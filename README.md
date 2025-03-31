@@ -235,7 +235,4 @@ Open the generated `index.html` file located in the `_build/html/` directory to 
 
 ## Data
 
-[Benchmark schema is defined here.](https://github.com/unitaryfund/metriq-gym/wiki/Quantum-Volume-definition)
-
 [First hardware results are here.](https://github.com/unitaryfund/metriq-gym/wiki/First-Hardware-Data)
-

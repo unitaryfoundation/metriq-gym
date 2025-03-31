@@ -1,38 +1,43 @@
 {
-    "$id": "metriq-gym/clops.schema.json",
-    "$schema": "https://json-schema.org/draft/2020-12/schema",  
-    "title": "CLOPS",
-    "type": "object",
-    "properties": {
-      "benchmark_name": {
-        "type": "string",
-        "const": "CLOPS"
-      },
-      "width": {
-        "type": "integer",
-        "default": 1000,
-        "minimum": 1,
-        "examples": [1000]
-      },
-      "num_layers": {
-        "type": "integer",
-        "default": 1000,
-        "minimum": 1,
-        "examples": [1000]
-      },
-      "num_circuits": {
-        "type": "integer",
-        "default": 100,
-        "minimum": 1,
-        "examples": [100]
-      },
-      "shots": {
-        "type": "integer",
-        "default": 1000,
-        "minimum": 1,
-        "examples": [1000]
-      }
+  "$id": "metriq-gym/clops.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "title": "CLOPS",
+  "description": "The CLOPS benchmark schema definition, describing parameters for the CLOPS benchmark.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "CLOPS",
+      "description": "Name of the benchmark. Must be 'CLOPS' for this schema."
     },
-    "required": ["benchmark_name"]
-  }
-  
+    "width": {
+      "type": "integer",
+      "description": "Circuit width, i.e., number of qubits or gates in one dimension.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "num_layers": {
+      "type": "integer",
+      "description": "Number of repeated layers or blocks in the circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "num_circuits": {
+      "type": "integer",
+      "description": "Number of circuits to generate and run for this benchmark.",
+      "default": 100,
+      "minimum": 1,
+      "examples": [100]
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots (repetitions) per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    }
+  },
+  "required": ["benchmark_name"]
+}

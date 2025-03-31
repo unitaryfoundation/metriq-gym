@@ -2,14 +2,17 @@
   "$id": "metriq-gym/bseq.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",  
   "title": "BSEQ",
+  "description": "The BSEQ benchmark schema definition, describing the BSEQ benchmark configuration.",
   "type": "object",
   "properties": {
     "benchmark_name": {
       "type": "string",
-      "const": "BSEQ"
+      "const": "BSEQ",
+      "description": "Name of the benchmark. Must be 'BSEQ' for this schema."
     },
     "shots": {
       "type": "integer",
+      "description": "Number of measurement shots (repetitions) to use for the benchmark.",
       "default": 1000,
       "minimum": 1,
       "examples": [1000]

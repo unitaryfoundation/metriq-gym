@@ -2,19 +2,23 @@
   "$id": "metriq-gym/qml_kernel.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",  
   "title": "QML Kernel",
+  "description": "The QML Kernel benchmark schema definition, describing parameters for the QML Kernel benchmark.",
   "type": "object",
   "properties": {
     "benchmark_name": {
       "type": "string",
-      "const": "QML Kernel"
+      "const": "QML Kernel",
+      "description": "Name of the benchmark. Must be 'QML Kernel' for this schema."
     },
     "num_qubits": {
       "type": "integer",
+      "description": "Number of qubits used in the QML Kernel circuit(s).",
       "minimum": 2,
       "examples": [10]
     },
     "shots": {
       "type": "integer",
+      "description": "Number of measurement shots (repetitions) for the QML Kernel benchmark.",
       "default": 1000,
       "minimum": 1,
       "examples": [1000]

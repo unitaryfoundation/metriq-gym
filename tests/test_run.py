@@ -1,5 +1,8 @@
+import logging
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
+from qbraid import QbraidError
 from metriq_gym.run import setup_device
 from metriq_gym.exceptions import QBraidSetupError
 
@@ -36,8 +39,25 @@ def test_setup_device_success(mock_provider, mock_device, patch_load_provider):
     assert device == mock_device
 
 
-def test_setup_device_failure(mock_provider, patch_load_provider, caplog):
-    mock_provider.get_device.side_effect = Exception()
+@patch("metriq_gym.run.get_providers")
+def test_setup_device_invalid_provider(get_providers_patch, caplog):
+    get_providers_patch.return_value = ["supported_provider"]
+    caplog.set_level(logging.INFO)
+
+    provider_name = "unsupported_provider"
+    backend_name = "whatever_backend"
+
+    with pytest.raises(QBraidSetupError, match="Provider not found"):
+        setup_device(provider_name, backend_name)
+
+    # Verify the printed output
+    assert f"No provider matching the name '{provider_name}' found." in caplog.text
+    assert "Providers available: ['supported_provider']" in caplog.text
+
+
+def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog):
+    caplog.set_level(logging.INFO)
+    mock_provider.get_device.side_effect = QbraidError()
     mock_provider.get_devices.return_value = [FakeDevice(id="device1"), FakeDevice(id="device2")]
 
     provider_name = "test_provider"

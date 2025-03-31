@@ -5,8 +5,9 @@ import logging
 
 from tabulate import tabulate
 
+from qbraid.runtime import get_providers
 from metriq_gym.job_manager import JobManager, MetriqGymJob
-from metriq_gym.provider import ProviderType
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -40,7 +41,7 @@ def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqG
         return job_manager.get_job(args.job_id)
     jobs = job_manager.get_jobs()
     if not jobs:
-        logger.info("No jobs found.")
+        print("No jobs found.")
         return None
     print("Available jobs:")
     list_jobs(jobs, show_index=True)
@@ -50,12 +51,16 @@ def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqG
         try:
             user_input = input("Select a job index (or 'q' for quit): ")
             if user_input.lower() == "q":
+                print("\nExiting...")
                 return None
             selected_index = int(user_input)
             if 0 <= selected_index < len(jobs):
                 break
             else:
                 print(f"Invalid index. Please enter a number between 0 and {len(jobs) - 1}")
+        except KeyboardInterrupt:
+            print("\nExiting...")
+            return None
         except ValueError:
             print("Invalid input. Please enter a valid number.")
     return jobs[selected_index]
@@ -81,16 +86,14 @@ def parse_arguments() -> argparse.Namespace:
         "-p",
         "--provider",
         type=str,
-        choices=ProviderType.value_list(),
-        default="ibm",
+        choices=get_providers(),
         help="String identifier for backend provider service",
     )
     dispatch_parser.add_argument(
         "-d",
         "--device",
         type=str,
-        default="qasm_simulator",
-        help='Backend to use (default is "qasm_simulator")',
+        help="Backend to use",
     )
 
     poll_parser = subparsers.add_parser("poll", help="Poll jobs")
@@ -99,7 +102,13 @@ def parse_arguments() -> argparse.Namespace:
     # Subparser for upload.
     upload_parser = subparsers.add_parser("upload", help="Upload results to Metriq")
     upload_parser.add_argument("--job_id", type=str, required=True, help="Job ID to upload")
-    upload_parser.add_argument("-s", "--submission_id", type=int, required=True, help="Metriq submission ID (needed to upload results)")
+    upload_parser.add_argument(
+        "-s",
+        "--submission_id",
+        type=int,
+        required=True,
+        help="Metriq submission ID (needed to upload results)",
+    )
 
     # Subparser for view.
     view_parser = subparsers.add_parser("view", help="View jobs")

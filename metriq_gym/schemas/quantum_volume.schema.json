@@ -2,31 +2,37 @@
   "$id": "metriq-gym/quantum_volume.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",  
   "title": "Quantum Volume",
+  "description": "The Quantum Volume benchmark schema definition, describing parameters for measuring quantum volume.",
   "type": "object",
   "properties": {
     "benchmark_name": {
       "type": "string",
-      "const": "Quantum Volume"
+      "const": "Quantum Volume",
+      "description": "Name of the benchmark. Must be 'Quantum Volume' for this schema."
     },
     "num_qubits": {
       "type": "integer",
+      "description": "Number of qubits in the Quantum Volume circuit(s).",
       "minimum": 1,
       "examples": [5]
     },
     "shots": {
       "type": "integer",
+      "description": "Number of measurement shots (repetitions) per circuit.",
       "default": 1000,
       "minimum": 1,
       "examples": [1000]
     },
     "trials": {
       "type": "integer",
+      "description": "Number of random circuits to generate and measure for the Quantum Volume test.",
       "default": 100,
       "minimum": 1,
       "examples": [100]
     },
     "confidence_level": {
       "type": "number",
+      "description": "Confidence level for establishing Quantum Volume success criteria. Must be between 0 and 1.",
       "minimum": 0,
       "maximum": 1,
       "default": 0.95,
