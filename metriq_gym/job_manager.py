@@ -52,7 +52,7 @@ class MetriqGymJob:
         return tabulate(rows, tablefmt="fancy_grid")
 
 
-# TODO: https://github.com/unitaryfund/metriq-gym/issues/51
+# TODO: https://github.com/unitaryfoundation/metriq-gym/issues/51
 class JobManager:
     jobs: list[MetriqGymJob]
     jobs_file = ".metriq_gym_jobs.jsonl"
