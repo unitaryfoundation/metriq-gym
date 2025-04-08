@@ -2,7 +2,6 @@ import argparse
 
 from pydantic import BaseModel
 from dataclasses import dataclass
-from datetime import datetime
 
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
@@ -14,8 +13,7 @@ class BenchmarkData:
     provider_job_ids: list[str]
 
 
-@dataclass
-class BenchmarkResult:
+class BenchmarkResult(BaseModel):
     """Stores the final results of the benchmark"""
 
     pass
@@ -39,14 +37,4 @@ class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
         result_data: list[GateModelResultData],
         quantum_jobs: list[QuantumJob],
     ) -> BR:
-        raise NotImplementedError
-
-    def upload_handler(
-        self,
-        job_data: BenchmarkData,
-        result_data: BenchmarkResult,
-        dispatch_time: datetime,
-        submission_id: int,
-        platform_id: int,
-    ) -> None:
         raise NotImplementedError

@@ -1,9 +1,7 @@
 import math
-import os
 import statistics
 from scipy.stats import binom
 from dataclasses import dataclass
-from datetime import datetime
 
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
@@ -14,9 +12,6 @@ from metriq_gym.circuits import qiskit_random_circuit_sampling
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
-
-from metriq_client import MetriqClient
-from metriq_client.models import ResultCreateRequest
 
 
 @dataclass
@@ -238,34 +233,3 @@ class QuantumVolume(Benchmark):
             p_value=stats.p_value,
             trials=stats.trials,
         )
-
-    def upload_handler(
-        self, job_data: BenchmarkData, result_data: BenchmarkResult, dispatch_time: datetime, submission_id: int, platform_id: int,
-    ) -> None:
-        client = MetriqClient(os.environ.get("METRIQ_CLIENT_API_KEY"))
-        task_id = 235 #Quantum Volume task ID
-        method_id = 144 #Heavy output generation method ID
-        client.submission_add_task(submission_id, task_id)
-        client.submission_add_method(submission_id, method_id)
-        client.submission_add_platform(submission_id, platform_id)
-        result_create_request = ResultCreateRequest(
-            task = str(task_id),
-            method = str(method_id),
-            platform = str(platform_id),
-            isHigherBetter = str(True),
-            metricName = "",
-            metricValue = str(0),
-            evaluatedAt = dispatch_time.strftime("%Y-%m-%d"),
-            qubitCount = str(job_data.num_qubits),                                     # type: ignore[attr-defined]
-            shots = str(job_data.shots),                                               # type: ignore[attr-defined]
-            circuitDepth = str(job_data.num_qubits),                                   # type: ignore[attr-defined]
-            sampleSize = str(job_data.trials),                                         # type: ignore[attr-defined]
-            # notes: str | None = None
-            # standardError: str | None = None
-        )
-        result_create_request.metricName = "Heavy-output generation rate"
-        result_create_request.metricValue = str(result_data.hog_prob)                  # type: ignore[attr-defined]
-        client.result_add(result_create_request, submission_id)
-        result_create_request.metricName = "Cross-entropy benchmark fidelity"
-        result_create_request.metricValue = str(result_data.xeb)                       # type: ignore[attr-defined]
-        client.result_add(result_create_request, submission_id)

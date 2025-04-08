@@ -91,7 +91,7 @@ python metriq_gym/run.py poll
 Once your job is complete and you are happy with the results, you can upload it directly to the Metriq web app.
 
 ```sh
-python metriq_gym/run.py upload --job_id <METRIQ_GYM_JOB_ID> --submission_id <METRIQ_APP_SUBMISSION_ID>
+python metriq_gym/run.py upload --job_id <METRIQ_GYM_JOB_ID>
 ```
 
 ### View jobs

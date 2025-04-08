@@ -24,7 +24,7 @@ from metriq_gym.exceptions import QBraidSetupError
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.job_type import JobType
-from metriq_gym.metriq_metadata import platforms
+from metriq_gym.exporters.metriq_client_exporter import MetriqClientExporter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("metriq_gym")
@@ -108,15 +108,10 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager, is_upload: bool 
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
         results: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
-        print(results)
+        print(results.model_dump_json())
         if is_upload:
-            handler.upload_handler(
-                job_data,
-                results,
-                metriq_job.dispatch_time,
-                args.submission_id,
-                platforms[metriq_job.device_name.lower()],
-            )
+            MetriqClientExporter().submit(metriq_job, job_data, results)
+
     else:
         print("Job is not yet completed. Please try again later.")
 

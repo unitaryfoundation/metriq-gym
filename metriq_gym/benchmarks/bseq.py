@@ -5,11 +5,10 @@ This benchmark evaluates a quantum device's ability to produce entangled states 
 the CHSH inequality. The violation of this inequality indicates successful entanglement between qubits.
 """
 
-import os
 from dataclasses import dataclass
-from datetime import datetime
 
 import networkx as nx
+from pydantic import Field
 import rustworkx as rx
 import numpy as np
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -27,14 +26,10 @@ from metriq_gym.helpers.graph_helpers import (
 )
 from metriq_gym.qplatform.device import connectivity_graph
 
-from metriq_client import MetriqClient
-from metriq_client.models import ResultCreateRequest
 
-
-@dataclass
 class BSEQResult(BenchmarkResult):
-    largest_connected_size: int
-    fraction_connected: float
+    largest_connected_size: int = Field(title="Largest connected component size")
+    fraction_connected: float = Field(title="Largest connected component size per node")
 
 
 @dataclass
@@ -197,34 +192,3 @@ class BSEQ(Benchmark):
             largest_connected_size=lcs,
             fraction_connected=lcs / job_data.coloring.num_nodes,
         )
-
-    def upload_handler(
-        self, job_data: BenchmarkData, result_data: BenchmarkResult, dispatch_time: datetime, submission_id: int, platform_id: int,
-    ) -> None:
-        client = MetriqClient(os.environ.get("METRIQ_CLIENT_API_KEY"))
-        task_id = 236 #BSEQ task ID
-        method_id = 426 #BSEQ method ID
-        client.submission_add_task(submission_id, task_id)
-        client.submission_add_method(submission_id, method_id)
-        client.submission_add_platform(submission_id, platform_id)
-        result_create_request = ResultCreateRequest(
-            task = str(task_id),
-            method = str(method_id),
-            platform = str(platform_id),
-            isHigherBetter = str(True),
-            metricName = "",
-            metricValue = str(0),
-            evaluatedAt = dispatch_time.strftime("%Y-%m-%d"),
-            qubitCount = str(job_data.num_qubits),                                         # type: ignore[attr-defined]
-            shots = str(job_data.shots),                                                   # type: ignore[attr-defined]
-            # circuitDepth = str(job_data.num_qubits),
-            # sampleSize = str(job_data.trials),
-            # notes: str | None = None
-            # standardError: str | None = None
-        )
-        result_create_request.metricName = "Largest connected component size"
-        result_create_request.metricValue = str(result_data.largest_connected_size)    # type: ignore[attr-defined]
-        client.result_add(result_create_request, submission_id)
-        result_create_request.metricName = "Largest connected component size per node"
-        result_create_request.metricValue = str(result_data.fraction_connected)        # type: ignore[attr-defined]
-        client.result_add(result_create_request, submission_id)
