@@ -205,19 +205,16 @@ def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
 
 
 def calculate_expectation_value(num_qubits: int, shots: int, count_results: dict) -> float:
-    """Calculate the expectation value for a measured qubit specified by its index.
-
-    measured_qubit_index: 0 corresponds to qubit0, 1 to qubit1, etc.
-
-    Note: Qiskit's measurement results are in little-endian order so outcome[-(measured_qubit_index+1)] gives the bit
-    corresponding to that qubit.
-    """
+    """Calculate the expectation value for a measured qubit specified by its index."""
+    # measured_qubit_index: 0 corresponds to qubit0, 1 to qubit1, etc.
     if num_qubits == 6:
         measured_qubit_index = 0
     elif num_qubits == 7:
         measured_qubit_index = 1
 
     expectation = 0.0
+    # Note: Qiskit's measurement results are in little-endian order so outcome[-(measured_qubit_index+1)] gives the bit
+    # corresponding to that qubit.
     for outcome, count in count_results.items():
         bit = outcome[-(measured_qubit_index + 1)]
         eigenvalue = 1 if bit == "0" else -1
@@ -239,7 +236,7 @@ class WormholeResult(BenchmarkResult):
 
 @dataclass
 class WormholeData(BenchmarkData):
-    """Data class to store Wormhole benchmark metadata."""
+    """Dataclass to store Wormhole benchmark metadata."""
 
     pass
 
