@@ -1,0 +1,6 @@
+{
+    "benchmark_name": "Wormhole",
+    "num_qubits": 6,
+    "shots": 10
+}
+  

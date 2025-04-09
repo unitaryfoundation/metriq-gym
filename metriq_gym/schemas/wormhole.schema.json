@@ -1,0 +1,30 @@
+{
+    "$id": "metriq-gym/wormhole.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",  
+    "title": "Wormhole",
+    "description": "The Wormhole benchmark schema definition, describing the Wormhole benchmark configuration.",
+    "type": "object",
+    "properties": {
+      "benchmark_name": {
+        "type": "string",
+        "const": "Wormhole",
+        "description": "Name of the benchmark. Must be 'Wormhole' for this schema."
+      },
+      "shots": {
+        "type": "integer",
+        "description": "Number of measurement shots (repetitions) to use for the benchmark.",
+        "default": 1000,
+        "minimum": 1,
+        "examples": [1000]
+      },
+      "num_qubits": {
+        "type": "integer",
+        "description": "Number of qubits to use for the benchmark. Must be either 6 or 7.",
+        "enum": [6, 7],
+        "default": 6,
+        "examples": [6, 7]
+      }
+    },
+    "required": ["benchmark_name"]
+  }
+  
