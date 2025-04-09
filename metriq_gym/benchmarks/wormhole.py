@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from qiskit import QuantumCircuit
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+from qbraid.runtime.result_data import MeasCount
 from metriq_gym.helpers.task_helpers import flatten_counts, flatten_job_ids
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 
@@ -204,9 +205,9 @@ def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
         raise ValueError(f"Unsupported number of qubits: {num_qubits}")
 
 
-def calculate_expectation_value(num_qubits: int, shots: int, count_results: dict) -> float:
+def calculate_expectation_value(num_qubits: int, shots: int, count_results: MeasCount) -> float:
     """Calculate the expectation value for a measured qubit specified by its index."""
-    # measured_qubit_index: 0 corresponds to qubit0, 1 to qubit1, etc.
+    # The measured_qubit_index: 0 corresponds to qubit0, 1 to qubit1, etc.
     if num_qubits == 6:
         measured_qubit_index = 0
     elif num_qubits == 7:
