@@ -111,7 +111,6 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager, is_upload: bool 
         print(results.model_dump_json())
         if is_upload:
             MetriqClientExporter().submit(metriq_job, job_data, results)
-
     else:
         print("Job is not yet completed. Please try again later.")
 
