@@ -6,3 +6,4 @@ class JobType(StrEnum):
     CLOPS = "CLOPS"
     QML_KERNEL = "QML Kernel"
     QUANTUM_VOLUME = "Quantum Volume"
+    WORMHOLE = "Wormhole"
