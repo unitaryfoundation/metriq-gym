@@ -23,7 +23,7 @@ from metriq_gym.cli import parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
-from metriq_gym.job_type import JobType
+from metriq_gym.benchmarks import JobType
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("metriq_gym")
