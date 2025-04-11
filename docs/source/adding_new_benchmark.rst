@@ -20,7 +20,7 @@ Defining a New Benchmark
 
    In this new file, define a class that inherits from :code:`Benchmark`. You must override:
 
-   - :code:`dispatch_handler()`: Houses the logic for dispatching and scheduling the benchmark job to the quantum device.
+   - :code:`dispatch_handler()`: Houses the logic for preprocessing and dispatching the benchmark job to the quantum device. This may includes things like creating the circuits, running those circuits on classical simulators, etc.
    - :code:`poll_handler()`: Houses the logic for retrieving and processing results from the quantum device or simulator.
 
 3. **Create the Data Classes**
