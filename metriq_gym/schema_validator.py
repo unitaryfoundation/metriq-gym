@@ -4,8 +4,7 @@ from typing import Any
 from jsonschema import validate
 from pydantic import BaseModel, create_model
 
-from metriq_gym.benchmarks import SCHEMA_MAPPING
-from metriq_gym.job_type import JobType
+from metriq_gym.benchmarks import SCHEMA_MAPPING, JobType
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
