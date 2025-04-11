@@ -1,7 +1,7 @@
 Adding a New Benchmark
 ######################
 
-This guide explains how to integrate a new benchmark into **metriq-gym**. You'll learn how to:
+This guide explains how to integrate a new benchmark into **metriq-gym**. The process involves several steps:
 
 1. Define the core Python structures (classes and :code:`dataclass` objects).
 2. Create a JSON Schema to validate benchmark parameters.
