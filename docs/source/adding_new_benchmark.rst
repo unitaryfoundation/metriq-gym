@@ -70,8 +70,9 @@ Defining a New Benchmark
 Defining the Schema
 *******************
 
-To standardize and validate the input parameters for each benchmark, **metriq-gym** uses JSON Schema. Add a new
-file named :file:`new_benchmark.schema.json` to the :file:`schemas/` directory:
+To standardize and validate the input parameters for each benchmark, **metriq-gym** uses JSON Schema. Add a new file
+named :file:`new_benchmark.schema.json` to the :file:`schemas/` directory. Note that this schema file is just an example
+and should be modified to fit the specific requirements of your benchmark.
 
 .. code-block:: json
 
