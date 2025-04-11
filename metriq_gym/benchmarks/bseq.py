@@ -8,6 +8,7 @@ the CHSH inequality. The violation of this inequality indicates successful entan
 from dataclasses import dataclass
 
 import networkx as nx
+from pydantic import Field
 import rustworkx as rx
 import numpy as np
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -26,10 +27,9 @@ from metriq_gym.helpers.graph_helpers import (
 from metriq_gym.qplatform.device import connectivity_graph
 
 
-@dataclass
 class BSEQResult(BenchmarkResult):
-    largest_connected_size: int
-    fraction_connected: float
+    largest_connected_size: int = Field(title="Largest connected component size")
+    fraction_connected: float = Field(title="Largest connected component size per node")
 
 
 @dataclass

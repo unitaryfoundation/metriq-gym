@@ -88,6 +88,12 @@ and select the one that is of interest.
 python metriq_gym/run.py poll
 ```
 
+Once your job is complete and you are happy with the results, you can upload it directly to the Metriq web app.
+
+```sh
+python metriq_gym/run.py upload --job_id <METRIQ_GYM_JOB_ID>
+```
+
 ### View jobs
 
 You can view all the jobs that have been dispatched by using the `view` action. 
