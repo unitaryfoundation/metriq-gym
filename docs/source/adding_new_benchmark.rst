@@ -25,8 +25,9 @@ Defining a New Benchmark
 
 3. **Create the Data Classes**
 
-   Define two :code:`dataclass` objects: one to store the input parameters (inheriting from :code:`BenchmarkData`), and one
-   to hold the benchmark’s output results (inheriting from :code:`BenchmarkResult`).
+   Define two :code:`dataclass` objects: one that will contain intermediate data after pre-processing and dispatching
+   (inheriting from :code:`BenchmarkData`), and one to hold the benchmark’s output results (inheriting from
+   :code:`BenchmarkResult`).
 
    Example:
 
