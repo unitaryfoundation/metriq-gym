@@ -6,7 +6,7 @@ import pprint
 from typing import Any
 
 from tabulate import tabulate
-from metriq_gym.job_type import JobType
+from metriq_gym.benchmarks import JobType
 
 
 @dataclass

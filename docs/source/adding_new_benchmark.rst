@@ -130,13 +130,12 @@ This file offers a reference for developers and users on how to structure the JS
 Registering the New Benchmark
 *****************************
 
-1. **Add to job_type.py**
+1. **Add to benchmarks/__init__.py**
 
-   Open the :file:`metriq_gym/job_type.py` file and register your new benchmark in the :code:`JobType` enumeration:
+   Open the :file:`metriq_gym/benchmarks/__init__.py` file and register your new benchmark in the :code:`JobType` enumeration:
 
    .. code-block:: python
 
-       from metriq_gym.job_type import JobType
        from enum import StrEnum
 
        class JobType(StrEnum):
@@ -152,7 +151,7 @@ Registering the New Benchmark
        from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
        from metriq_gym.benchmarks.new_benchmark import NewBenchmark, NewBenchmarkData
        ...
-       from metriq_gym.job_type import JobType
+
 
        BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
            JobType.NEW_BENCHMARK: NewBenchmark,
