@@ -118,7 +118,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
 
 def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    metriq_job: MetriqGymJob = prompt_for_job(args, job_manager)
+    metriq_job = prompt_for_job(args, job_manager)
     if metriq_job:
         print(metriq_job)
 
