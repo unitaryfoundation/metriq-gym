@@ -1,14 +1,20 @@
-[tool.poetry]
+[project]
 name = "metriq-gym"
-version = "0.1.0"
-description = ""
+description = "Framework for implementing and running standard quantum benchmarks on different quantum devices by different providers."
 authors = [
-    "UnitaryFoundation",
-    "Daniel Strano <dan@unitary.foundation>",
-    "Vincent Russo <vincent@unitary.foundation>",
-    "Alessandro Cosentino <alessandro@unitary.foundation>"
+    { name = "Unitary Foundation team" }
+]
+maintainers = [
+    { name = "Daniel Strano", email = "dan@unitary.foundation>" },
+    { name = "Vincent Russo", email = "vincent@unitary.foundation"},
+    { name = "Alessandro Cosentino", email = "alessandro@unitary.foundation"},
 ]
 readme = "README.md"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[project.scripts]
+mgym = "metriq_gym.run:main"
 
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
