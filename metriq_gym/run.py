@@ -21,11 +21,13 @@ from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
 from metriq_gym.cli import parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError
+from metriq_gym.exporters.cli_exporter import CliExporter
+from metriq_gym.exporters.json_exporter import JsonExporter
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.benchmarks import JobType
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
 
 
@@ -43,7 +45,7 @@ def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
         provider: QuantumProvider = load_provider(provider_name)
     except QbraidError:
         logger.error(f"No provider matching the name '{provider_name}' found.")
-        logger.info(f"Providers available: {get_providers()}")
+        logger.error(f"Providers available: {get_providers()}")
         raise QBraidSetupError("Provider not found")
 
     try:
@@ -52,7 +54,7 @@ def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
         logger.error(
             f"No device matching the name '{backend_name}' found in provider '{provider_name}'."
         )
-        logger.info(f"Devices available: {[device.id for device in provider.get_devices()]}")
+        logger.error(f"Devices available: {[device.id for device in provider.get_devices()]}")
         raise QBraidSetupError("Device not found")
     return device
 
@@ -66,14 +68,14 @@ def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
 
 
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    logger.info("Starting job dispatch...")
+    print("Starting job dispatch...")
     try:
         device = setup_device(args.provider, args.device)
     except QBraidSetupError:
         return
 
     params = load_and_validate(args.input_file)
-    logger.info(f"Dispatching {params.benchmark_name} benchmark job on {args.device} device...")
+    print(f"Dispatching {params.benchmark_name} benchmark job on {args.device} device...")
 
     job_type = JobType(params.benchmark_name)
     handler: Benchmark = setup_benchmark(args, params, job_type)
@@ -96,7 +98,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     metriq_job = prompt_for_job(args, job_manager)
     if not metriq_job:
         return
-    logger.info("Polling job...")
+    print("Polling job...")
     job_type: JobType = JobType(metriq_job.job_type)
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
@@ -106,13 +108,17 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
-        print(handler.poll_handler(job_data, result_data, quantum_jobs))
+        results = handler.poll_handler(job_data, result_data, quantum_jobs)
+        if args.json:
+            JsonExporter(metriq_job, results).export(args.json)
+        else:
+            CliExporter(metriq_job, results).export()
     else:
         print("Job is not yet completed. Please try again later.")
 
 
 def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    metriq_job = prompt_for_job(args, job_manager)
+    metriq_job: MetriqGymJob = prompt_for_job(args, job_manager)
     if metriq_job:
         print(metriq_job)
 
