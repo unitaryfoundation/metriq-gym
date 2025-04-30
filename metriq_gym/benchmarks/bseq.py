@@ -26,7 +26,6 @@ from metriq_gym.helpers.graph_helpers import (
 from metriq_gym.qplatform.device import connectivity_graph
 
 
-@dataclass
 class BSEQResult(BenchmarkResult):
     largest_connected_size: int
     fraction_connected: float

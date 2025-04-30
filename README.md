@@ -88,6 +88,13 @@ and select the one that is of interest.
 mgym poll
 ```
 
+In order to export results to a JSON file, you can use the `--json` flag with the `poll` action.
+```sh
+mgym poll --job_id <METRIQ_GYM_JOB_ID> --json
+```
+This will create a JSON file with the results and the metadata of the job identified by `<METRIQ_GYM_JOB_ID>`.
+By default, the JSON file will be saved in the current working directory with the name `<METRIQ_GYM_JOB_ID>.json`.
+
 ### View jobs
 
 You can view all the jobs that have been dispatched by using the `view` action. 

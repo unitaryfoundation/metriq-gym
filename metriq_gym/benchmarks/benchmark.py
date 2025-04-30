@@ -13,8 +13,7 @@ class BenchmarkData:
     provider_job_ids: list[str]
 
 
-@dataclass
-class BenchmarkResult:
+class BenchmarkResult(BaseModel):
     """Stores the final results of the benchmark"""
 
     pass
