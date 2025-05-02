@@ -21,13 +21,15 @@ jobs:
         id: metadata
         uses: dependabot/fetch-metadata@v2
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Ask Dependabot to rebase (if needed)
         if: steps.metadata.outputs.has-conflicts == 'true'
-        uses: bbeesley/gha-auto-dependabot-rebase@v1
+        uses: bbeesley/gha-auto-dependabot-rebase@main
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          task: rebase
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Approve Dependabot PRs and enable auto-merge
         if: steps.metadata.outputs.update-type == 'version-update:semver-patch'
