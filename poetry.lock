@@ -3774,23 +3774,23 @@ test = ["autoqasm (>=0.1.0)", "pytest", "pytest-cov", "qbraid (>=0.9.0,<0.10.0)"
 
 [[package]]
 name = "qiskit"
-version = "1.4.2"
+version = "1.4.3"
 description = "An open-source SDK for working with quantum computers at the level of extended quantum circuits, operators, and primitives."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
-    {file = "qiskit-1.4.2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:310d0fa8a3fbb8f6f0e09ba61602e28cf49d084f2b28a20fc965ee966ed79e4e"},
-    {file = "qiskit-1.4.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:e079f49557b46e7bef42294477aa16d790d16d4feb6841ed440022e8055ea128"},
-    {file = "qiskit-1.4.2-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7ba0788b71614a37f8a886563a5122756a50c4bfd40951b54a0083424891d47b"},
-    {file = "qiskit-1.4.2-cp39-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:4c2ec657c6387e6b32ac950e94ebaed7e897208cd2af42fec00b9c724d997145"},
-    {file = "qiskit-1.4.2-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:ced4c2229bcf5c47f83f9a5003a97ad5fb69bbb2e7cc9b93ac8b9d2023e79c85"},
-    {file = "qiskit-1.4.2-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:d7b8e6850d806ab56316e64292b099885677ffc0ccdde3c3aafd48096cbb620a"},
-    {file = "qiskit-1.4.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8ca3a5b7b7b8079d91daafa60f5f1283cc0dfddc86a78e8fbcd47efbebbfd5ad"},
-    {file = "qiskit-1.4.2-cp39-abi3-win32.whl", hash = "sha256:57c4922863d50109da28ba5de0fc720c16c8b47ed20c69fe51cfa9919d1d22b2"},
-    {file = "qiskit-1.4.2-cp39-abi3-win_amd64.whl", hash = "sha256:4d8043ac40302470fd9c275091a4cd11fd70108f4b70e89fe2764da6281299e1"},
-    {file = "qiskit-1.4.2.tar.gz", hash = "sha256:3cc75cd39d524dfff695d72c7589dfaf945d112ab9e4d4e6a4c06d6ffd439d2f"},
+    {file = "qiskit-1.4.3-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:65caf291bbe93f136b85281cb4a807c138fc4315fc17bdda9382cb4bfa18abdf"},
+    {file = "qiskit-1.4.3-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:6e9f41eca2f4d522f59e48a47eb8b81ed3fdd35f56cefb41cc0db47768ccde47"},
+    {file = "qiskit-1.4.3-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a04c6baca379bae8e6fc626bd06f0dda3f2ee7961205839b5a431b7f8d1e3978"},
+    {file = "qiskit-1.4.3-cp39-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:4ca6eeaf29ae2cf3789e7474b062845c59c6e4164276569949f9170cfcaec6b1"},
+    {file = "qiskit-1.4.3-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:bc82934e5b5192a75adca57bfa8194166e6bce1023da3b82e02db6c279a5d0fc"},
+    {file = "qiskit-1.4.3-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:03355819fb9747a937bfffb0aba59d44c4654536b87c62dcd00d4e4e1550190f"},
+    {file = "qiskit-1.4.3-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8d90b25ad017839b0bf1b5d05d8bd4066b7f83e3c14839947994f5fd56a5f5e2"},
+    {file = "qiskit-1.4.3-cp39-abi3-win32.whl", hash = "sha256:74cb30e34189ca9c1263994705a0cf8d97cead5f7375dedab3be4e783173785d"},
+    {file = "qiskit-1.4.3-cp39-abi3-win_amd64.whl", hash = "sha256:554b5ad8c6198881923998fd0124660eec534c985c731d1e3c09c6421377c29e"},
+    {file = "qiskit-1.4.3.tar.gz", hash = "sha256:e4e311190c159578f253d219dc860241ccb71955ca08725bb092c74cf7fbdac5"},
 ]
 
 [package.dependencies]
@@ -5315,4 +5315,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "40ba8be1af9df16d602c7f939ec9958e44b26b9beeb003fb9a845a5695b8e566"
+content-hash = "36d1f707e6e9b702e7f2579f2a5b6ae9204ba5fee34fa0820db2031a8243643f"
