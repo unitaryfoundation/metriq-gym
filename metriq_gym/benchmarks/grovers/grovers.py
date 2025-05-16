@@ -38,6 +38,7 @@ class GroversResult(BenchmarkResult):
 class GroversData(BenchmarkData):
     """Stores the input parameters or metadata for Grovers Benchmark."""
 
+    shots: int
     min_qubits: int
     max_qubits: int
     skip_qubits: int
@@ -225,6 +226,7 @@ class Grovers(Benchmark):
 
         return GroversData(
             provider_job_ids=provider_job_ids,
+            shots=shots,
             min_qubits=min_qubits,
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,
