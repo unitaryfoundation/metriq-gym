@@ -1,0 +1,9 @@
+{
+    "benchmark_name": "Grovers",
+    "shots": 100,
+    "min_qubits": 2,
+    "max_qubits": 6,
+    "skip_qubits": 1,
+    "max_circuits": 3,
+    "use_mcx_shim": false
+}
