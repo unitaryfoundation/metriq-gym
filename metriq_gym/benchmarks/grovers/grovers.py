@@ -127,8 +127,8 @@ def calc_fidelities(data: GroversData, counts: list[MeasCount]) -> list[list[dic
     Notes:
         - The order of the counts is preserved, meaning that the index of each MeasCount
           corresponds to the index of the dispatch data for it.
-            i.e.: counts[1] will represent the circuit with qubits equal to
-                  all_num_qubits[1] and secret strings of marked_items[1].
+            i.e.: counts[0] will represent the circuit with qubits equal to
+                  all_num_qubits[0] and secret string of marked_items[0][0].
     """
 
     def analyze_results(
