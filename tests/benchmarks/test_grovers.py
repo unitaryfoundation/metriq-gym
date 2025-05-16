@@ -11,7 +11,9 @@ def test_create_circuits():
         min_qubits=2, max_qubits=6, skip_qubits=1, max_circuits=3, use_mcx_shim=False
     )
 
-    print(f"\n\n{grovers_circuits} \n\n {marked_items} \n\n {all_num_qubits}")
+    print(
+        f"\n\n Circuits: {grovers_circuits} \n\n Marked Items: {marked_items} \n\n All Num Qubits: {all_num_qubits}"
+    )
 
     assert len(grovers_circuits) == len(all_num_qubits) * 3
     assert len(marked_items) == len(all_num_qubits)
@@ -50,7 +52,7 @@ def test_calc_fidelities():
 
     fidelities = calc_fidelities(job_data, counts)
 
-    print(f"\n\n{fidelities}")
+    print(f"\n\n Fidelities: {fidelities}")
 
     assert len(fidelities) == 2
     for i in range(len(fidelities)):
