@@ -135,7 +135,7 @@ def calc_fidelities(data: GroversData, counts: list[MeasCount]) -> list[list[dic
         counts: dict[str, int], num_qubits: int, marked_item: int
     ) -> dict[str, float]:
         """
-        Computes the fidelity for one job.
+        Computes the fidelity for one circuit.
         Slightly modified from QED-C's implementation in Grover's Benchmark.
         Args:
             counts: A dictionary of bitstrings to counts measured from the backend.
