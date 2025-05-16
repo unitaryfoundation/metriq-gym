@@ -7,13 +7,17 @@ def test_create_circuits():
     Test passed; all variables are populated.
     Note that there are many deprecation warnings that should be addressed.
     """
-    grovers_circuits, marked_items, all_num_qubits = create_circuits()
+    grovers_circuits, marked_items, all_num_qubits = create_circuits(
+        min_qubits=2, max_qubits=6, skip_qubits=1, max_circuits=3, use_mcx_shim=False
+    )
 
-    # print(marked_items, "\n", "\n", all_num_qubits)
+    print(f"\n\n{grovers_circuits} \n\n {marked_items} \n\n {all_num_qubits}")
 
-    assert len(grovers_circuits) > 0
-    assert len(marked_items) > 0
-    assert len(all_num_qubits) > 0
+    assert len(grovers_circuits) == len(all_num_qubits) * 3
+    assert len(marked_items) == len(all_num_qubits)
+    for i in range(len(marked_items)):
+        assert len(marked_items[i]) == 3
+    assert len(all_num_qubits) == 5
 
 
 def test_calc_fidelities():
@@ -46,6 +50,6 @@ def test_calc_fidelities():
 
     fidelities = calc_fidelities(job_data, counts)
 
-    # print(fidelities)
+    print(f"\n\n{fidelities}")
 
     assert len(fidelities) > 0
