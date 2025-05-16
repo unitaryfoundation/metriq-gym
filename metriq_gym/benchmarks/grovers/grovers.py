@@ -51,7 +51,8 @@ def create_circuits(
     min_qubits=2, max_qubits=6, skip_qubits=1, max_circuits=3, use_mcx_shim=False
 ) -> tuple[list[QuantumCircuit], list[list[int]], list[int]]:
     """
-    Modified version of the run() function in grovers_benchmark.py.
+    Modified version of the run() function in QED-C's Grover's Benchmark implementation.
+    Reference: https://github.com/SRI-International/QC-App-Oriented-Benchmarks/blob/master/grovers/qiskit/grovers_benchmark.py
     Args:
         min_qubits: minimum number of qubits to start generating circuits for the benchmark.
         max_qubits: maxiumum number of qubits to stop generating circuits for the benchmark.
@@ -134,6 +135,7 @@ def calc_fidelities(data: GroversData, counts: list[MeasCount]) -> list[list[dic
     ) -> dict[str, float]:
         """
         Computes the fidelity for one job.
+        Slightly modified from QED-C's implementation in Grover's Benchmark.
         Args:
             counts: A dictionary of bitstrings to counts measured from the backend.
             num_qubits: How many qubits the circuit had.
