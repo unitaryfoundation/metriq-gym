@@ -21,7 +21,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.CLOPS: Clops,
     JobType.QML_KERNEL: QMLKernel,
     JobType.QUANTUM_VOLUME: QuantumVolume,
-    JobType.GROVERS: Grovers
+    JobType.GROVERS: Grovers,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -29,7 +29,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.CLOPS: ClopsData,
     JobType.QML_KERNEL: QMLKernelData,
     JobType.QUANTUM_VOLUME: QuantumVolumeData,
-    JobType.GROVERS: GroversData
+    JobType.GROVERS: GroversData,
 }
 
 SCHEMA_MAPPING = {
@@ -37,5 +37,5 @@ SCHEMA_MAPPING = {
     JobType.CLOPS: "clops.schema.json",
     JobType.QML_KERNEL: "qml_kernel.schema.json",
     JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
-    JobType.GROVERS: "grovers.schema.json"
+    JobType.GROVERS: "grovers.schema.json",
 }
