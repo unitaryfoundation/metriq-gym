@@ -23,7 +23,6 @@ from metriq_gym.benchmarks.grovers.metrics import polarization_fidelity
 MAX_QUBITS = 8
 # benchmark_name = "Grover's Search"
 np.random.seed(0)
-verbose = False
 
 
 @dataclass
