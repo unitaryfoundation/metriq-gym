@@ -231,7 +231,10 @@ class Grovers(Benchmark):
         )
 
     def poll_handler(
-        self, job_data: GroversData, result_data: list[GateModelResultData]
+        self,
+        job_data: GroversData,
+        result_data: list[GateModelResultData],
+        quantum_jobs: list[QuantumJob],
     ) -> GroversResult:
         return GroversResult(
             fidelities=calc_fidelities(job_data, flatten_counts(result_data)),
