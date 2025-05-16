@@ -52,4 +52,6 @@ def test_calc_fidelities():
 
     print(f"\n\n{fidelities}")
 
-    assert len(fidelities) > 0
+    assert len(fidelities) == 2
+    for i in range(len(fidelities)):
+        assert len(fidelities[i]) == 3
