@@ -20,13 +20,13 @@ from qedc_grovers_benchmark import grovers_dist
 from metrics import polarization_fidelity
 
 MAX_QUBITS=8
-benchmark_name = "Grover's Search"
+# benchmark_name = "Grover's Search"
 np.random.seed(0)
 verbose = False
 
 @dataclass
 class GroversResult(BenchmarkResult):
-    """Stores the result(s) from running Grovers Benchmark."""
+    """Stores the results from running Grovers Benchmark."""
     fidelities: list[dict[str, float]]
     all_num_qubits: list[int]
     marked_items: list[list[int]]
@@ -40,6 +40,7 @@ class GroversData(BenchmarkData):
     max_circuits: int
     marked_items: list[list[int]]
     all_num_qubits: list[int]
+    use_mcx_shim: bool
 
 def create_circuits(min_qubits=2, max_qubits=6, skip_qubits=1, max_circuits=3,
         use_mcx_shim=False) -> tuple[list[QuantumCircuit], list[list[int]], list[int]]:
@@ -59,10 +60,12 @@ def create_circuits(min_qubits=2, max_qubits=6, skip_qubits=1, max_circuits=3,
                     Would have secret strings [1, 2, 3] for X qubits
                     and secret strings [4, 5, 6] for Y qubits.
         3. A list of all qubit sizes used to generate circuits. 
+    Notes:
+        The range from min to max qubits is inclusive. 
     """
     # Clamp the maximum number of qubits
     if max_qubits > MAX_QUBITS:
-        print(f"INFO: {benchmark_name} benchmark is limited to a maximum of {MAX_QUBITS} qubits.")
+        # print(f"INFO: {benchmark_name} benchmark is limited to a maximum of {MAX_QUBITS} qubits.")
         max_qubits = MAX_QUBITS
     
     # validate parameters (smallest circuit is 2 qubits)
@@ -169,18 +172,19 @@ class Grovers(Benchmark):
         device: QuantumDevice
     ) -> GroversData:
         
-        # The parameters below can be modified to be added from the JSON file 
-        # and accessed via self.params.X
-        shots = self.params.shots or 100
-        min_qubits = 2
-        max_qubits = 6 
-        skip_qubits = 1
-        max_circuits = 3
+        # For more information on the parameters, view the schema for this benchmark. 
+        shots = self.params.shots
+        min_qubits = self.params.min_qubits
+        max_qubits = self.params.max_qubits
+        skip_qubits = self.params.skip_qubits
+        max_circuits = self.params.max_circuits
+        use_mcx_shim = self.params.use_mcx_shim
 
         grovers_circuits, marked_items, all_num_qubits = create_circuits(min_qubits=min_qubits, 
                                                                         max_qubits=max_qubits,
                                                                         skip_qubits=skip_qubits, 
-                                                                        max_circuits=max_circuits)
+                                                                        max_circuits=max_circuits,
+                                                                        use_mcx_shim=use_mcx_shim)
 
         quantum_job: QuantumJob | list[QuantumJob] = device.run(grovers_circuits, shots=shots)
         provider_job_ids = (
@@ -196,7 +200,8 @@ class Grovers(Benchmark):
             skip_qubits = skip_qubits,
             max_circuits = max_circuits,
             marked_items = marked_items,
-            all_num_qubits = all_num_qubits
+            all_num_qubits = all_num_qubits,
+            use_mcx_shim = use_mcx_shim
         )
 
     def poll_handler(

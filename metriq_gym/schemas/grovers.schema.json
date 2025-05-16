@@ -1,0 +1,58 @@
+{
+  "$id": "metriq-gym/grovers.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "title": "Grovers",
+  "description": "Grovers benchmark schema definition, describing parameters for the benchmark.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Grovers",
+      "description": "Name of the benchmark. Must be 'Grovers' for this schema."
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
+      "default": 100,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "min_qubits": {
+      "type": "integer",
+      "description": "Minimum number of qubits to start generating circuits for the benchmark.",
+      "default": 2,
+      "minimum": 1,
+      "examples": [4]
+    },
+    "max_qubits": {
+      "type": "integer",
+      "description": "Maxiumum number of qubits to stop generating circuits for the benchmark.",
+      "default": 6,
+      "minimum": 1,
+      "maximum": 8,
+      "examples": [7]
+    },
+    "skip_qubits": {
+      "type": "integer",
+      "description": "The step size for generating circuits from the min to max qubit sizes. ",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 7,
+      "examples": [2]
+    },
+    "max_circuits": {
+      "type": "integer",
+      "description": "Maximum number of circuits generated for each qubit size in the benchmark.",
+      "default": 3,
+      "minimum": 1,
+      "examples": [9]
+    },
+    "use_mcx_shim": {
+      "type": "boolean",
+      "description": "For validating the implementation of an mcx shim.",
+      "default": false,
+      "examples": [true]
+    }
+  },
+  "required": ["benchmark_name"]
+}
