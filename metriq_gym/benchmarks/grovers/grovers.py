@@ -121,11 +121,13 @@ def calc_fidelities(data: GroversData, counts: list[MeasCount]) -> list[list[dic
         data: contains dispatch data like marked_items, all_num_qubits, and so on.
         counts: contains results from the quantum device (one MeasCount per circuit).
     Returns:
-        A 2-D list of fidelities. Where the first dimensions is the fidelity dictionaries
-        and the second dimension is the number of qubits for the group.
+        A 2-D list of fidelities. Where the first dimension has the fidelity dictionaries
+        and the second dimension corresponds to the number of qubits for the group.
     Notes:
         - The order of the counts is preserved, meaning that the index of each MeasCount
           corresponds to the index of the dispatch data for it.
+            i.e.: counts[1] will represent the circuit with qubits equal to
+                  all_num_qubits[1] and secret strings of marked_items[1].
     """
 
     def analyze_results(
@@ -135,8 +137,8 @@ def calc_fidelities(data: GroversData, counts: list[MeasCount]) -> list[list[dic
         Computes the fidelity for one job.
         Args:
             counts: A dictionary of bitstrings to counts measured from the backend.
-            num_qubits: How many qubits the job had.
-            marked_item: The secret of the
+            num_qubits: How many qubits the circuit had.
+            marked_item: The secret string for the circuit.
         Returns:
             Polarization fidelity and the hellinger fidelity as a dict with the following keys:
                 fidelity
@@ -168,11 +170,10 @@ def calc_fidelities(data: GroversData, counts: list[MeasCount]) -> list[list[dic
         return dist
 
     # Iterate over each group of X qubits.
-    # Compute the fidelity for each run in the group.
+    # Compute the fidelity for each circuit run in the group.
     fidelities = []
     counts_idx = 0
     all_num_qubits = data.all_num_qubits
-
     for i in range(len(all_num_qubits)):
         num_qubits = all_num_qubits[i]
         marked_items_group = data.marked_items[i]
