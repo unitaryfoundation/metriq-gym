@@ -1,7 +1,9 @@
-"""Grover's Benchmark for metriq-gym
+"""
+Grover's Benchmark for metriq-gym
 Credit to QED-C for implementing the benchmark.
+Reference: https://github.com/SRI-International/QC-App-Oriented-Benchmarks/tree/master
 
-[Description]
+A rough draft for implementing QED-C's Grover's Benchmark into metriq-gym.
 """
 
 from dataclasses import dataclass
