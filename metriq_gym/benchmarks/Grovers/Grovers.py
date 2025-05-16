@@ -1,4 +1,4 @@
-""" Grover benchmark for the Metriq Gym
+""" Grover's Benchmark for metriq-gym
 Credit to QED-C for implementing the benchmark.
 
 [Description]
@@ -16,7 +16,7 @@ from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkR
 from metriq_gym.helpers.task_helpers import flatten_counts
 
 from grovers_kernel import GroversSearch
-from grovers_benchmark import grovers_dist
+from qedc_grovers_benchmark import grovers_dist
 from metrics import polarization_fidelity
 
 MAX_QUBITS=8
