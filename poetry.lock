@@ -3287,19 +3287,19 @@ test = ["pytest (>=7.2.0,<7.3.0)"]
 
 [[package]]
 name = "pyqrack"
-version = "1.42.3"
+version = "1.44.4"
 description = "pyqrack - Pure Python vm6502q/qrack Wrapper"
 optional = false
 python-versions = "*"
 groups = ["main"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
-    {file = "pyqrack-1.42.3-py3-none-macosx_14_0_arm64.whl", hash = "sha256:570c3f9712b063efaf601e12b51bb0099001d1f02c88a65fd2798fead9b420da"},
-    {file = "pyqrack-1.42.3-py3-none-macosx_15_0_arm64.whl", hash = "sha256:e1185c4c982396f7ef8353f850aaf6159eb98c16d2873d99f8923a89f693d609"},
-    {file = "pyqrack-1.42.3-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:14f8bcf226495213b92dff58b2f5c188a74f21c9b28b85a635cd83f4710b2c36"},
-    {file = "pyqrack-1.42.3-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:dc64d293753497ae68b111cbff7db80923edb4502e2c7ac7cd4703a2c3c05120"},
-    {file = "pyqrack-1.42.3-py3-none-win_amd64.whl", hash = "sha256:c6556275c73ea342f22a32245f64e7fadf6d6c7162fafedbf7765a0b353f8a0e"},
-    {file = "pyqrack-1.42.3.tar.gz", hash = "sha256:adaae1fa728bf7d3f5fa2873e98b4542029f73957ee0ae97fd5912805839381e"},
+    {file = "pyqrack-1.44.4-py3-none-macosx_14_0_arm64.whl", hash = "sha256:67512d67167f5932f8816fa60db2b8e09e1265fb173f981a7e8e05530bd58abd"},
+    {file = "pyqrack-1.44.4-py3-none-macosx_15_0_arm64.whl", hash = "sha256:ca60463a7daff192fa9c94d3ad8915905efb51cf81e376d10c6f78175ab3538c"},
+    {file = "pyqrack-1.44.4-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:0a73ed329fc70856eb0c34bb1b27940a5ac618a9adafc410dd87c34057591d8a"},
+    {file = "pyqrack-1.44.4-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:01e299726e1166d2c474a63ef02bc8f535187199d1e7aee1bac7ef463ce05b8e"},
+    {file = "pyqrack-1.44.4-py3-none-win_amd64.whl", hash = "sha256:36fa0a7cf124c72bd9915c2a4c336f4a2b4374a5c863010affda86b96f6e9e00"},
+    {file = "pyqrack-1.44.4.tar.gz", hash = "sha256:7d2db0cab5b9be30577b82de52dd3ccfe0d85a354b84d2ead730950aadb7eb05"},
 ]
 
 [package.extras]
@@ -5315,4 +5315,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "50aac63f597653cf5827cd2a1aac0bc9259f42bd50f60f9dc50e36a73dc61e50"
+content-hash = "f82a816ac0fcc8cee031d79a7d0d9461947b6bd604ed74b273c1bc1dd5a89c16"
