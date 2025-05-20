@@ -10,7 +10,6 @@ class BaseExporter(ABC):
         self.results = results
         super().__init__()
 
-    @property
     def as_dict(self):
         return {
             "version": importlib.metadata.version("metriq-gym"),
