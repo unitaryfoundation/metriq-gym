@@ -109,7 +109,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
         results = handler.poll_handler(job_data, result_data, quantum_jobs)
-        if args.json:
+        if hasattr(args, "json"):
             JsonExporter(metriq_job, results).export(args.json)
         else:
             CliExporter(metriq_job, results).export()

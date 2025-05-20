@@ -10,7 +10,8 @@ class BaseExporter(ABC):
         self.results = results
         super().__init__()
 
-    def _as_dict(self):
+    @property
+    def as_dict(self):
         return {
             "version": importlib.metadata.version("metriq-gym"),
             "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),
