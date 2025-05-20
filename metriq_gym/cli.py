@@ -98,6 +98,13 @@ def parse_arguments() -> argparse.Namespace:
 
     poll_parser = subparsers.add_parser("poll", help="Poll jobs")
     poll_parser.add_argument("--job_id", type=str, required=False, help="Job ID to poll (optional)")
+    poll_parser.add_argument(
+        "--json",
+        nargs="?",
+        required=False,
+        default=argparse.SUPPRESS,
+        help="Export results to JSON file (optional)",
+    )
 
     view_parser = subparsers.add_parser("view", help="View jobs")
     view_parser.add_argument("--job_id", type=str, required=False, help="Job ID to view (optional)")
