@@ -18,7 +18,6 @@ class ClopsData(BenchmarkData):
     pass
 
 
-@dataclass
 class ClopsResult(BenchmarkResult):
     clops_score: float
 

@@ -17,7 +17,6 @@ class QMLKernelData(BenchmarkData):
     pass
 
 
-@dataclass
 class QMLKernelResult(BenchmarkResult):
     accuracy_score: float
 
