@@ -51,7 +51,7 @@ class GroversData(BenchmarkData):
     Paramters/Metadata:
         shots: number of shots for each grover circuit to be ran with.
         min_qubits: minimum number of qubits to start generating circuits for the benchmark.
-        max_qubits: maxiumum number of qubits to stop generating circuits for the benchmark.
+        max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
         marked_items: a list of secret strings used for each circuit in each number of qubits.
@@ -77,7 +77,7 @@ def create_circuits(
     Reference: https://github.com/SRI-International/QC-App-Oriented-Benchmarks/blob/master/grovers/qiskit/grovers_benchmark.py
     Args:
         min_qubits: minimum number of qubits to start generating circuits for the benchmark.
-        max_qubits: maxiumum number of qubits to stop generating circuits for the benchmark.
+        max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
         use_mcx_shim: for validating the implementation of an mcx shim.
