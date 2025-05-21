@@ -20,10 +20,6 @@ from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.benchmarks.grovers.grovers_kernel import GroversSearch
 from metriq_gym.benchmarks.grovers.metrics import polarization_fidelity
 
-MAX_QUBITS = 8
-# benchmark_name = "Grover's Search"
-np.random.seed(0)
-
 
 @dataclass
 class GroversResult(BenchmarkResult):
@@ -71,10 +67,6 @@ def create_circuits(
     Notes:
         The range from min to max qubits is inclusive.
     """
-    # Clamp the maximum number of qubits
-    if max_qubits > MAX_QUBITS:
-        # print(f"INFO: {benchmark_name} benchmark is limited to a maximum of {MAX_QUBITS} qubits.")
-        max_qubits = MAX_QUBITS
 
     # validate parameters (smallest circuit is 2 qubits)
     max_qubits = max(2, max_qubits)
