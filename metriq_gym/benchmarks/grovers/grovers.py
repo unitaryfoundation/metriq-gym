@@ -45,7 +45,7 @@ class GroversData(BenchmarkData):
 
 
 def create_circuits(
-    min_qubits=2, max_qubits=6, skip_qubits=1, max_circuits=3, use_mcx_shim=False
+    min_qubits: int, max_qubits: int, skip_qubits: int, max_circuits: int, use_mcx_shim: bool
 ) -> tuple[list[QuantumCircuit], list[list[int]], list[int]]:
     """
     Modified version of the run() function in QED-C's Grover's Benchmark implementation.
@@ -67,11 +67,6 @@ def create_circuits(
     Notes:
         The range from min to max qubits is inclusive.
     """
-
-    # validate parameters (smallest circuit is 2 qubits)
-    max_qubits = max(2, max_qubits)
-    min_qubits = min(max(2, min_qubits), max_qubits)
-    skip_qubits = max(1, skip_qubits)
 
     # Create Grovers Circuits
     grovers_circuits = []
