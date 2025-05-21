@@ -56,7 +56,7 @@ class GroversData(BenchmarkData):
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
         marked_items: a list of secret strings used for each circuit in each number of qubits.
         all_num_qubits: the range of qubits used to generate circuits.
-        use_mcx_shim: for validating the implementation of an mcx shim.
+        use_mcx_shim: toggles a custom implementation of mcx gates.
     """
 
     shots: int
@@ -80,7 +80,7 @@ def create_circuits(
         max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
-        use_mcx_shim: for validating the implementation of an mcx shim.
+        use_mcx_shim: toggles a custom implementation of mcx gates.
     Returns:
         1. A list of quantum circuits to run for the benchmark
         2. A 2-D list where the first dimension consists of marked items and the second dimension

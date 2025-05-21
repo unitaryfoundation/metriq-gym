@@ -49,7 +49,7 @@
     },
     "use_mcx_shim": {
       "type": "boolean",
-      "description": "For validating the implementation of an mcx shim.",
+      "description": "Toggles a custom implementation of mcx gates.",
       "default": false,
       "examples": [true]
     }
