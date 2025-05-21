@@ -40,7 +40,7 @@ def qiskit_random_circuit_sampling(n: int) -> QuantumCircuit:
             circ.cx(c, t)
     return circ
 
-def single_1D_layer_circuit(gamma:Parameter, G: int) -> QuantumCircuit:
+def single_1D_layer_circuit(gamma:Parameter, G: nx.Graph) -> QuantumCircuit:
     """Generate a single layer of the QAOA circuit from a networkx graph on a 1D lattice.
 
     Args:
@@ -67,10 +67,10 @@ def qaoa_1D_circuit(G:nx.Graph, p:int):
     gammas = ParameterVector("gamma", length=p)
     betas = ParameterVector("beta", length=p)
     
-    single_layer = lambda gamma: single_1D_layer_circuit(gamma, G)
+    single_layer = single_1D_layer_circuit(Parameter("theta"), G)
     qc = QuantumCircuit(nq)
     qc.h(range(nq))
     for pi in range(p):
-        qc.compose(single_layer(gammas[pi]/max_weight), inplace=True)
-        qc.rx(-2*betas[p], range(nq))
+        qc.compose(single_layer.assign_parameters(gammas[pi]/max_weight), inplace=True)
+        qc.rx(-2*betas[pi], range(nq))
     return qc
