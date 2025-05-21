@@ -4,6 +4,8 @@ Credit to QED-C for implementing the benchmark.
 Reference: https://github.com/SRI-International/QC-App-Oriented-Benchmarks/tree/master
 
 A rough draft for implementing QED-C's Grover's Benchmark into metriq-gym.
+The benchmark generates N circuits for X qubits ranging from min_qubits to max_qubits.
+Each circuit is then ran, and the polorization and Hellinger fidelities are calculated.
 """
 
 from dataclasses import dataclass
@@ -23,7 +25,20 @@ from metriq_gym.benchmarks.grovers.metrics import polarization_fidelity
 
 @dataclass
 class GroversResult(BenchmarkResult):
-    """Stores the results from running Grovers Benchmark."""
+    """Stores the results from running Grovers Benchmark.
+    Results:
+        fidelities: the polorization and Hellinger fidelity for each circuit in each number of qubits;
+                    a fidelity dictionary has the following keys: "fidelity" and "hf_fidelity".
+        all_num_qubits: the range of qubits used to generate circuits.
+        marked_items: a list of secret strings used for each circuit in each number of qubits.
+
+    Example results:
+        Assume fidelities = [[d_1, d_2, d_3], [d_4, d_5, d_6]]
+            where d_x represents a fidelity dictionary for a circuit x.
+        Then say all_num_qubits = [2, 3] and marked_items = [[1, 2, 3], [1, 2, 4]].
+        Then [d_1, d_2, d_3] are all circuits with 2 qubits and each circuit
+        corresponds to a secret string as follows: d_1 = 1, d_2 = 2, d_3 = 3.
+    """
 
     fidelities: list[list[dict[str, float]]]
     all_num_qubits: list[int]
@@ -32,7 +47,17 @@ class GroversResult(BenchmarkResult):
 
 @dataclass
 class GroversData(BenchmarkData):
-    """Stores the input parameters or metadata for Grovers Benchmark."""
+    """Stores the input parameters or metadata for Grovers Benchmark.
+    Paramters/Metadata:
+        shots: number of shots for each grover circuit to be ran with.
+        min_qubits: minimum number of qubits to start generating circuits for the benchmark.
+        max_qubits: maxiumum number of qubits to stop generating circuits for the benchmark.
+        skip_qubits: the step size for generating circuits from the min to max qubit sizes.
+        max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
+        marked_items: a list of secret strings used for each circuit in each number of qubits.
+        all_num_qubits: the range of qubits used to generate circuits.
+        use_mcx_shim: for validating the implementation of an mcx shim.
+    """
 
     shots: int
     min_qubits: int
