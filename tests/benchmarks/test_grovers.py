@@ -8,7 +8,7 @@ def test_create_circuits():
     Note that there are many deprecation warnings that should be addressed.
     """
     grovers_circuits, marked_items, all_num_qubits = create_circuits(
-        min_qubits=2, max_qubits=6, skip_qubits=1, max_circuits=3, use_mcx_shim=False
+        min_qubits=2, max_qubits=6, skip_qubits=1, max_circuits=3
     )
 
     assert len(grovers_circuits) == len(all_num_qubits) * 3
@@ -34,7 +34,6 @@ def test_calc_fidelities():
         max_circuits=3,
         marked_items=[[1, 2, 3], [1, 2, 4]],
         all_num_qubits=[2, 3],
-        use_mcx_shim=False,
     )
 
     counts = [

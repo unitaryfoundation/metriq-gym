@@ -29,7 +29,6 @@
       "description": "Maximum number of qubits to stop generating circuits for the benchmark.",
       "default": 6,
       "minimum": 2,
-      "maximum": 8,
       "examples": [7]
     },
     "skip_qubits": {
@@ -37,7 +36,6 @@
       "description": "The step size for generating circuits from the min to max qubit sizes. ",
       "default": 1,
       "minimum": 1,
-      "maximum": 7,
       "examples": [2]
     },
     "max_circuits": {
@@ -46,12 +44,6 @@
       "default": 3,
       "minimum": 1,
       "examples": [9]
-    },
-    "use_mcx_shim": {
-      "type": "boolean",
-      "description": "Toggles a custom implementation of mcx gates.",
-      "default": false,
-      "examples": [true]
     }
   },
   "required": ["benchmark_name"]

@@ -56,7 +56,6 @@ class GroversData(BenchmarkData):
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
         marked_items: a list of secret strings used for each circuit in each number of qubits.
         all_num_qubits: the range of qubits used to generate circuits.
-        use_mcx_shim: toggles a custom implementation of mcx gates.
     """
 
     shots: int
@@ -66,11 +65,10 @@ class GroversData(BenchmarkData):
     max_circuits: int
     marked_items: list[list[int]]
     all_num_qubits: list[int]
-    use_mcx_shim: bool
 
 
 def create_circuits(
-    min_qubits: int, max_qubits: int, skip_qubits: int, max_circuits: int, use_mcx_shim: bool
+    min_qubits: int, max_qubits: int, skip_qubits: int, max_circuits: int
 ) -> tuple[list[QuantumCircuit], list[list[int]], list[int]]:
     """
     Modified version of the run() function in QED-C's Grover's Benchmark implementation.
@@ -80,7 +78,6 @@ def create_circuits(
         max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
-        use_mcx_shim: toggles a custom implementation of mcx gates.
     Returns:
         1. A list of quantum circuits to run for the benchmark
         2. A 2-D list where the first dimension consists of marked items and the second dimension
@@ -117,7 +114,7 @@ def create_circuits(
 
             n_iterations = int(np.pi * np.sqrt(2**num_qubits) / 4)
 
-            qc = GroversSearch(num_qubits, s_int, n_iterations, use_mcx_shim)
+            qc = GroversSearch(num_qubits, s_int, n_iterations, False)
 
             grovers_circuits.append(qc)
 
@@ -219,14 +216,12 @@ class Grovers(Benchmark):
         max_qubits = self.params.max_qubits
         skip_qubits = self.params.skip_qubits
         max_circuits = self.params.max_circuits
-        use_mcx_shim = self.params.use_mcx_shim
 
         grovers_circuits, marked_items, all_num_qubits = create_circuits(
             min_qubits=min_qubits,
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,
             max_circuits=max_circuits,
-            use_mcx_shim=use_mcx_shim,
         )
 
         quantum_job: QuantumJob | list[QuantumJob] = device.run(grovers_circuits, shots=shots)
@@ -245,7 +240,6 @@ class Grovers(Benchmark):
             max_circuits=max_circuits,
             marked_items=marked_items,
             all_num_qubits=all_num_qubits,
-            use_mcx_shim=use_mcx_shim,
         )
 
     def poll_handler(
