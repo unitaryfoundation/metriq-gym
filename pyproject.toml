@@ -17,7 +17,7 @@ requires-python = ">=3.12"
 mgym = "metriq_gym.run:main"
 
 [tool.poetry.dependencies]
-jsonschema = "^4.23.0"
+jsonschema = "^4.24.0"
 metriq-client = { git = "https://github.com/unitaryfoundation/metriq-client.git", branch = "master" }
 pyqrack = "^1.44.19"
 python = "<3.14,>=3.12"
