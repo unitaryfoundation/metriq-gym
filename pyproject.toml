@@ -19,7 +19,7 @@ mgym = "metriq_gym.run:main"
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
 metriq-client = { git = "https://github.com/unitaryfoundation/metriq-client.git", branch = "master" }
-pyqrack = "^1.42.3"
+pyqrack = "^1.44.19"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.10"
