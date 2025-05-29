@@ -160,7 +160,9 @@ In the event where the job has not completed, we would receive the following mes
 
 ```sh
 INFO - Polling job...
-INFO - Job is not yet completed. Please try again later.
+INFO - Job is not yet completed. Current status:
+INFO - - 93a06a18-41d8-475a-a030-339fbf3accb9: QUEUED (position 3)
+INFO - Please try again later.
 ```
 
 As a convenience, while we could supply the metriq-gym job ID, we can also poll the job by running `mgym poll` and then selecting the job to poll by index from our local metriq-gym jobs database.
