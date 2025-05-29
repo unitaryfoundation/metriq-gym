@@ -3,10 +3,13 @@ from datetime import datetime
 import json
 import os
 import pprint
+import logging
 from typing import Any
 
 from tabulate import tabulate
 from metriq_gym.benchmarks import JobType
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -64,12 +67,17 @@ class JobManager:
         self.jobs = []
         if os.path.exists(self.jobs_file):
             with open(self.jobs_file) as file:
-                for line in file:
+                for line_no, line in enumerate(file, start=1):
                     try:
                         job = MetriqGymJob.deserialize(line.strip())
                         self.jobs.append(job)
-                    except json.JSONDecodeError:
-                        continue
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            "Skipping invalid job entry on line %d of %s: %s",
+                            line_no,
+                            self.jobs_file,
+                            exc,
+                        )
 
     def add_job(self, job: MetriqGymJob) -> str:
         self.jobs.append(job)

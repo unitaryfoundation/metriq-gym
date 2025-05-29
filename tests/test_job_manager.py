@@ -1,5 +1,6 @@
 from unittest.mock import patch
 import pytest
+import logging
 from datetime import datetime
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from tests.test_schema_validator import FAKE_BENCHMARK_NAME, FakeJobType
@@ -48,3 +49,15 @@ def test_load_jobs_with_existing_data(job_manager, sample_job):
     jobs = new_job_manager.get_jobs()
     assert len(jobs) == 1
     assert jobs[0].id == sample_job.id
+
+
+def test_load_jobs_skips_invalid(job_manager, sample_job, caplog):
+    job_manager.add_job(sample_job)
+    with open(JobManager.jobs_file, "a") as f:
+        f.write('{"id": "invalid"}\n')
+    caplog.set_level(logging.WARNING)
+    new_job_manager = JobManager()
+    jobs = new_job_manager.get_jobs()
+    assert len(jobs) == 1
+    assert jobs[0].id == sample_job.id
+    assert "Skipping invalid job entry" in caplog.text
