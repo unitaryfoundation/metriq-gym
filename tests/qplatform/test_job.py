@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 import pytest
 from qbraid.runtime import QuantumJob, QiskitJob
-from metriq_gym.qplatform.job import execution_time, job_status
+from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo
 from datetime import datetime, timedelta
 
 
@@ -22,17 +22,33 @@ def test_execution_time_unsupported():
         execution_time(mock_job)
 
 
-def test_job_status_incomplete():
-    """Verify provider specific status and queue position are reported."""
+def test_job_status_with_queue_position():
+    """Verify status and queue position are extracted correctly from QiskitJob."""
     status_obj = MagicMock()
     status_obj.name = "QUEUED"
 
     qiskit_job = MagicMock(spec=QiskitJob)
-    qiskit_job._job = MagicMock()
-    qiskit_job._job.status.return_value = status_obj
-    qiskit_job._job.queue_position.return_value = 3
+    qiskit_job.status.return_value = status_obj
+    qiskit_job.queue_position.return_value = 3
 
     info = job_status(qiskit_job)
 
+    assert isinstance(info, JobStatusInfo)
     assert info.status == "QUEUED"
     assert info.queue_position == 3
+
+
+def test_job_status_without_queue_position():
+    """Verify fallback when queue position is unavailable."""
+    status_obj = MagicMock()
+    status_obj.name = "RUNNING"
+
+    qiskit_job = MagicMock(spec=QiskitJob)
+    qiskit_job.status.return_value = status_obj
+    del qiskit_job.queue_position  # simulate method absence
+
+    info = job_status(qiskit_job)
+
+    assert isinstance(info, JobStatusInfo)
+    assert info.status == "RUNNING"
+    assert info.queue_position is None
