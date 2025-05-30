@@ -5,6 +5,8 @@ from metriq_gym.benchmarks.qml_kernel import QMLKernel, QMLKernelData
 from metriq_gym.benchmarks.clops import Clops, ClopsData
 from metriq_gym.benchmarks.quantum_volume import QuantumVolume, QuantumVolumeData
 from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
+from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData
+# from metriq_gym.job_type import JobType
 
 
 class JobType(StrEnum):
@@ -12,6 +14,7 @@ class JobType(StrEnum):
     CLOPS = "CLOPS"
     QML_KERNEL = "QML Kernel"
     QUANTUM_VOLUME = "Quantum Volume"
+    LinearRampQAOA = "Linear Ramp QAOA"
 
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
@@ -19,6 +22,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.CLOPS: Clops,
     JobType.QML_KERNEL: QMLKernel,
     JobType.QUANTUM_VOLUME: QuantumVolume,
+    JobType.LinearRampQAOA: LinearRampQAOA,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -26,6 +30,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.CLOPS: ClopsData,
     JobType.QML_KERNEL: QMLKernelData,
     JobType.QUANTUM_VOLUME: QuantumVolumeData,
+    JobType.LinearRampQAOA: LinearRampQAOAData,
 }
 
 SCHEMA_MAPPING = {

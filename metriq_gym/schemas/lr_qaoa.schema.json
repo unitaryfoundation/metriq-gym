@@ -1,0 +1,63 @@
+{
+  "$id": "metriq-gym/lr_qaoa.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "title": "LR-QAOA",
+  "description": "The LR-QAOA benchmark schema definition, describing parameters for measuring a successful implementation.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "LR-QAOA",
+      "description": "Name of the benchmark. Must be 'LR-QAOA' for this schema."
+    },
+    "num_qubits": {
+      "type": "integer",
+      "description": "Number of qubits in the LR-QAOA circuit(s).",
+      "minimum": 1,
+      "examples": [5]
+    },
+    "num_layers": {
+      "type": "list",
+      "description": "List with the layers in the LR-QAOA circuits.",
+      "minimum": [3],
+      "examples": [3,4,5]
+    },
+    "delta_beta": {
+      "type": "number",
+      "description": "Slope for beta parameters in the linear function in the LR-QAOA circuits.",
+      "default":0.3,
+      "minimum": 0.0,
+      "examples": 0.3
+    },
+    "delta_gamma": {
+      "type": "number",
+      "description": "Slope for gamma parameters in the linear function in the LR-QAOA circuits.",
+      "default":0.3,
+      "minimum": 0.0,
+      "examples": 0.3
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots (repetitions) per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "trials": {
+      "type": "integer",
+      "description": "Number of circuits to generate and measure for the LR-QAOA test.",
+      "default": 100,
+      "minimum": 1,
+      "examples": [100]
+    },
+    "confidence_level": {
+      "type": "number",
+      "description": "Confidence level for establishing LR-QAOA success criteria. Must be between 0 and 1.",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.995,
+      "examples": [0.995, 0.999]
+    }
+  },
+  "required": ["benchmark_name", "num_qubits", "p"]
+}
