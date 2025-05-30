@@ -1,3 +1,4 @@
+
 """Command-line parsing for running metriq benchmarks."""
 
 import argparse
@@ -66,6 +67,20 @@ def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqG
     return jobs[selected_index]
 
 
+def get_available_providers():
+    """Get list of available providers including local simulators.
+    
+    Returns:
+        list: List of provider names including remote providers and 'local'
+    """
+    try:
+        remote_providers = get_providers()
+        return remote_providers + ["local"]
+    except Exception:
+        # Fallback if qBraid is not available or configured
+        return ["local", "aws", "azure", "ibm", "ionq", "oqc", "qbraid"]
+
+
 def parse_arguments() -> argparse.Namespace:
     """
     Parse command-line arguments for the quantum volume benchmark.
@@ -86,14 +101,14 @@ def parse_arguments() -> argparse.Namespace:
         "-p",
         "--provider",
         type=str,
-        choices=get_providers(),
-        help="String identifier for backend provider service",
+        choices=get_available_providers(),
+        help="String identifier for backend provider service (including 'local' for local simulators)",
     )
     dispatch_parser.add_argument(
         "-d",
         "--device",
         type=str,
-        help="Backend to use",
+        help="Backend to use (e.g., 'aer_simulator' for local provider)",
     )
 
     poll_parser = subparsers.add_parser("poll", help="Poll jobs")

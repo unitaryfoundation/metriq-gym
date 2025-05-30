@@ -182,12 +182,35 @@ Select a job index: 0
 INFO - Polling job...
 ```
 
+### Local Simulators
+
+Metriq-gym also supports running benchmarks on local simulators for development and testing. Local simulators run immediately on your machine without requiring cloud API keys.
+
+#### Supported Simulators
+- **Qiskit Aer**: `aer_simulator`, `aer_simulator_statevector`, `aer_simulator_stabilizer`
+
+#### Installation
+```sh
+pip install qiskit-aer
+```
+
+#### Usage
+Use the same workflow as cloud providers, but specify `--provider local`:
+
+```sh
+# Dispatch a benchmark on local simulator
+mgym dispatch metriq_gym/schemas/examples/bseq.example.json --provider local --device aer_simulator
+
+# Poll results (jobs complete immediately)
+mgym poll --job_id <METRIQ_GYM_JOB_ID>
+```
+
 ## Contributing
 
 First, follow the [Setup](#setup) instructions above.
 
 ### Updating the submodule
-To pull the latest changes from the submodule’s repository:
+To pull the latest changes from the submodule's repository:
 
 ```sh
 cd submodules/qiskit-device-benchmarking
