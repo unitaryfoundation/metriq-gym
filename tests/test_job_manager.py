@@ -143,8 +143,8 @@ def test_load_jobs_with_invalid_entries(tmpdir, caplog):
     
     # Check that warning messages contain expected information and specific error types
     warning_text = " ".join(warning_messages)
-    assert "malformed JSON" in warning_text           # JSONDecodeError
-    assert "Incorrect data structure" in warning_text # TypeError from constructor 
-    assert "Unknown job type" in warning_text         # ValueError from invalid enum
-    assert "Invalid datetime format" in warning_text  # ValueError from datetime parsing
+    assert "Malformed JSON at pos" in warning_text        # JSONDecodeError
+    assert "Incorrect data structure:" in warning_text    # TypeError from constructor 
+    assert "Unknown job type:" in warning_text            # ValueError from invalid enum
+    assert "Bad datetime format:" in warning_text         # ValueError from datetime parsing
     assert all(str(jobs_file) in msg for msg in warning_messages)
