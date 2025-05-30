@@ -80,7 +80,8 @@ def parse_arguments() -> argparse.Namespace:
     dispatch_parser.add_argument(
         "input_file",
         type=str,
-        help="Path to the file containing the benchmark parameters",
+        nargs="?",
+        help="Path to the file containing the benchmark parameters (required unless --all-benchmarks is used)",
     )
     dispatch_parser.add_argument(
         "-p",
@@ -94,6 +95,17 @@ def parse_arguments() -> argparse.Namespace:
         "--device",
         type=str,
         help="Backend to use",
+    )
+    dispatch_parser.add_argument(
+        "--all-benchmarks",
+        action="store_true",
+        help="Run all available benchmarks on the specified device",
+    )
+    dispatch_parser.add_argument(
+        "--except",
+        nargs="*",
+        dest="exclude_benchmarks",
+        help="Benchmarks to exclude when using --all-benchmarks (e.g., 'BSEQ' 'CLOPS')",
     )
 
     poll_parser = subparsers.add_parser("poll", help="Poll jobs")

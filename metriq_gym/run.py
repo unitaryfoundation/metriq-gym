@@ -1,6 +1,7 @@
 import argparse
 from dataclasses import asdict
 from datetime import datetime
+import os
 import sys
 import logging
 import uuid
@@ -17,7 +18,7 @@ from qbraid.runtime import (
     load_provider,
 )
 
-from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS
+from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS, SCHEMA_MAPPING
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
 from metriq_gym.cli import parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError
@@ -67,7 +68,93 @@ def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
     return BENCHMARK_DATA_CLASSES[job_type]
 
 
+def get_example_file_path(job_type: JobType) -> str:
+    """Get the path to the example file for a given benchmark type."""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    example_files = {
+        JobType.BSEQ: "bseq.example.json",
+        JobType.CLOPS: "clops.example.json", 
+        JobType.QML_KERNEL: "qml_kernel.example.json",
+        JobType.QUANTUM_VOLUME: "quantum_volume.example.json",
+    }
+    return os.path.join(current_dir, "schemas", "examples", example_files[job_type])
+
+
+def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -> None:
+    """Dispatch all available benchmarks to a single device."""
+    print("Starting bulk benchmark dispatch...")
+    
+    try:
+        device = setup_device(args.provider, args.device)
+    except QBraidSetupError:
+        return
+
+    # Get all available benchmarks
+    available_benchmarks = list(JobType)
+    
+    # Filter excluded benchmarks
+    if args.exclude_benchmarks:
+        excluded = [JobType(name) for name in args.exclude_benchmarks if name in [jt.value for jt in JobType]]
+        available_benchmarks = [jt for jt in available_benchmarks if jt not in excluded]
+        if args.exclude_benchmarks:
+            print(f"Excluding benchmarks: {[jt.value for jt in excluded]}")
+
+    print(f"Running {len(available_benchmarks)} benchmarks on {args.device} device...")
+    
+    results = []
+    successful_jobs = []
+    
+    for job_type in available_benchmarks:
+        try:
+            # Load example file for this benchmark
+            example_file = get_example_file_path(job_type)
+            if not os.path.exists(example_file):
+                results.append(f"✗ {job_type.value}: Example file not found")
+                continue
+                
+            params = load_and_validate(example_file)
+            handler = setup_benchmark(args, params, job_type)
+            job_data = handler.dispatch_handler(device)
+            
+            job_id = job_manager.add_job(
+                MetriqGymJob(
+                    id=str(uuid.uuid4()),
+                    job_type=job_type,
+                    params=params.model_dump(),
+                    data=asdict(job_data),
+                    provider_name=args.provider,
+                    device_name=args.device,
+                    dispatch_time=datetime.now(),
+                )
+            )
+            
+            results.append(f"✓ {job_type.value} dispatched with ID: {job_id}")
+            successful_jobs.append(job_id)
+            
+        except Exception as e:
+            results.append(f"✗ {job_type.value} failed: {str(e)}")
+    
+    # Print summary
+    print("\nSummary:")
+    for result in results:
+        print(f"  {result}")
+    
+    print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(available_benchmarks)} benchmarks.")
+    if successful_jobs:
+        print("Use 'mgym poll' to check job status.")
+
+
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
+    """Dispatch job(s) based on provided arguments."""
+    if args.all_benchmarks:
+        dispatch_all_benchmarks(args, job_manager)
+        return
+    
+    # Original single benchmark dispatch logic
+    if not args.input_file:
+        logger.error("input_file is required when not using --all-benchmarks")
+        return
+        
     print("Starting job dispatch...")
     try:
         device = setup_device(args.provider, args.device)
