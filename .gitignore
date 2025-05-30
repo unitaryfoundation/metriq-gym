@@ -40,3 +40,4 @@ docs/_build/
 
 # mypy
 .mypy_cache/
+/python=3.12

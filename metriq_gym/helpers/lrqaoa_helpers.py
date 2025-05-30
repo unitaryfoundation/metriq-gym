@@ -2,6 +2,23 @@ import numpy as np
 from collections import defaultdict
 import networkx as nx
 import math
+from docplex.mp.model import Model
+
+def weighted_maxcut_solver(G: nx.Graph) -> str:
+    """ Constructs a mathematical model for the Max-Cut problem using the CPLEX solver.
+    This function creates a binary optimization model to maximize the cut in a weighted graph.
+    Args:
+        G (networkx.Graph): The input weighted graph where edges represent cut costs.
+    Returns:
+        str: A binary string representing the optimal partition of the graph nodes (e.g., "1010").
+    """
+    mdl = Model('MaxCut')
+    num_nodes = G.number_of_nodes()
+    x = {i: mdl.binary_var(name=f"x_{i}") for i in range(num_nodes)}
+    mdl.minimize(mdl.sum(G[i][j]["weight"] * (2 * x[i] * x[j] - x[i] - x[j])  for (i, j) in G.edges))
+    mdl.solve()
+    optimal_solution = "".join(str(round(mdl.solution.get_value(var))) for var in mdl.iter_binary_vars())
+    return optimal_solution
 
 def cost_maxcut(bitstring: str, G: nx.Graph) -> float:
     """
