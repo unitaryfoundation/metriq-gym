@@ -67,17 +67,34 @@ class JobManager:
         self.jobs = []
         if os.path.exists(self.jobs_file):
             with open(self.jobs_file) as file:
-                for line_no, line in enumerate(file, start=1):
+                for line_number, line in enumerate(file, start=0):  
+                    stripped_line = line.strip()
+                    if not stripped_line:
+                        continue
                     try:
-                        job = MetriqGymJob.deserialize(line.strip())
+                        job = MetriqGymJob.deserialize(stripped_line)
+
+                        if not isinstance(getattr(job, "job_type", None), JobType):
+                            raise ValueError("Invalid or missing job_type")
+
+                        if not isinstance(getattr(job, "params", None), dict):
+                            raise TypeError("Invalid or missing params")
+
+                        if not isinstance(getattr(job, "device_name", None), str):
+                            raise ValueError("Invalid or missing device_name")
+
                         self.jobs.append(job)
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning(
-                            "Skipping invalid job entry on line %d of %s: %s",
-                            line_no,
-                            self.jobs_file,
-                            exc,
-                        )
+
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Line {line_number}: Invalid JSON (pos {e.pos})")
+                    except (KeyError, TypeError, ValueError) as e:
+                        logger.warning(f"Line {line_number}: {e}")
+                    except Exception as e:
+                        logger.warning(f"Line {line_number}: Unexpected error ({type(e).__name__}) - {e}")
+
+        if not self.jobs:
+            logger.warning(f"No valid jobs found in {self.jobs_file}.")
+
 
     def add_job(self, job: MetriqGymJob) -> str:
         self.jobs.append(job)
