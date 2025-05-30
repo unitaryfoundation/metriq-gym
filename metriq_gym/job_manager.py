@@ -77,17 +77,61 @@ class JobManager:
         - The datetime format is invalid
         - Required fields are missing
         - The JSON structure doesn't match the expected schema
+        - The file contains malformed JSON
         """
         self.jobs = []
         if os.path.exists(self.jobs_file):
             with open(self.jobs_file) as file:
                 for line_number, line in enumerate(file, 1):
+                    line = line.strip()
+                    if not line:  # Skip empty lines
+                        continue
+                    
                     try:
-                        job = MetriqGymJob.deserialize(line.strip())
+                        job = MetriqGymJob.deserialize(line)
                         self.jobs.append(job)
-                    except Exception as e:
+                    except json.JSONDecodeError as e:
                         logger.warning(
-                            f"Skipping invalid job on line {line_number} in {self.jobs_file}: {e}"
+                            f"Skipping malformed JSON on line {line_number} in {self.jobs_file}: "
+                            f"Invalid JSON syntax at position {e.pos}"
+                        )
+                        continue
+                    except KeyError as e:
+                        logger.warning(
+                            f"Skipping job on line {line_number} in {self.jobs_file}: "
+                            f"Missing required field {e}"
+                        )
+                        continue
+                    except ValueError as e:
+                        # This covers JobType enum errors and datetime parsing errors
+                        error_msg = str(e)
+                        if "is not a valid JobType" in error_msg or "JobType" in error_msg:
+                            logger.warning(
+                                f"Skipping job on line {line_number} in {self.jobs_file}: "
+                                f"Unknown job type - {e}"
+                            )
+                        elif "datetime" in error_msg.lower() or "time" in error_msg.lower():
+                            logger.warning(
+                                f"Skipping job on line {line_number} in {self.jobs_file}: "
+                                f"Invalid datetime format - {e}"
+                            )
+                        else:
+                            logger.warning(
+                                f"Skipping job on line {line_number} in {self.jobs_file}: "
+                                f"Invalid value - {e}"
+                            )
+                        continue
+                    except TypeError as e:
+                        logger.warning(
+                            f"Skipping job on line {line_number} in {self.jobs_file}: "
+                            f"Incorrect data structure - {e}"
+                        )
+                        continue
+                    except Exception as e:
+                        # Catch-all for any other unexpected errors
+                        logger.warning(
+                            f"Skipping job on line {line_number} in {self.jobs_file}: "
+                            f"Unexpected error ({type(e).__name__}): {e}"
                         )
                         continue
 

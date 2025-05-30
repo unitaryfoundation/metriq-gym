@@ -73,11 +73,24 @@ def test_load_jobs_with_invalid_entries(tmpdir, caplog):
         # Valid job
         f.write(valid_job.serialize() + "\n")
         
-        # Invalid JSON (malformed)
+        # Empty line (should be skipped silently)
+        f.write("\n")
+        
+        # Invalid JSON (malformed) - missing closing brace
         f.write('{"invalid": "json", "missing_fields": true\n')
         
-        # Valid JSON but invalid job type
-        invalid_job_data = {
+        # Valid JSON but missing required constructor arguments
+        missing_constructor_args = {
+            "id": "missing_args_id",
+            "params": {},
+            "data": {},
+            "provider_name": "test_provider",
+            # Missing job_type, device_name and dispatch_time - will cause TypeError in constructor
+        }
+        f.write(json.dumps(missing_constructor_args) + "\n")
+        
+        # Valid JSON but invalid job type value
+        invalid_job_type_value = {
             "id": "invalid_job_type_id",
             "job_type": "NONEXISTENT_TYPE",
             "params": {},
@@ -86,7 +99,7 @@ def test_load_jobs_with_invalid_entries(tmpdir, caplog):
             "device_name": "test_device",
             "dispatch_time": "2023-01-01T00:00:00"
         }
-        f.write(json.dumps(invalid_job_data) + "\n")
+        f.write(json.dumps(invalid_job_type_value) + "\n")
         
         # Valid JSON but invalid datetime format
         invalid_datetime_job = {
@@ -124,12 +137,14 @@ def test_load_jobs_with_invalid_entries(tmpdir, caplog):
     assert jobs[0].id == "valid_job_id"
     assert jobs[1].id == "valid_job_id_2"
     
-    # Should have logged warnings for the 3 invalid entries
+    # Should have logged warnings for the 4 invalid entries (excluding empty line)
     warning_messages = [record.message for record in caplog.records if record.levelno == logging.WARNING]
-    assert len(warning_messages) == 3
+    assert len(warning_messages) == 4
     
-    # Check that warning messages contain expected information
-    assert any("line 2" in msg for msg in warning_messages)
-    assert any("line 3" in msg for msg in warning_messages) 
-    assert any("line 4" in msg for msg in warning_messages)
+    # Check that warning messages contain expected information and specific error types
+    warning_text = " ".join(warning_messages)
+    assert "malformed JSON" in warning_text           # JSONDecodeError
+    assert "Incorrect data structure" in warning_text # TypeError from constructor 
+    assert "Unknown job type" in warning_text         # ValueError from invalid enum
+    assert "Invalid datetime format" in warning_text  # ValueError from datetime parsing
     assert all(str(jobs_file) in msg for msg in warning_messages)
