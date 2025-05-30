@@ -118,7 +118,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         print("Job is not yet completed. Current status:")
         for task in quantum_jobs:
             info = job_status(task)
-            msg = f"- {task.id}: {info.status}"
+            msg = f"- {metriq_job.id}: {info.status}"
             if info.queue_position is not None:
                 msg += f" (position {info.queue_position})"
             print(msg)
