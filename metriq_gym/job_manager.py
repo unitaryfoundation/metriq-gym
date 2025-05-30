@@ -64,8 +64,12 @@ class JobManager:
     def __init__(self):
         self._load_jobs()
 
+    def _log_skip(self, line_number: int, reason: str) -> None:
+        """Log a warning for skipped invalid job entry."""
+        logger.warning(f"Skipping job on line {line_number} in {self.jobs_file}: {reason}")
+
     def _load_jobs(self):
-        """Load jobs from the local JSONL database file.
+        """Load jobs from the local JSONL database file, skipping invalid entries.
         
         This method loads all valid jobs from the JSONL file and silently skips
         any invalid entries (e.g., due to schema changes, corrupted data, or
@@ -80,60 +84,36 @@ class JobManager:
         - The file contains malformed JSON
         """
         self.jobs = []
-        if os.path.exists(self.jobs_file):
-            with open(self.jobs_file) as file:
-                for line_number, line in enumerate(file, 1):
-                    line = line.strip()
-                    if not line:  # Skip empty lines
-                        continue
-                    
-                    try:
-                        job = MetriqGymJob.deserialize(line)
-                        self.jobs.append(job)
-                    except json.JSONDecodeError as e:
-                        logger.warning(
-                            f"Skipping malformed JSON on line {line_number} in {self.jobs_file}: "
-                            f"Invalid JSON syntax at position {e.pos}"
-                        )
-                        continue
-                    except KeyError as e:
-                        logger.warning(
-                            f"Skipping job on line {line_number} in {self.jobs_file}: "
-                            f"Missing required field {e}"
-                        )
-                        continue
-                    except ValueError as e:
-                        # This covers JobType enum errors and datetime parsing errors
-                        error_msg = str(e)
-                        if "is not a valid JobType" in error_msg or "JobType" in error_msg:
-                            logger.warning(
-                                f"Skipping job on line {line_number} in {self.jobs_file}: "
-                                f"Unknown job type - {e}"
-                            )
-                        elif "datetime" in error_msg.lower() or "time" in error_msg.lower():
-                            logger.warning(
-                                f"Skipping job on line {line_number} in {self.jobs_file}: "
-                                f"Invalid datetime format - {e}"
-                            )
-                        else:
-                            logger.warning(
-                                f"Skipping job on line {line_number} in {self.jobs_file}: "
-                                f"Invalid value - {e}"
-                            )
-                        continue
-                    except TypeError as e:
-                        logger.warning(
-                            f"Skipping job on line {line_number} in {self.jobs_file}: "
-                            f"Incorrect data structure - {e}"
-                        )
-                        continue
-                    except Exception as e:
-                        # Catch-all for any other unexpected errors
-                        logger.warning(
-                            f"Skipping job on line {line_number} in {self.jobs_file}: "
-                            f"Unexpected error ({type(e).__name__}): {e}"
-                        )
-                        continue
+        if not os.path.exists(self.jobs_file):
+            return
+        
+        with open(self.jobs_file) as file:
+            for line_number, raw in enumerate(file, 1):
+                line = raw.strip()
+                if not line:  # Skip empty lines
+                    continue
+                
+                try:
+                    job = MetriqGymJob.deserialize(line)
+                except json.JSONDecodeError as e:
+                    self._log_skip(line_number, f"Malformed JSON at pos {e.pos}")
+                except KeyError as e:
+                    self._log_skip(line_number, f"Missing field {e}")
+                except ValueError as e:
+                    text = str(e).lower()
+                    if "not a valid" in text and "jobtype" in text:
+                        self._log_skip(line_number, f"Unknown job type: {e}")
+                    elif "datetime" in text or "time" in text:
+                        self._log_skip(line_number, f"Bad datetime format: {e}")
+                    else:
+                        self._log_skip(line_number, f"Invalid value: {e}")
+                except TypeError as e:
+                    self._log_skip(line_number, f"Incorrect data structure: {e}")
+                except Exception as e:
+                    self._log_skip(line_number, f"Unexpected error ({type(e).__name__}): {e}")
+                else:
+                    # Only append if no exception occurred
+                    self.jobs.append(job)
 
     def add_job(self, job: MetriqGymJob) -> str:
         self.jobs.append(job)
