@@ -1,12 +1,16 @@
 from dataclasses import asdict, dataclass
 from datetime import datetime
 import json
+import logging
 import os
 import pprint
 from typing import Any
 
 from tabulate import tabulate
 from metriq_gym.benchmarks import JobType
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -61,14 +65,30 @@ class JobManager:
         self._load_jobs()
 
     def _load_jobs(self):
+        """Load jobs from the local JSONL database file.
+        
+        This method loads all valid jobs from the JSONL file and silently skips
+        any invalid entries (e.g., due to schema changes, corrupted data, or
+        unsupported job types). Invalid jobs are logged as warnings but do not
+        prevent the loading of other valid jobs.
+        
+        Invalid jobs can occur when:
+        - The job type no longer exists in the current JobType enum
+        - The datetime format is invalid
+        - Required fields are missing
+        - The JSON structure doesn't match the expected schema
+        """
         self.jobs = []
         if os.path.exists(self.jobs_file):
             with open(self.jobs_file) as file:
-                for line in file:
+                for line_number, line in enumerate(file, 1):
                     try:
                         job = MetriqGymJob.deserialize(line.strip())
                         self.jobs.append(job)
-                    except json.JSONDecodeError:
+                    except Exception as e:
+                        logger.warning(
+                            f"Skipping invalid job on line {line_number} in {self.jobs_file}: {e}"
+                        )
                         continue
 
     def add_job(self, job: MetriqGymJob) -> str:
