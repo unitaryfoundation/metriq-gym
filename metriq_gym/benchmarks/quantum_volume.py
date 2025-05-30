@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
-from pyqrack import QrackSimulator
 from qiskit import QuantumCircuit
 
 from metriq_gym.circuits import qiskit_random_circuit_sampling
@@ -35,6 +34,16 @@ class QuantumVolumeResult(BenchmarkResult):
 
 
 def prepare_qv_circuits(n: int, num_trials: int) -> tuple[list[QuantumCircuit], list[list[float]]]:
+    # Lazy import of pyqrack to avoid system dependency issues
+    try:
+        from pyqrack import QrackSimulator
+    except ImportError as e:
+        raise ImportError(
+            "pyqrack is required for Quantum Volume benchmarks. "
+            "Please ensure Qrack and its dependencies (OpenCL) are properly installed. "
+            f"Original error: {e}"
+        ) from e
+    
     circuits = []
     ideal_probs = []
 
