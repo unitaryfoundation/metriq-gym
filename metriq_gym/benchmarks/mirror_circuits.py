@@ -1,5 +1,5 @@
-
-"""Mirror circuits benchmark for the Metriq Gym.
+"""
+Mirror circuits benchmark for the Metriq Gym.
 
 This benchmark evaluates a quantum device's ability to execute mirror circuits,
 which are quantum circuits with a reflection structure that perform calculations
