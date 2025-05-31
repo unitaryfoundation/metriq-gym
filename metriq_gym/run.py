@@ -57,7 +57,8 @@ class LocalProvider:
     
     def _load_available_devices(self):
         """Load available devices from configuration and adapters."""
-        from metriq_gym.qplatform.device import get_available_simulators
+        from metriq_gym.simulators.adapters import get_available_simulators
+
         self._available_devices = get_available_simulators()
     
     def get_device(self, device_id: str):
@@ -83,7 +84,7 @@ class LocalProvider:
             logger.error(f"Available local devices: {all_available}")
             raise QBraidSetupError(f"Local device '{device_id}' not found")
         
-        from metriq_gym.qplatform.device import create_local_device
+        from metriq_gym.simulators.adapters import create_local_device
         return create_local_device(mapped_device_id)
     
     def get_devices(self):
@@ -92,7 +93,7 @@ class LocalProvider:
         Returns:
             list: List of available LocalDevice instances
         """
-        from metriq_gym.qplatform.device import create_local_device
+        from metriq_gym.simulators.adapters import create_local_device
         devices = []
         for device_id in self._available_devices.keys():
             try:

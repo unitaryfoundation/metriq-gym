@@ -50,6 +50,17 @@ class SimulatorAdapter(Protocol):
             Version string for the simulator
         """
         ...
+    
+    def convert_results_to_counts(self, raw_results: Any) -> list[MeasCount]:
+        """Convert raw simulator results to standardized MeasCount format.
+        
+        Args:
+            raw_results: Raw results from the simulator backend
+            
+        Returns:
+            List of MeasCount objects in standardized format
+        """
+        ...
 
 
 class QiskitAerAdapter:
@@ -131,6 +142,31 @@ class QiskitAerAdapter:
             return qiskit_aer.__version__
         except (ImportError, AttributeError):
             return "unknown"
+    
+    def convert_results_to_counts(self, raw_results: Any) -> list[MeasCount]:
+        """Convert Qiskit results to MeasCount format.
+        
+        Args:
+            raw_results: List of Qiskit result objects
+            
+        Returns:
+            List of MeasCount objects
+        """
+        measurement_counts = []
+        
+        for result in raw_results:
+            if hasattr(result, 'get_counts'):
+                if hasattr(result, 'results') and len(result.results) > 0:
+                    # Multiple circuits
+                    for i in range(len(result.results)):
+                        counts = result.get_counts(i)
+                        measurement_counts.append(MeasCount(dict(counts)))
+                else:
+                    # Single circuit
+                    counts = result.get_counts()
+                    measurement_counts.append(MeasCount(dict(counts)))
+        
+        return measurement_counts
 
 
 class LocalDevice:
@@ -184,11 +220,15 @@ class LocalDevice:
         
         # Execute circuits immediately (synchronous)
         try:
-            results = self._adapter.run_circuits(circuits, shots)
+            # Run circuits using adapter
+            raw_results = self._adapter.run_circuits(circuits, shots)
             
-            # Create a local job with immediate results
+            # Convert results to standardized format using adapter
+            processed_results = self._adapter.convert_results_to_counts(raw_results)
+            
+            # Create a local job with processed results (modular design)
             job_id = str(uuid.uuid4())
-            return LocalJob(job_id, results, self._results_cache, self._adapter)
+            return LocalJob(job_id, processed_results, self._results_cache)
             
         except Exception as e:
             raise RuntimeError(f"Local simulator execution failed: {e}")
@@ -296,4 +336,3 @@ def create_local_device(device_spec: str) -> LocalDevice:
     adapter = adapter_class(method)
     
     return LocalDevice(device_spec, adapter)
-
