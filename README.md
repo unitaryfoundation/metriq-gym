@@ -184,7 +184,7 @@ INFO - Polling job...
 
 ### Running multiple benchmarks
 
-`metriq-gym` supports running all available benchmarks on a device to obtain a comprehensive performance profile.
+`metriq-gym` supports running multiple benchmarks as a batch to a device to obtain a comprehensive performance profile.
 
 #### All benchmarks
 To run all available benchmarks (refer to the supported benchmarks in the [`benchmarks`](https://github.com/unitaryfoundation/metriq-gym/tree/main/metriq_gym/benchmarks) directory) on a device:
