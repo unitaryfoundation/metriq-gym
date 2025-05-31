@@ -211,7 +211,7 @@ class MirrorCircuits(Benchmark):
         two_qubit_gate_prob = self.params.two_qubit_gate_prob
         two_qubit_gate_name = self.params.two_qubit_gate_name
         shots = self.params.shots
-        seed = getattr(self.params, 'seed', None)
+        seed = getattr(self.params, "seed", None)
 
         topology_graph = connectivity_graph(device)
         
