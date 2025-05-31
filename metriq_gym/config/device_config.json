@@ -1,0 +1,70 @@
+
+{
+  "topology_defaults": {
+    "max_qubits": 10,
+    "default_topology": "line",
+    "warning_threshold": 127
+  },
+  "topologies": {
+    "line": {
+      "bipartite": true,
+      "description": "Linear chain topology (always bipartite)",
+      "recommended_for": ["BSEQ", "most_benchmarks"]
+    },
+    "ring": {
+      "bipartite_condition": "even_nodes",
+      "description": "Ring topology (bipartite only for even number of qubits)",
+      "recommended_for": ["specialized_benchmarks"]
+    },
+    "grid": {
+      "bipartite": true,
+      "description": "2D grid topology (always bipartite)",
+      "recommended_for": ["2D_problems", "density_matrix_simulations"]
+    },
+    "heavy_hex": {
+      "bipartite": true,
+      "description": "IBM heavy hexagon topology",
+      "recommended_for": ["IBM_compatibility"]
+    },
+    "all_to_all": {
+      "bipartite_condition": "small_only",
+      "description": "Complete graph (rarely bipartite, use with caution)",
+      "recommended_for": ["small_circuits_only"],
+      "max_recommended_qubits": 6
+    }
+  },
+  "simulator_defaults": {
+    "qiskit.aer": {
+      "default_method": "automatic",
+      "supported_methods": ["automatic", "statevector", "stabilizer", "density_matrix"],
+      "max_qubits_by_method": {
+        "statevector": 25,
+        "density_matrix": 12,
+        "stabilizer": 50,
+        "automatic": 64
+      }
+    }
+  },
+  "benchmark_compatibility": {
+    "BSEQ": {
+      "requires_bipartite": true,
+      "recommended_topology": "line",
+      "max_recommended_qubits": 20
+    },
+    "CLOPS": {
+      "requires_bipartite": false,
+      "recommended_topology": "line",
+      "max_recommended_qubits": 15
+    },
+    "Quantum Volume": {
+      "requires_bipartite": false,
+      "recommended_topology": "line",
+      "max_recommended_qubits": 20
+    },
+    "QML Kernel": {
+      "requires_bipartite": false,
+      "recommended_topology": "line",
+      "max_recommended_qubits": 12
+    }
+  }
+}
