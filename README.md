@@ -187,7 +187,7 @@ INFO - Polling job...
 `metriq-gym` supports running all available benchmarks on a device to obtain a comprehensive performance profile.
 
 #### All benchmarks
-To run all available benchmarks (BSEQ, CLOPS, Quantum Volume, QML Kernel) on a device:
+To run all available benchmarks (refer to the supported benchmarks in the [`benchmarks`](https://github.com/unitaryfoundation/metriq-gym/tree/main/metriq_gym/benchmarks) directory) on a device:
 
 ```sh
 mgym dispatch --all-benchmarks --provider ibm --device ibm_sherbrooke
