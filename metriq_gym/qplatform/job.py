@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from functools import singledispatch
+from typing import Optional
 
 from qbraid import QuantumJob
 from qbraid.runtime import QiskitJob, AzureQuantumJob, BraketQuantumTask
+from qbraid.runtime.enums import JobStatus
 from qiskit_ibm_runtime.execution_span import ExecutionSpans
 
 
@@ -40,17 +42,18 @@ def _(quantum_job: BraketQuantumTask) -> float:
 class JobStatusInfo:
     """Provider agnostic job status information."""
 
-    status: str
-    queue_position: int | None = None
+    status: JobStatus
+    queue_position: Optional[int] = None
 
 
 def extract_status_info(quantum_job: QuantumJob, supports_queue_position: bool) -> JobStatusInfo:
     """Helper to extract job status and optionally queue position."""
     try:
         status_obj = quantum_job.status()
-        status = getattr(status_obj, "name", str(status_obj))
+        raw_status = getattr(status_obj, "name", str(status_obj)).upper()
+        status = JobStatus(raw_status) if raw_status in JobStatus.__members__ else JobStatus.UNKNOWN
     except Exception:
-        status = "UNKNOWN"
+        status = JobStatus.UNKNOWN
 
     queue_position = None
     if supports_queue_position:
