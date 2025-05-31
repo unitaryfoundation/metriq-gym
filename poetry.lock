@@ -3230,30 +3230,30 @@ diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pyqasm"
-version = "0.3.0"
+version = "0.3.2"
 description = "Python toolkit providing an OpenQASM 3 semantic analyzer and utilities for program analysis and compilation."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
-    {file = "pyqasm-0.3.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:70a088a60fad4dd9633e88562f897983667563630b437be0f2f205d50d84dfe4"},
-    {file = "pyqasm-0.3.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:d4502075d5a0ea74fddefeef1b07d65342982e079a264f3dd9fc5dec1a6de957"},
-    {file = "pyqasm-0.3.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fdb74a7ec482a3731cb23b8b976a4ac6138c1fa7c556f6ea261acbeb24636199"},
-    {file = "pyqasm-0.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:badf90799e6429a4e5780ea97382366f4d6b4bf8b59a4bbfa1d361e89c0e6cf1"},
-    {file = "pyqasm-0.3.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:36adf089604f5888060ec00da55646b5a36bad16b2bd111c8bfb3333cc1a8499"},
-    {file = "pyqasm-0.3.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4c9408a9d051b5c564607ba2ca0b007a86b63bffccb19860721ca06f2883060b"},
-    {file = "pyqasm-0.3.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:55733cff2672cd66a6c06efe4b584ccbf3ce6fe2027362fccb15285c2b06c376"},
-    {file = "pyqasm-0.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:f9aadb7cb19723ddcbb9fa3fde47ffc36d9dfdc0a39acb8d28e85baa85324e29"},
-    {file = "pyqasm-0.3.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:ddac0765eb943eace1873f271dfce8d35e6e75bde4b6d71fef371b326bd448f5"},
-    {file = "pyqasm-0.3.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:aeadc2d5692d64b1d01466710edf8d7532b7db44ad66b0150e14acddbf935ffe"},
-    {file = "pyqasm-0.3.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:76a7fdbf3849d60ee4329624f26dc9bbea9f40caa3c4549889b6f44d71315921"},
-    {file = "pyqasm-0.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:949d425ffb3140b988bf3d79efc678ff0a876c4cde60917dbf6daf184a40c94a"},
-    {file = "pyqasm-0.3.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:8d5abbd0f05373c1458220b0bc21f407172d51554ba8c2e74971d04a26f5cd45"},
-    {file = "pyqasm-0.3.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:09093e4832f1d534fe37cf8ca832a3f3820d1fd46899fc6e9ac4e4732bffd1c9"},
-    {file = "pyqasm-0.3.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:84ce99feca6b7d8053559f4477c5d83d27da71c1f4b0e1b0e3e99a56c52442d9"},
-    {file = "pyqasm-0.3.0-cp313-cp313-win_amd64.whl", hash = "sha256:2299028306272e8ab3c805cf7a04c0a88ab92a0cf6e6b318965e3d3dd7474ee8"},
-    {file = "pyqasm-0.3.0.tar.gz", hash = "sha256:27e486822e6c179555f25fd9cd83bc306e69d26114b005d6f6e5d1a94b5a4936"},
+    {file = "pyqasm-0.3.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:0480e8fd9afc6c4e0c3d058edc49ecbc5a0ef0c058d9b0038ad59e1d6e8e9b5e"},
+    {file = "pyqasm-0.3.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:6127c7057c7c79a9864354e586417e699b7e37a3d295751d759791490c1337d6"},
+    {file = "pyqasm-0.3.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:de7681d08a973291fd5fe43db528491e2b920664b1704bddf301133048063def"},
+    {file = "pyqasm-0.3.2-cp310-cp310-win_amd64.whl", hash = "sha256:03ef9a497f4f3af8013aeb4489b443eea894fe1650515be2dd92bf0227099a67"},
+    {file = "pyqasm-0.3.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:f19aea29f8f74f41780943575deca8ff7a13ccb8dc6259cdfdc9e48e792a22f4"},
+    {file = "pyqasm-0.3.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4b5b09501d77fb48c57cbb5cf9cf426a20389867072957e72bf6d4126d4c0f53"},
+    {file = "pyqasm-0.3.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b98fbc852b541809b67de9132e318d6fc4243ab6e9f55afa750ac099c20cb8eb"},
+    {file = "pyqasm-0.3.2-cp311-cp311-win_amd64.whl", hash = "sha256:358903b438654fe76e8d7c697ad48b607f26feef3114ac15cb25abd68e3e0784"},
+    {file = "pyqasm-0.3.2-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:2a94b5e289cc9e21edf97992b7630c58bf611e839f51b11b185460b9a2eee81b"},
+    {file = "pyqasm-0.3.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:b69609f842f49fc4e2bcb4a52596137c6d4622d05d36d2f643e2d19762855bcf"},
+    {file = "pyqasm-0.3.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a86a0a0d33ed1a620c6db5e6e4ffc44c00781308521b54a1f0582ec3b6ae72e8"},
+    {file = "pyqasm-0.3.2-cp312-cp312-win_amd64.whl", hash = "sha256:d3df3088efa31ada5b0afdaa359c3153be2da8d963a466f640646e003bc170e2"},
+    {file = "pyqasm-0.3.2-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:411dc1eada91537250a0311ce4f707a5cbbd19d1db3e3e4c1a5b238e12f9dbd1"},
+    {file = "pyqasm-0.3.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:3babfde8e40b48133d3ef0f2745a6edcfdf633849758d454da393a4b05b2e3cf"},
+    {file = "pyqasm-0.3.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f10bd1f5a569e37012bf9f5020b446acd1702128b09ee11d29750a5ba330a958"},
+    {file = "pyqasm-0.3.2-cp313-cp313-win_amd64.whl", hash = "sha256:7369d79c5b70a266417756fc05d592f4f09588fa0eda6ca16aa6f8eb7103d224"},
+    {file = "pyqasm-0.3.2.tar.gz", hash = "sha256:d1d78b085bdc393252858990ea96df262e6d5fea06656ad09754d8ff06814e56"},
 ]
 
 [package.dependencies]
@@ -3673,15 +3673,15 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "qbraid"
-version = "0.9.5"
+version = "0.9.6"
 description = "Platform-agnostic quantum runtime framework."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
-    {file = "qbraid-0.9.5-py3-none-any.whl", hash = "sha256:195988b6b6669023d7ba46b7447b8e212acef82a7a44926920c4de18e0c9e939"},
-    {file = "qbraid-0.9.5.tar.gz", hash = "sha256:9fe0b583a758c9aec41e204f872d73533655983a360a1fad8b8b01584a98d12f"},
+    {file = "qbraid-0.9.6-py3-none-any.whl", hash = "sha256:b055c6cd7c9347ab56f29a032dcb24855d8b9f89798b7ddacbfd4587d3ad5cc9"},
+    {file = "qbraid-0.9.6.tar.gz", hash = "sha256:b0302bc93395e594c7ec64e662af28b8c2db21de4d49d712da59607258eacee8"},
 ]
 
 [package.dependencies]
@@ -3692,13 +3692,14 @@ azure-storage-blob = {version = ">=12.20,<13.0", optional = true, markers = "ext
 numpy = ">=1.17"
 openqasm3 = {version = ">=0.4.0", extras = ["parser"]}
 pydantic = ">2.0.0"
-pyqasm = ">=0.3.0,<0.4.0"
+pydantic-core = "*"
+pyqasm = ">=0.3.2,<0.4.0"
 pytket-braket = {version = ">=0.30,<0.41", optional = true, markers = "extra == \"braket\""}
 qbraid-core = [
     {version = ">=0.1.25"},
     {version = ">=0.1.29", extras = ["runner"], optional = true, markers = "extra == \"qir\""},
 ]
-qbraid-qir = {version = ">=0.2.0,<=0.3.1", optional = true, markers = "extra == \"qir\""}
+qbraid-qir = {version = ">=0.2.0,<=0.3.2", optional = true, markers = "extra == \"qir\""}
 qiskit-ionq = {version = ">=0.5.12", optional = true, markers = "extra == \"ionq\""}
 qiskit-qir = {version = ">=0.5.0", optional = true, markers = "extra == \"qir\""}
 rustworkx = ">=0.15.0"
@@ -3713,12 +3714,12 @@ cudaq = ["cudaq (>=0.9.0)"]
 docs = ["docutils (<0.22)", "sphinx (>=7.2,<8.3)", "sphinx-autodoc-typehints (>=1.24,<3.2)", "sphinx-copybutton", "sphinx-rtd-theme (>=1.3,<3.1)"]
 ionq = ["qiskit-ionq (>=0.5.12)"]
 oqc = ["oqc-qcaas-client (>=3.11.0)"]
-pennylane = ["pennylane (<0.41)"]
+pennylane = ["pennylane (<0.42)"]
 pyqubo = ["pyqubo (>=1.4.0)"]
 pyquil = ["pyquil (>=4.4)", "qcs-sdk-python (>=0.21.12)"]
 pytket = ["pytket (>=1.31)"]
-qir = ["qbraid-core[runner] (>=0.1.29)", "qbraid-qir (>=0.2.0,<=0.3.1)", "qiskit-qir (>=0.5.0)"]
-qiskit = ["packaging (>=20.0)", "qiskit (>=1.0,<1.5)", "qiskit-ibm-runtime (>=0.25.0,<0.38)", "qiskit-qasm3-import (>=0.5.1)"]
+qir = ["qbraid-core[runner] (>=0.1.29)", "qbraid-qir (>=0.2.0,<=0.3.2)", "qiskit-qir (>=0.5.0)"]
+qiskit = ["packaging (>=20.0)", "qiskit (>=1.0,<2.0)", "qiskit-ibm-runtime (>=0.25.0,<0.39)", "qiskit-qasm3-import (>=0.5.1)"]
 quera = ["flair-visual[vis] (>=0.5.3)", "pandas"]
 visualization = ["ipympl", "ipython", "matplotlib", "pylatexenc", "pyqasm[visualization]"]
 
@@ -5315,4 +5316,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "ef325e05b990813a5b81fc9ce4cb03be2f9565689c61d457ce3a0f3204b05f9e"
+content-hash = "386fc268c3d91f3d782a4cb457b3082628b4ccc1527aeea7d4a9a00688129f2b"
