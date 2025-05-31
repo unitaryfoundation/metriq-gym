@@ -185,7 +185,6 @@ def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -
         except Exception as e:
             results.append(f"✗ {job_type.value} failed: {str(e)}")
     
-    # Print summary
     print("\nSummary:")
     for result in results:
         print(f"  {result}")
