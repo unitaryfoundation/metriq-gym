@@ -5,8 +5,8 @@ import argparse
 import logging
 
 from tabulate import tabulate
-
 from qbraid.runtime import get_providers
+
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 
 
@@ -38,6 +38,15 @@ def list_jobs(jobs: list[MetriqGymJob], show_index: bool = False) -> None:
 
 
 def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqGymJob | None:
+    """Prompt user to select a job for polling or viewing.
+    
+    Args:
+        args: Command line arguments containing optional job_id
+        job_manager: JobManager instance for retrieving jobs
+        
+    Returns:
+        Selected MetriqGymJob instance or None if cancelled/not found
+    """
     if args.job_id:
         return job_manager.get_job(args.job_id)
     jobs = job_manager.get_jobs()
@@ -67,26 +76,30 @@ def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqG
     return jobs[selected_index]
 
 
-def get_available_providers():
+def get_available_providers() -> list[str]:
     """Get list of available providers including local simulators.
     
     Returns:
-        list: List of provider names including remote providers and 'local'
+        List of provider names including remote providers and 'local'
+        
+    Raises:
+        RuntimeError: If qBraid is not available (required dependency)
     """
     try:
         remote_providers = get_providers()
         return remote_providers + ["local"]
-    except Exception:
-        # Fallback if qBraid is not available or configured
-        return ["local", "aws", "azure", "ibm", "ionq", "oqc", "qbraid"]
+    except Exception as e:
+        # qBraid is a required dependency, so this should not normally fail
+        logger.error(f"Failed to get qBraid providers: {e}")
+        logger.error("qBraid is required for metriq-gym. Please ensure it's properly installed.")
+        raise RuntimeError("qBraid providers not available - check installation") from e
 
 
 def parse_arguments() -> argparse.Namespace:
-    """
-    Parse command-line arguments for the quantum volume benchmark.
+    """Parse command-line arguments for the quantum benchmarking CLI.
 
     Returns:
-        Parsed arguments as an argparse.Namespace object.
+        Parsed arguments as an argparse.Namespace object
     """
     parser = argparse.ArgumentParser(description="Metriq-Gym benchmarking CLI")
     subparsers = parser.add_subparsers(dest="action", required=True, help="Action to perform")
@@ -125,3 +138,4 @@ def parse_arguments() -> argparse.Namespace:
     view_parser.add_argument("--job_id", type=str, required=False, help="Job ID to view (optional)")
 
     return parser.parse_args()
+

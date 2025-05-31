@@ -1,3 +1,4 @@
+
 import logging
 import pytest
 from unittest.mock import MagicMock, patch
@@ -5,7 +6,6 @@ from unittest.mock import MagicMock, patch
 from qbraid import QbraidError
 from metriq_gym.run import setup_device
 from metriq_gym.exceptions import QBraidSetupError
-
 
 class FakeDevice:
     def __init__(self, id):
@@ -25,7 +25,6 @@ def mock_device():
 @pytest.fixture
 def patch_load_provider(mock_provider, monkeypatch):
     monkeypatch.setattr("metriq_gym.run.load_provider", lambda _: mock_provider)
-
 
 def test_setup_device_success(mock_provider, mock_device, patch_load_provider):
     mock_provider.get_device.return_value = mock_device
@@ -72,6 +71,7 @@ def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog)
         in caplog.text
     )
     assert "Devices available: ['device1', 'device2']" in caplog.text
+
 
 class TestLocalProviderIntegration:
     """Test suite for LocalProvider integration - simulator agnostic."""

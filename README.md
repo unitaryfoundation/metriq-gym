@@ -189,16 +189,11 @@ Metriq-gym also supports running benchmarks on local simulators for development 
 #### Supported Simulators
 - **Qiskit Aer**: `aer_simulator`, `aer_simulator_statevector`, `aer_simulator_stabilizer`
 
-#### Installation
-```sh
-pip install qiskit-aer
-```
-
 #### Usage
 Use the same workflow as cloud providers, but specify `--provider local`:
 
 ```sh
-# Dispatch a benchmark on local simulator
+# Dispatch a benchmark on local 
 mgym dispatch metriq_gym/schemas/examples/bseq.example.json --provider local --device aer_simulator
 
 # Poll results (jobs complete immediately)

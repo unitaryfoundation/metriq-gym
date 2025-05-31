@@ -1,12 +1,13 @@
-from unittest.mock import MagicMock
+
+from unittest.mock import MagicMock, patch
 import pytest
 from qbraid import QuantumDevice
 from qbraid.runtime import QiskitBackend
 
 from rustworkx import PyGraph
 import rustworkx as rx
-from metriq_gym.qplatform.device import connectivity_graph
 
+from metriq_gym.qplatform.device import connectivity_graph
 
 def test_device_connectivity_graph_qiskit_backend():
     mock_backend = MagicMock()
@@ -30,6 +31,7 @@ def test_device_connectivity_graph_invalid_device():
     mock_device = MagicMock(spec=QuantumDevice)  # Mock an unknown QuantumDevice
     with pytest.raises(NotImplementedError, match="Connectivity graph not implemented for device"):
         connectivity_graph(mock_device)
+
 class TestLocalSimulators:
     """Test suite for local simulator functionality - adapter agnostic."""
 
@@ -38,18 +40,19 @@ class TestLocalSimulators:
         """Generic mock adapter that works with any simulator type."""
         mock_adapter = MagicMock()
         mock_adapter.get_backend_info.return_value = {
-            'num_qubits': 32,
-            'basis_gates': ['u1', 'u2', 'u3', 'cx', 'id', 'x', 'y', 'z', 'h'],
-            'coupling_map': None,
-            'method': 'automatic',
-            'backend_name': 'local_simulator',
+            "num_qubits": 32,
+            "basis_gates": ["u1", "u2", "u3", "cx", "id", "x", "y", "z", "h"],
+            "coupling_map": None,
+            "method": "automatic",
+            "backend_name": "local_simulator",
         }
         mock_adapter.get_version.return_value = "1.0.0"
         return mock_adapter
 
     def test_local_device_connectivity_graph_bipartite(self, mock_simulator_adapter):
         """Test that ANY local simulator generates bipartite connectivity graphs (critical for BSEQ)."""
-        from metriq_gym.qplatform.device import LocalDevice
+        from metriq_gym.simulators.adapters import LocalDevice
+        import rustworkx as rx
         
         # Test with generic device - should work with any simulator
         device = LocalDevice("any.simulator.method", mock_simulator_adapter)
@@ -67,32 +70,32 @@ class TestLocalSimulators:
 
     def test_local_device_universal_creation_and_metadata(self, mock_simulator_adapter):
         """Test that LocalDevice works universally with any simulator adapter."""
-        from metriq_gym.qplatform.device import LocalDevice
+        from metriq_gym.simulators.adapters import LocalDevice
         
         # Test with generic device spec - should work with any simulator
         device = LocalDevice("any.simulator.method", mock_simulator_adapter)
         
         # Verify universal device properties
-        assert hasattr(device, 'id')
+        assert hasattr(device, "id")
         assert device.device_type == "SIMULATOR"
         assert isinstance(device.num_qubits, int)
         assert device.num_qubits > 0
-        assert hasattr(device, 'profile')
+        assert hasattr(device, "profile")
         
         # Verify metadata structure (universal for all simulators)
         metadata = device.metadata()
-        required_fields = ['device_id', 'device_type', 'num_qubits', 'status', 'local', 'simulator']
+        required_fields = ["device_id", "device_type", "num_qubits", "status", "local", "simulator"]
         for field in required_fields:
             assert field in metadata
         
-        assert metadata['device_type'] == "SIMULATOR"
-        assert metadata['status'] == 'ONLINE'
-        assert metadata['local'] is True
-        assert metadata['simulator'] is True
+        assert metadata["device_type"] == "SIMULATOR"
+        assert metadata["status"] == "ONLINE"
+        assert metadata["local"] is True
+        assert metadata["simulator"] is True
 
     def test_available_simulators_auto_discovery(self):
         """Test that system automatically discovers and supports available simulators."""
-        from metriq_gym.qplatform.device import get_available_simulators, create_local_device
+        from metriq_gym.simulators.adapters import get_available_simulators, create_local_device
         
         # Get whatever simulators are available in the current environment
         available_simulators = get_available_simulators()
@@ -114,7 +117,7 @@ class TestLocalSimulators:
             # Test that it can be created (this validates the entire plugin architecture)
             try:
                 device = create_local_device(first_simulator_id)
-                assert hasattr(device, 'id')
+                assert hasattr(device, "id")
                 assert device.id == first_simulator_id
             except ImportError:
                 # Simulator not installed in test environment - that's OK
