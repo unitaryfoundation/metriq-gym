@@ -161,7 +161,7 @@ In the event where the job has not completed, we would receive the following mes
 ```sh
 INFO - Polling job...
 INFO - Job is not yet completed. Current status:
-INFO - - 93a06a18-41d8-475a-a030-339fbf3accb9: QUEUED (position 3)
+INFO - - d0wtyfhvx7bg008203b0: QUEUED (position 3)
 INFO - Please try again later.
 ```
 
