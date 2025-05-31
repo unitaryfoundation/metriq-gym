@@ -1,0 +1,51 @@
+{
+  "$id": "metriq-gym/mirror_circuits.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mirror Circuits",
+  "description": "The Mirror Circuits benchmark schema definition, describing parameters for mirror circuit benchmarking of quantum computers.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Mirror Circuits",
+      "description": "Name of the benchmark. Must be 'Mirror Circuits' for this schema."
+    },
+    "nlayers": {
+      "type": "integer",
+      "description": "The number of random Clifford layers in the mirror circuit. This controls the circuit depth.",
+      "default": 3,
+      "minimum": 1,
+      "maximum": 50,
+      "examples": [3, 5, 10]
+    },
+    "two_qubit_gate_prob": {
+      "type": "number",
+      "description": "Probability of applying a two-qubit gate on available edges. Must be between 0 and 1.",
+      "default": 0.5,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "examples": [0.3, 0.5, 0.8]
+    },
+    "two_qubit_gate_name": {
+      "type": "string",
+      "description": "Type of two-qubit gate to use in the circuit.",
+      "enum": ["CNOT", "CZ"],
+      "default": "CNOT",
+      "examples": ["CNOT", "CZ"]
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots (repetitions) for the benchmark.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000, 5000, 10000]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Optional random seed for reproducible circuit generation.",
+      "minimum": 0,
+      "examples": [42, 123, 2024]
+    }
+  },
+  "required": ["benchmark_name"]
+}
