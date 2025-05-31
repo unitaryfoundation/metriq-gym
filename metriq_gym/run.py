@@ -29,7 +29,8 @@ from metriq_gym.exporters.json_exporter import JsonExporter
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.benchmarks import JobType
-
+from metriq_gym.simulators.adapters import get_available_simulators, create_local_device
+from metriq_gym.qplatform.job import load_local_job
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
 
@@ -57,7 +58,7 @@ class LocalProvider:
     
     def _load_available_devices(self):
         """Load available devices from configuration and adapters."""
-        from metriq_gym.simulators.adapters import get_available_simulators
+        
 
         self._available_devices = get_available_simulators()
     
@@ -84,7 +85,7 @@ class LocalProvider:
             logger.error(f"Available local devices: {all_available}")
             raise QBraidSetupError(f"Local device '{device_id}' not found")
         
-        from metriq_gym.simulators.adapters import create_local_device
+        
         return create_local_device(mapped_device_id)
     
     def get_devices(self):
@@ -93,7 +94,7 @@ class LocalProvider:
         Returns:
             list: List of available LocalDevice instances
         """
-        from metriq_gym.simulators.adapters import create_local_device
+        
         devices = []
         for device_id in self._available_devices.keys():
             try:
@@ -199,7 +200,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     
     # Handle local jobs differently from remote jobs
     if metriq_job.provider_name == "local":
-        from metriq_gym.qplatform.job import load_local_job
+        
         quantum_jobs = [
             load_local_job(job_id, **asdict(job_data))
             for job_id in job_data.provider_job_ids
