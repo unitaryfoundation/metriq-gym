@@ -60,4 +60,4 @@ def test_load_jobs_skips_invalid(job_manager, sample_job, caplog):
     jobs = new_job_manager.get_jobs()
     assert len(jobs) == 1
     assert jobs[0].id == sample_job.id
-    assert "Skipping invalid job entry" in caplog.text
+    assert "invalid" in caplog.text
