@@ -8,7 +8,6 @@ for quantum computers as defined in Proctor et al., Nature Physics 2022.
 """
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 import networkx as nx
 import numpy as np
@@ -39,7 +38,7 @@ class MirrorCircuitsData(BenchmarkData):
     two_qubit_gate_name: str
     shots: int
     num_qubits: int
-    seed: Optional[int]
+    seed: int | None
     expected_bitstring: str
 
 
@@ -140,8 +139,8 @@ def generate_mirror_circuit(
     two_qubit_gate_prob: float,
     connectivity_graph: nx.Graph,
     two_qubit_gate_name: str = "CNOT",
-    seed: Optional[int] = None,
-) -> Tuple[QuantumCircuit, str]:
+    seed: int | None = None,
+) -> tuple[QuantumCircuit, str]:
     """Generate a mirror circuit with specified parameters.
     
     Args:
