@@ -11,7 +11,7 @@ import rustworkx as rx
 import networkx as nx
 from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
 
-from metriq_gym.qplatform.device import version, connectivity_graph
+from qplatform.device import version, connectivity_graph
 
 
 class MockCouplingMap:
@@ -37,9 +37,10 @@ class MockTopologyGraph:
 
     def __init__(self, num_qubits=8):
         self.num_qubits = num_qubits
+        self.to_undirected = Mock(return_value=self._create_nx_graph())
 
-    def to_undirected(self):
-        """Return a mock undirected NetworkX graph."""
+    def _create_nx_graph(self):
+        """Create a NetworkX graph for testing."""
         # Create a ring topology for testing
         edges = [(i, (i + 1) % self.num_qubits) for i in range(self.num_qubits)]
         return nx.Graph(edges)
@@ -268,7 +269,7 @@ class TestEdgeCases:
 
         # Single node graph
         topology = Mock()
-        topology.to_undirected.return_value = nx.Graph()  # Empty NetworkX graph
+        topology.to_undirected = Mock(return_value=nx.Graph())  # Empty NetworkX graph
         mock_internal_device.topology_graph = topology
         device._device = mock_internal_device
 
