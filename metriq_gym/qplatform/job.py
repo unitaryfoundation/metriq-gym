@@ -58,6 +58,8 @@ def extract_status_info(quantum_job: QuantumJob, supports_queue_position: bool) 
     queue_position = None
     if supports_queue_position:
         for attr in ["queue_position", "queue_info"]:
+            # These attributes are defined in qBraid provider job classes (e.g., QiskitJob, BraketQuantumTask).
+            # Reference: https://github.com/qBraid/qBraid/tree/main/qbraid/runtime
             if hasattr(quantum_job, attr):
                 try:
                     info = getattr(quantum_job, attr)
