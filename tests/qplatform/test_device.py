@@ -11,7 +11,7 @@ import rustworkx as rx
 import networkx as nx
 from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
 
-from qplatform.device import version, connectivity_graph
+from metriq_gym.qplatform.device import version, connectivity_graph
 
 
 class MockCouplingMap:
