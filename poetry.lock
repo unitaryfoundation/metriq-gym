@@ -3287,19 +3287,14 @@ test = ["pytest (>=7.2.0,<7.3.0)"]
 
 [[package]]
 name = "pyqrack"
-version = "1.44.19"
+version = "1.51.0"
 description = "pyqrack - Pure Python vm6502q/qrack Wrapper"
 optional = false
 python-versions = "*"
 groups = ["main"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
-    {file = "pyqrack-1.44.19-py3-none-macosx_14_0_arm64.whl", hash = "sha256:89f96c7acc2a72b2a3b85ae11103fbdaf34179fb3c3c412f12b778e5c2ea5298"},
-    {file = "pyqrack-1.44.19-py3-none-macosx_15_0_arm64.whl", hash = "sha256:3d5e0d0ff3c8f790064d76196db75f5989530d6cbb8cc19b3f57d817678618ab"},
-    {file = "pyqrack-1.44.19-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:e721b394382d4462e68ed5989956e3c6f63e5c7695eebb3a907ae38e1414e43a"},
-    {file = "pyqrack-1.44.19-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:dfa924f4a2af1b86fa2d8051c3763a0651f3941732162f3273e18c72e2ebd222"},
-    {file = "pyqrack-1.44.19-py3-none-win_amd64.whl", hash = "sha256:097a06142df1a51a5cf7f64090cdd457a79f2db45a9deffb24a3fdeb476d4dba"},
-    {file = "pyqrack-1.44.19.tar.gz", hash = "sha256:171002a83410ffd8d9a4bbfe405a0ba686a1bcac303fd0d86ab8ae24d4814964"},
+    {file = "pyqrack-1.51.0-py3-none-macosx_14_0_arm64.whl", hash = "sha256:92d6ecdb9b32671cd3459d935bcfa9458e2dee1742833adbd6f0fc059c1bbfdf"},
 ]
 
 [package.extras]
@@ -5315,4 +5310,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "ef325e05b990813a5b81fc9ce4cb03be2f9565689c61d457ce3a0f3204b05f9e"
+content-hash = "b2e5b38424ecca6988fcd2ac503761b6863b849e90714025bf8591341eaebd16"
