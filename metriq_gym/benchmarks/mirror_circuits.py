@@ -1,3 +1,4 @@
+
 """
 Mirror circuits benchmark for the Metriq Gym.
 
@@ -8,6 +9,8 @@ for quantum computers as defined in Proctor et al., Nature Physics 2022.
 """
 
 from dataclasses import dataclass
+from enum import StrEnum
+from typing import Union
 
 import networkx as nx
 import numpy as np
@@ -21,6 +24,12 @@ from numpy import random
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts, flatten_job_ids
 from metriq_gym.qplatform.device import connectivity_graph
+
+
+class TwoQubitGateType(StrEnum):
+    """Enumeration of supported two-qubit gate types."""
+    CNOT = "CNOT"
+    CZ = "CZ"
 
 
 class MirrorCircuitsResult(BenchmarkResult):
@@ -38,7 +47,8 @@ class MirrorCircuitsData(BenchmarkData):
     two_qubit_gate_name: str
     shots: int
     num_qubits: int
-    seed: int | None
+    num_circuits: int
+    seed: Union[int, None]
     expected_bitstring: str
 
 
@@ -48,8 +58,14 @@ def random_paulis(connectivity_graph: nx.Graph, random_state: random.RandomState
     Args:
         connectivity_graph: Connectivity graph of device to run circuit on.
         random_state: Random state to select Paulis I, X, Y, Z uniformly at random.
+        
+    Returns:
+        A quantum circuit with random Pauli gates on each qubit.
     """
     num_qubits = len(connectivity_graph.nodes)
+    if num_qubits == 0:
+        return QuantumCircuit(0)
+        
     qc = QuantumCircuit(num_qubits)
     
     paulis = [IGate(), XGate(), YGate(), ZGate()]
@@ -57,6 +73,32 @@ def random_paulis(connectivity_graph: nx.Graph, random_state: random.RandomState
     for qubit in connectivity_graph.nodes:
         pauli_gate = paulis[random_state.randint(len(paulis))]
         qc.append(pauli_gate, [qubit])
+    
+    return qc
+
+
+def random_single_cliffords(connectivity_graph: nx.Graph, random_state: random.RandomState) -> QuantumCircuit:
+    """Returns a circuit with randomly selected single-qubit Clifford gates on each qubit.
+
+    Args:
+        connectivity_graph: Connectivity graph of device to run circuit on.
+        random_state: Random state to select Cliffords uniformly at random.
+        
+    Returns:
+        A quantum circuit with random single-qubit Clifford gates on each qubit.
+    """
+    num_qubits = len(connectivity_graph.nodes)
+    if num_qubits == 0:
+        return QuantumCircuit(0)
+        
+    qc = QuantumCircuit(num_qubits)
+    
+    # Single-qubit Clifford gates (24 total, using subset for simplicity)
+    single_cliffords = [IGate(), XGate(), YGate(), ZGate(), HGate(), SGate()]
+    
+    for qubit in connectivity_graph.nodes:
+        clifford_gate = single_cliffords[random_state.randint(len(single_cliffords))]
+        qc.append(clifford_gate, [qubit])
     
     return qc
 
@@ -81,6 +123,7 @@ def edge_grab(
     final_edges = nx.Graph()
     final_edges.add_nodes_from(connectivity_graph.nodes)
 
+    # Generate disjoint edge set
     while connectivity_graph.edges:
         edges = list(connectivity_graph.edges)
         if not edges:
@@ -90,6 +133,7 @@ def edge_grab(
         candidate_edges.add_edge(*curr_edge)
         connectivity_graph.remove_nodes_from(curr_edge)
 
+    # Apply probability filter
     for edge in candidate_edges.edges:
         if random_state.uniform(0.0, 1.0) < two_qubit_gate_prob:
             final_edges.add_edge(*edge)
@@ -111,15 +155,25 @@ def random_cliffords(
 
     Returns:
         A circuit with two-qubit gates and random single-qubit Cliffords.
+        
+    Raises:
+        ValueError: If two_qubit_gate_name is not supported.
     """
     if not connectivity_graph.nodes:
         return QuantumCircuit(0)
+    
+    # Validate gate name
+    try:
+        gate_type = TwoQubitGateType(two_qubit_gate_name)
+    except ValueError:
+        raise ValueError(f"Unsupported two-qubit gate: {two_qubit_gate_name}. "
+                        f"Supported gates: {list(TwoQubitGateType)}")
     
     num_qubits = max(connectivity_graph.nodes) + 1
     qc = QuantumCircuit(num_qubits)
     
     # Add two-qubit gates
-    two_qubit_gate = CXGate() if two_qubit_gate_name == "CNOT" else CZGate()
+    two_qubit_gate = CXGate() if gate_type == TwoQubitGateType.CNOT else CZGate()
     for edge in connectivity_graph.edges:
         qc.append(two_qubit_gate, [edge[0], edge[1]])
     
@@ -139,7 +193,7 @@ def generate_mirror_circuit(
     two_qubit_gate_prob: float,
     connectivity_graph: nx.Graph,
     two_qubit_gate_name: str = "CNOT",
-    seed: int | None = None,
+    seed: Union[int, None] = None,
 ) -> tuple[QuantumCircuit, str]:
     """Generate a mirror circuit with specified parameters.
     
@@ -152,12 +206,17 @@ def generate_mirror_circuit(
 
     Returns:
         A tuple of (mirror_circuit, expected_bitstring).
+        
+    Raises:
+        ValueError: If parameters are invalid.
     """
     if not 0 <= two_qubit_gate_prob <= 1:
         raise ValueError("two_qubit_gate_prob must be between 0 and 1")
 
-    if two_qubit_gate_name not in ["CNOT", "CZ"]:
-        raise ValueError("two_qubit_gate_name must be 'CNOT' or 'CZ'")
+    try:
+        TwoQubitGateType(two_qubit_gate_name)
+    except ValueError:
+        raise ValueError(f"two_qubit_gate_name must be one of {list(TwoQubitGateType)}")
 
     random_state = random.RandomState(seed)
     num_qubits = len(connectivity_graph.nodes)
@@ -169,6 +228,10 @@ def generate_mirror_circuit(
 
     # Initialize circuit
     qc = QuantumCircuit(num_qubits)
+    
+    # Initial single-qubit Clifford layer
+    initial_clifford_layer = random_single_cliffords(connectivity_graph, random_state)
+    qc = qc.compose(initial_clifford_layer)
     
     # Forward circuit layers
     forward_layers = []
@@ -192,6 +255,9 @@ def generate_mirror_circuit(
     for layer in reversed(forward_layers):
         qc = qc.compose(layer.inverse())
     
+    # Inverse of initial single-qubit Clifford layer
+    qc = qc.compose(initial_clifford_layer.inverse())
+    
     # Add measurements
     qc.measure_all()
     
@@ -210,6 +276,7 @@ class MirrorCircuits(Benchmark):
         two_qubit_gate_prob = self.params.two_qubit_gate_prob
         two_qubit_gate_name = self.params.two_qubit_gate_name
         shots = self.params.shots
+        num_circuits = getattr(self.params, 'num_circuits', 1)
         seed = getattr(self.params, "seed", None)
 
         topology_graph = connectivity_graph(device)
@@ -219,15 +286,25 @@ class MirrorCircuits(Benchmark):
         nx_graph.add_nodes_from(topology_graph.node_indices())
         nx_graph.add_edges_from(topology_graph.edge_list())
 
-        circuit, expected_bitstring = generate_mirror_circuit(
-            nlayers=nlayers,
-            two_qubit_gate_prob=two_qubit_gate_prob,
-            connectivity_graph=nx_graph,
-            two_qubit_gate_name=two_qubit_gate_name,
-            seed=seed
-        )
+        # Generate multiple random circuits for statistical averaging
+        circuits = []
+        expected_bitstring = None
+        
+        for i in range(num_circuits):
+            circuit_seed = None if seed is None else seed + i
+            circuit, bitstring = generate_mirror_circuit(
+                nlayers=nlayers,
+                two_qubit_gate_prob=two_qubit_gate_prob,
+                connectivity_graph=nx_graph,
+                two_qubit_gate_name=two_qubit_gate_name,
+                seed=circuit_seed
+            )
+            circuits.append(circuit)
+            # All circuits should have the same expected bitstring
+            if expected_bitstring is None:
+                expected_bitstring = bitstring
 
-        quantum_job = device.run(circuit, shots=shots)
+        quantum_job = device.run(circuits, shots=shots)
         provider_job_ids = flatten_job_ids(quantum_job)
 
         return MirrorCircuitsData(
@@ -237,8 +314,9 @@ class MirrorCircuits(Benchmark):
             two_qubit_gate_name=two_qubit_gate_name,
             shots=shots,
             num_qubits=device.num_qubits or len(nx_graph.nodes),
+            num_circuits=num_circuits,
             seed=seed,
-            expected_bitstring=expected_bitstring
+            expected_bitstring=expected_bitstring or "0"
         )
 
     def poll_handler(
@@ -248,20 +326,26 @@ class MirrorCircuits(Benchmark):
         quantum_jobs: list[QuantumJob],
     ) -> MirrorCircuitsResult:
         """Poll and calculate mirror circuit success metrics."""
-        counts = flatten_counts(result_data)[0]
+        counts_list = flatten_counts(result_data)
         
-        # Calculate success probability
-        total_shots = sum(counts.values())
-        success_count = counts.get(job_data.expected_bitstring, 0)
-        success_probability = success_count / total_shots if total_shots > 0 else 0.0
+        # Handle edge case
+        if job_data.num_qubits == 0:
+            raise ValueError("Mirror circuits benchmark requires at least 1 qubit")
+        
+        # Calculate average success probability over all circuit repetitions
+        total_success_count = 0
+        total_shots = 0
+        
+        for counts in counts_list:
+            total_shots += sum(counts.values())
+            total_success_count += counts.get(job_data.expected_bitstring, 0)
+        
+        success_probability = total_success_count / total_shots if total_shots > 0 else 0.0
         
         # Calculate polarization P = (S - 1/2^w) / (1 - 1/2^w)
         w = job_data.num_qubits
-        if w > 0:
-            baseline = 1.0 / (2 ** w)
-            polarization = (success_probability - baseline) / (1.0 - baseline) if (1.0 - baseline) > 0 else 0.0
-        else:
-            polarization = success_probability
+        baseline = 1.0 / (2 ** w)
+        polarization = (success_probability - baseline) / (1.0 - baseline) if (1.0 - baseline) > 0 else 0.0
         
         # Binary success (typically threshold is 2/3)
         binary_success = success_probability >= (2.0 / 3.0)

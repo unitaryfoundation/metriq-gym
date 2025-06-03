@@ -1,3 +1,4 @@
+
 {
   "$id": "metriq-gym/mirror_circuits.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -40,9 +41,17 @@
       "minimum": 1,
       "examples": [1000, 5000, 10000]
     },
+    "num_circuits": {
+      "type": "integer",
+      "description": "Number of random circuit repetitions for statistical averaging. Multiple circuits provide more robust statistical results.",
+      "default": 10,
+      "minimum": 1,
+      "maximum": 1000,
+      "examples": [10, 50, 100]
+    },
     "seed": {
       "type": "integer",
-      "description": "Optional random seed for reproducible circuit generation.",
+      "description": "Optional random seed for reproducible circuit generation. If provided, circuits will be deterministic.",
       "minimum": 0,
       "examples": [42, 123, 2024]
     }
