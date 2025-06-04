@@ -22,7 +22,7 @@ metriq-client = { git = "https://github.com/unitaryfoundation/metriq-client.git"
 pyqrack = "^1.53.1"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
-pydantic = ">=2.5.0,<2.10"
+pydantic = ">=2.5.0,<2.12"
 qiskit = "^1.4.3"
 qiskit-device-benchmarking = { path = "submodules/qiskit-device-benchmarking" }
 qiskit-ibm-runtime = "^0.39.0"
