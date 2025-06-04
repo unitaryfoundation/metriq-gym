@@ -18,7 +18,7 @@ from qbraid.runtime import (
     load_provider,
 )
 
-from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS, SCHEMA_MAPPING
+from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
 from metriq_gym.cli import parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError

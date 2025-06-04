@@ -1,9 +1,6 @@
 import logging
-import os
 import pytest
-from unittest.mock import MagicMock, patch, mock_open
-from datetime import datetime
-import argparse
+from unittest.mock import MagicMock, patch
 
 from qbraid import QbraidError
 from metriq_gym.run import (
@@ -15,9 +12,7 @@ from metriq_gym.run import (
 from metriq_gym.exceptions import QBraidSetupError
 from metriq_gym.benchmarks import JobType
 from metriq_gym.benchmarks.bseq import BSEQData
-from metriq_gym.benchmarks.clops import ClopsData
-from metriq_gym.benchmarks.qml_kernel import QMLKernelData
-from metriq_gym.benchmarks.quantum_volume import QuantumVolumeData
+
 
 
 class FakeDevice:
