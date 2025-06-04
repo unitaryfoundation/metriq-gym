@@ -70,27 +70,27 @@ def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
 
 def get_example_file_path(job_type: JobType) -> str:
     """Get the path to the example file for a given benchmark type.
-    
+
     Maps each benchmark type to its corresponding example configuration file
     in the schemas/examples/ directory. These example files contain predefined
     parameters for running benchmarks in multi-benchmark dispatch mode.
-    
+
     Args:
         job_type: The benchmark type to get the example file for.
-        
+
     Returns:
         Full path to the example configuration file for the specified benchmark.
-        
+
     Supported benchmarks:
         - BSEQ: Bell State Effective Qubits benchmark
-        - CLOPS: Circuit Layer Operations per Second benchmark  
+        - CLOPS: Circuit Layer Operations per Second benchmark
         - QML_KERNEL: Quantum Machine Learning Kernel benchmark
         - QUANTUM_VOLUME: Quantum Volume benchmark
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
     example_files = {
         JobType.BSEQ: "bseq.example.json",
-        JobType.CLOPS: "clops.example.json", 
+        JobType.CLOPS: "clops.example.json",
         JobType.QML_KERNEL: "qml_kernel.example.json",
         JobType.QUANTUM_VOLUME: "quantum_volume.example.json",
     }
@@ -99,25 +99,25 @@ def get_example_file_path(job_type: JobType) -> str:
 
 def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Dispatch all available benchmarks to a single device.
-    
+
     This function orchestrates the execution of multiple benchmarks on a single
     quantum device, providing comprehensive device characterization capabilities.
     Each benchmark runs with predefined parameters from example configuration files.
-    
+
     Features:
         - Runs all available benchmarks using predefined example configurations
         - Supports benchmark exclusion via --except flag
         - Provides detailed progress reporting and error handling
         - Continues execution even if individual benchmarks fail
         - Generates comprehensive success/failure summary
-    
+
     Args:
         args: Command-line arguments containing:
             - provider: Quantum provider name (e.g., 'ibm', 'aws')
             - device: Device identifier (e.g., 'ibm_sherbrooke')
             - exclude_benchmarks: Optional list of benchmarks to exclude
         job_manager: JobManager instance for tracking dispatched jobs
-        
+
     Workflow:
         1. Setup quantum device connection
         2. Determine which benchmarks to run (all minus excluded)
@@ -127,14 +127,14 @@ def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -
            - Dispatch job to device
            - Record success/failure
         4. Display comprehensive summary with job IDs
-        
+
     Error handling:
         - Device setup failures: Return early with error message
         - Missing example files: Skip benchmark with warning
         - Benchmark failures: Log error and continue with remaining benchmarks
     """
     print("Starting bulk benchmark dispatch...")
-    
+
     try:
         device = setup_device(args.provider, args.device)
     except QBraidSetupError:
@@ -142,19 +142,23 @@ def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -
 
     # Get all available benchmarks
     available_benchmarks = list(JobType)
-    
+
     # Filter excluded benchmarks
     if args.exclude_benchmarks:
-        excluded = [JobType(name) for name in args.exclude_benchmarks if name in [jt.value for jt in JobType]]
+        excluded = [
+            JobType(name)
+            for name in args.exclude_benchmarks
+            if name in [jt.value for jt in JobType]
+        ]
         available_benchmarks = [jt for jt in available_benchmarks if jt not in excluded]
         if args.exclude_benchmarks:
             print(f"Excluding benchmarks: {[jt.value for jt in excluded]}")
 
     print(f"Running {len(available_benchmarks)} benchmarks on {args.device} device...")
-    
+
     results = []
     successful_jobs = []
-    
+
     for job_type in available_benchmarks:
         try:
             # Load example file for this benchmark
@@ -162,11 +166,11 @@ def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -
             if not os.path.exists(example_file):
                 results.append(f"✗ {job_type.value}: Example file not found")
                 continue
-                
+
             params = load_and_validate(example_file)
             handler = setup_benchmark(args, params, job_type)
             job_data = handler.dispatch_handler(device)
-            
+
             job_id = job_manager.add_job(
                 MetriqGymJob(
                     id=str(uuid.uuid4()),
@@ -178,40 +182,42 @@ def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -
                     dispatch_time=datetime.now(),
                 )
             )
-            
+
             results.append(f"✓ {job_type.value} dispatched with ID: {job_id}")
             successful_jobs.append(job_id)
-            
+
         except Exception as e:
             results.append(f"✗ {job_type.value} failed: {str(e)}")
-    
+
     print("\nSummary:")
     for result in results:
         print(f"  {result}")
-    
-    print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(available_benchmarks)} benchmarks.")
+
+    print(
+        f"\nSuccessfully dispatched {len(successful_jobs)}/{len(available_benchmarks)} benchmarks."
+    )
     if successful_jobs:
         print("Use 'mgym poll' to check job status.")
 
 
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Dispatch job(s) based on provided arguments.
-    
+
     This function supports both single benchmark and multi-benchmark dispatch modes,
     acting as the main entry point for job dispatching. The dispatch mode is determined
     by the presence of the --all-benchmarks flag in the command-line arguments.
-    
+
     Dispatch modes:
         1. Multi-benchmark mode (--all-benchmarks flag present):
            - Routes to dispatch_all_benchmarks()
            - Runs all available benchmarks using example configurations
            - Supports benchmark exclusion via --except
-           
+
         2. Single benchmark mode (traditional behavior):
            - Requires input_file with benchmark configuration
            - Dispatches single benchmark as specified in the file
            - Maintains full backward compatibility
-    
+
     Args:
         args: Command-line arguments containing:
             - all_benchmarks: Boolean flag for multi-benchmark mode
@@ -219,12 +225,12 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             - provider: Quantum provider name
             - device: Device identifier
         job_manager: JobManager instance for tracking dispatched jobs
-        
+
     Validation:
         - Ensures input_file is provided when not using --all-benchmarks
         - Validates device and provider accessibility
         - Handles configuration file loading and validation
-        
+
     Error handling:
         - Missing input_file: Logs error and returns
         - Device setup failures: Handled by setup_device()
@@ -233,12 +239,12 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if args.all_benchmarks:
         dispatch_all_benchmarks(args, job_manager)
         return
-    
+
     # Single benchmark dispatch logic
     if not args.input_file:
         logger.error("input_file is required when not using --all-benchmarks")
         return
-        
+
     print("Starting job dispatch...")
     try:
         device = setup_device(args.provider, args.device)

@@ -68,14 +68,14 @@ def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqG
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments for the metriq-gym benchmarking CLI.
-    
+
     This function sets up the complete argument parsing structure for metriq-gym,
     supporting both single benchmark dispatch and multi-benchmark dispatch modes
     for comprehensive device characterization.
 
     Returns:
         Parsed arguments as an argparse.Namespace object containing all CLI options.
-        
+
     Dispatch modes supported:
         - Single benchmark: Requires input_file with specific benchmark configuration
         - Multi-benchmark: Uses --all-benchmarks to run all available benchmarks
@@ -85,7 +85,7 @@ def parse_arguments() -> argparse.Namespace:
     subparsers = parser.add_subparsers(dest="action", required=True, help="Action to perform")
 
     dispatch_parser = subparsers.add_parser("dispatch", help="Dispatch jobs")
-    
+
     # Input file is optional when using multi-benchmark mode
     dispatch_parser.add_argument(
         "input_file",
@@ -93,7 +93,7 @@ def parse_arguments() -> argparse.Namespace:
         nargs="?",
         help="Path to the file containing the benchmark parameters (required unless --all-benchmarks is used)",
     )
-    
+
     dispatch_parser.add_argument(
         "-p",
         "--provider",
@@ -107,14 +107,14 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         help="Backend to use",
     )
-    
+
     # Multi-benchmark dispatch functionality
     dispatch_parser.add_argument(
         "--all-benchmarks",
         action="store_true",
         help="Run all available benchmarks on the specified device. Uses default parameters from example files in schemas/examples/",
     )
-    
+
     # Benchmark exclusion functionality for selective multi-benchmark runs
     dispatch_parser.add_argument(
         "--except",
