@@ -1,4 +1,3 @@
-
 from enum import StrEnum
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
