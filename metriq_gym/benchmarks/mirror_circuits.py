@@ -14,7 +14,6 @@ from typing import Union
 import networkx as nx
 import numpy as np
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import XGate, YGate, ZGate, IGate, CXGate, CZGate
 from qiskit.quantum_info import random_clifford, Statevector
