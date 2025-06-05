@@ -11,7 +11,7 @@
       "const": "Mirror Circuits",
       "description": "Name of the benchmark. Must be 'Mirror Circuits' for this schema."
     },
-    "nlayers": {
+    "num_layers": {
       "type": "integer",
       "description": "The number of random Clifford layers in the mirror circuit. This controls the circuit depth.",
       "default": 3,
@@ -58,3 +58,4 @@
   },
   "required": ["benchmark_name"]
 }
+
