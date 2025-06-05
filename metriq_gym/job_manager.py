@@ -63,35 +63,61 @@ class JobManager:
     def __init__(self):
         self._load_jobs()
 
+    def _log_skip(self, line_number: int, reason: str) -> None:
+        logger.warning(f"Skipping job on line {line_number} in {self.jobs_file}: {reason}")
+
     def _load_jobs(self):
+        """
+        Initialize the job list by loading valid jobs from the local JSONL file.
+
+        This method reads the `.metriq_gym_jobs.jsonl` file line by line, 
+        attempting to deserialize each entry into a `MetriqGymJob` object. 
+        It skips invalid or outdated entries without raising exceptions,
+        while logging the reasons for each skip.
+
+        Jobs may be skipped for the following reasons:
+        - JSON decoding errors
+        - Missing required fields
+        - Invalid job types not defined in `JobType`
+        - Incorrect datetime format
+        - Structural mismatches or unsupported schemas
+
+        All successfully parsed jobs are stored in `self.jobs`.
+        """
         self.jobs = []
-        if os.path.exists(self.jobs_file):
-            with open(self.jobs_file) as file:
-                for line_number, line in enumerate(file, start=0):  
-                    stripped_line = line.strip()
-                    if not stripped_line:
-                        continue
-                    try:
-                        job = MetriqGymJob.deserialize(stripped_line)
 
-                        if not isinstance(getattr(job, "job_type", None), JobType):
-                            raise ValueError("Invalid or missing job_type")
+        if not os.path.exists(self.jobs_file):
+            return
 
-                        if not isinstance(getattr(job, "params", None), dict):
-                            raise TypeError("Invalid or missing params")
+        with open(self.jobs_file) as file:
+            for line_number, raw_line in enumerate(file, start=1):
+                stripped_line = raw_line.strip()
+                if not stripped_line:
+                    continue  # Ignore blank lines
 
-                        if not isinstance(getattr(job, "device_name", None), str):
-                            raise ValueError("Invalid or missing device_name")
-
-                        self.jobs.append(job)
-
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"Line {line_number}: Invalid JSON (pos {e.pos})")
-                    except (KeyError, TypeError, ValueError) as e:
-                        logger.warning(f"Line {line_number}: {e}")
-                    except Exception as e:
-                        logger.warning(f"Line {line_number}: Unexpected error ({type(e).__name__}) - {e}")
-
+                try:
+                    job = MetriqGymJob.deserialize(stripped_line)
+                except json.JSONDecodeError as e:
+                    self._log_skip(line_number, f"Invalid JSON at position {e.pos}")
+                except KeyError as e:
+                    self._log_skip(line_number, f"Missing required field: {e}")
+                except ValueError as e:
+                    message = str(e).lower()
+                    if "not a valid" in message and "jobtype" in message:
+                        # Attempt to extract the invalid enum value
+                        invalid_value = str(e).split("'")[1] if "'" in str(e) else str(e)
+                        self._log_skip(line_number, f"Unknown job type: '{invalid_value}'")
+                    elif "datetime" in message or "time" in message:
+                        self._log_skip(line_number, f"Invalid datetime format: {e}")
+                    else:
+                        self._log_skip(line_number, f"Invalid value: {e}")
+                except TypeError as e:
+                    self._log_skip(line_number, f"Data structure mismatch: {e}")
+                except Exception as e:
+                    logger.warning(line_number, f"Unexpected exception ({type(e).__name__}): {e}")
+                else:
+                    self.jobs.append(job)
+       
         if not self.jobs:
             logger.warning(f"No valid jobs found in {self.jobs_file}.")
 
