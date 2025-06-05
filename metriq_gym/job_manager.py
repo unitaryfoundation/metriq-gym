@@ -73,28 +73,31 @@ class JobManager:
                         continue
                     try:
                         # First try to parse JSON
-                        job_dict = json.loads(stripped_line)
+                        try:
+                            job_dict = json.loads(stripped_line)
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"Line {line_number}: Invalid JSON (pos {e.pos})")
+                            continue
                         
                         # Then try to create job object
-                        job = MetriqGymJob(**job_dict)
-                        job.job_type = JobType(job_dict["job_type"])
-                        job.dispatch_time = datetime.fromisoformat(job_dict["dispatch_time"])
-                        
-                        # Validate required fields
-                        if not isinstance(job.job_type, JobType):
-                            raise ValueError("Invalid or missing job_type")
+                        try:
+                            job = MetriqGymJob(**job_dict)
+                            job.job_type = JobType(job_dict["job_type"])
+                            job.dispatch_time = datetime.fromisoformat(job_dict["dispatch_time"])
                             
-                        if not isinstance(job.params, dict):
-                            raise TypeError("Invalid or missing params")
-                            
-                        if not isinstance(job.device_name, str):
-                            raise ValueError("Invalid or missing device_name")
-                            
-                        self.jobs.append(job)
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"Line {line_number}: Invalid JSON (pos {e.pos})")
-                    except (KeyError, TypeError, ValueError) as e:
-                        logger.warning(f"Line {line_number}: {e}")
+                            # Validate required fields
+                            if not isinstance(job.job_type, JobType):
+                                raise ValueError("Invalid or missing job_type")
+                                
+                            if not isinstance(job.params, dict):
+                                raise TypeError("Invalid or missing params")
+                                
+                            if not isinstance(job.device_name, str):
+                                raise ValueError("Invalid or missing device_name")
+                                
+                            self.jobs.append(job)
+                        except (KeyError, TypeError, ValueError) as e:
+                            logger.warning(f"Line {line_number}: {e}")
                     except Exception as e:
                         logger.warning(f"Line {line_number}: Unexpected error ({type(e).__name__}) - {e}")
 
