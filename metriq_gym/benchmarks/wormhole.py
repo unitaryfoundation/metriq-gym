@@ -219,7 +219,6 @@ def calculate_expectation_value(shots: int, count_results: MeasCount) -> float:
     return count_results["1"] / shots
 
 
-@dataclass
 class WormholeResult(BenchmarkResult):
     """Result class to store Wormhole benchmark results.
 
