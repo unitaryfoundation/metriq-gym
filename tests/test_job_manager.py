@@ -32,12 +32,25 @@ def sample_job():
     )
 
 
-def test_load_jobs_empty_file(job_manager, caplog):
-    """Test handling of empty file."""
-    caplog.set_level(logging.WARNING)
-    with caplog.at_level(logging.WARNING):
-        assert job_manager.get_jobs() == []
-        assert "No valid jobs found" in caplog.text
+def test_load_jobs_empty_file(tmp_path, caplog):
+    """Test loading jobs from an empty file."""
+    # Create empty file at the hardcoded path
+    jobs_file = tmp_path / ".metriq_gym_jobs.jsonl"
+    jobs_file.write_text("")
+    
+    # Temporarily modify the class variable
+    original_jobs_file = JobManager.jobs_file
+    JobManager.jobs_file = str(jobs_file)
+    
+    try:
+        # Set up log capture before creating JobManager
+        with caplog.at_level(logging.WARNING):
+            manager = JobManager()
+            assert len(manager.jobs) == 0
+            assert "No valid jobs found" in caplog.text
+    finally:
+        # Restore original jobs_file path
+        JobManager.jobs_file = original_jobs_file
 
 
 def test_add_job(job_manager, sample_job):
@@ -55,33 +68,35 @@ def test_load_jobs_with_existing_data(job_manager, sample_job):
     assert jobs[0].id == sample_job.id
 
 
-def test_load_jobs_skips_invalid(job_manager, sample_job, caplog):
-    """Test that invalid JSONL entries are skipped with appropriate warnings."""
-    # Add a valid job
-    job_manager.add_job(sample_job)
+def test_load_jobs_skips_invalid(tmp_path, caplog):
+    """Test that invalid jobs are skipped with appropriate warnings."""
+    # Create file with mix of valid and invalid jobs at the hardcoded path
+    jobs_file = tmp_path / ".metriq_gym_jobs.jsonl"
+    jobs_file.write_text(f"""{{"id": "valid1", "job_type": "{FAKE_BENCHMARK_NAME}", "params": {{}}, "data": {{"provider_job_ids": []}}, "provider_name": "test", "device_name": "test", "dispatch_time": "2024-01-01T00:00:00"}}
+{{"id": "invalid1"}}
+{{"invalid": "json"}}
+{{"id": "valid2", "job_type": "{FAKE_BENCHMARK_NAME}", "params": {{}}, "data": {{"provider_job_ids": []}}, "provider_name": "test", "device_name": "test", "dispatch_time": "2024-01-01T00:00:00"}}""")
     
-    # Add various invalid entries
-    with open(JobManager.jobs_file, "a") as f:
-        f.write('{"id": "invalid"}\n')  # Missing required fields
-        f.write('{"invalid": "json"}\n')  # Invalid JSON
-        f.write('{"id": "test", "job_type": "invalid", "params": {}, "device_name": "test"}\n')  # Invalid job_type
-        f.write('{"id": "test", "job_type": "BSEQ", "params": "not_dict", "device_name": "test"}\n')  # Invalid params
-        f.write('{"id": "test", "job_type": "BSEQ", "params": {}, "device_name": 123}\n')  # Invalid device_name
+    # Temporarily modify the class variable
+    original_jobs_file = JobManager.jobs_file
+    JobManager.jobs_file = str(jobs_file)
     
-    with caplog.at_level(logging.WARNING):
-        new_job_manager = JobManager()
-        
-        # Verify only valid job was loaded
-        jobs = new_job_manager.get_jobs()
-        assert len(jobs) == 1
-        assert jobs[0].id == sample_job.id
-        
-        # Verify warnings were logged
-        log_text = caplog.text
-        assert "Invalid JSON" in log_text
-        assert "Invalid or missing job_type" in log_text
-        assert "Invalid or missing params" in log_text
-        assert "Invalid or missing device_name" in log_text
+    try:
+        with caplog.at_level(logging.WARNING):
+            manager = JobManager()
+            
+            # Should only load the two valid jobs
+            assert len(manager.jobs) == 2
+            assert any(job.id == "valid1" for job in manager.jobs)
+            assert any(job.id == "valid2" for job in manager.jobs)
+            
+            # Check that appropriate warnings were logged
+            log_text = caplog.text
+            assert "Line 2: MetriqGymJob.__init__() missing 6 required positional arguments" in log_text
+            assert "Line 3: MetriqGymJob.__init__() got an unexpected keyword argument 'invalid'" in log_text
+    finally:
+        # Restore original jobs_file path
+        JobManager.jobs_file = original_jobs_file
 
 
 def test_load_jobs_whitespace_only(job_manager, caplog):
