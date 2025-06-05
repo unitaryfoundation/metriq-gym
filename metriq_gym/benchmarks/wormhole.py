@@ -107,7 +107,7 @@ def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
 
         # Measure qubit 0 into a classical bit, e.g., classical register bit 0
         # Corresponds to Pauli Z operator on qubit 0 (SparsePauliOp('ZIIIII')).
-        qc.measure(0, 0)
+        qc.measure(5, 0)
         return qc
 
     elif num_qubits == 7:
