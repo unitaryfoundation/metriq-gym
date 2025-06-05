@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 import pytest
 from qbraid.runtime import QuantumJob, QiskitJob
 from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo
+from qbraid.runtime.enums import JobStatus
 from datetime import datetime, timedelta
 
 
@@ -34,7 +35,7 @@ def test_job_status_with_queue_position():
     info = job_status(qiskit_job)
 
     assert isinstance(info, JobStatusInfo)
-    assert info.status == "QUEUED"
+    assert info.status == JobStatus.QUEUED
     assert info.queue_position == 3
 
 
@@ -45,10 +46,26 @@ def test_job_status_without_queue_position():
 
     qiskit_job = MagicMock(spec=QiskitJob)
     qiskit_job.status.return_value = status_obj
-    del qiskit_job.queue_position  # simulate method absence
+    # simulate method absence
+    if hasattr(qiskit_job, "queue_position"):
+        del qiskit_job.queue_position
 
     info = job_status(qiskit_job)
 
     assert isinstance(info, JobStatusInfo)
-    assert info.status == "RUNNING"
+    assert info.status == JobStatus.RUNNING
     assert info.queue_position is None
+
+
+def test_job_status_unknown_fallback():
+    """Verify fallback to JobStatus.UNKNOWN for unrecognized statuses."""
+    status_obj = MagicMock()
+    status_obj.name = "FOOBAR"  # not a valid JobStatus
+
+    qiskit_job = MagicMock(spec=QiskitJob)
+    qiskit_job.status.return_value = status_obj
+
+    info = job_status(qiskit_job)
+
+    assert isinstance(info, JobStatusInfo)
+    assert info.status == JobStatus.UNKNOWN
