@@ -246,6 +246,6 @@ class Wormhole(Benchmark):
         """Poll results for Wormhole benchmark."""
         return WormholeResult(
             expectation_value=calculate_expectation_value(
-                self.params.num_qubits, self.params.shots, flatten_counts(result_data)[0]
+                self.params.shots, flatten_counts(result_data)[0]
             )
         )
