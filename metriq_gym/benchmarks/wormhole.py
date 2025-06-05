@@ -5,6 +5,9 @@ The Wormhole benchmark is based on the following paper:
     Towards Quantum Gravity in the Lab on Quantum Processors
     Illya Shapoval, Vincent Paul Su, Wibe de Jong, Miro Urbanek, Brian Swingle
     Quantum 7, 1138 (2023)
+
+A generalized version of the wormhole benchmark software can also be found as a companion [software
+repository](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py) to the above paper.
 """
 
 import numpy as np
@@ -18,7 +21,12 @@ from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkR
 
 
 def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
-    """Create a wormhole circuit for either 6 or 7 qubits."""
+    """Create a wormhole circuit for either 6 or 7 qubits.
+
+    The 7-qubit circuit is based on the circuit diagram in Figure-4 of
+    [arXiv:2205.14081](https://arxiv.org/pdf/2205.14081). Both the 6- and 7-qubit circuits assume a interraction
+    coupling constant (referred to as `g` in the paper) of pi/2.
+    """
     if num_qubits == 6:
         qc = QuantumCircuit(6, 1)
         qc.h(0)
@@ -105,8 +113,8 @@ def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
         qc.rzz(np.pi / 2, 5, 4)
         qc.rzz(np.pi / 2, 4, 3)
 
-        # Measure qubit 0 into a classical bit, e.g., classical register bit 0
-        # Corresponds to Pauli Z operator on qubit 0 (SparsePauliOp('ZIIIII')).
+        # Perform a measurement which corresponds to the Pauli-Z operator (SparsePauliOp('ZIIIII')). Since Qiskit is
+        # little-endian, this is reversed, and the measurement is actually performed on the 5-th qubit.
         qc.measure(5, 0)
         return qc
 
@@ -196,8 +204,9 @@ def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
         qc.rzz(np.pi / 2, 5, 4)
         qc.rzz(np.pi / 2, 4, 3)
 
-        # Measure qubit 1 into a classical bit, e.g., classical register bit 0
-        # Corresponds to Pauli Z operator on qubit 1 (SparsePauliOp('IZIIIII')).
+        # Perform a measurement which corresponds to the Pauli-Z operator (SparsePauliOp('IZIIIII')). Since Qiskit is
+        # little-endian, this is reversed, and the measurement is actually performed on the 5-th qubit. This can also
+        # be seen in Figure-4 of the paper.
         qc.measure(5, 0)
 
         return qc
@@ -206,7 +215,8 @@ def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
 
 
 def calculate_expectation_value(shots: int, count_results: MeasCount) -> float:
-    return count_results['1'] / shots
+    """Calculate the expectation value of the Pauli operator in the state produced by the quantum circuit."""
+    return count_results["1"] / shots
 
 
 @dataclass
