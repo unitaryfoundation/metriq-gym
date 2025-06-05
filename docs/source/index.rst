@@ -10,11 +10,12 @@ To install ``metriq-gym`` run ::
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    API-doc <api.rst>
    User Guide <user_guide.rst>
+   Adding a new benchmark <adding_new_benchmark.rst>
 
 
 

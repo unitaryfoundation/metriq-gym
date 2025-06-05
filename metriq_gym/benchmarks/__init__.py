@@ -1,10 +1,20 @@
+from enum import StrEnum
+
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
 from metriq_gym.benchmarks.qml_kernel import QMLKernel, QMLKernelData
 from metriq_gym.benchmarks.clops import Clops, ClopsData
 from metriq_gym.benchmarks.quantum_volume import QuantumVolume, QuantumVolumeData
 from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
 from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData
-from metriq_gym.job_type import JobType
+
+
+class JobType(StrEnum):
+    BSEQ = "BSEQ"
+    CLOPS = "CLOPS"
+    QML_KERNEL = "QML Kernel"
+    QUANTUM_VOLUME = "Quantum Volume"
+    WORMHOLE = "Wormhole"
+
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,

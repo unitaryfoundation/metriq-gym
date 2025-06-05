@@ -2,7 +2,7 @@
 
 [![Unitary Foundation](https://img.shields.io/badge/Supported%20By-Unitary%20Foundation-FFFF00.svg)](https://unitary.foundation)
 [![Discord Chat](https://img.shields.io/badge/dynamic/json?color=blue&label=Discord&query=approximate_presence_count&suffix=%20online.&url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2FJqVGmpkP96%3Fwith_counts%3Dtrue)](http://discord.unitary.foundation)
-
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 `metriq-gym` is a Python framework for implementing and running standard quantum benchmarks on different quantum devices by different providers.
 
@@ -67,7 +67,7 @@ The `.env.example` file illustrates how to specify the API keys once you have ac
 You can dispatch a job by specifying the parameters of the job you wish to launch in a configuration file. 
 
 ```sh
-python metriq_gym/run.py dispatch <BENCHMARK_JSON> --provider <PROVIDER> --device <DEVICE>
+mgym dispatch <BENCHMARK_JSON> --provider <PROVIDER> --device <DEVICE>
 ```
 
 Refer to the `schemas/` directory for example schema files for other supported benchmarks.
@@ -76,7 +76,7 @@ Refer to the `schemas/` directory for example schema files for other supported b
 If running on quantum cloud hardware, the job will be added to a polling queue. The status of the queue can be checked with
 
 ```sh
-python metriq_gym/run.py poll --job_id <METRIQ_GYM_JOB_ID>
+mgym poll --job_id <METRIQ_GYM_JOB_ID>
 ```
 
 where `<METRIQ_GYM_JOB_ID>` is the assigned job ID of the job that was dispatched as provided by `metriq-gym`. 
@@ -85,8 +85,15 @@ Alternatively, the `poll` action can be used without the `--job_id` flag to view
 and select the one that is of interest.
 
 ```sh
-python metriq_gym/run.py poll
+mgym poll
 ```
+
+In order to export results to a JSON file, you can use the `--json` flag with the `poll` action.
+```sh
+mgym poll --job_id <METRIQ_GYM_JOB_ID> --json
+```
+This will create a JSON file with the results and the metadata of the job identified by `<METRIQ_GYM_JOB_ID>`.
+By default, the JSON file will be saved in the current working directory with the name `<METRIQ_GYM_JOB_ID>.json`.
 
 ### View jobs
 
@@ -94,13 +101,13 @@ You can view all the jobs that have been dispatched by using the `view` action.
 This will display basic information about each job, including its ID, backend, job type, provider, and device.
 
 ```sh
-python metriq_gym/run.py view
+mgym view
 ```
 In order to view the details of a specific job (e.g., the parameters the job was launched with), 
 you can use the `view` action with the `--job_id` flag or select the job by index from the list of all dispatched jobs.
 
 ```sh
-python metriq_gym/run.py view --job_id <METRIQ_GYM_JOB_ID>
+mgym --job_id <METRIQ_GYM_JOB_ID>
 ```
 
 ### Example: Benchmarking Bell state effective qubits (BSEQ) on IBM hardware
@@ -114,7 +121,7 @@ case, we use the `bseq_example.json` file as we want to run a BSEQ job. The foll
 job on the ibm-sherbrooke device for BSEQ.
 
 ```sh
-python metriq_gym/run.py dispatch metriq_gym/schemas/examples/bseq.example.json --provider ibm --device ibm_sherbrooke
+mgym dispatch metriq_gym/schemas/examples/bseq.example.json --provider ibm --device ibm_sherbrooke
 ```
 
 We should see logging information in our terminal to indicate that the dispatch action is taking place:
@@ -139,7 +146,7 @@ We can confirm that the job has indeed been dispatched and retrieve the associat
 We can use the "poll" action to check the status of our job:
 
 ```sh
-python metriq_gym/run.py poll --job_id 93a06a18-41d8-475a-a030-339fbf3accb9
+mgym poll --job_id 93a06a18-41d8-475a-a030-339fbf3accb9
 ```
 
 Doing so gives us the results of our job (if it has completed):
@@ -156,8 +163,7 @@ INFO - Polling job...
 INFO - Job is not yet completed. Please try again later.
 ```
 
-As a convenience, while we could supply the metriq-gym job ID, we can also poll the job by running `python
-metriq_gym/run.py poll` and then selecting the job to poll by index from our local metriq-gym jobs database.
+As a convenience, while we could supply the metriq-gym job ID, we can also poll the job by running `mgym poll` and then selecting the job to poll by index from our local metriq-gym jobs database.
 
 ```sh
 Available jobs:

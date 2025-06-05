@@ -24,7 +24,6 @@ class QuantumVolumeData(BenchmarkData):
     trials: int
 
 
-@dataclass
 class QuantumVolumeResult(BenchmarkResult):
     num_qubits: int
     confidence_pass: bool
