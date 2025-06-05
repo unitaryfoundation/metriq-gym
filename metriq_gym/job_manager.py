@@ -3,10 +3,13 @@ from datetime import datetime
 import json
 import os
 import pprint
+import logging
 from typing import Any
 
 from tabulate import tabulate
 from metriq_gym.benchmarks import JobType
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -64,12 +67,33 @@ class JobManager:
         self.jobs = []
         if os.path.exists(self.jobs_file):
             with open(self.jobs_file) as file:
-                for line in file:
-                    try:
-                        job = MetriqGymJob.deserialize(line.strip())
-                        self.jobs.append(job)
-                    except json.JSONDecodeError:
+                for line_number, line in enumerate(file, start=1):
+                    stripped_line = line.strip()
+                    if not stripped_line:
                         continue
+                    try:
+                        job = MetriqGymJob.deserialize(stripped_line)
+                        
+                        # Validate required fields
+                        if not isinstance(getattr(job, "job_type", None), JobType):
+                            raise ValueError("Invalid or missing job_type")
+                            
+                        if not isinstance(getattr(job, "params", None), dict):
+                            raise TypeError("Invalid or missing params")
+                            
+                        if not isinstance(getattr(job, "device_name", None), str):
+                            raise ValueError("Invalid or missing device_name")
+                            
+                        self.jobs.append(job)
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Line {line_number}: Invalid JSON (pos {e.pos})")
+                    except (KeyError, TypeError, ValueError) as e:
+                        logger.warning(f"Line {line_number}: {e}")
+                    except Exception as e:
+                        logger.warning(f"Line {line_number}: Unexpected error ({type(e).__name__}) - {e}")
+
+        if not self.jobs:
+            logger.warning(f"No valid jobs found in {self.jobs_file}")
 
     def add_job(self, job: MetriqGymJob) -> str:
         self.jobs.append(job)
