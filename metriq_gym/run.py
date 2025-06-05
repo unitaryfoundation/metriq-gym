@@ -114,7 +114,11 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         else:
             CliExporter(metriq_job, results).export()
     else:
-        print("Job is not yet completed. Please try again later.")
+        print("Job is not yet completed. Current status:")
+        for task in quantum_jobs:
+            info = job_status(task)
+            print(f"- {task.id}: {info}")
+        print("Please try again later.")
 
 
 def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:

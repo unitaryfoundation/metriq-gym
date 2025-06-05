@@ -156,11 +156,13 @@ INFO - Polling job...
 BSEQResult(largest_connected_size=100, fraction_connected=0.7874015748031497)
 ```
 
-In the event where the job has not completed, we would receive the following message instead
+In the event where the job has not completed, we would receive the following message:
 
 ```sh
 INFO - Polling job...
-INFO - Job is not yet completed. Please try again later.
+INFO - Job is not yet completed. Current status:
+INFO - - d0wtyfhvx7bg008203b0: QUEUED (position 3)
+INFO - Please try again later.
 ```
 
 As a convenience, while we could supply the metriq-gym job ID, we can also poll the job by running `mgym poll` and then selecting the job to poll by index from our local metriq-gym jobs database.
@@ -187,7 +189,7 @@ INFO - Polling job...
 First, follow the [Setup](#setup) instructions above.
 
 ### Updating the submodule
-To pull the latest changes from the submodule’s repository:
+To pull the latest changes from the submodule's repository:
 
 ```sh
 cd submodules/qiskit-device-benchmarking
