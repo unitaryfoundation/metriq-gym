@@ -72,16 +72,22 @@ class JobManager:
                     if not stripped_line:
                         continue
                     try:
-                        job = MetriqGymJob.deserialize(stripped_line)
+                        # First try to parse JSON
+                        job_dict = json.loads(stripped_line)
+                        
+                        # Then try to create job object
+                        job = MetriqGymJob(**job_dict)
+                        job.job_type = JobType(job_dict["job_type"])
+                        job.dispatch_time = datetime.fromisoformat(job_dict["dispatch_time"])
                         
                         # Validate required fields
-                        if not isinstance(getattr(job, "job_type", None), JobType):
+                        if not isinstance(job.job_type, JobType):
                             raise ValueError("Invalid or missing job_type")
                             
-                        if not isinstance(getattr(job, "params", None), dict):
+                        if not isinstance(job.params, dict):
                             raise TypeError("Invalid or missing params")
                             
-                        if not isinstance(getattr(job, "device_name", None), str):
+                        if not isinstance(job.device_name, str):
                             raise ValueError("Invalid or missing device_name")
                             
                         self.jobs.append(job)

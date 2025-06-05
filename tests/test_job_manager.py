@@ -35,8 +35,9 @@ def sample_job():
 def test_load_jobs_empty_file(job_manager, caplog):
     """Test handling of empty file."""
     caplog.set_level(logging.WARNING)
-    assert job_manager.get_jobs() == []
-    assert "No valid jobs found" in caplog.text
+    with caplog.at_level(logging.WARNING):
+        assert job_manager.get_jobs() == []
+        assert "No valid jobs found" in caplog.text
 
 
 def test_add_job(job_manager, sample_job):
@@ -67,20 +68,20 @@ def test_load_jobs_skips_invalid(job_manager, sample_job, caplog):
         f.write('{"id": "test", "job_type": "BSEQ", "params": "not_dict", "device_name": "test"}\n')  # Invalid params
         f.write('{"id": "test", "job_type": "BSEQ", "params": {}, "device_name": 123}\n')  # Invalid device_name
     
-    caplog.set_level(logging.WARNING)
-    new_job_manager = JobManager()
-    
-    # Verify only valid job was loaded
-    jobs = new_job_manager.get_jobs()
-    assert len(jobs) == 1
-    assert jobs[0].id == sample_job.id
-    
-    # Verify warnings were logged
-    log_text = caplog.text
-    assert "Invalid JSON" in log_text
-    assert "Invalid or missing job_type" in log_text
-    assert "Invalid or missing params" in log_text
-    assert "Invalid or missing device_name" in log_text
+    with caplog.at_level(logging.WARNING):
+        new_job_manager = JobManager()
+        
+        # Verify only valid job was loaded
+        jobs = new_job_manager.get_jobs()
+        assert len(jobs) == 1
+        assert jobs[0].id == sample_job.id
+        
+        # Verify warnings were logged
+        log_text = caplog.text
+        assert "Invalid JSON" in log_text
+        assert "Invalid or missing job_type" in log_text
+        assert "Invalid or missing params" in log_text
+        assert "Invalid or missing device_name" in log_text
 
 
 def test_load_jobs_whitespace_only(job_manager, caplog):
@@ -88,7 +89,7 @@ def test_load_jobs_whitespace_only(job_manager, caplog):
     with open(JobManager.jobs_file, "w") as f:
         f.write("\n\n  \n\t\n")
     
-    caplog.set_level(logging.WARNING)
-    new_job_manager = JobManager()
-    assert new_job_manager.get_jobs() == []
-    assert "No valid jobs found" in caplog.text
+    with caplog.at_level(logging.WARNING):
+        new_job_manager = JobManager()
+        assert new_job_manager.get_jobs() == []
+        assert "No valid jobs found" in caplog.text
