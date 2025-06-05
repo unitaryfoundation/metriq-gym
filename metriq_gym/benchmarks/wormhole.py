@@ -205,23 +205,8 @@ def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
         raise ValueError(f"Unsupported number of qubits: {num_qubits}")
 
 
-def calculate_expectation_value(num_qubits: int, shots: int, count_results: MeasCount) -> float:
-    """Calculate the expectation value for a measured qubit specified by its index."""
-    # The measured_qubit_index: 0 corresponds to qubit0, 1 to qubit1, etc.
-    if num_qubits == 6:
-        measured_qubit_index = 0
-    elif num_qubits == 7:
-        measured_qubit_index = 1
-
-    expectation = 0.0
-    # Note: Qiskit's measurement results are in little-endian order so outcome[-(measured_qubit_index+1)] gives the bit
-    # corresponding to that qubit.
-    for outcome, count in count_results.items():
-        bit = outcome[-(measured_qubit_index + 1)]
-        eigenvalue = 1 if bit == "0" else -1
-        expectation += eigenvalue * count
-    expectation /= shots
-    return expectation
+def calculate_expectation_value(shots: int, count_results: MeasCount) -> float:
+    return count_results['1'] / shots
 
 
 @dataclass
