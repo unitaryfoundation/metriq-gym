@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import singledispatch
-from typing import Optional, Any
+from typing import Optional
 
 from qbraid import QuantumJob
 from qbraid.runtime import QiskitJob, AzureQuantumJob, BraketQuantumTask

@@ -3,7 +3,6 @@ import pytest
 from qbraid.runtime import QuantumJob, QiskitJob, BraketQuantumTask
 from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo, JobStatus
 from datetime import datetime, timedelta
-from qbraid.runtime.enums import JobStatus as QbraidJobStatus
 
 
 def test_execution_time_qiskit():

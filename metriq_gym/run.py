@@ -26,6 +26,7 @@ from metriq_gym.exporters.json_exporter import JsonExporter
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.benchmarks import JobType
+from metriq_gym.qplatform.job import job_status
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
