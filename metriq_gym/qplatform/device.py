@@ -5,10 +5,8 @@ import networkx as nx
 from qbraid import QuantumDevice
 from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
 
-try:
-    from metriq_gym.local.aer import AerSimulatorDevice
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    AerSimulatorDevice = None  # type: ignore
+from metriq_gym.local.aer import AerSimulatorDevice
+
 import rustworkx as rx
 
 
@@ -23,10 +21,10 @@ def _(device: QiskitBackend) -> str:
     return device._backend.backend_version
 
 
-if AerSimulatorDevice:
-    @version.register
-    def _(device: AerSimulatorDevice) -> str:  
-        return device.backend.backend_version
+
+@version.register
+def _(device: AerSimulatorDevice) -> str:  
+    return device.backend.backend_version
 
 
 @singledispatch
@@ -54,8 +52,7 @@ def _(device: AzureQuantumDevice) -> rx.PyGraph:
     return rx.generators.complete_graph(device.metadata()["num_qubits"])
 
 
-if AerSimulatorDevice:
-    @connectivity_graph.register
-    def _(device: AerSimulatorDevice) -> rx.PyGraph: 
-        num_qubits = device.backend.num_qubits
-        return rx.generators.complete_graph(num_qubits)
+@connectivity_graph.register
+def _(device: AerSimulatorDevice) -> rx.PyGraph: 
+    num_qubits = device.backend.num_qubits
+    return rx.generators.complete_graph(num_qubits)

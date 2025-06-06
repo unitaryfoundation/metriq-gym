@@ -62,7 +62,7 @@ def load_local_job(job_id: str) -> LocalJob:
 
 
 class LocalDevice:
-    def run(self, shots: int | None = None) -> LocalJob:
+    def run(self, shots: int) -> LocalJob:
         job = LocalJob(str(uuid.uuid4()), {"shots": shots})
         job._save()
         return job
