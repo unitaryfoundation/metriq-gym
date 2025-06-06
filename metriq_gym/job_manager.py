@@ -70,8 +70,8 @@ class JobManager:
         """
         Initialize the job list by loading valid jobs from the local JSONL file.
 
-        This method reads the `.metriq_gym_jobs.jsonl` file line by line, 
-        attempting to deserialize each entry into a `MetriqGymJob` object. 
+        This method reads the `.metriq_gym_jobs.jsonl` file line by line,
+        attempting to deserialize each entry into a `MetriqGymJob` object.
         It skips invalid or outdated entries without raising exceptions,
         while logging the reasons for each skip.
 
@@ -117,10 +117,9 @@ class JobManager:
                     logger.warning(line_number, f"Unexpected exception ({type(e).__name__}): {e}")
                 else:
                     self.jobs.append(job)
-       
+
         if not self.jobs:
             logger.warning(f"No valid jobs found in {self.jobs_file}.")
-
 
     def add_job(self, job: MetriqGymJob) -> str:
         self.jobs.append(job)
