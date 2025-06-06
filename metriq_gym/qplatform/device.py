@@ -3,7 +3,7 @@ from typing import cast
 
 import networkx as nx
 from qbraid import QuantumDevice
-from qbraid.runtime import BraketDevice, QiskitBackend
+from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
 import rustworkx as rx
 
 
@@ -36,3 +36,8 @@ def _(device: BraketDevice) -> rx.PyGraph:
         rx.PyGraph,
         rx.networkx_converter(nx.Graph(device._device.topology_graph.to_undirected())),
     )
+
+
+@connectivity_graph.register
+def _(device: AzureQuantumDevice) -> rx.PyGraph:
+    return rx.generators.complete_graph(device.metadata()["num_qubits"])
