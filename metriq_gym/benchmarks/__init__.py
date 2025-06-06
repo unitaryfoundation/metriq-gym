@@ -6,6 +6,7 @@ from metriq_gym.benchmarks.clops import Clops, ClopsData
 from metriq_gym.benchmarks.quantum_volume import QuantumVolume, QuantumVolumeData
 from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
 from metriq_gym.benchmarks.mirror_circuits import MirrorCircuits, MirrorCircuitsData
+from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData
 
 
 class JobType(StrEnum):
