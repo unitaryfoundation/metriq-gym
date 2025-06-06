@@ -16,6 +16,7 @@ from qbraid.runtime import (
     load_job,
     load_provider,
 )
+from metriq_gym.local.aer import load_local_job
 
 from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
@@ -42,6 +43,13 @@ def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
     Raises:
         QBraidSetupError: If no device matching the name is found in the provider.
     """
+    if provider_name == "local":
+        if backend_name == "aer_simulator":
+            from metriq_gym.local.aer import AerSimulatorDevice
+
+            return AerSimulatorDevice()
+        raise QBraidSetupError("Device not found")
+
     try:
         provider: QuantumProvider = load_provider(provider_name)
     except QbraidError:
@@ -104,7 +112,11 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
     quantum_jobs = [
-        load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data))
+        (
+            load_local_job(job_id)
+            if metriq_job.provider_name == "local"
+            else load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data))
+        )
         for job_id in job_data.provider_job_ids
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):

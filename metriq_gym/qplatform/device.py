@@ -4,6 +4,9 @@ from typing import cast
 import networkx as nx
 from qbraid import QuantumDevice
 from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
+
+from metriq_gym.local.aer import AerSimulatorDevice
+
 import rustworkx as rx
 
 
@@ -16,6 +19,12 @@ def version(device: QuantumDevice) -> str:
 @version.register
 def _(device: QiskitBackend) -> str:
     return device._backend.backend_version
+
+
+
+@version.register
+def _(device: AerSimulatorDevice) -> str:  
+    return device.backend.backend_version
 
 
 @singledispatch
@@ -41,3 +50,9 @@ def _(device: BraketDevice) -> rx.PyGraph:
 @connectivity_graph.register
 def _(device: AzureQuantumDevice) -> rx.PyGraph:
     return rx.generators.complete_graph(device.metadata()["num_qubits"])
+
+
+@connectivity_graph.register
+def _(device: AerSimulatorDevice) -> rx.PyGraph: 
+    num_qubits = device.backend.num_qubits
+    return rx.generators.complete_graph(num_qubits)
