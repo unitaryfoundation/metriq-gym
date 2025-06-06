@@ -62,19 +62,8 @@ def load_local_job(job_id: str) -> LocalJob:
     return LocalJob(job_id, data["measurement_counts"])
 
 
-class LocalJob:
-    def __init__(self, data: dict):
-        self.job_id = str(uuid4())
-        self.data = data
-
-    def _save(self) -> None:
-        os.makedirs(LOCAL_JOB_DIR, exist_ok=True)
-        path = os.path.join(LOCAL_JOB_DIR, f"{self.job_id}.json")
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(self.data, f)
-
 class LocalDevice:
-    def run(self, circ, shots: int | None = None) -> LocalJob:
-        job = LocalJob({"shots": shots})
+    def run(self, shots: int | None = None) -> LocalJob:
+        job = LocalJob(str(uuid.uuid4()), {"shots": shots})
         job._save()
         return job
