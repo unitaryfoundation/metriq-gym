@@ -1,5 +1,7 @@
 from unittest.mock import patch
 import pytest
+import json
+import logging
 from datetime import datetime
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from tests.test_schema_validator import FAKE_BENCHMARK_NAME, FakeJobType
@@ -48,3 +50,114 @@ def test_load_jobs_with_existing_data(job_manager, sample_job):
     jobs = new_job_manager.get_jobs()
     assert len(jobs) == 1
     assert jobs[0].id == sample_job.id
+
+
+
+def test_mixed_valid_and_invalid_jobs_are_handled_gracefully(tmpdir, caplog):
+    """
+    Test that JobManager loads only valid jobs from a file containing a mix
+    of valid and invalid entries, and logs appropriate warnings for each invalid entry.
+    """
+    jobs_file = tmpdir.join("mixed_jobs.jsonl")
+    JobManager.jobs_file = str(jobs_file)
+
+    # Prepare job entries
+    valid_job_1 = MetriqGymJob(
+        id="valid_job_1",
+        provider_name="provider_1",
+        device_name="device_1",
+        job_type=FakeJobType(FAKE_BENCHMARK_NAME),
+        params={},
+        data={"provider_job_ids": []},
+        dispatch_time=datetime.now(),
+    )
+    valid_job_2 = MetriqGymJob(
+        id="valid_job_2",
+        provider_name="provider_2",
+        device_name="device_2",
+        job_type=FakeJobType(FAKE_BENCHMARK_NAME),
+        params={},
+        data={"provider_job_ids": []},
+        dispatch_time=datetime.now(),
+    )
+
+    with open(jobs_file, "w") as f:
+        f.write(valid_job_1.serialize() + "\n")                     # Valid
+        f.write("\n")                                               # Empty line
+        f.write('{"invalid": "json", "missing": true\n')            # Malformed JSON
+        f.write(json.dumps({                                        # Missing fields
+            "id": "missing_fields",
+            "params": {},
+            "data": {},
+            "provider_name": "test"
+        }) + "\n")
+        f.write(json.dumps({                                        # Invalid job type
+            "id": "bad_job_type",
+            "job_type": "NONEXISTENT_TYPE",
+            "params": {},
+            "data": {},
+            "provider_name": "test",
+            "device_name": "device",
+            "dispatch_time": "2024-01-01T00:00:00"
+        }) + "\n")
+        f.write(json.dumps({                                        # Bad datetime
+            "id": "bad_datetime",
+            "job_type": FAKE_BENCHMARK_NAME,
+            "params": {},
+            "data": {},
+            "provider_name": "test",
+            "device_name": "device",
+            "dispatch_time": "not-a-datetime"
+        }) + "\n")
+        f.write(valid_job_2.serialize() + "\n")                     # Valid
+
+    caplog.set_level(logging.WARNING)
+    manager = JobManager()
+    loaded_jobs = manager.get_jobs()
+
+    # Expect only 2 valid jobs to be loaded
+    assert len(loaded_jobs) == 2
+    assert loaded_jobs[0].id == "valid_job_1"
+    assert loaded_jobs[1].id == "valid_job_2"
+
+    # Expect 4 warning logs for invalid entries (excluding blank line)
+    warnings = [rec.message for rec in caplog.records if rec.levelno == logging.WARNING]
+    assert len(warnings) == 4
+
+    # Verify log contents by error type
+    joined_logs = " ".join(warnings)
+    assert "Invalid JSON at position" in joined_logs
+    assert (
+        "Missing required field" in joined_logs or
+        "Incorrect data structure" in joined_logs or
+        "Data structure mismatch" in joined_logs
+    )
+    assert "Unknown job type:" in joined_logs
+    assert "Invalid datetime format:" in joined_logs or "Bad datetime format:" in joined_logs
+
+
+
+def test_load_jobs_with_only_invalid_entries(tmpdir, caplog):
+    """Test that a warning is logged when no valid jobs are found."""
+    jobs_file = tmpdir.join("test_jobs_only_invalid.jsonl")
+    JobManager.jobs_file = str(jobs_file)
+
+    with open(jobs_file, "w") as f:
+        f.write('{"bad": "entry", "no_required_fields": true}\n')  # Invalid entry
+
+    caplog.set_level(logging.WARNING)
+    job_manager = JobManager()
+    jobs = job_manager.get_jobs()
+
+    assert jobs == []  # No valid jobs
+    warning_messages = [record.message for record in caplog.records]
+    assert any("No valid jobs found" in msg for msg in warning_messages)
+
+
+def test_load_jobs_file_missing(tmpdir):
+    """Test that no errors occur and jobs list is empty when jobs file is missing."""
+    missing_file_path = tmpdir.join("non_existent.jsonl")
+    JobManager.jobs_file = str(missing_file_path)
+
+    job_manager = JobManager()
+    assert job_manager.get_jobs() == []
