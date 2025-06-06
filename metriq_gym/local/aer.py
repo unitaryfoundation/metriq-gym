@@ -1,7 +1,6 @@
 import json
 import os
 import uuid
-from uuid import uuid4
 
 from qbraid.runtime import JobStatus, GateModelResultData
 from qiskit import QuantumCircuit

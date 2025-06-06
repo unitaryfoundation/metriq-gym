@@ -10,9 +10,7 @@ from qiskit_aer import AerSimulator
 
 from metriq_gym.local.aer import (
     AerSimulatorDevice,
-    load_local_job,
-    LOCAL_JOB_DIR,
-    LocalDevice,
+    LOCAL_JOB_DIR
 )
 from metriq_gym.qplatform.device import connectivity_graph
 import rustworkx as rx
