@@ -4,6 +4,11 @@ from typing import cast
 import networkx as nx
 from qbraid import QuantumDevice
 from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
+
+try:
+    from metriq_gym.local.aer import AerSimulatorDevice
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    AerSimulatorDevice = None  # type: ignore
 import rustworkx as rx
 
 
@@ -18,6 +23,12 @@ def _(device: QiskitBackend) -> str:
     return device._backend.backend_version
 
 
+if AerSimulatorDevice:
+    @version.register
+    def _(device: AerSimulatorDevice) -> str:  # type: ignore[misc]
+        return device.backend.backend_version
+
+
 @singledispatch
 def connectivity_graph(device: QuantumDevice) -> rx.PyGraph:
     raise NotImplementedError(
@@ -28,6 +39,13 @@ def connectivity_graph(device: QuantumDevice) -> rx.PyGraph:
 @connectivity_graph.register
 def _(device: QiskitBackend) -> rx.PyGraph:
     return device._backend.coupling_map.graph.to_undirected(multigraph=False)
+
+
+if AerSimulatorDevice:
+    @connectivity_graph.register
+    def _(device: AerSimulatorDevice) -> rx.PyGraph:  # type: ignore[misc]
+        num_qubits = device.backend.num_qubits
+        return rx.generators.complete_graph(num_qubits)
 
 
 @connectivity_graph.register

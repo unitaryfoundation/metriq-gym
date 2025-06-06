@@ -21,6 +21,7 @@ class MetriqGymJob:
     provider_name: str
     device_name: str
     dispatch_time: datetime
+    result_data: list[dict[str, Any]] | None = None
 
     def to_table_row(self) -> list[str]:
         return [

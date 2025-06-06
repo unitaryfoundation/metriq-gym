@@ -82,11 +82,12 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         help="Path to the file containing the benchmark parameters",
     )
+    providers = get_providers() + ["local"]
     dispatch_parser.add_argument(
         "-p",
         "--provider",
         type=str,
-        choices=get_providers(),
+        choices=providers,
         help="String identifier for backend provider service",
     )
     dispatch_parser.add_argument(
