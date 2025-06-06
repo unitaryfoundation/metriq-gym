@@ -184,12 +184,32 @@ Select a job index: 0
 INFO - Polling job...
 ```
 
+### Running multiple benchmarks
+
+`metriq-gym` supports running multiple benchmarks as a batch to a device to obtain a comprehensive performance profile.
+
+#### All benchmarks
+To run all available benchmarks (refer to the supported benchmarks in the [`benchmarks`](https://github.com/unitaryfoundation/metriq-gym/tree/main/metriq_gym/benchmarks) directory) on a device:
+
+```sh
+mgym dispatch --all-benchmarks --provider ibm --device ibm_sherbrooke
+```
+
+#### Excluding benchmarks
+To exclude specific benchmarks from the run:
+
+```sh
+mgym dispatch --all-benchmarks --provider ibm --device ibm_sherbrooke --except CLOPS "QML Kernel"
+```
+
+The system will automatically use default parameters from example configuration files in `schemas/examples/` and provide a summary of successful and failed benchmark dispatches.
+
 ## Contributing
 
 First, follow the [Setup](#setup) instructions above.
 
 ### Updating the submodule
-To pull the latest changes from the submodule’s repository:
+To pull the latest changes from the submodule's repository:
 
 ```sh
 cd submodules/qiskit-device-benchmarking
