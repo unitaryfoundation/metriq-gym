@@ -25,7 +25,7 @@ def _(device: QiskitBackend) -> str:
 
 if AerSimulatorDevice:
     @version.register
-    def _(device: AerSimulatorDevice) -> str:  # type: ignore[misc]
+    def _(device: AerSimulatorDevice) -> str:  
         return device.backend.backend_version
 
 
@@ -41,13 +41,6 @@ def _(device: QiskitBackend) -> rx.PyGraph:
     return device._backend.coupling_map.graph.to_undirected(multigraph=False)
 
 
-if AerSimulatorDevice:
-    @connectivity_graph.register
-    def _(device: AerSimulatorDevice) -> rx.PyGraph:  # type: ignore[misc]
-        num_qubits = device.backend.num_qubits
-        return rx.generators.complete_graph(num_qubits)
-
-
 @connectivity_graph.register
 def _(device: BraketDevice) -> rx.PyGraph:
     return cast(
@@ -59,3 +52,10 @@ def _(device: BraketDevice) -> rx.PyGraph:
 @connectivity_graph.register
 def _(device: AzureQuantumDevice) -> rx.PyGraph:
     return rx.generators.complete_graph(device.metadata()["num_qubits"])
+
+
+if AerSimulatorDevice:
+    @connectivity_graph.register
+    def _(device: AerSimulatorDevice) -> rx.PyGraph: 
+        num_qubits = device.backend.num_qubits
+        return rx.generators.complete_graph(num_qubits)
