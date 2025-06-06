@@ -15,6 +15,7 @@ class JobType(StrEnum):
     QML_KERNEL = "QML Kernel"
     QUANTUM_VOLUME = "Quantum Volume"
     MIRROR_CIRCUITS = "Mirror Circuits"
+    WORMHOLE = "Wormhole"
 
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
@@ -23,6 +24,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.QML_KERNEL: QMLKernel,
     JobType.QUANTUM_VOLUME: QuantumVolume,
     JobType.MIRROR_CIRCUITS: MirrorCircuits,
+    JobType.WORMHOLE: Wormhole,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -31,6 +33,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.QML_KERNEL: QMLKernelData,
     JobType.QUANTUM_VOLUME: QuantumVolumeData,
     JobType.MIRROR_CIRCUITS: MirrorCircuitsData,
+    JobType.WORMHOLE: WormholeData,
 }
 
 SCHEMA_MAPPING = {
@@ -39,4 +42,5 @@ SCHEMA_MAPPING = {
     JobType.QML_KERNEL: "qml_kernel.schema.json",
     JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
     JobType.MIRROR_CIRCUITS: "mirror_circuits.schema.json",
+    JobType.WORMHOLE: "wormhole.schema.json",
 }
