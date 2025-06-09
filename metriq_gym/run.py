@@ -25,6 +25,7 @@ from metriq_gym.exceptions import QBraidSetupError
 from metriq_gym.exporters.cli_exporter import CliExporter
 from metriq_gym.exporters.json_exporter import JsonExporter
 from metriq_gym.job_manager import JobManager, MetriqGymJob
+from metriq_gym.qplatform.job import job_status
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.benchmarks import JobType
 
@@ -291,7 +292,14 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         else:
             CliExporter(metriq_job, results).export()
     else:
-        print("Job is not yet completed. Please try again later.")
+        print("Job is not yet completed. Current status:")
+        for task in quantum_jobs:
+            info = job_status(task)
+            msg = f"- {task.id}: {info.status.value}"
+            if info.queue_position is not None:
+                msg += f" (position {info.queue_position})"
+            print(msg)
+        print("Please try again later.")
 
 
 def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
