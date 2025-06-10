@@ -1,3 +1,4 @@
+
 import logging
 import pytest
 from unittest.mock import MagicMock, patch
@@ -5,12 +6,11 @@ from unittest.mock import MagicMock, patch
 from qbraid import QbraidError
 from metriq_gym.run import (
     setup_device,
-    get_example_file_path,
     dispatch_all_benchmarks,
     dispatch_job,
 )
 from metriq_gym.exceptions import QBraidSetupError
-from metriq_gym.benchmarks import JobType
+from metriq_gym.benchmarks import JobType, get_available_benchmarks
 from metriq_gym.benchmarks.bseq import BSEQData
 
 
@@ -102,25 +102,6 @@ def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog)
     assert "Devices available: ['device1', 'device2']" in caplog.text
 
 
-def test_get_example_file_path():
-    """Test that get_example_file_path returns correct paths for all benchmark types."""
-    # Test BSEQ benchmark
-    bseq_path = get_example_file_path(JobType.BSEQ)
-    assert bseq_path.endswith("schemas/examples/bseq.example.json")
-
-    # Test CLOPS benchmark
-    clops_path = get_example_file_path(JobType.CLOPS)
-    assert clops_path.endswith("schemas/examples/clops.example.json")
-
-    # Test Quantum Volume benchmark
-    qv_path = get_example_file_path(JobType.QUANTUM_VOLUME)
-    assert qv_path.endswith("schemas/examples/quantum_volume.example.json")
-
-    # Test QML Kernel benchmark
-    qml_path = get_example_file_path(JobType.QML_KERNEL)
-    assert qml_path.endswith("schemas/examples/qml_kernel.example.json")
-
-
 @patch("metriq_gym.run.setup_device")
 @patch("metriq_gym.run.load_and_validate")
 @patch("metriq_gym.run.setup_benchmark")
@@ -156,13 +137,16 @@ def test_dispatch_all_benchmarks_success(
     # Execute function
     dispatch_all_benchmarks(mock_args, mock_job_manager)
 
-    # Verify output
+    # Verify output - DYNAMIC: gets current number of benchmarks
     captured = capsys.readouterr()
     assert "Starting bulk benchmark dispatch..." in captured.out
-    assert "Successfully dispatched 4/4 benchmarks." in captured.out
+    
+    # Dynamic assertion based on actual number of available benchmarks
+    total_benchmarks = len(get_available_benchmarks())
+    assert f"Successfully dispatched {total_benchmarks}/{total_benchmarks} benchmarks." in captured.out
 
     # Verify all benchmarks were processed
-    assert mock_job_manager.add_job.call_count == 4
+    assert mock_job_manager.add_job.call_count == total_benchmarks
 
 
 @patch("metriq_gym.run.setup_device")
@@ -194,10 +178,17 @@ def test_dispatch_all_benchmarks_with_exclusions(
         # Execute function
         dispatch_all_benchmarks(mock_args, mock_job_manager)
 
-        # Verify output shows exclusions
+        # Verify output shows exclusions - DYNAMIC calculation
         captured = capsys.readouterr()
         assert "Excluding benchmarks: ['CLOPS', 'QML Kernel']" in captured.out
-        assert "Running 2 benchmarks" in captured.out
+        
+        # Calculate expected number dynamically
+        total_benchmarks = len(get_available_benchmarks())
+        excluded_count = len([jt for jt in get_available_benchmarks() 
+                             if jt.value in ["CLOPS", "QML Kernel"]])
+        expected_count = total_benchmarks - excluded_count
+        
+        assert f"Running {expected_count} benchmarks" in captured.out
 
 
 @patch("os.path.exists")
@@ -218,10 +209,13 @@ def test_dispatch_all_benchmarks_missing_example_file(
         # Execute function
         dispatch_all_benchmarks(mock_args, mock_job_manager)
 
-        # Verify output shows file not found errors
+        # Verify output shows file not found errors - DYNAMIC
         captured = capsys.readouterr()
         assert "Example file not found" in captured.out
-        assert "Successfully dispatched 0/4 benchmarks." in captured.out
+        
+        # Dynamic assertion
+        total_benchmarks = len(get_available_benchmarks())
+        assert f"Successfully dispatched 0/{total_benchmarks} benchmarks." in captured.out
 
 
 @patch("metriq_gym.run.dispatch_all_benchmarks")
@@ -288,3 +282,24 @@ def test_dispatch_job_missing_input_file(mock_args, mock_job_manager, caplog):
 
     # Verify error is logged
     assert "input_file is required when not using --all-benchmarks" in caplog.text
+
+
+def test_get_available_benchmarks_dynamic():
+    """Test that get_available_benchmarks returns current JobType list."""
+    available = get_available_benchmarks()
+    
+    # Verify it returns a list of JobType
+    assert isinstance(available, list)
+    assert all(isinstance(jt, JobType) for jt in available)
+    
+    # Verify it includes known benchmarks
+    benchmark_values = [jt.value for jt in available]
+    assert "BSEQ" in benchmark_values
+    assert "CLOPS" in benchmark_values
+    assert "Quantum Volume" in benchmark_values
+    assert "QML Kernel" in benchmark_values
+    assert "Wormhole" in benchmark_values
+    
+    # Verify it matches JobType enum exactly
+    assert len(available) == len(JobType)
+    assert set(available) == set(JobType)

@@ -1,3 +1,4 @@
+
 import argparse
 from dataclasses import asdict
 from datetime import datetime
@@ -18,7 +19,7 @@ from qbraid.runtime import (
     load_provider,
 )
 
-from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS
+from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS, get_available_benchmarks, get_example_file_path
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
 from metriq_gym.cli import parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError
@@ -69,35 +70,6 @@ def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
     return BENCHMARK_DATA_CLASSES[job_type]
 
 
-def get_example_file_path(job_type: JobType) -> str:
-    """Get the path to the example file for a given benchmark type.
-
-    Maps each benchmark type to its corresponding example configuration file
-    in the schemas/examples/ directory. These example files contain predefined
-    parameters for running benchmarks in multi-benchmark dispatch mode.
-
-    Args:
-        job_type: The benchmark type to get the example file for.
-
-    Returns:
-        Full path to the example configuration file for the specified benchmark.
-
-    Supported benchmarks:
-        - BSEQ: Bell State Effective Qubits benchmark
-        - CLOPS: Circuit Layer Operations per Second benchmark
-        - QML_KERNEL: Quantum Machine Learning Kernel benchmark
-        - QUANTUM_VOLUME: Quantum Volume benchmark
-    """
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    example_files = {
-        JobType.BSEQ: "bseq.example.json",
-        JobType.CLOPS: "clops.example.json",
-        JobType.QML_KERNEL: "qml_kernel.example.json",
-        JobType.QUANTUM_VOLUME: "quantum_volume.example.json",
-    }
-    return os.path.join(current_dir, "schemas", "examples", example_files[job_type])
-
-
 def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Dispatch all available benchmarks to a single device.
 
@@ -141,8 +113,8 @@ def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -
     except QBraidSetupError:
         return
 
-    # Get all available benchmarks
-    available_benchmarks = list(JobType)
+    # Get all available benchmarks from the official source
+    available_benchmarks = get_available_benchmarks()
 
     # Filter excluded benchmarks
     if args.exclude_benchmarks:
@@ -152,7 +124,7 @@ def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -
             if name in [jt.value for jt in JobType]
         ]
         available_benchmarks = [jt for jt in available_benchmarks if jt not in excluded]
-        if args.exclude_benchmarks:
+        if excluded:
             print(f"Excluding benchmarks: {[jt.value for jt in excluded]}")
 
     print(f"Running {len(available_benchmarks)} benchmarks on {args.device} device...")
@@ -188,7 +160,18 @@ def dispatch_all_benchmarks(args: argparse.Namespace, job_manager: JobManager) -
             successful_jobs.append(job_id)
 
         except Exception as e:
-            results.append(f"✗ {job_type.value} failed: {str(e)}")
+            error_type = type(e).__name__
+            error_msg = str(e)
+            if hasattr(e, '__traceback__') and e.__traceback__:
+                import traceback
+                tb_lines = traceback.format_tb(e.__traceback__)
+                if tb_lines:
+                    last_frame = tb_lines[-1].strip()
+                    results.append(f"✗ {job_type.value} failed: {error_type}: {error_msg} (at: {last_frame})")
+                else:
+                    results.append(f"✗ {job_type.value} failed: {error_type}: {error_msg}")
+            else:
+                results.append(f"✗ {job_type.value} failed: {error_type}: {error_msg}")
 
     print("\nSummary:")
     for result in results:
