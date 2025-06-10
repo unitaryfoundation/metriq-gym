@@ -1,3 +1,4 @@
+
 """Command-line parsing for running metriq benchmarks."""
 
 import argparse
@@ -70,28 +71,27 @@ def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments for the metriq-gym benchmarking CLI.
 
     This function sets up the complete argument parsing structure for metriq-gym,
-    supporting both single benchmark dispatch and multi-benchmark dispatch modes
-    for comprehensive device characterization.
+    supporting dispatch of multiple benchmark configuration files for comprehensive 
+    device characterization.
 
     Returns:
         Parsed arguments as an argparse.Namespace object containing all CLI options.
 
-    Dispatch modes supported:
-        - Single benchmark: Requires input_file with specific benchmark configuration
-        - Multi-benchmark: Uses --all-benchmarks to run all available benchmarks
-        - Selective multi-benchmark: Uses --except to exclude specific benchmarks
+    Dispatch mode:
+        - Multiple benchmarks: Requires one or more JSON configuration files
+        - Each file can contain different parameters for any benchmark type
+        - Same benchmark type can be run multiple times with different configurations
     """
     parser = argparse.ArgumentParser(description="Metriq-Gym benchmarking CLI")
     subparsers = parser.add_subparsers(dest="action", required=True, help="Action to perform")
 
     dispatch_parser = subparsers.add_parser("dispatch", help="Dispatch jobs")
 
-    # Input file is optional when using multi-benchmark mode
     dispatch_parser.add_argument(
-        "input_file",
+        "benchmark_configs",
         type=str,
-        nargs="?",
-        help="Path to the file containing the benchmark parameters (required unless --all-benchmarks is used)",
+        nargs="+",
+        help="Path(s) to benchmark configuration files. Multiple files can be specified to run multiple benchmarks.",
     )
 
     dispatch_parser.add_argument(
@@ -106,21 +106,6 @@ def parse_arguments() -> argparse.Namespace:
         "--device",
         type=str,
         help="Backend to use",
-    )
-
-    # Multi-benchmark dispatch functionality
-    dispatch_parser.add_argument(
-        "--all-benchmarks",
-        action="store_true",
-        help="Run all available benchmarks on the specified device. Uses default parameters from example files in schemas/examples/",
-    )
-
-    # Benchmark exclusion functionality for selective multi-benchmark runs
-    dispatch_parser.add_argument(
-        "--except",
-        nargs="*",
-        dest="exclude_benchmarks",
-        help="Benchmarks to exclude when using --all-benchmarks. Accepts benchmark names like 'BSEQ' 'CLOPS' 'Quantum Volume' 'QML Kernel'",
     )
 
     poll_parser = subparsers.add_parser("poll", help="Poll jobs")

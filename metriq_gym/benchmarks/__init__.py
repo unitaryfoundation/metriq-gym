@@ -49,25 +49,3 @@ def get_available_benchmarks() -> list[JobType]:
     Replaces hardcoded lists in other files.
     """
     return list(JobType)
-
-
-def get_example_file_path(job_type: JobType) -> str:
-    """Return the path to the example file for a specific benchmark.
-    
-    Args:
-        job_type: The benchmark type
-        
-    Returns:
-        Full path to the example file
-    """
-    import os
-    
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    example_files = {
-        JobType.BSEQ: "bseq.example.json",
-        JobType.CLOPS: "clops.example.json",
-        JobType.QML_KERNEL: "qml_kernel.example.json",
-        JobType.QUANTUM_VOLUME: "quantum_volume.example.json",
-        JobType.WORMHOLE: "wormhole.example.json",
-    }
-    return os.path.join(current_dir, "..", "schemas", "examples", example_files[job_type])

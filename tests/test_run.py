@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 from qbraid import QbraidError
 from metriq_gym.run import (
     setup_device,
-    dispatch_all_benchmarks,
     dispatch_job,
 )
 from metriq_gym.exceptions import QBraidSetupError
@@ -41,9 +40,7 @@ def mock_args():
     args = MagicMock()
     args.provider = "test_provider"
     args.device = "test_device"
-    args.all_benchmarks = False
-    args.input_file = "test.json"
-    args.exclude_benchmarks = None
+    args.benchmark_configs = ["test.json"]
     return args
 
 
@@ -106,7 +103,7 @@ def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog)
 @patch("metriq_gym.run.load_and_validate")
 @patch("metriq_gym.run.setup_benchmark")
 @patch("os.path.exists")
-def test_dispatch_all_benchmarks_success(
+def test_dispatch_multiple_benchmarks_success(
     mock_exists,
     mock_setup_benchmark,
     mock_load_validate,
@@ -115,90 +112,101 @@ def test_dispatch_all_benchmarks_success(
     mock_job_manager,
     capsys,
 ):
-    """Test successful dispatch of all benchmarks to a single device."""
+    """Test successful dispatch of multiple benchmark configuration files."""
     # Setup mocks
-    mock_args.all_benchmarks = True
-    mock_args.exclude_benchmarks = None
+    mock_args.benchmark_configs = ["bseq.json", "clops.json"]
     mock_exists.return_value = True
 
     mock_device = MagicMock()
     mock_setup_device.return_value = mock_device
 
-    mock_params = MagicMock()
-    mock_params.model_dump.return_value = {"test": "params"}
-    mock_load_validate.return_value = mock_params
+    # Mock different benchmark params for each file
+    mock_bseq_params = MagicMock()
+    mock_bseq_params.benchmark_name = "BSEQ"
+    mock_bseq_params.model_dump.return_value = {"benchmark_name": "BSEQ", "shots": 1000}
+    
+    mock_clops_params = MagicMock()
+    mock_clops_params.benchmark_name = "CLOPS"
+    mock_clops_params.model_dump.return_value = {"benchmark_name": "CLOPS", "width": 4}
+    
+    mock_load_validate.side_effect = [mock_bseq_params, mock_clops_params]
 
     mock_handler = MagicMock()
-    # Create real dataclass instances instead of mocks
-    mock_job_data = BSEQData(provider_job_ids=["job1", "job2"], shots=1000, num_qubits=5)
+    mock_job_data = BSEQData(provider_job_ids=["job1"], shots=1000, num_qubits=5)
     mock_handler.dispatch_handler.return_value = mock_job_data
     mock_setup_benchmark.return_value = mock_handler
 
     # Execute function
-    dispatch_all_benchmarks(mock_args, mock_job_manager)
+    dispatch_job(mock_args, mock_job_manager)
 
-    # Verify output - DYNAMIC: gets current number of benchmarks
+    # Verify output
     captured = capsys.readouterr()
-    assert "Starting bulk benchmark dispatch..." in captured.out
-    
-    # Dynamic assertion based on actual number of available benchmarks
-    total_benchmarks = len(get_available_benchmarks())
-    assert f"Successfully dispatched {total_benchmarks}/{total_benchmarks} benchmarks." in captured.out
+    assert "Starting job dispatch..." in captured.out
+    assert "Successfully dispatched 2/2 benchmarks." in captured.out
+    assert "BSEQ (bseq.json) dispatched with ID:" in captured.out
+    assert "CLOPS (clops.json) dispatched with ID:" in captured.out
 
     # Verify all benchmarks were processed
-    assert mock_job_manager.add_job.call_count == total_benchmarks
+    assert mock_job_manager.add_job.call_count == 2
 
 
 @patch("metriq_gym.run.setup_device")
 @patch("metriq_gym.run.load_and_validate")
+@patch("metriq_gym.run.setup_benchmark")
 @patch("os.path.exists")
-def test_dispatch_all_benchmarks_with_exclusions(
-    mock_exists, mock_load_validate, mock_setup_device, mock_args, mock_job_manager, capsys
+def test_dispatch_duplicate_benchmark_types(
+    mock_exists,
+    mock_setup_benchmark,
+    mock_load_validate,
+    mock_setup_device,
+    mock_args,
+    mock_job_manager,
+    capsys,
 ):
-    """Test dispatch of all benchmarks excluding specific ones."""
-    # Setup mocks
-    mock_args.all_benchmarks = True
-    mock_args.exclude_benchmarks = ["CLOPS", "QML Kernel"]
+    """Test dispatch of same benchmark type with different configurations."""
+    # Setup mocks for same benchmark type, different configs
+    mock_args.benchmark_configs = ["bseq_config1.json", "bseq_config2.json"]
     mock_exists.return_value = True
 
     mock_device = MagicMock()
     mock_setup_device.return_value = mock_device
 
-    mock_params = MagicMock()
-    mock_params.model_dump.return_value = {"test": "params"}
-    mock_load_validate.return_value = mock_params
+    # Mock different BSEQ configurations
+    mock_bseq_params1 = MagicMock()
+    mock_bseq_params1.benchmark_name = "BSEQ"
+    mock_bseq_params1.model_dump.return_value = {"benchmark_name": "BSEQ", "shots": 1000}
+    
+    mock_bseq_params2 = MagicMock()
+    mock_bseq_params2.benchmark_name = "BSEQ"
+    mock_bseq_params2.model_dump.return_value = {"benchmark_name": "BSEQ", "shots": 5000}
+    
+    mock_load_validate.side_effect = [mock_bseq_params1, mock_bseq_params2]
 
-    # Mock the benchmark and handler
-    with patch("metriq_gym.run.setup_benchmark") as mock_setup_benchmark:
-        mock_handler = MagicMock()
-        mock_job_data = BSEQData(provider_job_ids=["job1"], shots=1000, num_qubits=5)
-        mock_handler.dispatch_handler.return_value = mock_job_data
-        mock_setup_benchmark.return_value = mock_handler
+    mock_handler = MagicMock()
+    mock_job_data = BSEQData(provider_job_ids=["job1"], shots=1000, num_qubits=5)
+    mock_handler.dispatch_handler.return_value = mock_job_data
+    mock_setup_benchmark.return_value = mock_handler
 
-        # Execute function
-        dispatch_all_benchmarks(mock_args, mock_job_manager)
+    # Execute function
+    dispatch_job(mock_args, mock_job_manager)
 
-        # Verify output shows exclusions - DYNAMIC calculation
-        captured = capsys.readouterr()
-        assert "Excluding benchmarks: ['CLOPS', 'QML Kernel']" in captured.out
-        
-        # Calculate expected number dynamically
-        total_benchmarks = len(get_available_benchmarks())
-        excluded_count = len([jt for jt in get_available_benchmarks() 
-                             if jt.value in ["CLOPS", "QML Kernel"]])
-        expected_count = total_benchmarks - excluded_count
-        
-        assert f"Running {expected_count} benchmarks" in captured.out
+    # Verify output
+    captured = capsys.readouterr()
+    assert "Successfully dispatched 2/2 benchmarks." in captured.out
+    assert "BSEQ (bseq_config1.json) dispatched with ID:" in captured.out
+    assert "BSEQ (bseq_config2.json) dispatched with ID:" in captured.out
+
+    # Verify both jobs were processed
+    assert mock_job_manager.add_job.call_count == 2
 
 
 @patch("os.path.exists")
-def test_dispatch_all_benchmarks_missing_example_file(
+def test_dispatch_missing_config_file(
     mock_exists, mock_args, mock_job_manager, capsys
 ):
-    """Test behavior when example file is missing for a benchmark."""
+    """Test behavior when configuration file is missing."""
     # Setup mocks
-    mock_args.all_benchmarks = True
-    mock_args.exclude_benchmarks = None
+    mock_args.benchmark_configs = ["missing.json", "also_missing.json"]
     mock_exists.return_value = False  # Simulate missing files
 
     # Mock setup_device to avoid provider validation error
@@ -207,81 +215,50 @@ def test_dispatch_all_benchmarks_missing_example_file(
         mock_setup_device.return_value = mock_device
 
         # Execute function
-        dispatch_all_benchmarks(mock_args, mock_job_manager)
+        dispatch_job(mock_args, mock_job_manager)
 
-        # Verify output shows file not found errors - DYNAMIC
+        # Verify output shows file not found errors
         captured = capsys.readouterr()
-        assert "Example file not found" in captured.out
-        
-        # Dynamic assertion
-        total_benchmarks = len(get_available_benchmarks())
-        assert f"Successfully dispatched 0/{total_benchmarks} benchmarks." in captured.out
+        assert "Configuration file not found" in captured.out
+        assert "Successfully dispatched 0/2 benchmarks." in captured.out
 
 
-@patch("metriq_gym.run.dispatch_all_benchmarks")
-def test_dispatch_job_calls_all_benchmarks(mock_dispatch_all, mock_args, mock_job_manager):
-    """Test that dispatch_job calls dispatch_all_benchmarks when --all-benchmarks is used."""
-    # Setup args for all benchmarks mode
-    mock_args.all_benchmarks = True
-
-    # Execute function
-    dispatch_job(mock_args, mock_job_manager)
-
-    # Verify dispatch_all_benchmarks was called
-    mock_dispatch_all.assert_called_once_with(mock_args, mock_job_manager)
-
-
-@patch("metriq_gym.run.load_and_validate")
 @patch("metriq_gym.run.setup_device")
-@patch("metriq_gym.run.setup_benchmark")
-def test_dispatch_job_calls_single_benchmark(
-    mock_setup_benchmark, mock_setup_device, mock_load_validate, mock_args, mock_job_manager
+@patch("metriq_gym.run.load_and_validate")
+@patch("os.path.exists")
+def test_dispatch_mixed_success_failure(
+    mock_exists, mock_load_validate, mock_setup_device, mock_args, mock_job_manager, capsys
 ):
-    """Test that dispatch_job calls single benchmark dispatch when input_file is provided."""
-    # Setup args for single benchmark mode
-    mock_args.all_benchmarks = False
-    mock_args.input_file = "test.json"
+    """Test dispatch with mix of successful and failed configurations."""
+    # Setup mocks
+    mock_args.benchmark_configs = ["good.json", "bad.json"]
+    mock_exists.return_value = True
 
-    # Setup mocks for single benchmark flow
     mock_device = MagicMock()
     mock_setup_device.return_value = mock_device
 
-    mock_params = MagicMock()
-    mock_params.benchmark_name = "BSEQ"
-    mock_params.model_dump.return_value = {"test": "params"}
-    mock_load_validate.return_value = mock_params
+    # First file succeeds, second fails
+    mock_good_params = MagicMock()
+    mock_good_params.benchmark_name = "BSEQ"
+    mock_good_params.model_dump.return_value = {"benchmark_name": "BSEQ"}
+    
+    mock_load_validate.side_effect = [mock_good_params, ValueError("Invalid configuration")]
 
-    # Setup benchmark mock with real dataclass
-    mock_handler = MagicMock()
-    mock_job_data = BSEQData(provider_job_ids=["job1"], shots=1000, num_qubits=5)
-    mock_handler.dispatch_handler.return_value = mock_job_data
-    mock_setup_benchmark.return_value = mock_handler
-
-    # Mock JobType enum
-    with patch("metriq_gym.run.JobType") as mock_job_type:
-        mock_job_type.return_value = JobType.BSEQ
+    # Mock successful benchmark setup for first file
+    with patch("metriq_gym.run.setup_benchmark") as mock_setup_benchmark:
+        mock_handler = MagicMock()
+        mock_job_data = BSEQData(provider_job_ids=["job1"], shots=1000, num_qubits=5)
+        mock_handler.dispatch_handler.return_value = mock_job_data
+        mock_setup_benchmark.return_value = mock_handler
 
         # Execute function
         dispatch_job(mock_args, mock_job_manager)
 
-    # Verify single benchmark functions were called
-    mock_load_validate.assert_called_once_with("test.json")
-    mock_setup_device.assert_called_once()
-
-
-def test_dispatch_job_missing_input_file(mock_args, mock_job_manager, caplog):
-    """Test that dispatch_job logs error when input_file is missing and --all-benchmarks is not used."""
-    caplog.set_level(logging.INFO)
-
-    # Setup args with missing input file
-    mock_args.all_benchmarks = False
-    mock_args.input_file = None
-
-    # Execute function
-    dispatch_job(mock_args, mock_job_manager)
-
-    # Verify error is logged
-    assert "input_file is required when not using --all-benchmarks" in caplog.text
+        # Verify output shows mixed results
+        captured = capsys.readouterr()
+        assert "Successfully dispatched 1/2 benchmarks." in captured.out
+        assert "BSEQ (good.json) dispatched with ID:" in captured.out
+        assert "bad.json failed: ValueError: Invalid configuration" in captured.out
 
 
 def test_get_available_benchmarks_dynamic():
