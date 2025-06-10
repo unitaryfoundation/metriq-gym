@@ -65,9 +65,14 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     """
     num_nodes = topology_graph.num_nodes()
 
-    # Graphs are bipartite, so use that feature to prevent extra colors from greedy search.
-    # This graph is colored using a bipartite edge-coloring algorithm.
-    edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
+    try:
+        # Graphs are bipartite, so use that feature to prevent extra colors from greedy search.
+        # This graph is colored using a bipartite edge-coloring algorithm.
+        edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
+    except rx.GraphNotBipartite:
+        # If the graph is not bipartite, fall back to a greedy edge-coloring algorithm.
+        # This is the case for topologies that are defined as complete graphs.
+        edge_color_map = rx.graph_greedy_edge_color(topology_graph)
 
     # Get the index of the edges.
     edge_index_map = dict(topology_graph.edge_index_map())
