@@ -111,7 +111,6 @@ def create_subgraph_from_qubits(topology_graph: rx.PyGraph, selected_qubits: lis
     subgraph = rx.PyGraph()
     
     # Add nodes with remapped indices
-    qubit_map = {old_idx: new_idx for new_idx, old_idx in enumerate(selected_qubits)}
     subgraph.add_nodes_from(range(len(selected_qubits)))
     
     # Add edges between selected qubits
