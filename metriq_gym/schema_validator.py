@@ -54,8 +54,8 @@ def create_pydantic_model(schema: dict[str, Any]) -> Any:
             field_params["default"] = field_schema["default"]
         elif not is_required:
             field_params["default"] = None
+            # Use union type directly without reassigning field_type
             field_type = field_type | None
-
         else:
             field_params["default"] = ...  # Required field
             
