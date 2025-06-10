@@ -1,3 +1,4 @@
+# File: tests/benchmarks/test_mirror_circuits.py
 """
 Unit tests for mirror circuits benchmark.
 
@@ -20,6 +21,8 @@ from metriq_gym.benchmarks.mirror_circuits import (
     random_single_cliffords,
     edge_grab,
     random_cliffords,
+    select_optimal_qubit_subset,
+    create_subgraph_from_qubits,
 )
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
@@ -81,6 +84,23 @@ class TestMirrorCircuitGeneration:
 
         assert isinstance(selected_edges, rx.PyGraph)
         assert len(selected_edges.node_indices()) >= 0
+
+        # Test select_optimal_qubit_subset
+        subset = select_optimal_qubit_subset(graph, 2)
+        assert len(subset) == 2
+        assert all(qubit in graph.node_indices() for qubit in subset)
+        
+        # Test create_subgraph_from_qubits
+        subgraph = create_subgraph_from_qubits(graph, subset)
+        assert len(subgraph.node_indices()) == 2
+        assert all(node in range(len(subset)) for node in subgraph.node_indices())
+
+        # Test edge cases for subset selection
+        full_subset = select_optimal_qubit_subset(graph, 10)
+        assert len(full_subset) == 4
+        
+        single_subset = select_optimal_qubit_subset(graph, 1)
+        assert len(single_subset) == 1
 
     def test_edge_grab_zero_probability(self):
         graph = rx.PyGraph()
@@ -154,6 +174,29 @@ class TestMirrorCircuitGeneration:
 
         # Verify the Statevector was used
         mock_statevector.assert_called_once()
+
+        # Test that mirror circuit works with subgraph
+        large_graph = rx.PyGraph()
+        large_graph.add_nodes_from([0, 1, 2, 3, 4, 5])
+        large_graph.add_edges_from([(0, 1, None), (1, 2, None), (2, 3, None), (3, 4, None)])
+        
+        subset_3 = select_optimal_qubit_subset(large_graph, 3)
+        assert len(subset_3) == 3
+        
+        subgraph_3 = create_subgraph_from_qubits(large_graph, subset_3)
+        assert len(subgraph_3.node_indices()) == 3
+        
+        mock_statevector.reset_mock()
+        mock_sv2 = MagicMock()
+        mock_sv2.probabilities.return_value = np.array([0.5, 0.5, 0, 0, 0, 0, 0, 0])
+        mock_statevector.return_value = mock_sv2
+        
+        circuit_sub, bitstring_sub = generate_mirror_circuit(
+            num_layers=1, two_qubit_gate_prob=0.5, connectivity_graph=subgraph_3, seed=42
+        )
+        
+        assert circuit_sub.num_qubits == 3
+        assert len(bitstring_sub) == 3
 
     @patch("metriq_gym.benchmarks.mirror_circuits.Statevector")
     def test_generate_mirror_circuit_simulation_error(self, mock_statevector):
@@ -304,6 +347,40 @@ class TestMirrorCircuitsBenchmark:
 
         # Verify that generate_mirror_circuit was called correctly
         assert mock_generate_circuit.call_count == 5  # num_circuits times
+
+        # Test width parameter functionality
+        mock_params_with_width = MagicMock()
+        mock_params_with_width.num_layers = 2
+        mock_params_with_width.two_qubit_gate_prob = 0.5
+        mock_params_with_width.two_qubit_gate_name = "CNOT"
+        mock_params_with_width.shots = 100
+        mock_params_with_width.num_circuits = 1
+        mock_params_with_width.seed = 42
+        mock_params_with_width.width = 2
+
+        benchmark_with_width = MirrorCircuits(MagicMock(), mock_params_with_width)
+
+        mock_generate_circuit.reset_mock()
+
+        result_with_width = benchmark_with_width.dispatch_handler(mock_device)
+
+        assert result_with_width.num_qubits == 2
+        mock_generate_circuit.assert_called_once()
+
+        # Test width parameter validation
+        mock_params_invalid = MagicMock()
+        mock_params_invalid.num_layers = 1
+        mock_params_invalid.two_qubit_gate_prob = 0.5
+        mock_params_invalid.two_qubit_gate_name = "CNOT"
+        mock_params_invalid.shots = 100
+        mock_params_invalid.num_circuits = 1
+        mock_params_invalid.seed = 42
+        mock_params_invalid.width = 10
+
+        benchmark_invalid = MirrorCircuits(MagicMock(), mock_params_invalid)
+
+        with pytest.raises(ValueError, match="exceeds device capacity"):
+            benchmark_invalid.dispatch_handler(mock_device)
 
     def test_poll_handler_perfect_success(self, benchmark):
         job_data = MirrorCircuitsData(

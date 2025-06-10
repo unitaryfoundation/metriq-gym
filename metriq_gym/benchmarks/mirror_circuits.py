@@ -46,6 +46,83 @@ class MirrorCircuitsData(BenchmarkData):
     expected_bitstring: str
 
 
+def select_optimal_qubit_subset(topology_graph: rx.PyGraph, target_width: int) -> list[int]:
+    """
+    Select a connected subset of qubits with the best connectivity.
+    
+    Args:
+        topology_graph: The device connectivity graph.
+        target_width: Number of qubits to select.
+        
+    Returns:
+        List of selected qubit indices.
+    """
+    all_qubits = list(topology_graph.node_indices())
+    
+    if target_width >= len(all_qubits):
+        return all_qubits
+    
+    if target_width == 1:
+        return [all_qubits[0]]
+    
+    # Use a greedy approach similar to CLOPS create_qubit_map
+    # Start from the qubit with highest degree and expand
+    degrees = [(node, topology_graph.degree(node)) for node in all_qubits]
+    degrees.sort(key=lambda x: x[1], reverse=True)
+    
+    selected = [degrees[0][0]]  # Start with highest degree node
+    remaining = set(all_qubits) - {degrees[0][0]}
+    
+    # Greedily add connected qubits
+    while len(selected) < target_width and remaining:
+        best_candidate = None
+        max_connections = -1
+        
+        for candidate in remaining:
+            # Count connections to already selected qubits
+            connections = sum(1 for selected_qubit in selected 
+                            if topology_graph.has_edge(candidate, selected_qubit))
+            if connections > max_connections:
+                max_connections = connections
+                best_candidate = candidate
+        
+        if best_candidate is not None:
+            selected.append(best_candidate)
+            remaining.remove(best_candidate)
+        else:
+            # No more connected qubits, add any remaining
+            selected.append(list(remaining)[0])
+            remaining.remove(selected[-1])
+    
+    return selected[:target_width]
+
+
+def create_subgraph_from_qubits(topology_graph: rx.PyGraph, selected_qubits: list[int]) -> rx.PyGraph:
+    """
+    Create a subgraph containing only the selected qubits and their connections.
+    
+    Args:
+        topology_graph: Original device topology graph.
+        selected_qubits: List of qubit indices to include.
+        
+    Returns:
+        Subgraph with selected qubits and their interconnections.
+    """
+    subgraph = rx.PyGraph()
+    
+    # Add nodes with remapped indices
+    qubit_map = {old_idx: new_idx for new_idx, old_idx in enumerate(selected_qubits)}
+    subgraph.add_nodes_from(range(len(selected_qubits)))
+    
+    # Add edges between selected qubits
+    for i, qubit_i in enumerate(selected_qubits):
+        for j, qubit_j in enumerate(selected_qubits):
+            if i < j and topology_graph.has_edge(qubit_i, qubit_j):
+                subgraph.add_edge(i, j, None)
+    
+    return subgraph
+
+
 def random_paulis(
     connectivity_graph: rx.PyGraph, random_state: random.RandomState
 ) -> QuantumCircuit:
@@ -317,8 +394,23 @@ class MirrorCircuits(Benchmark):
         shots = self.params.shots
         num_circuits = self.params.num_circuits
         seed = self.params.seed
-
+        target_width = getattr(self.params, 'width', None)
+        if not isinstance(target_width, (int, type(None))):
+            target_width = None
         topology_graph = connectivity_graph(device)
+        
+        # Select subset of qubits if width is specified
+        if target_width is not None:
+            max_width = len(topology_graph.node_indices())
+            if target_width > max_width:
+                raise ValueError(f"Requested width {target_width} exceeds device capacity {max_width}")
+            
+            selected_qubits = select_optimal_qubit_subset(topology_graph, target_width)
+            working_graph = create_subgraph_from_qubits(topology_graph, selected_qubits)
+            actual_width = len(selected_qubits)
+        else:
+            working_graph = topology_graph
+            actual_width = len(topology_graph.node_indices())
 
         circuits = []
         expected_bitstring = None
@@ -328,7 +420,7 @@ class MirrorCircuits(Benchmark):
             circuit, bitstring = generate_mirror_circuit(
                 num_layers=num_layers,
                 two_qubit_gate_prob=two_qubit_gate_prob,
-                connectivity_graph=topology_graph,
+                connectivity_graph=working_graph,
                 two_qubit_gate_name=two_qubit_gate_name,
                 seed=circuit_seed,
             )
@@ -345,7 +437,7 @@ class MirrorCircuits(Benchmark):
             two_qubit_gate_prob=two_qubit_gate_prob,
             two_qubit_gate_name=two_qubit_gate_name,
             shots=shots,
-            num_qubits=device.num_qubits or len(topology_graph.node_indices()),
+            num_qubits=actual_width,
             num_circuits=num_circuits,
             seed=seed,
             expected_bitstring=expected_bitstring or "0",

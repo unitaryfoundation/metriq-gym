@@ -1,8 +1,8 @@
 import json
 import os
-from typing import Any
+from typing import Any, Optional
 from jsonschema import validate
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, create_model, Field
 
 from metriq_gym.benchmarks import SCHEMA_MAPPING, JobType
 
@@ -31,15 +31,48 @@ def load_schema(benchmark_name: str, schema_dir: str = DEFAULT_SCHEMA_DIR) -> di
 def create_pydantic_model(schema: dict[str, Any]) -> Any:
     """Create a Pydantic model from a JSON schema."""
     type_mapping = {
-        "string": (str, ...),
-        "integer": (int, ...),
-        "number": (float, ...),
-        "boolean": (bool, ...),
-        "array": (list, ...),
-        "object": (dict, ...),
+        "string": str,
+        "integer": int,
+        "number": float,
+        "boolean": bool,
+        "array": list,
+        "object": dict,
     }
-    fields = {k: type_mapping[v["type"]] for k, v in schema["properties"].items()}
-    model = create_model(schema["title"], **fields)
+    
+    required_fields = set(schema.get("required", []))
+    field_definitions = {}
+    
+    for field_name, field_schema in schema["properties"].items():
+        field_type = type_mapping[field_schema["type"]]
+        has_default = "default" in field_schema
+        is_required = field_name in required_fields
+        
+        # Build Field parameters
+        field_params = {}
+        
+        if has_default:
+            field_params["default"] = field_schema["default"]
+        elif not is_required:
+            field_params["default"] = None
+            field_type = Optional[field_type]
+        else:
+            field_params["default"] = ...  # Required field
+            
+        # Add constraints if they exist
+        if "minimum" in field_schema:
+            field_params["ge"] = field_schema["minimum"]
+        if "maximum" in field_schema:
+            field_params["le"] = field_schema["maximum"]
+        if "pattern" in field_schema:
+            field_params["pattern"] = field_schema["pattern"]
+        if "minLength" in field_schema:
+            field_params["min_length"] = field_schema["minLength"]
+        if "maxLength" in field_schema:
+            field_params["max_length"] = field_schema["maxLength"]
+            
+        field_definitions[field_name] = (field_type, Field(**field_params))
+    
+    model = create_model(schema["title"], **field_definitions)
     model.model_rebuild()
     return model
 

@@ -1,4 +1,3 @@
-
 {
   "$id": "metriq-gym/mirror_circuits.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10,6 +9,12 @@
       "type": "string",
       "const": "Mirror Circuits",
       "description": "Name of the benchmark. Must be 'Mirror Circuits' for this schema."
+    },
+    "width": {
+      "type": "integer",
+      "description": "Number of qubits to use for the mirror circuit. If not specified, uses all available qubits on the device.",
+      "minimum": 1,
+      "examples": [4, 8, 16]
     },
     "num_layers": {
       "type": "integer",
@@ -58,4 +63,3 @@
   },
   "required": ["benchmark_name"]
 }
-
