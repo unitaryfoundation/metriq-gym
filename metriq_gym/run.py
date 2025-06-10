@@ -117,6 +117,14 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
                 continue
 
             params = load_and_validate(config_file)
+            
+            # Validate that the benchmark exists
+            available_benchmarks = get_available_benchmarks()
+            if params.benchmark_name not in [jt.value for jt in available_benchmarks]:
+                available_names = [jt.value for jt in available_benchmarks]
+                results.append(f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_names}")
+                continue
+            
             job_type = JobType(params.benchmark_name)
             
             print(f"Dispatching {params.benchmark_name} benchmark from {config_file}...")
