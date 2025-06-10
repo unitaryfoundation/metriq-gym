@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Optional
+from typing import Any
 from jsonschema import validate
 from pydantic import BaseModel, create_model, Field
 
@@ -54,7 +54,8 @@ def create_pydantic_model(schema: dict[str, Any]) -> Any:
             field_params["default"] = field_schema["default"]
         elif not is_required:
             field_params["default"] = None
-            field_type = Optional[field_type]
+            field_type = field_type | None
+
         else:
             field_params["default"] = ...  # Required field
             
