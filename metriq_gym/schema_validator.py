@@ -54,8 +54,6 @@ def create_pydantic_model(schema: dict[str, Any]) -> Any:
             field_params["default"] = field_schema["default"]
         elif not is_required:
             field_params["default"] = None
-            # Use union type directly without reassigning field_type
-            field_type = field_type | None
         else:
             field_params["default"] = ...  # Required field
             
@@ -71,7 +69,9 @@ def create_pydantic_model(schema: dict[str, Any]) -> Any:
         if "maxLength" in field_schema:
             field_params["max_length"] = field_schema["maxLength"]
             
-        field_definitions[field_name] = (field_type, Field(**field_params))
+        # Create final type, avoiding variable reassignment
+        final_type = field_type | None if not is_required and not has_default else field_type
+        field_definitions[field_name] = (final_type, Field(**field_params))
     
     model = create_model(schema["title"], **field_definitions)
     model.model_rebuild()
