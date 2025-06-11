@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+from typing import Optional, Union
 
 from qbraid.runtime import JobStatus, GateModelResultData
 from qiskit import QuantumCircuit
@@ -16,7 +17,7 @@ def _append_job_to_file(job_dict: dict) -> None:
         f.write(json.dumps(job_dict) + "\n")
 
 
-def _load_job_from_file(job_id: str) -> dict | None:
+def _load_job_from_file(job_id: str) -> Optional[dict]:
     if not os.path.exists(JOB_STORAGE_FILE):
         return None
     with open(JOB_STORAGE_FILE, "r") as f:
@@ -38,11 +39,11 @@ class LocalJob:
         job_id: str,
         counts: dict[str, int],
         job_type: str = "local",
-        params: dict = None,
-        data: dict = None,
+        params: Optional[dict] = None,
+        data: Optional[dict] = None,
         provider_name: str = "local",
         device_name: str = "aer_simulator",
-        dispatch_time: str = None,
+        dispatch_time: Optional[str] = None,
     ):
         self.id = job_id
         self._counts = counts
@@ -82,8 +83,8 @@ class AerSimulatorDevice:
         self.num_qubits = self.backend.configuration().n_qubits
 
     def run(
-        self, circuits: QuantumCircuit | list[QuantumCircuit], shots: int | None = None
-    ) -> LocalJob | list[LocalJob]:
+        self, circuits: Union[QuantumCircuit, list[QuantumCircuit]], shots: Optional[int] = None
+    ) -> Union[LocalJob, list[LocalJob]]:
         circ_list = circuits if isinstance(circuits, list) else [circuits]
         jobs = []
         for circ in circ_list:
