@@ -1,4 +1,3 @@
-
 import argparse
 from dataclasses import asdict
 from datetime import datetime
@@ -19,7 +18,11 @@ from qbraid.runtime import (
     load_provider,
 )
 
-from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS, get_available_benchmarks
+from metriq_gym.benchmarks import (
+    BENCHMARK_DATA_CLASSES,
+    BENCHMARK_HANDLERS,
+    get_available_benchmarks,
+)
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
 from metriq_gym.cli import parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError
@@ -71,37 +74,19 @@ def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
 
 
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    """Dispatch benchmark jobs based on provided configuration files.
-
-    This function processes multiple benchmark configuration files and dispatches
-    each as a separate job to the specified quantum device. Multiple files can contain
-    the same benchmark type with different parameters, allowing for comprehensive
-    device characterization with custom configurations.
-
+    """Dispatch multiple benchmark configurations to a quantum device.
+    
+    Enables comprehensive device characterization by running the same benchmark 
+    type with different parameters or multiple benchmark types in sequence.
+    
     Args:
-        args: Command-line arguments containing:
-            - benchmark_configs: List of paths to benchmark configuration files
-            - provider: Quantum provider name (e.g., 'ibm', 'aws')
-            - device: Device identifier (e.g., 'ibm_sherbrooke')
-        job_manager: JobManager instance for tracking dispatched jobs
-
-    Workflow:
-        1. Setup quantum device connection
-        2. For each configuration file:
-           - Load and validate benchmark parameters
-           - Setup benchmark handler
-           - Dispatch job to device
-           - Record success/failure
-        3. Display comprehensive summary with job IDs
-
-    Error handling:
-        - Device setup failures: Return early with error message
-        - Missing configuration files: Skip file with warning
-        - Invalid configurations: Skip file with validation error
-        - Benchmark failures: Log error and continue with remaining files
+        args: CLI arguments with benchmark configs, provider, and device
+        job_manager: Tracks dispatched jobs for later polling
+        
+    Note: Continues processing remaining configs if individual configs fail.
     """
     print("Starting job dispatch...")
-    
+
     try:
         device = setup_device(args.provider, args.device)
     except QBraidSetupError:
@@ -117,21 +102,25 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
                 continue
 
             params = load_and_validate(config_file)
-            
+
             # Validate that the benchmark exists
             available_benchmarks = get_available_benchmarks()
             if params.benchmark_name not in [jt.value for jt in available_benchmarks]:
                 available_names = [jt.value for jt in available_benchmarks]
-                results.append(f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_names}")
+                results.append(
+                    f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_names}"
+                )
                 continue
-            
+
             job_type = JobType(params.benchmark_name)
-            
-            print(f"Dispatching {params.benchmark_name} benchmark from {config_file}...")
-            
+
+            print(
+                f"Dispatching {params.benchmark_name} benchmark from {config_file} on {args.device}..."
+            )
+
             handler: Benchmark = setup_benchmark(args, params, job_type)
             job_data: BenchmarkData = handler.dispatch_handler(device)
-            
+
             job_id = job_manager.add_job(
                 MetriqGymJob(
                     id=str(uuid.uuid4()),
@@ -143,29 +132,23 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
                     dispatch_time=datetime.now(),
                 )
             )
-            
-            results.append(f"✓ {params.benchmark_name} ({config_file}) dispatched with ID: {job_id}")
+
+            results.append(
+                f"✓ {params.benchmark_name} ({config_file}) dispatched with ID: {job_id}"
+            )
             successful_jobs.append(job_id)
 
         except Exception as e:
-            error_type = type(e).__name__
-            error_msg = str(e)
-            if hasattr(e, '__traceback__') and e.__traceback__:
-                import traceback
-                tb_lines = traceback.format_tb(e.__traceback__)
-                if tb_lines:
-                    last_frame = tb_lines[-1].strip()
-                    results.append(f"✗ {config_file} failed: {error_type}: {error_msg} (at: {last_frame})")
-                else:
-                    results.append(f"✗ {config_file} failed: {error_type}: {error_msg}")
-            else:
-                results.append(f"✗ {config_file} failed: {error_type}: {error_msg}")
+            error_details = f"{type(e).__name__}: {str(e)}"
+            results.append(f"✗ {config_file} failed: {error_details}")
 
     print("\nSummary:")
     for result in results:
         print(f"  {result}")
 
-    print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(args.benchmark_configs)} benchmarks.")
+    print(
+        f"\nSuccessfully dispatched {len(successful_jobs)}/{len(args.benchmark_configs)} benchmarks."
+    )
     if successful_jobs:
         print("Use 'mgym poll' to check job status.")
 

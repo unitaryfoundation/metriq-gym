@@ -1,4 +1,3 @@
-
 import logging
 import pytest
 from unittest.mock import MagicMock, patch
@@ -11,7 +10,6 @@ from metriq_gym.run import (
 from metriq_gym.exceptions import QBraidSetupError
 from metriq_gym.benchmarks import JobType, get_available_benchmarks
 from metriq_gym.benchmarks.bseq import BSEQData
-
 
 
 class FakeDevice:
@@ -124,11 +122,11 @@ def test_dispatch_multiple_benchmarks_success(
     mock_bseq_params = MagicMock()
     mock_bseq_params.benchmark_name = "BSEQ"
     mock_bseq_params.model_dump.return_value = {"benchmark_name": "BSEQ", "shots": 1000}
-    
+
     mock_clops_params = MagicMock()
     mock_clops_params.benchmark_name = "CLOPS"
     mock_clops_params.model_dump.return_value = {"benchmark_name": "CLOPS", "width": 4}
-    
+
     mock_load_validate.side_effect = [mock_bseq_params, mock_clops_params]
 
     mock_handler = MagicMock()
@@ -175,11 +173,11 @@ def test_dispatch_duplicate_benchmark_types(
     mock_bseq_params1 = MagicMock()
     mock_bseq_params1.benchmark_name = "BSEQ"
     mock_bseq_params1.model_dump.return_value = {"benchmark_name": "BSEQ", "shots": 1000}
-    
+
     mock_bseq_params2 = MagicMock()
     mock_bseq_params2.benchmark_name = "BSEQ"
     mock_bseq_params2.model_dump.return_value = {"benchmark_name": "BSEQ", "shots": 5000}
-    
+
     mock_load_validate.side_effect = [mock_bseq_params1, mock_bseq_params2]
 
     mock_handler = MagicMock()
@@ -201,9 +199,7 @@ def test_dispatch_duplicate_benchmark_types(
 
 
 @patch("os.path.exists")
-def test_dispatch_missing_config_file(
-    mock_exists, mock_args, mock_job_manager, capsys
-):
+def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, capsys):
     """Test behavior when configuration file is missing."""
     # Setup mocks
     mock_args.benchmark_configs = ["missing.json", "also_missing.json"]
@@ -241,7 +237,7 @@ def test_dispatch_mixed_success_failure(
     mock_good_params = MagicMock()
     mock_good_params.benchmark_name = "BSEQ"
     mock_good_params.model_dump.return_value = {"benchmark_name": "BSEQ"}
-    
+
     mock_load_validate.side_effect = [mock_good_params, ValueError("Invalid configuration")]
 
     # Mock successful benchmark setup for first file
@@ -264,11 +260,11 @@ def test_dispatch_mixed_success_failure(
 def test_get_available_benchmarks_dynamic():
     """Test that get_available_benchmarks returns current JobType list."""
     available = get_available_benchmarks()
-    
+
     # Verify it returns a list of JobType
     assert isinstance(available, list)
     assert all(isinstance(jt, JobType) for jt in available)
-    
+
     # Verify it includes known benchmarks
     benchmark_values = [jt.value for jt in available]
     assert "BSEQ" in benchmark_values
@@ -276,7 +272,7 @@ def test_get_available_benchmarks_dynamic():
     assert "Quantum Volume" in benchmark_values
     assert "QML Kernel" in benchmark_values
     assert "Wormhole" in benchmark_values
-    
+
     # Verify it matches JobType enum exactly
     assert len(available) == len(JobType)
     assert set(available) == set(JobType)

@@ -1,4 +1,3 @@
-
 from enum import StrEnum
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
@@ -43,9 +42,4 @@ SCHEMA_MAPPING = {
 
 
 def get_available_benchmarks() -> list[JobType]:
-    """Return list of all available benchmarks.
-    
-    This is the single source of truth for the list of benchmarks.
-    Replaces hardcoded lists in other files.
-    """
     return list(JobType)

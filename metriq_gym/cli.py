@@ -1,4 +1,3 @@
-
 """Command-line parsing for running metriq benchmarks."""
 
 import argparse
@@ -71,7 +70,7 @@ def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments for the metriq-gym benchmarking CLI.
 
     This function sets up the complete argument parsing structure for metriq-gym,
-    supporting dispatch of multiple benchmark configuration files for comprehensive 
+    supporting dispatch of multiple benchmark configuration files for comprehensive
     device characterization.
 
     Returns:
