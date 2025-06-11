@@ -95,3 +95,4 @@ def test_device_graph_coloring_multigraph():
     assert coloring.num_nodes == 3
     assert max(coloring.edge_color_map.values()) + 1 <= 3  # Should use at most 3 colors
     assert len(coloring.edge_index_map) == 3  # Should match the number of edges
+    
