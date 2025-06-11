@@ -8,7 +8,6 @@ from metriq_gym.run import (
     dispatch_job,
 )
 from metriq_gym.exceptions import QBraidSetupError
-from metriq_gym.benchmarks import JobType
 from metriq_gym.benchmarks.bseq import BSEQData
 
 
