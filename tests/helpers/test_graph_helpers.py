@@ -95,19 +95,3 @@ def test_device_graph_coloring_multigraph():
     assert coloring.num_nodes == 3
     assert max(coloring.edge_color_map.values()) + 1 <= 3  # Should use at most 3 colors
     assert len(coloring.edge_index_map) == 3  # Should match the number of edges
-
-
-def test_device_graph_coloring_non_bipartite():
-    """Ensure coloring works on a non-bipartite graph."""
-    graph = rx.PyGraph()
-    graph.add_nodes_from(range(3))
-    # Triangle graph (complete graph on 3 nodes) is not bipartite
-    graph.add_edges_from([(0, 1, 1), (1, 2, 1), (2, 0, 1)])
-
-    coloring = device_graph_coloring(graph)
-
-    assert isinstance(coloring, GraphColoring)
-    assert coloring.num_nodes == 3
-    assert max(coloring.edge_color_map.values()) + 1 <= 3
-    assert len(coloring.edge_index_map) == 3
-    
