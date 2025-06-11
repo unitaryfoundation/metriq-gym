@@ -1,33 +1,51 @@
 import os
+import json
 import pytest
 
 pytest.importorskip("qiskit")
 pytest.importorskip("qiskit_aer")
 
 from qiskit import QuantumCircuit
-from qiskit_aer import AerSimulator
 
 from metriq_gym.local.aer import (
     AerSimulatorDevice,
-    LOCAL_JOB_DIR
+    JOB_STORAGE_FILE,
+    load_local_job,
 )
 from metriq_gym.qplatform.device import connectivity_graph
 import rustworkx as rx
 
+
 def test_aer_simulator_device_run(tmp_path):
     os.chdir(tmp_path)
-    os.makedirs(LOCAL_JOB_DIR, exist_ok=True)
 
     qc = QuantumCircuit(1)
     qc.h(0)
     qc.measure_all()
 
-    backend = AerSimulator()
-    job = backend.run(qc)
+    device = AerSimulatorDevice()
+    job = device.run(qc, shots=100)
     result = job.result()
 
-    assert result.success
-    assert (tmp_path / LOCAL_JOB_DIR).exists()
+    assert isinstance(result.data.measurement_counts, dict)
+    assert os.path.exists(JOB_STORAGE_FILE)
+
+    # Validate stored content
+    with open(JOB_STORAGE_FILE) as f:
+        lines = f.readlines()
+    assert len(lines) == 1
+
+    entry = json.loads(lines[0])
+    assert entry["id"] == job.id
+    assert entry["job_type"] == "Quantum Volume"
+    assert entry["device_name"] == "aer_simulator"
+    assert "measurement_counts" in entry["data"]
+
+    # Check reloading
+    reloaded = load_local_job(job.id)
+    assert reloaded.id == job.id
+    assert reloaded.result().data.measurement_counts == result.data.measurement_counts
+
 
 def test_aer_simulator_connectivity():
     device = AerSimulatorDevice()
