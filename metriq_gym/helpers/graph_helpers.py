@@ -1,3 +1,4 @@
+from typing import Any
 from dataclasses import dataclass, field
 
 import rustworkx as rx
@@ -97,7 +98,8 @@ def _complete_graph_edge_color(topology_graph: rx.PyGraph) -> dict[int, int]:
     Returns a map from edge index to color.
     """
     # Initialize nodes and dummy marker
-    nodes = list(topology_graph.node_indexes())
+    nodes: list[Any] = list(topology_graph.node_indexes())
+
     n = len(nodes)
     odd = n % 2 == 1
     dummy = None
