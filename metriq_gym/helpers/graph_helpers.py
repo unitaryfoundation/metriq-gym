@@ -21,7 +21,10 @@ class GraphColoring:
     num_colors: int = field(init=False)
 
     def __post_init__(self):
-        self.num_colors = max(self.edge_color_map.values()) + 1
+        if self.edge_color_map:
+            self.num_colors = max(self.edge_color_map.values()) + 1
+        else:
+            self.num_colors = 0
 
     @classmethod
     def from_dict(cls, data: dict) -> "GraphColoring":
@@ -57,6 +60,11 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     that can be executed without interference. These pairs are grouped by "color." The coloring reduces
     the complexity of the benchmarking process by organizing the graph into independent sets of qubit pairs.
 
+    Chooses between:
+      - One-factorization (optimal) for complete graphs,
+      - Bipartite edge-coloring for bipartite graphs,
+      - Greedy edge-coloring otherwise.
+
     Args:
         topology_graph: The topology graph (coupling map) of the quantum device.
 
@@ -64,18 +72,55 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
         GraphColoring: An object containing the coloring information.
     """
     num_nodes = topology_graph.num_nodes()
+    num_edges = topology_graph.num_edges()
 
-    try:
-        # Graphs are bipartite, so use that feature to prevent extra colors from greedy search.
-        # This graph is colored using a bipartite edge-coloring algorithm.
-        edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
-    except rx.GraphNotBipartite:
-        # If the graph is not bipartite, fall back to a greedy edge-coloring algorithm.
-        # This is the case for topologies that are defined as complete graphs.
-        edge_color_map = rx.graph_greedy_edge_color(topology_graph)
+    # Use optimal one-factorization if graph is complete
+    if num_edges == num_nodes * (num_nodes - 1) // 2:
+        edge_color_map = _complete_graph_edge_color(topology_graph)
+    else:
+        try:
+            edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
+        except rx.GraphNotBipartite:
+            edge_color_map = rx.graph_greedy_edge_color(topology_graph)
 
-    # Get the index of the edges.
     edge_index_map = dict(topology_graph.edge_index_map())
     return GraphColoring(
-        num_nodes=num_nodes, edge_color_map=edge_color_map, edge_index_map=edge_index_map
+        num_nodes=num_nodes,
+        edge_color_map=edge_color_map,
+        edge_index_map=edge_index_map,
     )
+
+
+def _complete_graph_edge_color(topology_graph: rx.PyGraph) -> dict[int, int]:
+    """One-factorization edge-coloring of K_n in n-1 rounds.
+
+    Returns a map from edge index to color.
+    """
+    # Initialize nodes and dummy marker
+    nodes = list(topology_graph.node_indexes())
+    n = len(nodes)
+    odd = n % 2 == 1
+    dummy = None
+    if odd:
+        dummy = object()
+        nodes.append(dummy)
+        n += 1
+
+    # Invert edge_index_map: idx -> (u, v)
+    raw_index = topology_graph.edge_index_map()  # dict[int, tuple[int, int]]
+    edge_idx: dict[frozenset[int], int] = {frozenset(pair): idx for idx, pair in raw_index.items()}
+
+    color_map: dict[int, int] = {}
+    for color in range(n - 1):
+        for i in range(n // 2):
+            u, v = nodes[i], nodes[n - 1 - i]
+            # skip dummy pairs
+            if odd and (u is dummy or v is dummy):
+                continue
+            idx = edge_idx.get(frozenset((u, v)))
+            if idx is not None:
+                color_map[idx] = color
+        # rotate nodes except first
+        nodes = [nodes[0]] + [nodes[-1]] + nodes[1:-1]
+
+    return color_map
