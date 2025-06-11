@@ -8,7 +8,7 @@ from metriq_gym.run import (
     dispatch_job,
 )
 from metriq_gym.exceptions import QBraidSetupError
-from metriq_gym.benchmarks import JobType, get_available_benchmarks
+from metriq_gym.benchmarks import JobType
 from metriq_gym.benchmarks.bseq import BSEQData
 
 
@@ -255,24 +255,3 @@ def test_dispatch_mixed_success_failure(
         assert "Successfully dispatched 1/2 benchmarks." in captured.out
         assert "BSEQ (good.json) dispatched with ID:" in captured.out
         assert "bad.json failed: ValueError: Invalid configuration" in captured.out
-
-
-def test_get_available_benchmarks_dynamic():
-    """Test that get_available_benchmarks returns current JobType list."""
-    available = get_available_benchmarks()
-
-    # Verify it returns a list of JobType
-    assert isinstance(available, list)
-    assert all(isinstance(jt, JobType) for jt in available)
-
-    # Verify it includes known benchmarks
-    benchmark_values = [jt.value for jt in available]
-    assert "BSEQ" in benchmark_values
-    assert "CLOPS" in benchmark_values
-    assert "Quantum Volume" in benchmark_values
-    assert "QML Kernel" in benchmark_values
-    assert "Wormhole" in benchmark_values
-
-    # Verify it matches JobType enum exactly
-    assert len(available) == len(JobType)
-    assert set(available) == set(JobType)

@@ -75,14 +75,14 @@ def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
 
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Dispatch multiple benchmark configurations to a quantum device.
-    
-    Enables comprehensive device characterization by running the same benchmark 
+
+    Enables comprehensive device characterization by running the same benchmark
     type with different parameters or multiple benchmark types in sequence.
-    
+
     Args:
         args: CLI arguments with benchmark configs, provider, and device
         job_manager: Tracks dispatched jobs for later polling
-        
+
     Note: Continues processing remaining configs if individual configs fail.
     """
     print("Starting job dispatch...")
@@ -105,10 +105,9 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
             # Validate that the benchmark exists
             available_benchmarks = get_available_benchmarks()
-            if params.benchmark_name not in [jt.value for jt in available_benchmarks]:
-                available_names = [jt.value for jt in available_benchmarks]
+            if params.benchmark_name not in available_benchmarks:
                 results.append(
-                    f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_names}"
+                    f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
                 )
                 continue
 

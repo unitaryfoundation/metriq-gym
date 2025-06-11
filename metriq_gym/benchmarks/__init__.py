@@ -41,5 +41,5 @@ SCHEMA_MAPPING = {
 }
 
 
-def get_available_benchmarks() -> list[JobType]:
-    return list(JobType)
+def get_available_benchmarks() -> list[str]:
+    return [jt.value for jt in JobType]
