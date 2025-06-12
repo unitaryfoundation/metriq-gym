@@ -44,3 +44,7 @@ SCHEMA_MAPPING = {
     JobType.MIRROR_CIRCUITS: "mirror_circuits.schema.json",
     JobType.WORMHOLE: "wormhole.schema.json",
 }
+
+
+def get_available_benchmarks() -> list[str]:
+    return [jt.value for jt in JobType]

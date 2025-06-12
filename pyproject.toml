@@ -19,13 +19,13 @@ mgym = "metriq_gym.run:main"
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
 metriq-client = { git = "https://github.com/unitaryfoundation/metriq-client.git", branch = "master" }
-pyqrack = "^1.53.1"
+pyqrack = "^1.56.0"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
 qiskit = "^1.4.3"
 qiskit-device-benchmarking = { path = "submodules/qiskit-device-benchmarking" }
-qiskit-ibm-runtime = "^0.39.0"
+qiskit-ibm-runtime = "^0.40.1"
 scipy = "^1.15.3"
 tabulate = "^0.9.0"
 qbraid = {extras = ["ionq", "qir", "braket", "azure"], version = "^0.9.6"}
@@ -39,7 +39,7 @@ ruamel-yaml-clib = [
 mypy = "^1.15.0"
 pre-commit = "^4.1.0"
 pytest = "^8.3.5"
-ruff = "^0.11.11"
+ruff = "^0.11.13"
 sphinx = "^8.2.3"
 types-tabulate = "^0.9.0.20241207"
 deptry = "^0.23.0"
