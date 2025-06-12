@@ -84,7 +84,7 @@ class AerSimulatorDevice:
 
     def run(
         self, circuits: Union[QuantumCircuit, list[QuantumCircuit]], shots: Optional[int] = None
-    ) -> Union[LocalJob, list[LocalJob]]:
+    ) -> LocalJob | list[LocalJob]:
         circ_list = circuits if isinstance(circuits, list) else [circuits]
         jobs = []
         for circ in circ_list:
