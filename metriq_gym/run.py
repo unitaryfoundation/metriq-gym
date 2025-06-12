@@ -124,7 +124,7 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
                 MetriqGymJob(
                     id=str(uuid.uuid4()),
                     job_type=job_type,
-                    params=params.model_dump(),
+                    params=params.model_dump(exclude_none=True),
                     data=asdict(job_data),
                     provider_name=args.provider,
                     device_name=args.device,
