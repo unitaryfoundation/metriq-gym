@@ -39,3 +39,7 @@ SCHEMA_MAPPING = {
     JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
     JobType.WORMHOLE: "wormhole.schema.json",
 }
+
+
+def get_available_benchmarks() -> list[str]:
+    return [jt.value for jt in JobType]

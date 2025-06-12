@@ -52,7 +52,6 @@ def test_load_jobs_with_existing_data(job_manager, sample_job):
     assert jobs[0].id == sample_job.id
 
 
-
 def test_mixed_valid_and_invalid_jobs_are_handled_gracefully(tmpdir, caplog):
     """
     Test that JobManager loads only valid jobs from a file containing a mix
@@ -82,34 +81,49 @@ def test_mixed_valid_and_invalid_jobs_are_handled_gracefully(tmpdir, caplog):
     )
 
     with open(jobs_file, "w") as f:
-        f.write(valid_job_1.serialize() + "\n")                     # Valid
-        f.write("\n")                                               # Empty line
-        f.write('{"invalid": "json", "missing": true\n')            # Malformed JSON
-        f.write(json.dumps({                                        # Missing fields
-            "id": "missing_fields",
-            "params": {},
-            "data": {},
-            "provider_name": "test"
-        }) + "\n")
-        f.write(json.dumps({                                        # Invalid job type
-            "id": "bad_job_type",
-            "job_type": "NONEXISTENT_TYPE",
-            "params": {},
-            "data": {},
-            "provider_name": "test",
-            "device_name": "device",
-            "dispatch_time": "2024-01-01T00:00:00"
-        }) + "\n")
-        f.write(json.dumps({                                        # Bad datetime
-            "id": "bad_datetime",
-            "job_type": FAKE_BENCHMARK_NAME,
-            "params": {},
-            "data": {},
-            "provider_name": "test",
-            "device_name": "device",
-            "dispatch_time": "not-a-datetime"
-        }) + "\n")
-        f.write(valid_job_2.serialize() + "\n")                     # Valid
+        f.write(valid_job_1.serialize() + "\n")  # Valid
+        f.write("\n")  # Empty line
+        f.write('{"invalid": "json", "missing": true\n')  # Malformed JSON
+        f.write(
+            json.dumps(
+                {  # Missing fields
+                    "id": "missing_fields",
+                    "params": {},
+                    "data": {},
+                    "provider_name": "test",
+                }
+            )
+            + "\n"
+        )
+        f.write(
+            json.dumps(
+                {  # Invalid job type
+                    "id": "bad_job_type",
+                    "job_type": "NONEXISTENT_TYPE",
+                    "params": {},
+                    "data": {},
+                    "provider_name": "test",
+                    "device_name": "device",
+                    "dispatch_time": "2024-01-01T00:00:00",
+                }
+            )
+            + "\n"
+        )
+        f.write(
+            json.dumps(
+                {  # Bad datetime
+                    "id": "bad_datetime",
+                    "job_type": FAKE_BENCHMARK_NAME,
+                    "params": {},
+                    "data": {},
+                    "provider_name": "test",
+                    "device_name": "device",
+                    "dispatch_time": "not-a-datetime",
+                }
+            )
+            + "\n"
+        )
+        f.write(valid_job_2.serialize() + "\n")  # Valid
 
     caplog.set_level(logging.WARNING)
     manager = JobManager()
@@ -128,13 +142,12 @@ def test_mixed_valid_and_invalid_jobs_are_handled_gracefully(tmpdir, caplog):
     joined_logs = " ".join(warnings)
     assert "Invalid JSON at position" in joined_logs
     assert (
-        "Missing required field" in joined_logs or
-        "Incorrect data structure" in joined_logs or
-        "Data structure mismatch" in joined_logs
+        "Missing required field" in joined_logs
+        or "Incorrect data structure" in joined_logs
+        or "Data structure mismatch" in joined_logs
     )
     assert "Unknown job type:" in joined_logs
     assert "Invalid datetime format:" in joined_logs or "Bad datetime format:" in joined_logs
-
 
 
 def test_load_jobs_with_only_invalid_entries(tmpdir, caplog):
