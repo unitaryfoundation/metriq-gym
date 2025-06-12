@@ -1,8 +1,5 @@
 import pytest
-from metriq_gym.helpers.task_helpers import (  
-    flatten_counts, 
-    flatten_job_ids
-    )
+from metriq_gym.helpers.task_helpers import flatten_counts, flatten_job_ids
 from metriq_gym.local.aer import LocalJob
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
