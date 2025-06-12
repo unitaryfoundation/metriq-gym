@@ -247,10 +247,10 @@ class LinearRampQAOA(Benchmark):
         random.seed(seed)  # set seed for reproducibility
         graph_device = device.coupling_map.graph.to_undirected()
         edges_device = edges = list(graph_device.edge_list())
-
+        circuit_encoding: EncodingType = "Direct"
         if graph_type == "1D":
             edges = [(i, i + 1) for i in range(num_qubits - 1)]
-            circuit_encoding: Literal["Direct", "PTC"] = "Direct"
+
         elif graph_type == "NL":
             num_qubits_device = graph_device.num_nodes()
             if num_qubits != num_qubits_device:
@@ -258,7 +258,6 @@ class LinearRampQAOA(Benchmark):
                     f"Number of qubits ({num_qubits}) does not match the device's number of qubits ({num_qubits_device})."
                 )
             edges = edges_device
-            circuit_encoding = "Direct"
         elif graph_type == "FC":
             edges = [(i, j) for i in range(num_qubits) for j in range(i + 1, num_qubits)]
             if not all(edge in edges_device for edge in edges):
