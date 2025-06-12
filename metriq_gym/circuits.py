@@ -4,12 +4,15 @@ import math
 import random
 from qiskit import QuantumCircuit
 from qiskit.circuit import Parameter, ParameterVector
+from helpers.lr_qaoa_helpers import PTC_pairs
 import networkx as nx
 from typing import Literal, List, Tuple
 
 GraphType = Literal[
     "1D", "NL", "FC"
 ]  # 1D chain of qubits (1D), Native Layout graph (NL), or Fully connected graph (FC).
+
+EncodingType = Literal["Direct", "PTC"]
 
 
 def rand_u3(circ: QuantumCircuit, q: int) -> None:
@@ -74,47 +77,6 @@ def distribute_edges(graph: nx.Graph) -> list:
     if sum(len(layer) for layer in layers) != n_edges:
         raise ValueError("Not all edges were assigned to a layer, check the graph structure.")
     return layers
-
-
-def PTC_pairs(nq: int) -> list:
-    """Generate pairs of qubits for a 2-qubit gate in a PTC (Parity twine chain) configuration.
-       PTC is the best strategy to create a fully connected graph from a 1D chain of qubits;
-       it comes from https://arxiv.org/abs/2408.10907 and https://arxiv.org/abs/2501.14020
-        and an implementation for QAOA from https://arxiv.org/abs/2505.17944
-    Args:
-        nq: Number of qubits in the circuit.
-    Returns:
-        A list of lists, where each inner list contains tuples representing pairs of qubits."""
-
-    list_2q: list[list[tuple]] = [nq * [(0,)]]
-    list_2q[0][0] = (0,)
-    for j in range(1, nq):
-        if len(list_2q[0][j - 1]) == 1:
-            if j % 2:
-                list_2q[0][j] = (j,)
-            else:
-                list_2q[0][j] = (list_2q[0][j - 1][0], nq - 1)
-        else:
-            list_2q[0][j] = (list_2q[0][j - 1][0] + j % 2, list_2q[0][j - 1][1] - 1 + j % 2)
-
-    for i in range(1, nq):
-        array_i = list_2q[i - 1].copy()
-        if i % 2 == 1:
-            lista = list(list_2q[i - 1][0]) + list(list_2q[i - 1][1])
-            unique_list = tuple(sorted([item for item in lista if lista.count(item) == 1]))
-            array_i[0] = unique_list
-        for j in range(i % 2, nq - 2, 2):
-            lista = (
-                list(list_2q[i - 1][j]) + list(list_2q[i - 1][j + 1]) + list(list_2q[i - 1][j + 2])
-            )
-            unique_list = tuple(sorted([item for item in lista if lista.count(item) == 1]))
-            array_i[j + 1] = unique_list
-        if nq % 2 == i % 2:
-            lista = list(list_2q[i - 1][nq - 1]) + list(list_2q[i - 1][nq - 2])
-            unique_list = tuple(sorted([item for item in lista if lista.count(item) == 1]))
-            array_i[nq - 1] = unique_list
-        list_2q.append(array_i)
-    return list_2q
 
 
 def single_cost_layer_circuit(gamma: Parameter, graph: nx.Graph, layers: list) -> QuantumCircuit:
@@ -204,14 +166,37 @@ def single_mixer_layer_PTC_circuit(
     qc.rx(-2 * beta, nq - 1)
 
 
-def qaoa_circuit(graph: nx.Graph, p_layers: int, graph_type: GraphType) -> QuantumCircuit:
+def single_cost_layer_fully_connected_device(gamma: Parameter, graph: nx.Graph) -> QuantumCircuit:
+    """Generate a single layer of the QAOA circuit from a networkx graph with optimal depth in case of
+    a fully connected graph in the device.
+    Args:
+        gamma: Parameter of the QAOA algorithm.
+        graph: Networkx graph of the problem.
+    Returns:
+        QuantumCircuit: A quantum circuit representing the single cost layer.
+    """
+    nq = graph.number_of_nodes()
+    qc = QuantumCircuit(nq)
+
+    permutations = [i for i in range(nq)]
+
+    for qubit_i in range(nq):
+        for k in range(qubit_i % 2, nq - 1, 2):
+            qubit_pair = (permutations[k], permutations[k + 1])
+            qc.rzz(2 * gamma * graph[qubit_pair[0]][qubit_pair[1]]["weight"], *qubit_pair)
+            permutations[k], permutations[k + 1] = permutations[k + 1], permutations[k]
+
+
+def qaoa_circuit(
+    graph: nx.Graph, p_layers: int, graph_type: GraphType, circuit_encoding: EncodingType
+) -> QuantumCircuit:
     """Generate a QAOA circuit from a networkx graph on a graph_type lattice.
 
     Args:
         G: Networkx graph of the problem.
         p_layers: Number of QAOA layers.
         graph_type: Type of the graph, "1D":1D chain graph, "NL": Native Layout graph, or "FC": Fully connected graph.
-
+        device_layout_fully_connected: True if the connectivity of the device graph is fully connected.
     Returns:
         QuantumCircuit: A QAOA circuit for the given graph and number of layers.
     """
@@ -237,18 +222,30 @@ def qaoa_circuit(graph: nx.Graph, p_layers: int, graph_type: GraphType) -> Quant
             qc.rx(-2 * betas[pi], range(nq))
 
     elif graph_type == "FC":
-        list_parity = PTC_pairs(nq)
-        cost_layer_0 = single_cost_layer_PTC_circuit(
-            Parameter("theta_0"), graph, list_parity.copy(), 0
-        )
-        cost_layer_1 = single_cost_layer_PTC_circuit(
-            Parameter("theta_1"), graph, list_parity.copy(), 1
-        )
-        for pi in range(p_layers):
-            if pi % 2 == 0:
-                qc.compose(cost_layer_0.assign_parameters(gammas[pi]), inplace=True)
-            else:
-                qc.compose(cost_layer_1.assign_parameters(gammas[pi]), inplace=True)
-            single_mixer_layer_PTC_circuit(qc, nq, betas[pi], list_parity)
-            list_parity = list_parity[::-1]
+        if circuit_encoding == "Direct":
+            cost_layer = single_cost_layer_fully_connected_device(Parameter("theta"), graph)
+
+            for pi in range(p_layers):
+                qc.compose(cost_layer.assign_parameters(gammas[pi]), inplace=True)
+                qc.rx(-2 * betas[pi], range(nq))
+        elif circuit_encoding == "PTC":
+            # If the device is not fully connected use the parity twine chain (PTC) strategy to encode the problem.
+            list_parity = PTC_pairs(nq)
+            cost_layer_0 = single_cost_layer_PTC_circuit(
+                Parameter("theta_0"), graph, list_parity.copy(), 0
+            )
+            cost_layer_1 = single_cost_layer_PTC_circuit(
+                Parameter("theta_1"), graph, list_parity.copy(), 1
+            )
+            for pi in range(p_layers):
+                if pi % 2 == 0:
+                    qc.compose(cost_layer_0.assign_parameters(gammas[pi]), inplace=True)
+                else:
+                    qc.compose(cost_layer_1.assign_parameters(gammas[pi]), inplace=True)
+                single_mixer_layer_PTC_circuit(qc, nq, betas[pi], list_parity)
+                list_parity = list_parity[::-1]
+        else:
+            raise ValueError(
+                f"{circuit_encoding} is not valid circuit encoding from ['Direct', 'PTC']"
+            )
     return qc

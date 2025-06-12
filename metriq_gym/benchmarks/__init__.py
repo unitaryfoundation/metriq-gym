@@ -43,5 +43,6 @@ SCHEMA_MAPPING = {
     JobType.CLOPS: "clops.schema.json",
     JobType.QML_KERNEL: "qml_kernel.schema.json",
     JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
+    JobType.LinearRampQAOA: "lr_qaoa.schema.json",
     JobType.WORMHOLE: "wormhole.schema.json",
 }

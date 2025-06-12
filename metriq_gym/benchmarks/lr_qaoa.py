@@ -3,7 +3,7 @@ import statistics
 import networkx as nx
 from scipy import stats
 from dataclasses import dataclass
-import numpy as np
+import random
 
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
@@ -13,11 +13,18 @@ from metriq_gym.circuits import qaoa_circuit
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
-from metriq_gym.helpers.lrqaoa_helpers import weighted_maxcut_solver, objective_func, random_samples
+from metriq_gym.helpers.lr_qaoa_helpers import (
+    weighted_maxcut_solver,
+    objective_func,
+    random_samples,
+    PTC_pairs,
+    PTC_decoder,
+)
 
 from typing import Literal
 
 GraphType = Literal["1D", "NL", "FC"]
+EncodingType = Literal["Direct", "PTC"]
 
 
 @dataclass
@@ -31,10 +38,11 @@ class LinearRampQAOAData(BenchmarkData):
     num_random_trials: int
     confidence_level: float
     shots: int
-    p_layers: int
+    p_layers: list[int]
     seed: int
     delta_beta: float
     delta_gamma: float
+    circuit_encoding: EncodingType
 
 
 @dataclass
@@ -44,23 +52,24 @@ class LinearRampQAOAResult(BenchmarkResult):
     probability: float
     confidence_pass: bool
     p_value: float
-    trails: int
+    trials: int
 
 
 def prepare_qaoa_circuit(
-    graph: nx.Graph, p_layers: list, graph_type: GraphType
+    graph: nx.Graph, p_layers: list, graph_type: GraphType, circuit_encoding: EncodingType
 ) -> list[QuantumCircuit]:
     """Prepare a list of QAOA circuits for the given graph and p_layers.
     Args:
         graph: Networkx graph of the problem.
         p_layers: List of p-layer values for the QAOA circuit.
         graph_type: Type of graph used in the experiment (1D, NL, FC).
+        circuit_encoding: if connectivity of the device graph is not fully connected and the test is FC, it is used the PTC encoding.
     Returns:
         List of QAOA circuits for each p_layer.
     """
     circuits = []
     for layer_p_i in p_layers:
-        circuit = qaoa_circuit(graph, layer_p_i, graph_type)
+        circuit = qaoa_circuit(graph, layer_p_i, graph_type, circuit_encoding)
         circuit.measure_all()
         circuits.append(circuit)
     return circuits
@@ -121,10 +130,12 @@ class AggregateStats:
 def calc_trial_stats(
     graph: nx.graph,
     optimal_sol: str,
-    counts: dict[str, int],
+    samples: dict[str, int],
     shots: int,
     confidence_level: float,
     num_random_trials: int,
+    circuit_encoding: EncodingType,
+    p_layer: int,
 ) -> TrialStats:
     """Calculate various statistics for linear ramp QAOA benchmarking.
 
@@ -133,16 +144,23 @@ def calc_trial_stats(
         optimal_sol: Optimal solution bitstring for the problem.
         graph_type: Type of graph used in the experiment.
         seed": Seed for graph and the random number generator.
-        counts: A dictionary of bitstrings to counts measured from the backend.
+        samples: A dictionary of bitstrings to counts measured from the backend.
         shots: Number of measurement shots performed on the quantum circuit.
         confidence_level: Specified confidence level for the benchmarking.
         num_random_trials: random sampler number of trails
-
+        circuit_encoding: Direct: if the quantum circuit is compatible with the device layout, PTC: used in fully connected case for non-fully connected devices, e.g., IBM's heavy-hex layout.
+        p_layer: experiment number of LR-QAOA layers.
     Returns:
         A `TrialStats` object containing the calculated statistics.
     """
     nq = graph.number_of_nodes()  # number of qubits
-    shots = sum(counts.values())
+    shots = sum(samples.values())
+    if circuit_encoding == "PTC":
+        list_parity = PTC_pairs(nq)
+        samples = {
+            PTC_decoder(bitstring, p_layer=p_layer, list_parity=list_parity): count
+            for bitstring, count in samples.items()
+        }
     random_samples_dict = random_samples(shots, len(graph.nodes()))
     approx_ratio_random_list = []
     for _ in range(num_random_trials):
@@ -151,7 +169,7 @@ def calc_trial_stats(
         )
     approx_ratio_random_mean = statistics.mean(approx_ratio_random_list)
     approx_ratio_random_std = statistics.pstdev(approx_ratio_random_list)
-    results_qpu = objective_func(counts, graph, optimal_sol)
+    results_qpu = objective_func(samples, graph, optimal_sol)
     approx_ratio = results_qpu["approx_ratio"]
     t_score = (approx_ratio - approx_ratio_random_mean) / approx_ratio_random_std
     p_val = 1 - stats.t.cdf(t_score, df=num_random_trials - 1)
@@ -168,29 +186,32 @@ def calc_trial_stats(
     )
 
 
-def calc_stats(data: LinearRampQAOAData, counts: list[MeasCount]) -> AggregateStats:
+def calc_stats(data: LinearRampQAOAData, samples: list[MeasCount]) -> AggregateStats:
     """Calculate aggregate statistics over multiple trials.
 
     Args:
         data: contains dispatch-time data (input data + ideal probability).
-        counts: contains results from the quantum device (one MeasCount per trial).
+        samples: contains results from the quantum device (one MeasCount per trial).
     Returns:
         An AggregateStats object containing aggregated statistics for the result.
     """
     trial_stats = []
 
-    num_trials = len(counts)
+    num_trials = len(samples)
     # Process each trial, handling provider-specific logic.
     for trial in range(num_trials):
-        trial_stat = calc_trial_stats(
-            graph=data.graph,
-            optimal_sol=data.optimal_sol,
-            counts=counts[trial],
-            shots=data.shots,
-            confidence_level=data.confidence_level,
-            num_random_trials=data.num_random_trials,
-        )
-        trial_stats.append(trial_stat)
+        for p_layer in data.p_layers:
+            trial_stat = calc_trial_stats(
+                graph=data.graph,
+                optimal_sol=data.optimal_sol,
+                samples=samples[trial * len(data.p_layers) + trial],
+                shots=data.shots,
+                confidence_level=data.confidence_level,
+                num_random_trials=data.num_random_trials,
+                circuit_encoding=data.circuit_encoding,
+                p_layer=p_layer,
+            )
+            trial_stats.append(trial_stat)
 
     # Aggregate the trial statistics.
     probability = sum(stat.probability for stat in trial_stats) / num_trials
@@ -214,7 +235,7 @@ class LinearRampQAOA(Benchmark):
     def dispatch_handler(self, device: QuantumDevice) -> LinearRampQAOAData:
         num_qubits = self.params.num_qubits
         graph_type = self.params.graph_type
-        p_layers = self.params.p
+        p_layers = self.params.p_layers
         shots = self.params.shots
         trials = self.params.trials
         num_random_trials = self.params.num_random_trials
@@ -223,39 +244,51 @@ class LinearRampQAOA(Benchmark):
         seed = self.params.seed
         confidence_level = self.params.confidence_level
 
-        np.random.seed(seed)  # set seed for reproducibility
+        random.seed(seed)  # set seed for reproducibility
+        graph_device = device.coupling_map.graph.to_undirected()
+        edges_device = edges = list(graph_device.edge_list())
 
         if graph_type == "1D":
             edges = [(i, i + 1) for i in range(num_qubits - 1)]
+            circuit_encoding: Literal["Direct", "PTC"] = "Direct"
         elif graph_type == "NL":
-            graph_device = device.coupling_map.graph.to_undirected()
             num_qubits_device = graph_device.num_nodes()
             if num_qubits != num_qubits_device:
                 raise ValueError(
                     f"Number of qubits ({num_qubits}) does not match the device's number of qubits ({num_qubits_device})."
                 )
-            edges = list(graph_device.edge_list())
+            edges = edges_device
+            circuit_encoding = "Direct"
         elif graph_type == "FC":
             edges = [(i, j) for i in range(num_qubits) for j in range(i + 1, num_qubits)]
+            if not all(edge in edges_device for edge in edges):
+                # in case the quantum device is not fully connected the parity twine chain (PTC) is implemented.
+                circuit_encoding = "PTC"
+
         else:
             raise ValueError(
                 f"Unsupported graph type: {graph_type}. Supported types are '1D', 'NL', and 'FC'."
             )
-
+        possible_weights = [0.1, 0.2, 0.3, 0.5, 1.0]
         graph = nx.Graph()
         graph.add_nodes_from(range(num_qubits))
-        graph.add_weighted_edges_from(
-            [(i, j, np.random.choice([0.1, 0.2, 0.3, 0.5, 1.0])) for i, j in edges]
-        )
+        graph.add_weighted_edges_from([(i, j, random.choice(possible_weights)) for i, j in edges])
         optimal_sol = weighted_maxcut_solver(graph)
-        circuits = prepare_qaoa_circuit(graph=graph, p_layers=p_layers, graph_type=graph_type)
+        circuits = prepare_qaoa_circuit(
+            graph=graph,
+            p_layers=p_layers,
+            graph_type=graph_type,
+            circuit_encoding=circuit_encoding,
+        )
         circuits_with_params = []
-        for pi, circuit in zip(p_layers, circuits):
-            betas = np.arange(pi, 0, -1) * delta_beta / pi
-            gammas = np.arange(1, pi + 1) * delta_gamma / pi
-            circuits_with_params.append(
-                circuit.assign_parameters((betas, gammas))
-            )  # assing linear ramp parameters
+        for trail_i in range(trials):
+            for p_layer_i, circuit in zip(p_layers, circuits):
+                linear_ramp = list(range(1, p_layer_i + 1))
+                betas = [i * delta_beta / p_layer_i for i in reversed(linear_ramp)]
+                gammas = [i * delta_gamma / p_layer_i for i in linear_ramp]
+                circuits_with_params.append(
+                    circuit.assign_parameters((betas, gammas))
+                )  # assing linear ramp parameters
         quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits_with_params, shots=shots)
         provider_job_ids = (
             [quantum_job.id]
@@ -276,6 +309,7 @@ class LinearRampQAOA(Benchmark):
             delta_beta=delta_beta,
             delta_gamma=delta_gamma,
             graph_type=graph_type,
+            circuit_encoding=circuit_encoding,
         )
 
     def poll_handler(
