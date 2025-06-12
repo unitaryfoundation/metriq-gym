@@ -6,8 +6,8 @@ from datetime import datetime
 from qbraid.runtime import JobStatus, GateModelResultData
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
+from metriq_gym.config import JOB_STORAGE_FILE
 
-JOB_STORAGE_FILE = ".metriq_gym_jobs.jsonl"
 os.makedirs(os.path.dirname(JOB_STORAGE_FILE) or ".", exist_ok=True)
 
 
@@ -24,7 +24,7 @@ def _load_job_from_file(job_id: str) -> dict:
             entry = json.loads(line)
             if entry.get("id") == job_id:
                 return entry
-    return {}
+    raise FileNotFoundError(f"No job with id {job_id} found in {JOB_STORAGE_FILE}")
 
 
 class LocalResult:
@@ -37,9 +37,9 @@ class LocalJob:
         self,
         job_id: str,
         counts: dict[str, int],
-        job_type: str = "local",
-        params: dict = {},
-        data: dict = {},
+        job_type: str = "Local",
+        params: dict | None = None,
+        data: dict | None = None,
         provider_name: str = "local",
         device_name: str = "aer_simulator",
         dispatch_time: str = "",
@@ -47,8 +47,8 @@ class LocalJob:
         self.id = job_id
         self._counts = counts
         self.job_type = job_type
-        self.params = params
-        self.data = data
+        self.params = params or {}  
+        self.data = data or {}
         self.provider_name = provider_name
         self.device_name = device_name
         self.dispatch_time = dispatch_time or datetime.now().isoformat()
@@ -85,9 +85,9 @@ class AerSimulatorDevice:
         self,
         circuits: QuantumCircuit | list[QuantumCircuit],
         shots: int | None = None,
-        job_type: str = "local",
-        params: dict = {},
-        data: dict = {},
+        job_type: str = "Local",
+        params: dict | None = None,
+        data: dict | None = None,
     ) -> LocalJob | list[LocalJob]:
         circ_list = circuits if isinstance(circuits, list) else [circuits]
         jobs = []
@@ -100,8 +100,8 @@ class AerSimulatorDevice:
                     job_id=str(uuid.uuid4()),
                     counts=counts,
                     job_type=job_type,
-                    params=params,
-                    data=data | {"shots": shots or 1024},
+                    params=params or {},
+                    data=(data or {}) | {"shots": shots or 1024},
                 )
             )
         return jobs[0] if isinstance(circuits, QuantumCircuit) else jobs
@@ -115,7 +115,7 @@ def load_local_job(job_id: str) -> LocalJob:
     return LocalJob(
         job_id=job_dict["id"],
         counts=counts,
-        job_type=job_dict.get("job_type", "local"),
+        job_type=job_dict.get("job_type", "Local"),
         params=job_dict.get("params", {}),
         data=job_dict.get("data", {}),
         provider_name=job_dict.get("provider_name", "local"),

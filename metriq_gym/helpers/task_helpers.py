@@ -21,11 +21,12 @@ def flatten_counts(result_data: list[GateModelResultData]) -> list[MeasCount]:
     return flat_counts
 
 
-def flatten_job_ids(quantum_job):
+def flatten_job_ids(
+    quantum_job: QuantumJob | LocalJob | Iterable[QuantumJob]
+) -> list[str]:
     if isinstance(quantum_job, (QuantumJob, LocalJob)):
         return [quantum_job.id]
     elif isinstance(quantum_job, Iterable):
         return [job.id for job in quantum_job]
     else:
         raise TypeError(f"Unsupported job type: {type(quantum_job)}")
-
