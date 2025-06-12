@@ -14,7 +14,7 @@ class JobType(StrEnum):
     QML_KERNEL = "QML Kernel"
     QUANTUM_VOLUME = "Quantum Volume"
     WORMHOLE = "Wormhole"
-    LOCAL = "local"
+    LOCAL = "Local"
 
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
