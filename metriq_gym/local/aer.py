@@ -16,15 +16,15 @@ def _append_job_to_file(job_dict: dict) -> None:
         f.write(json.dumps(job_dict) + "\n")
 
 
-def _load_job_from_file(job_id: str) -> Optional[dict]:
+def _load_job_from_file(job_id: str) -> dict:
     if not os.path.exists(JOB_STORAGE_FILE):
-        return None
+        return {}
     with open(JOB_STORAGE_FILE, "r") as f:
         for line in f:
             entry = json.loads(line)
             if entry.get("id") == job_id:
                 return entry
-    return None
+    return {}
 
 
 class LocalResult:
@@ -38,17 +38,17 @@ class LocalJob:
         job_id: str,
         counts: dict[str, int],
         job_type: str = "local",
-        params: Optional[dict] = None,
-        data: Optional[dict] = None,
+        params: dict = {},
+        data: dict = {},
         provider_name: str = "local",
         device_name: str = "aer_simulator",
-        dispatch_time: Optional[str] = None,
+        dispatch_time: str = "",
     ):
         self.id = job_id
         self._counts = counts
         self.job_type = job_type
-        self.params = params or {}
-        self.data = data or {}
+        self.params = params
+        self.data = data
         self.provider_name = provider_name
         self.device_name = device_name
         self.dispatch_time = dispatch_time or datetime.now().isoformat()
@@ -82,7 +82,12 @@ class AerSimulatorDevice:
         self.num_qubits = self.backend.configuration().n_qubits
 
     def run(
-        self, circuits: QuantumCircuit | list[QuantumCircuit], shots: int | None = None
+        self,
+        circuits: QuantumCircuit | list[QuantumCircuit],
+        shots: int | None = None,
+        job_type: str = "local",
+        params: dict = {},
+        data: dict = {},
     ) -> LocalJob | list[LocalJob]:
         circ_list = circuits if isinstance(circuits, list) else [circuits]
         jobs = []
@@ -94,15 +99,9 @@ class AerSimulatorDevice:
                 LocalJob(
                     job_id=str(uuid.uuid4()),
                     counts=counts,
-                    job_type="Quantum Volume",
-                    params={
-                        "benchmark_name": "Quantum Volume",
-                        "confidence_level": 0.95,
-                        "num_qubits": self.num_qubits,
-                        "shots": shots or 1024,
-                        "trials": 2,
-                    },
-                    data={"shots": shots or 1024, "trials": 2},
+                    job_type=job_type,
+                    params=params,
+                    data=data | {"shots": shots or 1024},
                 )
             )
         return jobs[0] if isinstance(circuits, QuantumCircuit) else jobs
@@ -110,7 +109,7 @@ class AerSimulatorDevice:
 
 def load_local_job(job_id: str) -> LocalJob:
     job_dict = _load_job_from_file(job_id)
-    if job_dict is None:
+    if not job_dict:
         raise FileNotFoundError(f"No job with id {job_id} found in {JOB_STORAGE_FILE}")
     counts = job_dict.get("data", {}).get("measurement_counts", {})
     return LocalJob(
@@ -121,7 +120,7 @@ def load_local_job(job_id: str) -> LocalJob:
         data=job_dict.get("data", {}),
         provider_name=job_dict.get("provider_name", "local"),
         device_name=job_dict.get("device_name", "aer_simulator"),
-        dispatch_time=job_dict.get("dispatch_time"),
+        dispatch_time=job_dict.get("dispatch_time", ""),
     )
 
 

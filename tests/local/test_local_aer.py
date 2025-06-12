@@ -2,9 +2,6 @@ import os
 import json
 import pytest
 
-pytest.importorskip("qiskit")
-pytest.importorskip("qiskit_aer")
-
 from qiskit import QuantumCircuit
 
 from metriq_gym.local.aer import (
@@ -17,6 +14,11 @@ import rustworkx as rx
 
 
 def test_aer_simulator_device_run(tmp_path):
+    import os
+    import json
+    from qiskit import QuantumCircuit
+    from metriq_gym.local.aer import AerSimulatorDevice, JOB_STORAGE_FILE, load_local_job
+
     os.chdir(tmp_path)
 
     qc = QuantumCircuit(1)
@@ -24,7 +26,8 @@ def test_aer_simulator_device_run(tmp_path):
     qc.measure_all()
 
     device = AerSimulatorDevice()
-    job = device.run(qc, shots=100)
+    job_type = "quantum-volume-test"
+    job = device.run(qc, shots=100, job_type=job_type)
     result = job.result()
 
     assert isinstance(result.data.measurement_counts, dict)
@@ -37,13 +40,14 @@ def test_aer_simulator_device_run(tmp_path):
 
     entry = json.loads(lines[0])
     assert entry["id"] == job.id
-    assert entry["job_type"] == "Quantum Volume"
     assert entry["device_name"] == "aer_simulator"
+    assert entry["job_type"] == job_type
     assert "measurement_counts" in entry["data"]
 
     # Check reloading
     reloaded = load_local_job(job.id)
     assert reloaded.id == job.id
+    assert reloaded.job_type == job_type
     assert reloaded.result().data.measurement_counts == result.data.measurement_counts
 
 
