@@ -2,7 +2,6 @@ import json
 import os
 import uuid
 from datetime import datetime
-from typing import Optional, Union
 
 from qbraid.runtime import JobStatus, GateModelResultData
 from qiskit import QuantumCircuit
