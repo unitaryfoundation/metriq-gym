@@ -40,3 +40,5 @@ docs/_build/
 
 # mypy
 .mypy_cache/
+/python=3.12
+.github/workflows/dependabot-automerge.yml
