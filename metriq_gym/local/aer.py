@@ -82,7 +82,7 @@ class AerSimulatorDevice:
         self.num_qubits = self.backend.configuration().n_qubits
 
     def run(
-        self, circuits: Union[QuantumCircuit, list[QuantumCircuit]], shots: Optional[int] = None
+        self, circuits: QuantumCircuit | list[QuantumCircuit], shots: int | None = None
     ) -> LocalJob | list[LocalJob]:
         circ_list = circuits if isinstance(circuits, list) else [circuits]
         jobs = []
