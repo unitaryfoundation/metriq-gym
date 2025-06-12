@@ -1,6 +1,5 @@
 import os
 import json
-import pytest
 
 from qiskit import QuantumCircuit
 
@@ -14,10 +13,7 @@ import rustworkx as rx
 
 
 def test_aer_simulator_device_run(tmp_path):
-    import os
-    import json
-    from qiskit import QuantumCircuit
-    from metriq_gym.local.aer import AerSimulatorDevice, JOB_STORAGE_FILE, load_local_job
+    from metriq_gym.local.aer import AerSimulatorDevice
 
     os.chdir(tmp_path)
 
