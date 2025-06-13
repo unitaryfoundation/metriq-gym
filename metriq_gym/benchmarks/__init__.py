@@ -16,7 +16,6 @@ class JobType(StrEnum):
     QUANTUM_VOLUME = "Quantum Volume"
     MIRROR_CIRCUITS = "Mirror Circuits"
     WORMHOLE = "Wormhole"
-    LOCAL = "Local"
 
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
