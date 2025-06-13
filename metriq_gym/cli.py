@@ -97,7 +97,7 @@ def parse_arguments() -> argparse.Namespace:
         "-p",
         "--provider",
         type=str,
-        choices=get_providers(),
+        choices=get_providers() + ["local"],
         help="String identifier for backend provider service",
     )
     dispatch_parser.add_argument(
