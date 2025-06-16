@@ -1,4 +1,3 @@
-from typing import Any
 from dataclasses import dataclass, field
 
 import rustworkx as rx
@@ -73,16 +72,11 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
         GraphColoring: An object containing the coloring information.
     """
     num_nodes = topology_graph.num_nodes()
-    num_edges = topology_graph.num_edges()
 
-    # Use optimal one-factorization if graph is complete
-    if num_edges == num_nodes * (num_nodes - 1) // 2:
-        edge_color_map = _complete_graph_edge_color(topology_graph)
+    if rx.is_bipartite(topology_graph):
+        edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
     else:
-        try:
-            edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
-        except rx.GraphNotBipartite:
-            edge_color_map = rx.graph_greedy_edge_color(topology_graph)
+        edge_color_map = rx.graph_greedy_edge_color(topology_graph)
 
     edge_index_map = dict(topology_graph.edge_index_map())
     return GraphColoring(
@@ -90,48 +84,3 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
         edge_color_map=edge_color_map,
         edge_index_map=edge_index_map,
     )
-
-
-def _complete_graph_edge_color(topology_graph: rx.PyGraph) -> dict[int, int]:
-    """One-factorization edge-coloring of K_n in n-1 rounds.
-
-    Returns a map from edge index to color.
-    """
-    # Sort nodes to ensure a canonical order for the algorithm.
-    nodes: list[Any] = sorted(list(topology_graph.node_indexes()))
-    n = len(nodes)
-
-    if n < 2:
-        return {}
-
-    odd = n % 2 == 1
-    dummy = None
-    if odd:
-        dummy = object()
-        nodes.append(dummy)
-        n += 1
-
-    # Invert edge_index_map: idx -> (u, v)
-    raw_index = topology_graph.edge_index_map()
-    # The `pair` from raw_index.items() is a (source, target, weight) tuple.
-    # We only care about the source and target, so we use `pair[:2]`.
-    edge_idx: dict[frozenset[int], int] = {
-        frozenset(pair[:2]): idx for idx, pair in raw_index.items()
-    }
-
-    color_map: dict[int, int] = {}
-    for color in range(n - 1):
-        for i in range(n // 2):
-            u, v = nodes[i], nodes[n - 1 - i]
-            # Skip pairs involving the dummy node for odd-sized graphs.
-            if u is dummy or v is dummy:
-                continue
-
-            idx = edge_idx.get(frozenset((u, v)))
-            if idx is not None:
-                color_map[idx] = color
-
-        # Rotate nodes, keeping the first element in place.
-        nodes = [nodes[0]] + [nodes[-1]] + nodes[1:-1]
-
-    return color_map
