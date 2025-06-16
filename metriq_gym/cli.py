@@ -67,26 +67,37 @@ def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqG
 
 
 def parse_arguments() -> argparse.Namespace:
-    """
-    Parse command-line arguments for the quantum volume benchmark.
+    """Parse command-line arguments for the metriq-gym benchmarking CLI.
+
+    This function sets up the complete argument parsing structure for metriq-gym,
+    supporting dispatch of multiple benchmark configuration files for comprehensive
+    device characterization.
 
     Returns:
-        Parsed arguments as an argparse.Namespace object.
+        Parsed arguments as an argparse.Namespace object containing all CLI options.
+
+    Dispatch mode:
+        - Multiple benchmarks: Requires one or more JSON configuration files
+        - Each file can contain different parameters for any benchmark type
+        - Same benchmark type can be run multiple times with different configurations
     """
     parser = argparse.ArgumentParser(description="Metriq-Gym benchmarking CLI")
     subparsers = parser.add_subparsers(dest="action", required=True, help="Action to perform")
 
     dispatch_parser = subparsers.add_parser("dispatch", help="Dispatch jobs")
+
     dispatch_parser.add_argument(
-        "input_file",
+        "benchmark_configs",
         type=str,
-        help="Path to the file containing the benchmark parameters",
+        nargs="+",
+        help="Path(s) to benchmark configuration files. Multiple files can be specified to run multiple benchmarks.",
     )
+
     dispatch_parser.add_argument(
         "-p",
         "--provider",
         type=str,
-        choices=get_providers(),
+        choices=get_providers() + ["local"],
         help="String identifier for backend provider service",
     )
     dispatch_parser.add_argument(

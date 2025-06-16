@@ -64,16 +64,15 @@ The `.env.example` file illustrates how to specify the API keys once you have ac
 
 ### Workflow
 
-You can dispatch a job by specifying the parameters of the job you wish to launch in a configuration file. 
+You can dispatch benchmark jobs by specifying one or more configuration files for the benchmarks you wish to run. 
 
 ```sh
-mgym dispatch <BENCHMARK_JSON> --provider <PROVIDER> --device <DEVICE>
+mgym dispatch <BENCHMARK_CONFIG_1> <BENCHMARK_CONFIG_2> ... --provider <PROVIDER> --device <DEVICE>
 ```
 
-Refer to the `schemas/` directory for example schema files for other supported benchmarks.
+Refer to the `schemas/examples/` directory for example configuration files for supported benchmarks.
 
-
-If running on quantum cloud hardware, the job will be added to a polling queue. The status of the queue can be checked with
+If running on quantum cloud hardware, the jobs will be added to a polling queue. The status of the queue can be checked with
 
 ```sh
 mgym poll --job_id <METRIQ_GYM_JOB_ID>
@@ -95,6 +94,22 @@ mgym poll --job_id <METRIQ_GYM_JOB_ID> --json
 This will create a JSON file with the results and the metadata of the job identified by `<METRIQ_GYM_JOB_ID>`.
 By default, the JSON file will be saved in the current working directory with the name `<METRIQ_GYM_JOB_ID>.json`.
 
+### Using local simulators
+
+For quick testing without access to cloud hardware, `metriq-gym` can dispatch jobs to a local simulator.
+At the moment the Qiskit Aer simulator is supported. Specify the `local` provider and the
+`aer_simulator` device:
+
+```sh
+mgym dispatch examples/adder.json --provider local --device aer_simulator
+```
+
+Polling local simulator jobs works the same way:
+
+```sh
+mgym poll --job_id <METRIQ_GYM_JOB_ID>
+```
+
 ### View jobs
 
 You can view all the jobs that have been dispatched by using the `view` action. 
@@ -107,7 +122,7 @@ In order to view the details of a specific job (e.g., the parameters the job was
 you can use the `view` action with the `--job_id` flag or select the job by index from the list of all dispatched jobs.
 
 ```sh
-mgym --job_id <METRIQ_GYM_JOB_ID>
+mgym view --job_id <METRIQ_GYM_JOB_ID>
 ```
 
 ### Example: Benchmarking Bell state effective qubits (BSEQ) on IBM hardware
@@ -128,7 +143,7 @@ We should see logging information in our terminal to indicate that the dispatch 
 
 ```sh
 INFO - Starting job dispatch...
-INFO - Dispatching BSEQ benchmark job on ibm_sherbrooke device...
+INFO - Dispatching BSEQ benchmark from metriq_gym/schemas/examples/bseq.example.json on ibm_sherbrooke...
 ...
 INFO - Job dispatched with ID: 93a06a18-41d8-475a-a030-339fbf3accb9
 ```
@@ -184,12 +199,32 @@ Select a job index: 0
 INFO - Polling job...
 ```
 
+### Running multiple benchmarks
+
+`metriq-gym` supports running multiple benchmarks by specifying multiple configuration files. This allows you to obtain a comprehensive performance profile of a quantum device with full control over the parameters of each benchmark.
+
+#### Multiple benchmark types
+To run different types of benchmarks on a device, specify multiple configuration files:
+
+```sh
+mgym dispatch bseq_config.json clops_config.json qv_config.json --provider ibm --device ibm_sherbrooke
+```
+
+#### Same benchmark with different parameters
+You can run the same benchmark type multiple times with different configurations to test various parameter ranges:
+
+```sh
+mgym dispatch bseq_small.json bseq_large.json --provider ibm --device ibm_sherbrooke
+```
+
+The system will process each configuration file as a separate job, giving you full control over the benchmark parameters and allowing for comprehensive device characterization.
+
 ## Contributing
 
 First, follow the [Setup](#setup) instructions above.
 
 ### Updating the submodule
-To pull the latest changes from the submodule’s repository:
+To pull the latest changes from the submodule's repository:
 
 ```sh
 cd submodules/qiskit-device-benchmarking

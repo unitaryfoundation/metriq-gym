@@ -8,6 +8,8 @@ from typing import Any
 
 from tabulate import tabulate
 from metriq_gym.benchmarks import JobType
+from metriq_gym.config import JOB_STORAGE_FILE
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,7 @@ class MetriqGymJob:
     provider_name: str
     device_name: str
     dispatch_time: datetime
+    result_data: list[dict[str, Any]] | None = None
 
     def to_table_row(self) -> list[str]:
         return [
@@ -58,7 +61,7 @@ class MetriqGymJob:
 # TODO: https://github.com/unitaryfoundation/metriq-gym/issues/51
 class JobManager:
     jobs: list[MetriqGymJob]
-    jobs_file = ".metriq_gym_jobs.jsonl"
+    jobs_file = JOB_STORAGE_FILE
 
     def __init__(self):
         self._load_jobs()
@@ -69,9 +72,8 @@ class JobManager:
     def _load_jobs(self):
         """
         Initialize the job list by loading valid jobs from the local JSONL file.
-
-        This method reads the `.metriq_gym_jobs.jsonl` file line by line, 
-        attempting to deserialize each entry into a `MetriqGymJob` object. 
+        This method reads the `.metriq_gym_jobs.jsonl` file line by line,
+        attempting to deserialize each entry into a `MetriqGymJob` object.
         It skips invalid or outdated entries without raising exceptions,
         while logging the reasons for each skip.
 
@@ -117,10 +119,9 @@ class JobManager:
                     logger.warning(line_number, f"Unexpected exception ({type(e).__name__}): {e}")
                 else:
                     self.jobs.append(job)
-       
+
         if not self.jobs:
             logger.warning(f"No valid jobs found in {self.jobs_file}.")
-
 
     def add_job(self, job: MetriqGymJob) -> str:
         self.jobs.append(job)

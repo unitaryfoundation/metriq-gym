@@ -23,7 +23,7 @@ platforms = {
     "ibm_nazca": 184,
     "ibm_oslo": 120,
     "ibm_perth": 22,
-    "ibm_prague": 56,   
+    "ibm_prague": 56,
     "ibm_quito": 25,
     "ibm_sherbrooke": 211,
     "ibm_tokyo": 66,

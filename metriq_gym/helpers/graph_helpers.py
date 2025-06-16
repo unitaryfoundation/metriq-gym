@@ -97,10 +97,13 @@ def _complete_graph_edge_color(topology_graph: rx.PyGraph) -> dict[int, int]:
 
     Returns a map from edge index to color.
     """
-    # Initialize nodes and dummy marker
-    nodes: list[Any] = list(topology_graph.node_indexes())
-
+    # Sort nodes to ensure a canonical order for the algorithm.
+    nodes: list[Any] = sorted(list(topology_graph.node_indexes()))
     n = len(nodes)
+
+    if n < 2:
+        return {}
+
     odd = n % 2 == 1
     dummy = None
     if odd:
@@ -109,20 +112,26 @@ def _complete_graph_edge_color(topology_graph: rx.PyGraph) -> dict[int, int]:
         n += 1
 
     # Invert edge_index_map: idx -> (u, v)
-    raw_index = topology_graph.edge_index_map()  # dict[int, tuple[int, int]]
-    edge_idx: dict[frozenset[int], int] = {frozenset(pair): idx for idx, pair in raw_index.items()}
+    raw_index = topology_graph.edge_index_map()
+    # The `pair` from raw_index.items() is a (source, target, weight) tuple.
+    # We only care about the source and target, so we use `pair[:2]`.
+    edge_idx: dict[frozenset[int], int] = {
+        frozenset(pair[:2]): idx for idx, pair in raw_index.items()
+    }
 
     color_map: dict[int, int] = {}
     for color in range(n - 1):
         for i in range(n // 2):
             u, v = nodes[i], nodes[n - 1 - i]
-            # skip dummy pairs
-            if odd and (u is dummy or v is dummy):
+            # Skip pairs involving the dummy node for odd-sized graphs.
+            if u is dummy or v is dummy:
                 continue
+
             idx = edge_idx.get(frozenset((u, v)))
             if idx is not None:
                 color_map[idx] = color
-        # rotate nodes except first
+
+        # Rotate nodes, keeping the first element in place.
         nodes = [nodes[0]] + [nodes[-1]] + nodes[1:-1]
 
     return color_map
