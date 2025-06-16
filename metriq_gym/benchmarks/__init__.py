@@ -7,6 +7,7 @@ from metriq_gym.benchmarks.quantum_volume import QuantumVolume, QuantumVolumeDat
 from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
 from metriq_gym.benchmarks.mirror_circuits import MirrorCircuits, MirrorCircuitsData
 from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData
+from metriq_gym.benchmarks.bernstein_vazirani import BernsteinVazirani, BernsteinVaziraniData
 
 
 class JobType(StrEnum):
@@ -16,6 +17,7 @@ class JobType(StrEnum):
     QUANTUM_VOLUME = "Quantum Volume"
     MIRROR_CIRCUITS = "Mirror Circuits"
     WORMHOLE = "Wormhole"
+    BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
 
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
@@ -25,6 +27,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.QUANTUM_VOLUME: QuantumVolume,
     JobType.MIRROR_CIRCUITS: MirrorCircuits,
     JobType.WORMHOLE: Wormhole,
+    JobType.BERNSTEIN_VAZIRANI: BernsteinVazirani,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -34,6 +37,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.QUANTUM_VOLUME: QuantumVolumeData,
     JobType.MIRROR_CIRCUITS: MirrorCircuitsData,
     JobType.WORMHOLE: WormholeData,
+    JobType.BERNSTEIN_VAZIRANI: BernsteinVaziraniData,
 }
 
 SCHEMA_MAPPING = {
@@ -43,6 +47,7 @@ SCHEMA_MAPPING = {
     JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
     JobType.MIRROR_CIRCUITS: "mirror_circuits.schema.json",
     JobType.WORMHOLE: "wormhole.schema.json",
+    JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.schema.json",
 }
 
 
