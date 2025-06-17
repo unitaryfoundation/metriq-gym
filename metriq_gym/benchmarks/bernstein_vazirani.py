@@ -127,6 +127,9 @@ class BernsteinVazirani(Benchmark):
 
         # analyze_results(metrics, counts_list)
 
-        # TO DO: print and dump the metrics as a JSON or some local storage.
+        # metrics.aggregate_metrics()
+
+        # For now, try and plot with just method 1, worry about method 2 later.
+        # metrics.plot_metrics(f"Benchmark Results - {benchmark_name} ({method}) - Qiskit", filters=["fidelity"])
 
         return BernsteinVaziraniResult(final_metrics=metrics)
