@@ -9,8 +9,12 @@ Each circuit is then ran, and the metrics are computed.
 from dataclasses import dataclass
 
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+from qbraid.runtime.result_data import MeasCount
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+# from metriq_gym.helpers.task_helpers import flatten_counts
+
+import types
 
 
 @dataclass
@@ -20,10 +24,8 @@ class BernsteinVaziraniResult(BenchmarkResult):
         final_metrics: A QED-C metrics object containing final results.
     """
 
-    # Note: format of this might change after using the QED-C module and computing
-    #       final metrics; this is a place holder for now.
-    # final_metrics: dict[str, dict[str, dict[str, str]]]
-    final_metrics: None
+    # final_metrics: types.ModuleType
+    final_metrics: None  # Temprorary type, work in progress.
 
 
 @dataclass
@@ -43,8 +45,43 @@ class BernsteinVaziraniData(BenchmarkData):
     max_qubits: int
     skip_qubits: int
     max_circuits: int
-    # metrics: dict[str, dict[str, dict[str, str]]]
-    metrics: None
+    # metrics: types.ModuleType
+    metrics: None  # Temprorary type, work in progress.
+
+
+def analyze_results(metrics: types.ModuleType, counts_list: list[MeasCount]) -> None:
+    """
+    Iterates over each circuit group and secret int to compute the fidelities.
+
+    Args:
+        metrics: A QED-C metrics module object.
+        counts_list: A list of all counts objects, each index corresponds to a circuit.
+
+    Returns:
+        None: the modification is done in-place and stored in the metrics object.
+    """
+
+    info: dict[str, dict[str, dict[str, float]]] = metrics.circuit_metrics
+
+    num_qubits_list: list[str] = list(info.keys())
+
+    counts_idx: int = 0
+
+    for num_qubits in num_qubits_list:
+        s_str_list = list(info[num_qubits].keys())
+
+        for s_str in s_str_list:
+            counts: dict[str, int] = counts_list[counts_idx]
+
+            counts_idx += 1
+
+            correct_dist = {format(int(s_str), f"0{int(num_qubits) - 1}b"): 1.0}
+
+            fidelity = metrics.polarization_fidelity(counts, correct_dist)
+
+            metrics.store_metric(num_qubits, s_str, "fidelity", fidelity)
+
+    # The metrics object now has all the fidelities stored.
 
 
 class BernsteinVazirani(Benchmark):
@@ -84,8 +121,12 @@ class BernsteinVazirani(Benchmark):
         result_data: list[GateModelResultData],
         quantum_jobs: list[QuantumJob],
     ) -> BernsteinVaziraniResult:
-        # To implement: calling QED-C metrics module and using the info to create final metrics.
         metrics = job_data.metrics
-        final_metrics = metrics  # Temprorary assignment, work in progress.
 
-        return BernsteinVaziraniResult(final_metrics=final_metrics)
+        # counts_list = flatten_counts(result_data)
+
+        # analyze_results(metrics, counts_list)
+
+        # TO DO: print and dump the metrics as a JSON or some local storage.
+
+        return BernsteinVaziraniResult(final_metrics=metrics)
