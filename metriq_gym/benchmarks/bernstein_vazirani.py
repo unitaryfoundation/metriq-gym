@@ -14,7 +14,7 @@ from qbraid.runtime.result_data import MeasCount
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 
-from qedc_bernstein_vazirani.bv_benchmark import run
+from qc_app_oriented_benchmarks.bernstein_vazirani.bv_benchmark import run
 
 import types
 

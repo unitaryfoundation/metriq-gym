@@ -25,6 +25,7 @@ python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
 qiskit = ">=1.4.3,<3.0"
 qiskit-device-benchmarking = { path = "submodules/qiskit-device-benchmarking" }
+qc-app-oriented-benchmarks = { path = "submodules/QC-App-Oriented-Benchmarks", develop = true }
 qiskit-aer = "^0.17.1"
 qiskit-ibm-runtime = "^0.38.0"
 scipy = "^1.15.3"
