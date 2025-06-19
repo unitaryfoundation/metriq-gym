@@ -1,3 +1,6 @@
 [submodule "submodules/qiskit-device-benchmarking"]
 	path = submodules/qiskit-device-benchmarking
 	url = https://github.com/qiskit-community/qiskit-device-benchmarking.git
+[submodule "submodules/QC-App-Oriented-Benchmarks"]
+	path = submodules/QC-App-Oriented-Benchmarks
+	url = https://github.com/SRI-International/QC-App-Oriented-Benchmarks.git
