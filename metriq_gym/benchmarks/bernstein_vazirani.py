@@ -103,15 +103,6 @@ class BernsteinVazirani(Benchmark):
             max_circuits=max_circuits,
             num_shots=shots,
             method=1,
-            input_value=None,
-            backend_id=None,
-            provider_backend=None,
-            hub="ibm-q",
-            group="open",
-            project="main",
-            exec_options=None,
-            context=None,
-            api=None,
             get_circuits=True,
         )
 
