@@ -1,4 +1,3 @@
-from __future__ import annotations
 import uuid
 from qbraid import QPROGRAM
 from qbraid.runtime import QuantumDevice, DeviceStatus, TargetProfile
@@ -34,7 +33,7 @@ class LocalAerDevice(QuantumDevice):
         return DeviceStatus.ONLINE
 
     def submit(
-        self, run_input: QPROGRAM | list[QPROGRAM], *, shots: int | None = None, **kw
+        self, run_input: QPROGRAM | list[QPROGRAM], *, shots: int | None = None, **kwargs
     ) -> LocalAerJob:
-        counts = self._backend.run(run_input, shots=shots, **kw).result().get_counts()
+        counts = self._backend.run(run_input, shots=shots, **kwargs).result().get_counts()
         return LocalAerJob(uuid.uuid4().hex, device=self, counts=counts)
