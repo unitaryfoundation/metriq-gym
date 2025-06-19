@@ -49,7 +49,7 @@ class BernsteinVaziraniData(BenchmarkData):
     metrics: Any
 
 
-def analyze_results(metrics: Any, counts_list: list[MeasCount]) -> None:
+def analyze_results(metrics: Any, counts_list: list[MeasCount]) -> Any:
     """
     Iterates over each circuit group and secret int to compute the fidelities.
 
@@ -61,11 +61,13 @@ def analyze_results(metrics: Any, counts_list: list[MeasCount]) -> None:
         None: the modification is done in-place and stored in the metrics object.
     """
 
-    info: dict[str, dict[str, dict[str, float]]] = metrics.circuit_metrics
+    info: dict[str, dict[str, dict[str, float]]] = metrics
 
     num_qubits_list: list[str] = list(info.keys())
 
     counts_idx: int = 0
+
+    all_fidelity = []
 
     for num_qubits in num_qubits_list:
         s_str_list = list(info[num_qubits].keys())
@@ -79,9 +81,9 @@ def analyze_results(metrics: Any, counts_list: list[MeasCount]) -> None:
 
             fidelity = metrics.polarization_fidelity(counts, correct_dist)
 
-            metrics.store_metric(num_qubits, s_str, "fidelity", fidelity)
+            all_fidelity.append(fidelity)
 
-    # The metrics object now has all the fidelities stored.
+    return all_fidelity
 
 
 class BernsteinVazirani(Benchmark):
@@ -120,7 +122,7 @@ class BernsteinVazirani(Benchmark):
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,
             max_circuits=max_circuits,
-            metrics=metrics,
+            metrics=metrics.circuit_metrics,
         )
 
     def poll_handler(
@@ -133,13 +135,6 @@ class BernsteinVazirani(Benchmark):
 
         counts_list = flatten_counts(result_data)
 
-        analyze_results(metrics, counts_list)
+        fidelity = analyze_results(metrics, counts_list)
 
-        metrics.aggregate_metrics()
-
-        # For now, try and plot with just method 1, worry about method 2 later.
-        metrics.plot_metrics(
-            "Benchmark Results - Bernstein-Vazirani (1) - Qiskit", filters=["fidelity"]
-        )
-
-        return BernsteinVaziraniResult(final_metrics=metrics)
+        return BernsteinVaziraniResult(final_metrics=fidelity)
