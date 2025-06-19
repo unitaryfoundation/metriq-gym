@@ -3690,11 +3690,11 @@ runner = ["numpy", "psutil"]
 test = ["pytest", "pytest-asyncio", "pytest-cov"]
 
 [[package]]
-name = "QC-App-Oriented-Benchmarks"
+name = "qc_app_oriented_benchmarks"
 version = "0.1.0"
-description = "QC App Oriented Benchmarks"
+description = ""
 optional = false
-python-versions = ">=3.7"
+python-versions = "*"
 groups = ["main"]
 files = []
 develop = true
@@ -5263,4 +5263,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "a6a5c1fa3814e3d09557cd7ec446b554a29a82ab3dcc6893d8aabb11a83756ed"
+content-hash = "64df001b50bc2147b127986a0039773bc4c2befc08063c9b39196af1e06ed5a7"

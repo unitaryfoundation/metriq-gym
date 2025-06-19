@@ -14,9 +14,9 @@ from qbraid.runtime.result_data import MeasCount
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 
-from qc_app_oriented_benchmarks.bernstein_vazirani.bv_benchmark import run
+from qedc.bernstein_vazirani.bv_benchmark import run
 
-import types
+from typing import Any
 
 
 @dataclass
@@ -26,7 +26,7 @@ class BernsteinVaziraniResult(BenchmarkResult):
         final_metrics: A QED-C metrics object containing final results.
     """
 
-    final_metrics: types.ModuleType
+    final_metrics: Any
 
 
 @dataclass
@@ -46,10 +46,10 @@ class BernsteinVaziraniData(BenchmarkData):
     max_qubits: int
     skip_qubits: int
     max_circuits: int
-    metrics: types.ModuleType
+    metrics: Any
 
 
-def analyze_results(metrics: types.ModuleType, counts_list: list[MeasCount]) -> None:
+def analyze_results(metrics: Any, counts_list: list[MeasCount]) -> None:
     """
     Iterates over each circuit group and secret int to compute the fidelities.
 
