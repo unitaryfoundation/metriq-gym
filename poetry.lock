@@ -3701,7 +3701,7 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "submodules/QC-App-Oriented-Benchmarks"
+url = "submodules/qc-app-oriented-benchmarks"
 
 [[package]]
 name = "qiskit"
@@ -5263,4 +5263,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "64df001b50bc2147b127986a0039773bc4c2befc08063c9b39196af1e06ed5a7"
+content-hash = "46930e2b19f2f476979b54879540fc92aea2f65c0e2aa0d2664a765b0232a958"
