@@ -12,7 +12,9 @@ from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
-# from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.helpers.task_helpers import flatten_counts
+
+from qedc_bernstein_vazirani.bv_benchmark import run
 
 import types
 
@@ -24,8 +26,7 @@ class BernsteinVaziraniResult(BenchmarkResult):
         final_metrics: A QED-C metrics object containing final results.
     """
 
-    # final_metrics: types.ModuleType
-    final_metrics: None  # Temprorary type, work in progress.
+    final_metrics: types.ModuleType
 
 
 @dataclass
@@ -45,8 +46,7 @@ class BernsteinVaziraniData(BenchmarkData):
     max_qubits: int
     skip_qubits: int
     max_circuits: int
-    # metrics: types.ModuleType
-    metrics: None  # Temprorary type, work in progress.
+    metrics: types.ModuleType
 
 
 def analyze_results(metrics: types.ModuleType, counts_list: list[MeasCount]) -> None:
@@ -96,7 +96,24 @@ class BernsteinVazirani(Benchmark):
         max_circuits = self.params.max_circuits
 
         # Call the QED-C submodule to get the circuits and creation information.
-        circuits, metrics = None, None  # Temprorary assignment, work in progress.
+        circuits, metrics = run(
+            min_qubits=min_qubits,
+            max_qubits=max_qubits,
+            skip_qubits=skip_qubits,
+            max_circuits=max_circuits,
+            num_shots=shots,
+            method=1,
+            input_value=None,
+            backend_id=None,
+            provider_backend=None,
+            hub="ibm-q",
+            group="open",
+            project="main",
+            exec_options=None,
+            context=None,
+            api=None,
+            get_circuits=True,
+        )
 
         quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
         provider_job_ids = (
@@ -123,13 +140,15 @@ class BernsteinVazirani(Benchmark):
     ) -> BernsteinVaziraniResult:
         metrics = job_data.metrics
 
-        # counts_list = flatten_counts(result_data)
+        counts_list = flatten_counts(result_data)
 
-        # analyze_results(metrics, counts_list)
+        analyze_results(metrics, counts_list)
 
-        # metrics.aggregate_metrics()
+        metrics.aggregate_metrics()
 
         # For now, try and plot with just method 1, worry about method 2 later.
-        # metrics.plot_metrics(f"Benchmark Results - {benchmark_name} ({method}) - Qiskit", filters=["fidelity"])
+        metrics.plot_metrics(
+            "Benchmark Results - Bernstein-Vazirani (1) - Qiskit", filters=["fidelity"]
+        )
 
         return BernsteinVaziraniResult(final_metrics=metrics)
