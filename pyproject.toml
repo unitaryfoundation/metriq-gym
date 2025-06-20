@@ -62,6 +62,9 @@ exclude = ["submodules"]
 testpaths = [
     "tests",
 ]
+markers = [
+    "e2e: marks end-to-end test of the CLI workflow",
+]
 
 [build-system]
 requires = ["poetry-core"]
