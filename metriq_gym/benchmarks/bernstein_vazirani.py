@@ -15,18 +15,18 @@ from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkR
 from metriq_gym.helpers.task_helpers import flatten_counts
 
 from qedc.bernstein_vazirani.bv_benchmark import run
-
-from typing import Any
+from qedc._common import metrics as qedc_metrics
 
 
 @dataclass
 class BernsteinVaziraniResult(BenchmarkResult):
     """Stores the results from running Bernstein-Vazirani Benchmark.
     Results:
-        final_metrics: A QED-C metrics object containing final results.
+        fidelity: Stores QED-C fidelity calculations
+        fidelity_plot: To be added
     """
 
-    final_metrics: Any
+    fidelity: list[dict[str, float]]
 
 
 @dataclass
@@ -38,7 +38,7 @@ class BernsteinVaziraniData(BenchmarkData):
         max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
-        metrics: QED-C returned object storing creation information, it will be used to process results.
+        metrics: Stores QED-C circuit metrics data.
     """
 
     shots: int
@@ -46,19 +46,21 @@ class BernsteinVaziraniData(BenchmarkData):
     max_qubits: int
     skip_qubits: int
     max_circuits: int
-    metrics: Any
+    metrics: dict[str, dict[str, dict[str, float]]]
 
 
-def analyze_results(metrics: Any, counts_list: list[MeasCount]) -> Any:
+def analyze_results(
+    metrics: dict[str, dict[str, dict[str, float]]], counts_list: list[MeasCount]
+) -> list[dict[str, float]]:
     """
     Iterates over each circuit group and secret int to compute the fidelities.
 
     Args:
-        metrics: A QED-C metrics module object.
+        metrics: Stored QED-C circuit metrics
         counts_list: A list of all counts objects, each index corresponds to a circuit.
 
     Returns:
-        None: the modification is done in-place and stored in the metrics object.
+        fidelity: Stores QED-C fidelity calculations with respect to circuits in the counts_list.
     """
 
     info: dict[str, dict[str, dict[str, float]]] = metrics
@@ -79,7 +81,7 @@ def analyze_results(metrics: Any, counts_list: list[MeasCount]) -> Any:
 
             correct_dist = {format(int(s_str), f"0{int(num_qubits) - 1}b"): 1.0}
 
-            fidelity = metrics.polarization_fidelity(counts, correct_dist)
+            fidelity = qedc_metrics.polarization_fidelity(counts, correct_dist)
 
             all_fidelity.append(fidelity)
 
@@ -108,6 +110,7 @@ class BernsteinVazirani(Benchmark):
             get_circuits=True,
         )
 
+        # Store job IDs
         quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
         provider_job_ids = (
             [quantum_job.id]
@@ -137,4 +140,4 @@ class BernsteinVazirani(Benchmark):
 
         fidelity = analyze_results(metrics, counts_list)
 
-        return BernsteinVaziraniResult(final_metrics=fidelity)
+        return BernsteinVaziraniResult(fidelity=fidelity)
