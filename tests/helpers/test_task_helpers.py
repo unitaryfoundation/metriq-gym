@@ -1,6 +1,5 @@
 import pytest
-from metriq_gym.helpers.task_helpers import flatten_counts, flatten_job_ids
-from metriq_gym.local.aer import LocalJob
+from metriq_gym.helpers.task_helpers import flatten_counts
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
 
@@ -62,9 +61,3 @@ def test_flatten_counts_none():
     result_data = [GateModelResultData(measurement_counts=None)]
     flat_counts = flatten_counts(result_data)
     assert flat_counts == []
-
-
-def test_flatten_job_ids_single_local_job():
-    job = LocalJob("local-001", {'local':10})
-    result = flatten_job_ids(job)
-    assert result == ["local-001"]

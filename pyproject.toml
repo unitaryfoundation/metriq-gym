@@ -67,3 +67,9 @@ testpaths = [
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[project.entry-points."qbraid.providers"]
+local = "metriq_gym.local.provider:LocalProvider"
+
+[project.entry-points."qbraid.jobs"]
+local = "metriq_gym.local.job:LocalAerJob"
