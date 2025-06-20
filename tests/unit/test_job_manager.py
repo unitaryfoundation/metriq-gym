@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime
 from metriq_gym.job_manager import JobManager, MetriqGymJob
-from tests.test_schema_validator import FAKE_BENCHMARK_NAME, FakeJobType
+from tests.unit.test_schema_validator import FAKE_BENCHMARK_NAME, FakeJobType
 
 
 @pytest.fixture(autouse=True)
