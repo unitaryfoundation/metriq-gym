@@ -11,6 +11,7 @@ import rustworkx as rx
 import networkx as nx
 from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
 
+from metriq_gym.local.provider import LocalProvider
 from metriq_gym.qplatform.device import version, connectivity_graph
 
 
@@ -90,6 +91,11 @@ class TestVersionFunction:
             version(mock_unsupported_device)
         assert "Device version not implemented" in str(exc_info.value)
         assert "UnsupportedDevice" in str(exc_info.value)
+
+    def test_local_aer_device_version(self):
+        provider = LocalProvider()
+        device = provider.get_device("aer_simulator")
+        assert isinstance(version(device), str)
 
 
 class TestConnectivityGraphFunction:

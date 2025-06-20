@@ -62,5 +62,4 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
     coupling_map = device._backend.configuration().coupling_map
     if coupling_map is None:
         return rx.generators.complete_graph(device._backend.configuration().n_qubits)
-    else:
-        return coupling_map_to_graph(coupling_map)
+    return coupling_map_to_graph(coupling_map)
