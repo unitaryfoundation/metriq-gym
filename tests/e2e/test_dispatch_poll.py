@@ -44,9 +44,12 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
         check=True,
     )
 
-    # Extract the UUID that the CLI prints as:
-    #   "dispatched with ID: <uuid>"
-    m = re.search(r"dispatched with ID: ([0-9a-f-]{36})", dispatch.stdout)
+    # Define the expected CLI output format
+    DISPATCH_OUTPUT_FORMAT = "dispatched with ID: {}"
+
+    # Extract the UUID using the defined format
+    uuid_regex = DISPATCH_OUTPUT_FORMAT.format(r"([0-9a-f-]{36})")
+    m = re.search(uuid_regex, dispatch.stdout)
     assert m, f"Could not parse job_id from:\n{dispatch.stdout}"
     job_id = m.group(1)
 
