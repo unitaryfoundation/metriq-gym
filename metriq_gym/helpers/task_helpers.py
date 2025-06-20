@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 from qbraid import QuantumJob
-from metriq_gym.local.aer import LocalJob 
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
 
@@ -21,10 +20,8 @@ def flatten_counts(result_data: list[GateModelResultData]) -> list[MeasCount]:
     return flat_counts
 
 
-def flatten_job_ids(
-    quantum_job: QuantumJob | LocalJob | Iterable[QuantumJob]
-) -> list[str]:
-    if isinstance(quantum_job, (QuantumJob, LocalJob)):
+def flatten_job_ids(quantum_job: QuantumJob | Iterable[QuantumJob]) -> list[str]:
+    if isinstance(quantum_job, QuantumJob):
         return [quantum_job.id]
     elif isinstance(quantum_job, Iterable):
         return [job.id for job in quantum_job]
