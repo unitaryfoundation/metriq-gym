@@ -89,7 +89,7 @@ class TestMirrorCircuitGeneration:
         subset = select_optimal_qubit_subset(graph, 2)
         assert len(subset) == 2
         assert all(qubit in graph.node_indices() for qubit in subset)
-        
+
         # Test create_subgraph_from_qubits
         subgraph = create_subgraph_from_qubits(graph, subset)
         assert len(subgraph.node_indices()) == 2
@@ -98,7 +98,7 @@ class TestMirrorCircuitGeneration:
         # Test edge cases for subset selection
         full_subset = select_optimal_qubit_subset(graph, 10)
         assert len(full_subset) == 4
-        
+
         single_subset = select_optimal_qubit_subset(graph, 1)
         assert len(single_subset) == 1
 
@@ -179,22 +179,22 @@ class TestMirrorCircuitGeneration:
         large_graph = rx.PyGraph()
         large_graph.add_nodes_from([0, 1, 2, 3, 4, 5])
         large_graph.add_edges_from([(0, 1, None), (1, 2, None), (2, 3, None), (3, 4, None)])
-        
+
         subset_3 = select_optimal_qubit_subset(large_graph, 3)
         assert len(subset_3) == 3
-        
+
         subgraph_3 = create_subgraph_from_qubits(large_graph, subset_3)
         assert len(subgraph_3.node_indices()) == 3
-        
+
         mock_statevector.reset_mock()
         mock_sv2 = MagicMock()
         mock_sv2.probabilities.return_value = np.array([0.5, 0.5, 0, 0, 0, 0, 0, 0])
         mock_statevector.return_value = mock_sv2
-        
+
         circuit_sub, bitstring_sub = generate_mirror_circuit(
             num_layers=1, two_qubit_gate_prob=0.5, connectivity_graph=subgraph_3, seed=42
         )
-        
+
         assert circuit_sub.num_qubits == 3
         assert len(bitstring_sub) == 3
 
