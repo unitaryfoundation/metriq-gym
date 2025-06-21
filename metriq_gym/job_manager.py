@@ -137,3 +137,10 @@ class JobManager:
             if job.id == job_id:
                 return job
         raise ValueError(f"Job with id {job_id} not found")
+
+    def delete_job(self, job_id: str) -> None:
+        self.jobs = [job for job in self.jobs if job.id != job_id]
+        with open(self.jobs_file, "w") as file:
+            for job in self.jobs:
+                file.write(job.serialize() + "\n")
+        logger.info(f"Delete job with id {job_id} from {self.jobs_file}")

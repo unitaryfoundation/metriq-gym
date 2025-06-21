@@ -188,6 +188,15 @@ def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(metriq_job)
 
 
+def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
+    metriq_job = prompt_for_job(args, job_manager)
+    if metriq_job:
+        job_manager.delete_job(metriq_job.id)
+        print(f"Job {metriq_job.id} deleted successfully.")
+    else:
+        print("No job selected for deletion.")
+
+
 def main() -> int:
     """Main entry point for the CLI."""
     load_dotenv()
@@ -200,6 +209,8 @@ def main() -> int:
         view_job(args, job_manager)
     elif args.action == "poll":
         poll_job(args, job_manager)
+    elif args.action == "delete":
+        delete_job(args, job_manager)
     else:
         logging.error("Invalid action specified. Run with --help for usage information.")
         return 1

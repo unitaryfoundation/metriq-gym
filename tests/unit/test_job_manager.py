@@ -174,3 +174,10 @@ def test_load_jobs_file_missing(tmpdir):
 
     job_manager = JobManager()
     assert job_manager.get_jobs() == []
+
+
+def test_delete_job(job_manager, sample_job):
+    job_manager.add_job(sample_job)
+    job_manager.delete_job(sample_job.id)
+    jobs = job_manager.get_jobs()
+    assert len(jobs) == 0

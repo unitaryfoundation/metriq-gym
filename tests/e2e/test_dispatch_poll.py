@@ -24,12 +24,9 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
     # ------------------------------------------------------------------
     # 1. Dispatch a tiny benchmark on the local Aer simulator
     # ------------------------------------------------------------------
-    example_cfg = (
-        Path(__file__).resolve().parents[2]  # repo root
-        / "metriq_gym/schemas/examples/qml_kernel.example.json"
-    )
+    example_cfg = Path(__file__).parent.resolve() / "test_benchmark.json"
 
-    dispatch = subprocess.run(
+    dispatch_cmd = subprocess.run(
         [
             "mgym",
             "dispatch",
@@ -49,28 +46,28 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
 
     # Extract the UUID using the defined format
     uuid_regex = DISPATCH_OUTPUT_FORMAT.format(r"([0-9a-f-]{36})")
-    m = re.search(uuid_regex, dispatch.stdout)
-    assert m, f"Could not parse job_id from:\n{dispatch.stdout}"
+    m = re.search(uuid_regex, dispatch_cmd.stdout)
+    assert m, f"Could not parse job_id from:\n{dispatch_cmd.stdout}"
     job_id = m.group(1)
 
     # ------------------------------------------------------------------
     # 2. Poll the same job and export the JSON payload
     # ------------------------------------------------------------------
     outfile = tmp_path / "test.json"
-    poll = subprocess.run(
+    poll_cmd = subprocess.run(
         [
             "mgym",
             "poll",
             "--job_id",
             job_id,
             "--json",
-            str(outfile),  # keep the repo clean
+            str(outfile),  # temp file to keep the repo clean
         ],
         capture_output=True,
         text=True,
         check=True,
     )
-    assert "Polling job..." in poll.stdout
+    assert "Polling job..." in poll_cmd.stdout
 
     # ------------------------------------------------------------------
     # 3. Validate the JSON result file
@@ -81,3 +78,20 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
     result = data["results"]["accuracy_score"]
     assert result, "No results found in the JSON file"
     assert result == 1.0, "Expected accuracy score of 1.0 for the local simulator"
+
+    # ------------------------------------------------------------------
+    # 4. Clean up
+    # ------------------------------------------------------------------
+    outfile.unlink(missing_ok=True)
+    delete_cmd = subprocess.run(
+        [
+            "mgym",
+            "delete",
+            "--job_id",
+            job_id,
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert f"Job {job_id} deleted successfully" in delete_cmd.stdout, "Failed to delete the job"
