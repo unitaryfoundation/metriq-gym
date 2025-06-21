@@ -191,8 +191,13 @@ def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     metriq_job = prompt_for_job(args, job_manager)
     if metriq_job:
-        job_manager.delete_job(metriq_job.id)
-        print(f"Job {metriq_job.id} deleted successfully.")
+        try:
+            job_manager.delete_job(metriq_job.id)
+            print(f"Job {metriq_job.id} deleted successfully.")
+        except ValueError:
+            print(f"Error: Job {metriq_job.id} could not be deleted. It may not exist.")
+        except Exception as e:
+            print(f"An unexpected error occurred while deleting the job: {e}")
     else:
         print("No job selected for deletion.")
 

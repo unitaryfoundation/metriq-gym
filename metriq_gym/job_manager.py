@@ -140,7 +140,14 @@ class JobManager:
 
     def delete_job(self, job_id: str) -> None:
         self.jobs = [job for job in self.jobs if job.id != job_id]
-        with open(self.jobs_file, "w") as file:
-            for job in self.jobs:
-                file.write(job.serialize() + "\n")
-        logger.info(f"Delete job with id {job_id} from {self.jobs_file}")
+        temp_file = f"{self.jobs_file}.tmp"
+        try:
+            with open(temp_file, "w") as file:
+                for job in self.jobs:
+                    file.write(job.serialize() + "\n")
+            os.replace(temp_file, self.jobs_file)
+            logger.info(f"Deleted job with id {job_id} from {self.jobs_file}")
+        except Exception as e:
+            logger.error(f"Failed to delete job with id {job_id}: {e}")
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
