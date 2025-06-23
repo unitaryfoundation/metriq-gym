@@ -120,4 +120,9 @@ def parse_arguments() -> argparse.Namespace:
     view_parser = subparsers.add_parser("view", help="View jobs")
     view_parser.add_argument("--job_id", type=str, required=False, help="Job ID to view (optional)")
 
+    delete_parser = subparsers.add_parser("delete", help="Delete jobs")
+    delete_parser.add_argument(
+        "--job_id", type=str, required=False, help="Job ID to delete (optional)"
+    )
+
     return parser.parse_args()
