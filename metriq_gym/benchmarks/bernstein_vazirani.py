@@ -115,15 +115,12 @@ class BernsteinVazirani(Benchmark):
             get_circuits=True,
         )
 
-        quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
-            device.run(qc, shots=shots) for qc in circuits
-        ]
-
-        provider_job_ids = [
-            job.id
-            for quantum_job_set in quantum_jobs
-            for job in (quantum_job_set if isinstance(quantum_job_set, list) else [quantum_job_set])
-        ]
+        quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
+        provider_job_ids = (
+            [quantum_job.id]
+            if isinstance(quantum_job, QuantumJob)
+            else [job.id for job in quantum_job]
+        )
 
         return BernsteinVaziraniData(
             provider_job_ids=provider_job_ids,
