@@ -18,7 +18,6 @@ from qedc.bernstein_vazirani.bv_benchmark import run
 from qedc._common import metrics as qedc_metrics
 
 
-@dataclass
 class BernsteinVaziraniResult(BenchmarkResult):
     """Stores the results from running Bernstein-Vazirani Benchmark.
     Results:
@@ -72,9 +71,15 @@ def analyze_results(
     all_fidelity = []
 
     for num_qubits in num_qubits_list:
-        s_str_list = list(info[num_qubits].keys())
+        num_qubits_info = info[num_qubits]
 
-        for s_str in s_str_list:
+        s_ints: list[str]
+        if isinstance(num_qubits_info, dict):
+            s_ints = list(info[num_qubits].keys())
+        else:
+            continue
+
+        for s_str in s_ints:
             counts: dict[str, int] = counts_list[counts_idx]
 
             counts_idx += 1
@@ -110,13 +115,15 @@ class BernsteinVazirani(Benchmark):
             get_circuits=True,
         )
 
-        # Store job IDs
-        quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
-        provider_job_ids = (
-            [quantum_job.id]
-            if isinstance(quantum_job, QuantumJob)
-            else [job.id for job in quantum_job]
-        )
+        quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
+            device.run(qc, shots=shots) for qc in circuits
+        ]
+
+        provider_job_ids = [
+            job.id
+            for quantum_job_set in quantum_jobs
+            for job in (quantum_job_set if isinstance(quantum_job_set, list) else [quantum_job_set])
+        ]
 
         return BernsteinVaziraniData(
             provider_job_ids=provider_job_ids,
