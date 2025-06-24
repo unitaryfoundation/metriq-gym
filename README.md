@@ -243,9 +243,19 @@ poetry run pre-commit install
 immediately upon cloning the repository.
 
 ### Tests
-The suite of unit tests can be run with
+The entire suite of tests can be run with
 ```sh
 poetry run pytest
+```
+
+Unit tests only can be run with
+```sh
+poetry run pytest -m "not e2e"
+```
+
+End-to-end tests only can be run with
+```sh
+poetry run pytest -m e2e
 ```
 
 ### Type checking
