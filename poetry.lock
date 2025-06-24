@@ -118,29 +118,6 @@ files = [
 ]
 
 [[package]]
-name = "anyio"
-version = "4.9.0"
-description = "High level compatibility layer for multiple asynchronous event loop implementations"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "anyio-4.9.0-py3-none-any.whl", hash = "sha256:9f76d541cad6e36af7beb62e978876f3b41e3e04f2c1fbf0884604c0a9c4d93c"},
-    {file = "anyio-4.9.0.tar.gz", hash = "sha256:673c0c244e15788651a4ff38710fea9675823028a6f08a5eda409e0c9840a028"},
-]
-
-[package.dependencies]
-idna = ">=2.8"
-sniffio = ">=1.1"
-typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
-
-[package.extras]
-doc = ["Sphinx (>=8.2,<9.0)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx_rtd_theme"]
-test = ["anyio[trio]", "blockbuster (>=1.5.23)", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypothesis (>=4.0)", "psutil (>=5.9)", "pytest (>=7.0)", "trustme", "truststore (>=0.9.1) ; python_version >= \"3.10\"", "uvloop (>=0.21) ; platform_python_implementation == \"CPython\" and platform_system != \"Windows\" and python_version < \"3.14\""]
-trio = ["trio (>=0.26.1)"]
-
-[[package]]
 name = "appnope"
 version = "0.1.4"
 description = "Disable App Nap on macOS >= 10.9"
@@ -1113,7 +1090,7 @@ version = "8.2.1"
 description = "Composable command line interface toolkit"
 optional = false
 python-versions = ">=3.10"
-groups = ["main", "dev"]
+groups = ["dev"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
     {file = "click-8.2.1-py3-none-any.whl", hash = "sha256:61a3265b914e850b85317d0b3109c7f8cd35a670f963866005d6ef1d5175a12b"},
@@ -1603,69 +1580,6 @@ files = [
 dev = ["Flake8-pyproject", "build", "flake8", "pep8-naming", "tox (>=3)", "twine", "wheel"]
 docs = ["sphinx (>=5,<7)", "sphinx-autodoc-typehints", "sphinx-rtd-theme (>=0.2.5)"]
 test = ["coverage", "pytest (>=7,<8.1)", "pytest-cov", "pytest-mock (>=3)"]
-
-[[package]]
-name = "h11"
-version = "0.16.0"
-description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "h11-0.16.0-py3-none-any.whl", hash = "sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"},
-    {file = "h11-0.16.0.tar.gz", hash = "sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1"},
-]
-
-[[package]]
-name = "httpcore"
-version = "1.0.9"
-description = "A minimal low-level HTTP client."
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "httpcore-1.0.9-py3-none-any.whl", hash = "sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55"},
-    {file = "httpcore-1.0.9.tar.gz", hash = "sha256:6e34463af53fd2ab5d807f399a9b45ea31c3dfa2276f15a2c3f00afff6e176e8"},
-]
-
-[package.dependencies]
-certifi = "*"
-h11 = ">=0.16"
-
-[package.extras]
-asyncio = ["anyio (>=4.0,<5.0)"]
-http2 = ["h2 (>=3,<5)"]
-socks = ["socksio (==1.*)"]
-trio = ["trio (>=0.22.0,<1.0)"]
-
-[[package]]
-name = "httpx"
-version = "0.27.2"
-description = "The next generation HTTP client."
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "httpx-0.27.2-py3-none-any.whl", hash = "sha256:7bb2708e112d8fdd7829cd4243970f0c223274051cb35ee80c03301ee29a3df0"},
-    {file = "httpx-0.27.2.tar.gz", hash = "sha256:f7c2be1d2f3c3c3160d441802406b206c2b76f5947b11115e6df10c6c65e66c2"},
-]
-
-[package.dependencies]
-anyio = "*"
-certifi = "*"
-httpcore = "==1.*"
-idna = "*"
-sniffio = "*"
-
-[package.extras]
-brotli = ["brotli ; platform_python_implementation == \"CPython\"", "brotlicffi ; platform_python_implementation != \"CPython\""]
-cli = ["click (==8.*)", "pygments (==2.*)", "rich (>=10,<14)"]
-http2 = ["h2 (>=3,<5)"]
-socks = ["socksio (==1.*)"]
-zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "ibm-cloud-sdk-core"
@@ -2182,32 +2096,6 @@ docs = ["mdx_gh_links (>=0.2)", "mkdocs (>=1.6)", "mkdocs-gen-files", "mkdocs-li
 testing = ["coverage", "pyyaml"]
 
 [[package]]
-name = "markdown-it-py"
-version = "3.0.0"
-description = "Python port of markdown-it. Markdown parsing, done right!"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "markdown-it-py-3.0.0.tar.gz", hash = "sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb"},
-    {file = "markdown_it_py-3.0.0-py3-none-any.whl", hash = "sha256:355216845c60bd96232cd8d8c40e8f9765cc86f46880e43a8fd22dc1a1a8cab1"},
-]
-
-[package.dependencies]
-mdurl = ">=0.1,<1.0"
-
-[package.extras]
-benchmarking = ["psutil", "pytest", "pytest-benchmark"]
-code-style = ["pre-commit (>=3.0,<4.0)"]
-compare = ["commonmark (>=0.9,<1.0)", "markdown (>=3.4,<4.0)", "mistletoe (>=1.0,<2.0)", "mistune (>=2.0,<3.0)", "panflute (>=2.3,<3.0)"]
-linkify = ["linkify-it-py (>=1,<3)"]
-plugins = ["mdit-py-plugins"]
-profiling = ["gprof2dot"]
-rtd = ["jupyter_sphinx", "mdit-py-plugins", "myst-parser", "pyyaml", "sphinx", "sphinx-copybutton", "sphinx-design", "sphinx_book_theme"]
-testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions"]
-
-[[package]]
 name = "markupsafe"
 version = "3.0.2"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -2353,40 +2241,6 @@ files = [
 
 [package.dependencies]
 traitlets = "*"
-
-[[package]]
-name = "mdurl"
-version = "0.1.2"
-description = "Markdown URL utilities"
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
-    {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
-]
-
-[[package]]
-name = "metriq-client"
-version = "0.1.2"
-description = "Python client for metriq API."
-optional = false
-python-versions = "^3.12"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = []
-develop = false
-
-[package.dependencies]
-tea-client = {git = "https://github.com/unitaryfund/tea-client.git", branch = "develop"}
-tea-console = {git = "https://github.com/unitaryfund/tea-console.git", branch = "develop"}
-
-[package.source]
-type = "git"
-url = "https://github.com/unitaryfoundation/metriq-client.git"
-reference = "master"
-resolved_reference = "8554d23e1d1f5e97c43b6751d00a8a5bcdb012bd"
 
 [[package]]
 name = "mpmath"
@@ -3276,7 +3130,7 @@ version = "2.19.1"
 description = "Pygments is a syntax highlighting package written in Python."
 optional = false
 python-versions = ">=3.8"
-groups = ["main", "dev"]
+groups = ["dev"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
     {file = "pygments-2.19.1-py3-none-any.whl", hash = "sha256:9ea1544ad55cecf4b8242fab6dd35a93bbce657034b0611ee383099054ab6d8c"},
@@ -4168,26 +4022,6 @@ files = [
 packaging = ">=23.2"
 
 [[package]]
-name = "rich"
-version = "13.9.4"
-description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
-optional = false
-python-versions = ">=3.8.0"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "rich-13.9.4-py3-none-any.whl", hash = "sha256:6049d5e6ec054bf2779ab3358186963bac2ea89175919d699e378b99738c2a90"},
-    {file = "rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098"},
-]
-
-[package.dependencies]
-markdown-it-py = ">=2.2.0"
-pygments = ">=2.13.0,<3.0.0"
-
-[package.extras]
-jupyter = ["ipywidgets (>=7.5.1,<9)"]
-
-[[package]]
 name = "roman-numerals-py"
 version = "3.1.0"
 description = "Manipulate well-formed Roman numerals"
@@ -4616,19 +4450,6 @@ test = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "ini2toml[lite] (>=
 type = ["importlib_metadata (>=7.0.2) ; python_version < \"3.10\"", "jaraco.develop (>=7.21) ; sys_platform != \"cygwin\"", "mypy (==1.14.*)", "pytest-mypy"]
 
 [[package]]
-name = "shellingham"
-version = "1.5.4"
-description = "Tool to Detect Surrounding Shell"
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"},
-    {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
-]
-
-[[package]]
 name = "six"
 version = "1.17.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -4639,19 +4460,6 @@ markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sy
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
-]
-
-[[package]]
-name = "sniffio"
-version = "1.3.1"
-description = "Sniff out which async library your code is running under"
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
-    {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
 ]
 
 [[package]]
@@ -4938,74 +4746,6 @@ files = [
 widechars = ["wcwidth"]
 
 [[package]]
-name = "tea"
-version = "0.1.0"
-description = ""
-optional = false
-python-versions = "^3.12"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = []
-develop = false
-
-[package.dependencies]
-psutil = "^6.1.0"
-pytz = "^2024.2"
-tzlocal = "^5.2"
-
-[package.source]
-type = "git"
-url = "https://github.com/unitaryfund/tea.git"
-reference = "develop"
-resolved_reference = "e410e7b83774976ead35b9c43323523fbe34d4af"
-
-[[package]]
-name = "tea-client"
-version = "0.1.0"
-description = ""
-optional = false
-python-versions = "^3.12"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = []
-develop = false
-
-[package.dependencies]
-httpx = "^0.27.2"
-pydantic = "^2.9.2"
-tea = {git = "https://github.com/unitaryfund/tea.git", branch = "develop"}
-
-[package.source]
-type = "git"
-url = "https://github.com/unitaryfund/tea-client.git"
-reference = "develop"
-resolved_reference = "84c75a6e4a1522310dc1d12cf440acb4c17aa426"
-
-[[package]]
-name = "tea-console"
-version = "0.1.0"
-description = ""
-optional = false
-python-versions = "^3.12"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = []
-develop = false
-
-[package.dependencies]
-pytz = "^2024.2"
-rich = "^13.9.2"
-tea = {git = "https://github.com/unitaryfund/tea.git", branch = "develop"}
-typer = "^0.12.5"
-tzlocal = "^5.2"
-
-[package.source]
-type = "git"
-url = "https://github.com/unitaryfund/tea-console.git"
-reference = "develop"
-resolved_reference = "557a615939b97ad66a6632e276c3d3e5ec1efe81"
-
-[[package]]
 name = "tornado"
 version = "6.5.1"
 description = "Tornado is a Python web framework and asynchronous networking library, originally developed at FriendFeed."
@@ -5067,25 +4807,6 @@ files = [
 [package.extras]
 docs = ["myst-parser", "pydata-sphinx-theme", "sphinx"]
 test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,<8.2)", "pytest-mock", "pytest-mypy-testing"]
-
-[[package]]
-name = "typer"
-version = "0.12.5"
-description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "typer-0.12.5-py3-none-any.whl", hash = "sha256:62fe4e471711b147e3365034133904df3e235698399bc4de2b36c8579298d52b"},
-    {file = "typer-0.12.5.tar.gz", hash = "sha256:f592f089bedcc8ec1b974125d64851029c3b1af145f04aca64d69410f0c9b722"},
-]
-
-[package.dependencies]
-click = ">=8.0.0"
-rich = ">=10.11.0"
-shellingham = ">=1.3.0"
-typing-extensions = ">=3.7.4.3"
 
 [[package]]
 name = "types-awscrt"
@@ -5151,25 +4872,6 @@ files = [
     {file = "tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8"},
     {file = "tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9"},
 ]
-
-[[package]]
-name = "tzlocal"
-version = "5.3.1"
-description = "tzinfo object for the local timezone"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
-files = [
-    {file = "tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d"},
-    {file = "tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd"},
-]
-
-[package.dependencies]
-tzdata = {version = "*", markers = "platform_system == \"Windows\""}
-
-[package.extras]
-devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "zest.releaser"]
 
 [[package]]
 name = "uncertainties"
@@ -5376,4 +5078,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "b5e397667b02b1145233c24817c76ccedbf9ad8065c8cc0bdec318f7362248cc"
+content-hash = "ed8b7efdc0f1634fc28640c4ac46c9305d440d05db6dfb8c25a8b99b826b2676"
