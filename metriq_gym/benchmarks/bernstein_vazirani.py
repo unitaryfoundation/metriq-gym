@@ -14,18 +14,19 @@ from qbraid.runtime.result_data import MeasCount
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 
-from qedc.bernstein_vazirani.bv_benchmark import run
-from qedc._common import metrics as qedc_metrics
+from qedc.bernstein_vazirani.bv_benchmark import run, analyze_and_print_result, qedc_benchmarks_init
+from qedc._common import metrics
+
+from qiskit import QuantumCircuit
 
 
 class BernsteinVaziraniResult(BenchmarkResult):
     """Stores the results from running Bernstein-Vazirani Benchmark.
     Results:
-        fidelity: Stores QED-C fidelity calculations
-        fidelity_plot: To be added
+        circuit_metrics: Stores QED-C fidelity calculations
     """
 
-    fidelity: list[dict[str, float]]
+    circuit_metrics: dict[str, dict[str, dict[str, float]]]
 
 
 @dataclass
@@ -37,7 +38,7 @@ class BernsteinVaziraniData(BenchmarkData):
         max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
-        metrics: Stores QED-C circuit metrics data.
+        circuit_metrics: Stores QED-C circuit metrics data.
     """
 
     shots: int
@@ -45,30 +46,43 @@ class BernsteinVaziraniData(BenchmarkData):
     max_qubits: int
     skip_qubits: int
     max_circuits: int
-    metrics: dict[str, dict[str, dict[str, float]]]
+    circuit_metrics: dict[str, dict[str, dict[str, float]]]
+    circuits: list[QuantumCircuit]
 
 
-def analyze_results(
-    metrics: dict[str, dict[str, dict[str, float]]], counts_list: list[MeasCount]
-) -> list[dict[str, float]]:
+def analyze_results(job_data: BernsteinVaziraniData, counts_list: list[MeasCount]) -> None:
     """
-    Iterates over each circuit group and secret int to compute the fidelities.
+    Iterates over each circuit group and secret int to process results.
+    Uses QED-C submodule to obtain calculations.
 
     Args:
-        metrics: Stored QED-C circuit metrics
+        job_data: The BernsteinVaziraniData object for the job.
         counts_list: A list of all counts objects, each index corresponds to a circuit.
 
     Returns:
-        fidelity: Stores QED-C fidelity calculations with respect to circuits in the counts_list.
+        None
     """
 
-    info: dict[str, dict[str, dict[str, float]]] = metrics
+    qedc_benchmarks_init()
+
+    """
+    A wrapper class to enable support with QED-C's method to analyze results. 
+    """
+
+    class CountsWrapper:
+        def __init__(self, qc: QuantumCircuit, counts: dict[str, int]):
+            self.qc = qc
+            self.counts = counts
+
+        def get_counts(self, qc):
+            if qc == self.qc:
+                return self.counts
+
+    info: dict[str, dict[str, dict[str, float]]] = job_data.circuit_metrics
 
     num_qubits_list: list[str] = list(info.keys())
 
-    counts_idx: int = 0
-
-    all_fidelity = []
+    curr_idx: int = 0
 
     for num_qubits in num_qubits_list:
         num_qubits_info = info[num_qubits]
@@ -80,17 +94,21 @@ def analyze_results(
             continue
 
         for s_str in s_ints:
-            counts: dict[str, int] = counts_list[counts_idx]
+            counts: dict[str, int] = counts_list[curr_idx]
 
-            counts_idx += 1
+            qc = job_data.circuits[curr_idx]
 
-            correct_dist = {format(int(s_str), f"0{int(num_qubits) - 1}b"): 1.0}
+            resultObj = CountsWrapper(qc, counts)
 
-            fidelity = qedc_metrics.polarization_fidelity(counts, correct_dist)
+            _, fidelity = analyze_and_print_result(
+                qc, resultObj, int(num_qubits), int(s_str), job_data.shots
+            )
 
-            all_fidelity.append(fidelity)
+            metrics.store_metric(int(num_qubits), int(s_str), "fidelity", fidelity)
 
-    return all_fidelity
+            curr_idx += 1
+
+    #  We have now stored the fidelities within our global metrics module; it can be used in the poll function.
 
 
 class BernsteinVazirani(Benchmark):
@@ -105,7 +123,7 @@ class BernsteinVazirani(Benchmark):
         max_circuits = self.params.max_circuits
 
         # Call the QED-C submodule to get the circuits and creation information.
-        circuits, metrics = run(
+        circuits, circuit_metrics = run(
             min_qubits=min_qubits,
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,
@@ -129,7 +147,8 @@ class BernsteinVazirani(Benchmark):
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,
             max_circuits=max_circuits,
-            metrics=metrics.circuit_metrics,
+            circuit_metrics=circuit_metrics,
+            circuits=circuits,
         )
 
     def poll_handler(
@@ -138,10 +157,10 @@ class BernsteinVazirani(Benchmark):
         result_data: list[GateModelResultData],
         quantum_jobs: list[QuantumJob],
     ) -> BernsteinVaziraniResult:
-        metrics = job_data.metrics
-
         counts_list = flatten_counts(result_data)
 
-        fidelity = analyze_results(metrics, counts_list)
+        analyze_results(job_data, counts_list)
 
-        return BernsteinVaziraniResult(fidelity=fidelity)
+        circuit_metrics = metrics.circuit_metrics
+
+        return BernsteinVaziraniResult(circuit_metrics=circuit_metrics)
