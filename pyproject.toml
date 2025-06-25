@@ -5,9 +5,8 @@ authors = [
     { name = "Unitary Foundation team" }
 ]
 maintainers = [
-    { name = "Daniel Strano", email = "dan@unitary.foundation>" },
-    { name = "Vincent Russo", email = "vincent@unitary.foundation"},
     { name = "Alessandro Cosentino", email = "alessandro@unitary.foundation"},
+    { name = "Vincent Russo", email = "vincent@unitary.foundation"},
 ]
 readme = "README.md"
 version = "0.1.0"
@@ -18,13 +17,11 @@ mgym = "metriq_gym.run:main"
 
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
-metriq-client = { git = "https://github.com/unitaryfoundation/metriq-client.git", branch = "master" }
 pyqrack = "^1.59.0"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
 qiskit = ">=1.4.3,<3.0"
-qiskit-device-benchmarking = { path = "submodules/qiskit-device-benchmarking" }
 qiskit-aer = "^0.17.1"
 qiskit-ibm-runtime = "^0.38.0"
 scipy = "^1.16.0"
@@ -35,6 +32,9 @@ ruamel-yaml-clib = [
     { version = "0.2.12", markers = "sys_platform == 'darwin' and platform_machine == 'arm64'" },
     { version = "0.2.8", markers = "sys_platform == 'darwin' and platform_machine == 'x86_64'" }
 ]
+
+[tool.poetry.extras]
+dev = ["qiskit-device-benchmarking"]
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.16.1"
