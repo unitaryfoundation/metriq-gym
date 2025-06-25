@@ -50,7 +50,9 @@ class BernsteinVaziraniData(BenchmarkData):
     circuits: list[QuantumCircuit]
 
 
-def analyze_results(job_data: BernsteinVaziraniData, counts_list: list[MeasCount]) -> None:
+def analyze_results(
+    job_data: BernsteinVaziraniData, counts_list: list[MeasCount]
+) -> dict[str, dict[str, dict[str, float]]]:
     """
     Iterates over each circuit group and secret int to process results.
     Uses QED-C submodule to obtain calculations.
@@ -62,8 +64,6 @@ def analyze_results(job_data: BernsteinVaziraniData, counts_list: list[MeasCount
     Returns:
         None
     """
-
-    qedc_benchmarks_init()
 
     """
     A wrapper class to enable support with QED-C's method to analyze results. 
@@ -77,6 +77,12 @@ def analyze_results(job_data: BernsteinVaziraniData, counts_list: list[MeasCount
         def get_counts(self, qc):
             if qc == self.qc:
                 return self.counts
+
+    # Initialize metrics module in QED-C submodule.
+    qedc_benchmarks_init()
+
+    # Restore circuit metrics dictionary from the dispatch data
+    metrics.circuit_metrics = job_data.circuit_metrics
 
     info: dict[str, dict[str, dict[str, float]]] = job_data.circuit_metrics
 
@@ -108,7 +114,7 @@ def analyze_results(job_data: BernsteinVaziraniData, counts_list: list[MeasCount
 
             curr_idx += 1
 
-    #  We have now stored the fidelities within our global metrics module; it can be used in the poll function.
+    return metrics.circuit_metrics
 
 
 class BernsteinVazirani(Benchmark):
@@ -132,6 +138,8 @@ class BernsteinVazirani(Benchmark):
             method=1,
             get_circuits=True,
         )
+
+        del circuit_metrics["subtitle"]
 
         quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
         provider_job_ids = (
@@ -159,8 +167,6 @@ class BernsteinVazirani(Benchmark):
     ) -> BernsteinVaziraniResult:
         counts_list = flatten_counts(result_data)
 
-        analyze_results(job_data, counts_list)
-
-        circuit_metrics = metrics.circuit_metrics
+        circuit_metrics = analyze_results(job_data, counts_list)
 
         return BernsteinVaziraniResult(circuit_metrics=circuit_metrics)
