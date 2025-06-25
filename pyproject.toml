@@ -5,9 +5,8 @@ authors = [
     { name = "Unitary Foundation team" }
 ]
 maintainers = [
-    { name = "Daniel Strano", email = "dan@unitary.foundation>" },
-    { name = "Vincent Russo", email = "vincent@unitary.foundation"},
     { name = "Alessandro Cosentino", email = "alessandro@unitary.foundation"},
+    { name = "Vincent Russo", email = "vincent@unitary.foundation"},
 ]
 readme = "README.md"
 version = "0.1.0"
@@ -18,14 +17,14 @@ mgym = "metriq_gym.run:main"
 
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
-pyqrack = "^1.56.0"
+pyqrack = "^1.59.0"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
 qiskit = ">=1.4.3,<3.0"
 qiskit-aer = "^0.17.1"
 qiskit-ibm-runtime = "^0.38.0"
-scipy = "^1.15.3"
+scipy = "^1.16.0"
 tabulate = "^0.9.0"
 qbraid = {extras = ["ionq", "qiskit", "braket", "azure", "cirq"], version = "^0.9.7"}
 # Use ruamel-yamlmclib 0.2.8 on x86-based Macs (Apple Silicon)
@@ -40,7 +39,7 @@ dev = ["qiskit-device-benchmarking"]
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.16.1"
 pre-commit = "^4.1.0"
-pytest = "^8.3.5"
+pytest = "^8.4.1"
 ruff = "^0.12.0"
 sphinx = "^8.2.3"
 types-tabulate = "^0.9.0.20241207"

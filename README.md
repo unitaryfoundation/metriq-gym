@@ -27,7 +27,8 @@ Install `metriq-gym` directly from PyPI:
 pip install metriq-gym
 ```
 
-This will install the package and all its dependencies, making the `mgym` command available in your terminal.
+This will install the latest version of the package available for your environment and all its dependencies, making the
+`mgym` command available in your terminal.
 
 ### Prerequisites
 
@@ -42,6 +43,15 @@ These instructions are for setting up a development environment if you plan to c
 Before you begin, ensure you have the following installed:
 * [Python](https://www.python.org/downloads/) (version 3.12 or newer)
 * [Poetry](https://python-poetry.org/docs/#installation) for managing dependencies
+
+### Cloning the Repository
+
+First, clone the repository and navigate to the project directory:
+
+```sh
+git clone https://github.com/unitaryfoundation/metriq-gym.git
+cd metriq-gym
+```
 
 ### Installation
 Once you have `poetry` installed and the repository cloned, run:
