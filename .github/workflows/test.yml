@@ -56,7 +56,6 @@ jobs:
     - name: Install project *dependencies only*
       run: |
         poetry install --no-root
-        poetry run pip install -e submodules/qiskit-device-benchmarking
 
     - name: Lint with Ruff
       run: |
