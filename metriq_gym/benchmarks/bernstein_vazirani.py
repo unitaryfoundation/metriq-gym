@@ -87,8 +87,8 @@ def analyze_results(
     # Restore circuit metrics dictionary from the dispatch data
     metrics.circuit_metrics = job_data.circuit_metrics
 
+    # Iterate and get the metrics for each circuit in the list.
     curr_idx: int = 0
-
     for num_qubits, s_str in job_data.circuit_identifiers:
         counts: dict[str, int] = counts_list[curr_idx]
 
@@ -119,6 +119,7 @@ class BernsteinVazirani(Benchmark):
         max_circuits = self.params.max_circuits
 
         # Call the QED-C submodule to get the circuits and creation information.
+        circuits: dict[str, dict[str, QuantumCircuit]]
         circuits, circuit_metrics = run(
             min_qubits=min_qubits,
             max_qubits=max_qubits,
@@ -129,14 +130,18 @@ class BernsteinVazirani(Benchmark):
             get_circuits=True,
         )
 
+        # Remove the subtitle key to keep our desired format.
         del circuit_metrics["subtitle"]
 
+        # Store the circuit identifiers and a flat list of circuits.
         circuit_identifiers = []
+        flat_circuits = []
         for num_qubits in circuit_metrics.keys():
             for s_str in circuit_metrics[num_qubits].keys():
                 circuit_identifiers.append((num_qubits, s_str))
+                flat_circuits.append(circuits[num_qubits][s_str])
 
-        quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
+        quantum_job: QuantumJob | list[QuantumJob] = device.run(flat_circuits, shots=shots)
         provider_job_ids = (
             [quantum_job.id]
             if isinstance(quantum_job, QuantumJob)
@@ -151,7 +156,7 @@ class BernsteinVazirani(Benchmark):
             skip_qubits=skip_qubits,
             max_circuits=max_circuits,
             circuit_metrics=circuit_metrics,
-            circuits=circuits,
+            circuits=flat_circuits,
             circuit_identifiers=circuit_identifiers,
         )
 
@@ -163,6 +168,7 @@ class BernsteinVazirani(Benchmark):
     ) -> BernsteinVaziraniResult:
         counts_list = flatten_counts(result_data)
 
+        # Call the QED-C method after some pre-processing to obtain metrics.
         circuit_metrics = analyze_results(job_data, counts_list)
 
         return BernsteinVaziraniResult(circuit_metrics=circuit_metrics)
