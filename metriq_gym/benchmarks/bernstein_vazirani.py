@@ -86,20 +86,10 @@ def analyze_results(
 
     info: dict[str, dict[str, dict[str, float]]] = job_data.circuit_metrics
 
-    num_qubits_list: list[str] = list(info.keys())
-
     curr_idx: int = 0
 
-    for num_qubits in num_qubits_list:
-        num_qubits_info = info[num_qubits]
-
-        s_ints: list[str]
-        if isinstance(num_qubits_info, dict):
-            s_ints = list(info[num_qubits].keys())
-        else:
-            continue
-
-        for s_str in s_ints:
+    for num_qubits in info.keys():
+        for s_str in info[num_qubits].keys():
             counts: dict[str, int] = counts_list[curr_idx]
 
             qc = job_data.circuits[curr_idx]
@@ -111,6 +101,9 @@ def analyze_results(
             )
 
             metrics.store_metric(int(num_qubits), int(s_str), "fidelity", fidelity)
+
+            # Debugging some fidelities = 0 in a noiseless simulator
+            # print(curr_idx, num_qubits, s_str, counts_list[curr_idx])
 
             curr_idx += 1
 
