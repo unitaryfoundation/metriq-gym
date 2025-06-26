@@ -22,6 +22,7 @@ packages = [
     { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" }
 ]
 include = [
+    { path = "LICENSE", format = ["sdist", "wheel"] },
     { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] }
 ]
 
