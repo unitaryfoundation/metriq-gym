@@ -68,14 +68,11 @@ jobs:
         poetry run stubgen --no-analysis
         poetry run mypy
 
-    - name: Run unit tests with pytest
-      run: |
-        poetry run pytest -m "not e2e" -q
-
     - name: Install project and CLI command
       run: |
         poetry install
 
-    - name: Run e2e tests
-      run: poetry run pytest -m e2e -q
+    - name: Run tests
+      run: |
+        poetry run pytest
 
