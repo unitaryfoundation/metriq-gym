@@ -9,11 +9,21 @@ maintainers = [
     { name = "Vincent Russo", email = "vincent@unitary.foundation"},
 ]
 readme = "README.md"
+license = { text = "Apache-2.0" }
 version = "0.1.1"
 requires-python = ">=3.12"
 
 [project.scripts]
 mgym = "metriq_gym.run:main"
+
+[tool.poetry]
+packages = [
+    { include = "metriq_gym", from = "." },
+    { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" }
+]
+include = [
+    { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] }
+]
 
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
