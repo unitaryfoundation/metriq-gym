@@ -63,13 +63,6 @@ poetry install
 ```
 from the root folder of the project, in order to install the project dependencies. 
 
-Because the `qiskit-device-benchmarking` submodule cannot be listed as a publishable dependency, it must be installed
-into the environment manually after the main installation.
-
-```sh
-poetry run pip install -e submodules/qiskit-device-benchmarking
-```
-
 We recommend doing this in an isolated virtual environment. See [Poetry
 documentation](https://python-poetry.org/docs/managing-environments/) for more information on managing virtual
 environments.
