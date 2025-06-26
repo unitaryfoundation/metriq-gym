@@ -1,10 +1,12 @@
-# `metriq-gym`
+# metriq-gym
 
 [![Unitary Foundation](https://img.shields.io/badge/Supported%20By-Unitary%20Foundation-FFFF00.svg)](https://unitary.foundation)
-[![Discord Chat](https://img.shields.io/badge/dynamic/json?color=blue&label=Discord&query=approximate_presence_count&suffix=%20online.&url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2FJqVGmpkP96%3Fwith_counts%3Dtrue)](http://discord.unitary.foundation)
+[![PyPI version](https://img.shields.io/pypi/v/metriq-gym.svg?color=blue)](https://pypi.org/project/metriq-gym/)
+[![Downloads](https://static.pepy.tech/badge/metriq-gym)](https://pepy.tech/project/metriq-gym)
+[![Discord Chat](https://img.shields.io/badge/dynamic/json?color=orange&label=Discord&query=approximate_presence_count&suffix=%20online.&url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2FJqVGmpkP96%3Fwith_counts%3Dtrue)](http://discord.unitary.foundation)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
-`metriq-gym` is a Python framework for implementing and running standard quantum benchmarks on different quantum devices by different providers.
+metriq-gym is a Python framework for implementing and running standard quantum benchmarks on different quantum devices by different providers.
 
 - _Open_ – Open-source since its inception and fully developed in public.
 - _Transparent_ – All benchmark parameters are defined in a schema file and the benchmark code is reviewable by the community.
@@ -60,13 +62,6 @@ Once you have `poetry` installed and the repository cloned, run:
 poetry install
 ```
 from the root folder of the project, in order to install the project dependencies. 
-
-Because the `qiskit-device-benchmarking` submodule cannot be listed as a publishable dependency, it must be installed
-into the environment manually after the main installation.
-
-```sh
-poetry run pip install -e submodules/qiskit-device-benchmarking
-```
 
 We recommend doing this in an isolated virtual environment. See [Poetry
 documentation](https://python-poetry.org/docs/managing-environments/) for more information on managing virtual

@@ -13,8 +13,10 @@ jobs:
       id-token: write  # This is required for trusted publishing
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo + submodules
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5
