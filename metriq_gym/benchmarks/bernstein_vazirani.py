@@ -50,7 +50,7 @@ class BernsteinVaziraniData(BenchmarkData):
     max_circuits: int
     circuit_metrics: dict[str, dict[str, dict[str, float]]]
     circuits: list[QuantumCircuit]
-    circuit_identifiers: list[str]
+    circuit_identifiers: list[tuple[str, str]]
 
 
 def analyze_results(
@@ -87,27 +87,22 @@ def analyze_results(
     # Restore circuit metrics dictionary from the dispatch data
     metrics.circuit_metrics = job_data.circuit_metrics
 
-    info: dict[str, dict[str, dict[str, float]]] = job_data.circuit_metrics
-
     curr_idx: int = 0
 
-    for num_qubits in info.keys():
-        for _ in info[num_qubits].keys():
-            counts: dict[str, int] = counts_list[curr_idx]
+    for num_qubits, s_str in job_data.circuit_identifiers:
+        counts: dict[str, int] = counts_list[curr_idx]
 
-            qc = job_data.circuits[curr_idx]
+        qc = job_data.circuits[curr_idx]
 
-            resultObj = CountsWrapper(qc, counts)
+        resultObj = CountsWrapper(qc, counts)
 
-            s_int = int(job_data.circuit_identifiers[curr_idx])
+        _, fidelity = analyze_and_print_result(
+            qc, resultObj, int(num_qubits), int(s_str), job_data.shots
+        )
 
-            _, fidelity = analyze_and_print_result(
-                qc, resultObj, int(num_qubits), s_int, job_data.shots
-            )
+        metrics.store_metric(int(num_qubits), int(s_str), "fidelity", fidelity)
 
-            metrics.store_metric(int(num_qubits), s_int, "fidelity", fidelity)
-
-            curr_idx += 1
+        curr_idx += 1
 
     return metrics.circuit_metrics
 
@@ -139,7 +134,7 @@ class BernsteinVazirani(Benchmark):
         circuit_identifiers = []
         for num_qubits in circuit_metrics.keys():
             for s_str in circuit_metrics[num_qubits].keys():
-                circuit_identifiers.append(s_str)
+                circuit_identifiers.append((num_qubits, s_str))
 
         quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
         provider_job_ids = (
