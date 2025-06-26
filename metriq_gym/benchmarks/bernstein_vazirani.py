@@ -23,7 +23,7 @@ from qiskit import QuantumCircuit
 class BernsteinVaziraniResult(BenchmarkResult):
     """Stores the results from running Bernstein-Vazirani Benchmark.
     Results:
-        circuit_metrics: Stores QED-C fidelity calculations
+        circuit_metrics: Stores all QED-C metrics to output.
     """
 
     circuit_metrics: dict[str, dict[str, dict[str, float]]]
@@ -38,7 +38,9 @@ class BernsteinVaziraniData(BenchmarkData):
         max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
-        circuit_metrics: Stores QED-C circuit metrics data.
+        circuit_metrics: stores QED-C circuit creation metrics data.
+        circuits: the list of quantum circuits ran, it's needed to poll the results with QED-C.
+        circuit_identifiers: the unique identifiers for circuits, used to preserve order when polling.
     """
 
     shots: int
@@ -48,6 +50,7 @@ class BernsteinVaziraniData(BenchmarkData):
     max_circuits: int
     circuit_metrics: dict[str, dict[str, dict[str, float]]]
     circuits: list[QuantumCircuit]
+    circuit_identifiers: list[str]
 
 
 def analyze_results(
@@ -89,21 +92,20 @@ def analyze_results(
     curr_idx: int = 0
 
     for num_qubits in info.keys():
-        for s_str in info[num_qubits].keys():
+        for _ in info[num_qubits].keys():
             counts: dict[str, int] = counts_list[curr_idx]
 
             qc = job_data.circuits[curr_idx]
 
             resultObj = CountsWrapper(qc, counts)
 
+            s_int = int(job_data.circuit_identifiers[curr_idx])
+
             _, fidelity = analyze_and_print_result(
-                qc, resultObj, int(num_qubits), int(s_str), job_data.shots
+                qc, resultObj, int(num_qubits), s_int, job_data.shots
             )
 
-            metrics.store_metric(int(num_qubits), int(s_str), "fidelity", fidelity)
-
-            # Debugging some fidelities = 0 in a noiseless simulator
-            # print(curr_idx, num_qubits, s_str, counts_list[curr_idx])
+            metrics.store_metric(int(num_qubits), s_int, "fidelity", fidelity)
 
             curr_idx += 1
 
@@ -134,6 +136,11 @@ class BernsteinVazirani(Benchmark):
 
         del circuit_metrics["subtitle"]
 
+        circuit_identifiers = []
+        for num_qubits in circuit_metrics.keys():
+            for s_str in circuit_metrics[num_qubits].keys():
+                circuit_identifiers.append(s_str)
+
         quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
         provider_job_ids = (
             [quantum_job.id]
@@ -150,6 +157,7 @@ class BernsteinVazirani(Benchmark):
             max_circuits=max_circuits,
             circuit_metrics=circuit_metrics,
             circuits=circuits,
+            circuit_identifiers=circuit_identifiers,
         )
 
     def poll_handler(
