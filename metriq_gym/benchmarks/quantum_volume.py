@@ -199,14 +199,8 @@ class QuantumVolume(Benchmark):
         shots = self.params.shots
         trials = self.params.trials
         circuits, ideal_probs = prepare_qv_circuits(n=num_qubits, num_trials=trials)
-        quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits, shots=shots)
-        provider_job_ids = (
-            [quantum_job.id]
-            if isinstance(quantum_job, QuantumJob)
-            else [job.id for job in quantum_job]
-        )
-        return QuantumVolumeData(
-            provider_job_ids=provider_job_ids,
+        return QuantumVolumeData.from_quantum_job(
+            quantum_job=device.run(circuits, shots=shots),
             num_qubits=num_qubits,
             shots=shots,
             depth=num_qubits,
