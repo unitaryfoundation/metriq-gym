@@ -61,18 +61,18 @@ def analyze_results(
     Uses QED-C submodule to obtain calculations.
 
     Args:
-        job_data: The BernsteinVaziraniData object for the job.
-        counts_list: A list of all counts objects, each index corresponds to a circuit.
+        job_data: the BernsteinVaziraniData object for the job.
+        counts_list: a list of all counts objects, each index corresponds to a circuit.
 
     Returns:
-        None
-    """
-
-    """
-    A wrapper class to enable support with QED-C's method to analyze results. 
+        circuit_metrics: the updated circuit metrics in QED-C's format.
     """
 
     class CountsWrapper:
+        """
+        A wrapper class to enable support with QED-C's method to analyze results.
+        """
+
         def __init__(self, qc: QuantumCircuit, counts: dict[str, int]):
             self.qc = qc
             self.counts = counts
