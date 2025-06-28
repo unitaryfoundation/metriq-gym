@@ -9,7 +9,7 @@ from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
-from metriq_gym.helpers.task_helpers import flatten_counts, flatten_job_ids
+from metriq_gym.helpers.task_helpers import flatten_counts
 
 
 @dataclass
@@ -74,11 +74,10 @@ def calculate_accuracy_score(num_qubits: int, count_results: MeasCount) -> float
 
 class QMLKernel(Benchmark):
     def dispatch_handler(self, device: QuantumDevice) -> QMLKernelData:
-        qc = create_inner_product_circuit(self.params.num_qubits)
-        quantum_job: QuantumJob | list[QuantumJob] = device.run(qc, shots=self.params.shots)
-        provider_job_ids = flatten_job_ids(quantum_job)
-        return QMLKernelData(
-            provider_job_ids=provider_job_ids,
+        return QMLKernelData.from_quantum_job(
+            device.run(
+                create_inner_product_circuit(self.params.num_qubits), shots=self.params.shots
+            )
         )
 
     def poll_handler(
