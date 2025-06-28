@@ -43,6 +43,7 @@ ruamel-yaml-clib = [
     { version = "0.2.12", markers = "sys_platform == 'darwin' and platform_machine == 'arm64'" },
     { version = "0.2.8", markers = "sys_platform == 'darwin' and platform_machine == 'x86_64'" }
 ]
+qc-app-oriented-benchmarks = {path = "submodules/qc-app-oriented-benchmarks", develop = true}
 
 [tool.poetry.extras]
 dev = ["qiskit-device-benchmarking"]
