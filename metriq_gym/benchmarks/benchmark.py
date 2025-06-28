@@ -22,7 +22,7 @@ class BenchmarkData:
     provider_job_ids: list[str]
 
     @classmethod
-    def from_quantum_job(cls, quantum_job, **kwargs) -> "BenchmarkData":
+    def from_quantum_job(cls, quantum_job, **kwargs):
         """Populate the provider job IDs from a QuantumJob or iterable of QuantumJobs."""
         return cls(provider_job_ids=flatten_job_ids(quantum_job), **kwargs)
 
