@@ -1,5 +1,5 @@
 import argparse
-from collections.abc import Iterable
+from typing import Iterable
 
 from pydantic import BaseModel
 from dataclasses import dataclass
@@ -12,8 +12,7 @@ def flatten_job_ids(quantum_job: QuantumJob | Iterable[QuantumJob]) -> list[str]
         return [quantum_job.id]
     elif isinstance(quantum_job, Iterable):
         return [job.id for job in quantum_job]
-    else:
-        raise TypeError(f"Unsupported job type: {type(quantum_job)}")
+    raise TypeError(f"Unsupported job type: {type(quantum_job)}")
 
 
 @dataclass
@@ -23,7 +22,8 @@ class BenchmarkData:
     provider_job_ids: list[str]
 
     @classmethod
-    def from_quantum_job(cls, quantum_job, **kwargs):
+    def from_quantum_job(cls, quantum_job, **kwargs) -> "BenchmarkData":
+        """Populate the provider job IDs from a QuantumJob or iterable of QuantumJobs."""
         return cls(provider_job_ids=flatten_job_ids(quantum_job), **kwargs)
 
 
