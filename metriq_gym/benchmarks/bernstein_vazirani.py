@@ -170,15 +170,8 @@ class BernsteinVazirani(Benchmark):
                 circuit_identifiers.append((num_qubits, s_str))
                 flat_circuits.append(circuits[num_qubits][s_str])
 
-        quantum_job: QuantumJob | list[QuantumJob] = device.run(flat_circuits, shots=shots)
-        provider_job_ids = (
-            [quantum_job.id]
-            if isinstance(quantum_job, QuantumJob)
-            else [job.id for job in quantum_job]
-        )
-
-        return BernsteinVaziraniData(
-            provider_job_ids=provider_job_ids,
+        return BernsteinVaziraniData.from_quantum_job(
+            quantum_job=device.run(flat_circuits, shots=shots),
             shots=shots,
             min_qubits=min_qubits,
             max_qubits=max_qubits,
