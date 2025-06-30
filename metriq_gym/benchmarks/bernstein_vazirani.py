@@ -3,7 +3,7 @@ Bernstein-Vazirani Benchmark for metriq-gym
 Credit to QED-C for implementing the benchmark.
 
 The benchmark generates N circuits for X qubits ranging from min_qubits to max_qubits.
-Each circuit is then ran, and the metrics are computed.
+Each circuit is then run, and the metrics are computed.
 """
 
 from dataclasses import dataclass
@@ -21,7 +21,7 @@ from qiskit import QuantumCircuit
 
 
 class BernsteinVaziraniResult(BenchmarkResult):
-    """Stores the results from running Bernstein-Vazirani Benchmark.
+    """Stores the results from running Bernstein-Vazirani benchmark.
     Results:
         circuit_metrics: Stores all QED-C metrics to output.
     """
@@ -31,8 +31,8 @@ class BernsteinVaziraniResult(BenchmarkResult):
 
 @dataclass
 class BernsteinVaziraniData(BenchmarkData):
-    """Stores the input parameters or metadata for Bernstein-Vazirani Benchmark.
-    Paramters/Metadata:
+    """Stores the input parameters or metadata for Bernstein-Vazirani benchmark.
+    Parameters/Metadata:
         shots: number of shots for each circuit to be ran with.
         min_qubits: minimum number of qubits to start generating circuits for the benchmark.
         max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
@@ -88,21 +88,18 @@ def analyze_results(
     metrics.circuit_metrics = job_data.circuit_metrics
 
     # Iterate and get the metrics for each circuit in the list.
-    curr_idx: int = 0
-    for num_qubits, s_str in job_data.circuit_identifiers:
+    for curr_idx, (num_qubits, s_str) in enumerate(job_data.circuit_identifiers):
         counts: dict[str, int] = counts_list[curr_idx]
 
         qc = job_data.circuits[curr_idx]
 
-        resultObj = CountsWrapper(qc, counts)
+        result_object = CountsWrapper(qc, counts)
 
         _, fidelity = analyze_and_print_result(
-            qc, resultObj, int(num_qubits), int(s_str), job_data.shots
+            qc, result_object, int(num_qubits), int(s_str), job_data.shots
         )
 
         metrics.store_metric(int(num_qubits), int(s_str), "fidelity", fidelity)
-
-        curr_idx += 1
 
     return metrics.circuit_metrics
 
@@ -131,7 +128,7 @@ class BernsteinVazirani(Benchmark):
         )
 
         # Remove the subtitle key to keep our desired format.
-        del circuit_metrics["subtitle"]
+        circuit_metrics.pop("subtitle", None)
 
         # Store the circuit identifiers and a flat list of circuits.
         circuit_identifiers = []

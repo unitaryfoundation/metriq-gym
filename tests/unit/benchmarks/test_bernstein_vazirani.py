@@ -1,9 +1,9 @@
 from qedc.bernstein_vazirani.bv_benchmark import run
 
 
-# A basic test to ensure that circuits are being made
-def testGettingCircs():
-    circuits, metrics = run(
+def test_run_bv_circuits():
+    """A basic test to ensure that circuits are being made."""
+    circuits, _ = run(
         min_qubits=2,
         max_qubits=6,
         skip_qubits=1,
@@ -12,7 +12,5 @@ def testGettingCircs():
         method=1,
         get_circuits=True,
     )
-
-    print(f"\n\n{circuits}\n\n")
 
     assert len(circuits) > 0
