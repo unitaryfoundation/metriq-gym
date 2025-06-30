@@ -7,6 +7,7 @@ for more efficient and lightweight simulation in testing.
 """
 
 import pytest
+from qbraid import QuantumJob
 import rustworkx as rx
 import numpy as np
 from unittest.mock import MagicMock, patch
@@ -306,12 +307,10 @@ class TestMirrorCircuitsBenchmark:
         return MirrorCircuits(args, mock_params_minimal)
 
     @patch("metriq_gym.benchmarks.mirror_circuits.connectivity_graph")
-    @patch("metriq_gym.benchmarks.mirror_circuits.flatten_job_ids")
     @patch("metriq_gym.benchmarks.mirror_circuits.generate_mirror_circuit")
     def test_dispatch_handler(
         self,
         mock_generate_circuit,
-        mock_flatten_job_ids,
         mock_connectivity_graph,
         benchmark,
         mock_device,
@@ -326,12 +325,9 @@ class TestMirrorCircuitsBenchmark:
         mock_generate_circuit.return_value = (mock_circuit, "001")
 
         # Mock device.run
-        mock_job = MagicMock()
+        mock_job = MagicMock(spec=QuantumJob)
         mock_job.id = "test_job_id"
         mock_device.run.return_value = mock_job
-
-        # Mock flatten_job_ids to return the expected result
-        mock_flatten_job_ids.return_value = ["test_job_id"]
 
         result = benchmark.dispatch_handler(mock_device)
 
