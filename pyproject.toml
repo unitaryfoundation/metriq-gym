@@ -19,7 +19,8 @@ mgym = "metriq_gym.run:main"
 [tool.poetry]
 packages = [
     { include = "metriq_gym", from = "." },
-    { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" }
+    { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" },
+    { include = "qedc", from = "submodules/QC-App-Oriented-Benchmarks" }
 ]
 include = [
     { path = "LICENSE", format = ["sdist", "wheel"] },
@@ -43,7 +44,6 @@ ruamel-yaml-clib = [
     { version = "0.2.12", markers = "sys_platform == 'darwin' and platform_machine == 'arm64'" },
     { version = "0.2.8", markers = "sys_platform == 'darwin' and platform_machine == 'x86_64'" }
 ]
-qc-app-oriented-benchmarks = {path = "submodules/qc-app-oriented-benchmarks", develop = true}
 
 [tool.poetry.extras]
 dev = ["qiskit-device-benchmarking"]

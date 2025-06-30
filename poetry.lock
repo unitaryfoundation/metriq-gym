@@ -3504,20 +3504,6 @@ runner = ["numpy", "psutil"]
 test = ["pytest", "pytest-asyncio", "pytest-cov"]
 
 [[package]]
-name = "qc_app_oriented_benchmarks"
-version = "0.1.0"
-description = ""
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = []
-develop = true
-
-[package.source]
-type = "directory"
-url = "submodules/qc-app-oriented-benchmarks"
-
-[[package]]
 name = "qiskit"
 version = "2.1.0"
 description = "An open-source SDK for working with quantum computers at the level of extended quantum circuits, operators, and primitives."
@@ -4761,4 +4747,4 @@ dev = []
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "0a10e7c6e27ce09ebe161ab26bcd6b1e61f18c5a7437fd8ad842e87501636b6a"
+content-hash = "f67278d49d7bf5dcfd5c686b0edf07f846934202e232fde1a523f536875b8849"
