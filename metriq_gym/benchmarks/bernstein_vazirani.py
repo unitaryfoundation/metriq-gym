@@ -20,13 +20,46 @@ from qedc._common import metrics
 from qiskit import QuantumCircuit
 
 
+"""
+Type: QEDC_Metrics
+Description: 
+    The structure for all returned QEDC circuit metrics. 
+    The first key represents the number of qubits for the group of circuits.
+    The second key represents the unique identifier (secret str) for a circuit. 
+    The third key represents the metric being stored.
+Example:
+{
+'3':    {
+        '1': {'create_time': 0.16371703147888184,
+            'fidelity': 1.0,
+            'hf_fidelity': 1.0},
+        '2': {'create_time': 0.0005087852478027344,
+            'fidelity': 1.0,
+            'hf_fidelity': 1.0}
+        },
+'4':    {
+        '1': {'create_time': 0.0005209445953369141,
+            'fidelity': 1.0,
+            'hf_fidelity': 1.0},
+        '3': {'create_time': 0.00047206878662109375,
+            'fidelity': 1.0,
+            'hf_fidelity': 1.0},
+        '5': {'create_time': 0.0005078315734863281,
+            'fidelity': 1.0,
+            'hf_fidelity': 1.0}
+        }
+}
+"""
+QEDC_Metrics = dict[str, dict[str, dict[str, float]]]
+
+
 class BernsteinVaziraniResult(BenchmarkResult):
     """Stores the results from running Bernstein-Vazirani benchmark.
     Results:
         circuit_metrics: Stores all QED-C metrics to output.
     """
 
-    circuit_metrics: dict[str, dict[str, dict[str, float]]]
+    circuit_metrics: QEDC_Metrics
 
 
 @dataclass
@@ -40,7 +73,8 @@ class BernsteinVaziraniData(BenchmarkData):
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
         circuit_metrics: stores QED-C circuit creation metrics data.
         circuits: the list of quantum circuits ran, it's needed to poll the results with QED-C.
-        circuit_identifiers: the unique identifiers for circuits, used to preserve order when polling.
+        circuit_identifiers: the unique identifiers for circuits (num qubits, secret str),
+                             used to preserve order when polling.
     """
 
     shots: int
@@ -48,14 +82,12 @@ class BernsteinVaziraniData(BenchmarkData):
     max_qubits: int
     skip_qubits: int
     max_circuits: int
-    circuit_metrics: dict[str, dict[str, dict[str, float]]]
+    circuit_metrics: QEDC_Metrics
     circuits: list[QuantumCircuit]
     circuit_identifiers: list[tuple[str, str]]
 
 
-def analyze_results(
-    job_data: BernsteinVaziraniData, counts_list: list[MeasCount]
-) -> dict[str, dict[str, dict[str, float]]]:
+def analyze_results(job_data: BernsteinVaziraniData, counts_list: list[MeasCount]) -> QEDC_Metrics:
     """
     Iterates over each circuit group and secret int to process results.
     Uses QED-C submodule to obtain calculations.
