@@ -24,7 +24,8 @@ packages = [
 ]
 include = [
     { path = "LICENSE", format = ["sdist", "wheel"] },
-    { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] }
+    { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] },
+    { path = "submodules/QC-App-Oriented-Benchmarks/LICENSE", format = ["sdist", "wheel"] }
 ]
 
 [tool.poetry.dependencies]
