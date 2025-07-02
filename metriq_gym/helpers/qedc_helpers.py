@@ -173,26 +173,15 @@ def get_circuits_and_metrics(
     benchmark = import_benchmark_module(benchmark_name)
 
     # Call the QED-C submodule to get the circuits and creation information.
-    # Note that phase estimation doesn't have a methods argument.
-    if benchmark_name != QEDC_Benchmark_Names.PHASE_ESTIMATION:
-        circuits, circuit_metrics = benchmark.run(
-            min_qubits=min_qubits,
-            max_qubits=max_qubits,
-            skip_qubits=skip_qubits,
-            max_circuits=max_circuits,
-            num_shots=num_shots,
-            method=method,
-            get_circuits=True,
-        )
-    else:
-        circuits, circuit_metrics = benchmark.run(
-            min_qubits=min_qubits,
-            max_qubits=max_qubits,
-            skip_qubits=skip_qubits,
-            max_circuits=max_circuits,
-            num_shots=num_shots,
-            get_circuits=True,
-        )
+    circuits, circuit_metrics = benchmark.run(
+        min_qubits=min_qubits,
+        max_qubits=max_qubits,
+        skip_qubits=skip_qubits,
+        max_circuits=max_circuits,
+        num_shots=num_shots,
+        method=method,
+        get_circuits=True,
+    )
 
     # Remove the subtitle key to keep our desired format.
     circuit_metrics.pop("subtitle", None)
