@@ -19,6 +19,13 @@ class QEDC_Benchmark_Names(StrEnum):
     QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
 
 
+QEDC_BENCHMARK_IMPORTS: dict[QEDC_Benchmark_Names, str] = {
+    QEDC_Benchmark_Names.BERNSTEIN_VAZIRANI: "qedc.bernstein_vazirani.bv_benchmark",
+    QEDC_Benchmark_Names.PHASE_ESTIMATION: "qedc.phase_estimation.pe_benchmark",
+    QEDC_Benchmark_Names.HIDDEN_SHIFT: "qedc.hidden_shift.hs_benchmark",
+    QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM: "qedc.quantum_fourier_transform.qft_benchmark",
+}
+
 """
 Type: QEDC_Metrics
 Description: 
@@ -64,17 +71,7 @@ def import_benchmark_module(benchmark_name: str) -> types.ModuleType:
 
     """
 
-    if benchmark_name == QEDC_Benchmark_Names.BERNSTEIN_VAZIRANI:
-        module_name = "qedc.bernstein_vazirani.bv_benchmark"
-
-    elif benchmark_name == QEDC_Benchmark_Names.PHASE_ESTIMATION:
-        module_name = "qedc.phase_estimation.pe_benchmark"
-
-    elif benchmark_name == QEDC_Benchmark_Names.HIDDEN_SHIFT:
-        module_name = "qedc.hidden_shift.hs_benchmark"
-
-    elif benchmark_name == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
-        module_name = "qedc.quantum_fourier_transform.qft_benchmark"
+    module_name = QEDC_BENCHMARK_IMPORTS[QEDC_Benchmark_Names(benchmark_name)]
 
     return importlib.import_module(module_name)
 
