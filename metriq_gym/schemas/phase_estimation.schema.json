@@ -10,7 +10,7 @@
       "const": "Phase Estimation",
       "description": "Name of the benchmark. Must be 'Phase Estimation' for this schema."
     },
-    "shots": {
+    "num_shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
       "default": 100,

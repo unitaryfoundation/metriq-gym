@@ -10,7 +10,7 @@
       "const": "Quantum Fourier Transform",
       "description": "Name of the benchmark. Must be 'Quantum Fourier Transform' for this schema."
     },
-    "shots": {
+    "num_shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
       "default": 100,

@@ -35,7 +35,7 @@ class QEDCData(BenchmarkData):
     Stores the input parameters or metadata for a QED-C benchmark.
 
     Parameters/Metadata:
-        shots: number of shots for each circuit to be ran with.
+        num_shots: number of shots for each circuit to be ran with.
         min_qubits: minimum number of qubits to start generating circuits for the benchmark.
         max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
@@ -47,7 +47,7 @@ class QEDCData(BenchmarkData):
         benchmark_name: the name of the benchmark being ran.
     """
 
-    shots: int
+    num_shots: int
     min_qubits: int
     max_qubits: int
     skip_qubits: int
@@ -64,7 +64,7 @@ class QEDCBenchmarks(Benchmark):
     def dispatch_handler(self, device: QuantumDevice) -> QEDCData:
         # For more information on the parameters, view the schema for this benchmark.
         benchmark_name = self.params.benchmark_name
-        shots = self.params.shots
+        num_shots = self.params.num_shots
         min_qubits = self.params.min_qubits
         max_qubits = self.params.max_qubits
         skip_qubits = self.params.skip_qubits
@@ -75,13 +75,13 @@ class QEDCBenchmarks(Benchmark):
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,
             max_circuits=max_circuits,
-            shots=shots,
+            num_shots=num_shots,
             benchmark_name=benchmark_name,
         )
 
         return QEDCData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=shots),
-            shots=shots,
+            quantum_job=device.run(circuits, shots=num_shots),
+            num_shots=num_shots,
             min_qubits=min_qubits,
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,

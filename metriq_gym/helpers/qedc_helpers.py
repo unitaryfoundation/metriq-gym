@@ -125,20 +125,20 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
         if job_data.benchmark_name == QEDC_Benchmark_Names.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits) - 1, float(s_str), job_data.shots
+                qc, result_object, int(num_qubits) - 1, float(s_str), job_data.num_shots
             )
 
         elif job_data.benchmark_name == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
             # Requires an additional "method" argument.
             # Fixed to 1, but will be changed once we support different methods.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits), int(s_str), job_data.shots, 1
+                qc, result_object, int(num_qubits), int(s_str), job_data.num_shots, 1
             )
 
         else:
             # Default call for Bernstein-Vazirani and Hidden Shift.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits), int(s_str), job_data.shots
+                qc, result_object, int(num_qubits), int(s_str), job_data.num_shots
             )
 
         metrics.store_metric(num_qubits, s_str, "fidelity", fidelity)
@@ -151,7 +151,7 @@ def get_circuits_and_metrics(
     max_qubits: int,
     skip_qubits: int,
     max_circuits: int,
-    shots: int,
+    num_shots: int,
     benchmark_name: str,
 ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
     """
@@ -162,7 +162,7 @@ def get_circuits_and_metrics(
         max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
         skip_qubits: the step size for generating circuits from the min to max qubit sizes.
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
-        shots: number of shots for each circuit to be ran with.
+        num_shots: number of shots for each circuit to be ran with.
         benchmark_name: the name of the benchmark being ran.
 
     Returns:
@@ -182,7 +182,7 @@ def get_circuits_and_metrics(
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,
             max_circuits=max_circuits,
-            num_shots=shots,
+            num_shots=num_shots,
             method=1,
             get_circuits=True,
         )
@@ -192,7 +192,7 @@ def get_circuits_and_metrics(
             max_qubits=max_qubits,
             skip_qubits=skip_qubits,
             max_circuits=max_circuits,
-            num_shots=shots,
+            num_shots=num_shots,
             get_circuits=True,
         )
 
