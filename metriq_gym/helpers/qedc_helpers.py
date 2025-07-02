@@ -2,11 +2,22 @@ from qedc._common import metrics
 from qbraid.runtime.result_data import MeasCount
 import importlib
 from qiskit import QuantumCircuit
+from enum import StrEnum
 import types
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from metriq_gym.benchmarks.qedc_benchmarks import QEDCData
+
+
+class QEDC_Benchmark_Names(StrEnum):
+    """Store names of all supported QEDC Benchmarks"""
+
+    BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
+    PHASE_ESTIMATION = "Phase Estimation"
+    HIDDEN_SHIFT = "Hidden Shift"
+    QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
+
 
 """
 Type: QEDC_Metrics
@@ -44,16 +55,16 @@ QEDC_Metrics = dict[str, dict[str, dict[str, float]]]
 def import_benchmark_module(benchmark_name: str) -> types.ModuleType:
     """Import the correct module"""
 
-    if benchmark_name.lower() == "bernstein-vazirani":
+    if benchmark_name == QEDC_Benchmark_Names.BERNSTEIN_VAZIRANI:
         module_name = "qedc.bernstein_vazirani.bv_benchmark"
 
-    elif benchmark_name.lower() == "phase estimation":
+    elif benchmark_name == QEDC_Benchmark_Names.PHASE_ESTIMATION:
         module_name = "qedc.phase_estimation.pe_benchmark"
 
-    elif benchmark_name.lower() == "hidden shift":
+    elif benchmark_name == QEDC_Benchmark_Names.HIDDEN_SHIFT:
         module_name = "qedc.hidden_shift.hs_benchmark"
 
-    elif benchmark_name.lower() == "quantum fourier transform":
+    elif benchmark_name == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
         module_name = "qedc.quantum_fourier_transform.qft_benchmark"
 
     return importlib.import_module(module_name)
@@ -102,13 +113,13 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
 
         result_object = CountsWrapper(qc, counts)
 
-        if job_data.benchmark_name.lower() == "phase estimation":
+        if job_data.benchmark_name == QEDC_Benchmark_Names.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
                 qc, result_object, int(num_qubits) - 1, float(s_str), job_data.shots
             )
 
-        elif job_data.benchmark_name.lower() == "quantum fourier transform":
+        elif job_data.benchmark_name == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
             # Requires an additional "method" argument.
             # Fixed to 1, but will be changed once we support different methods.
             _, fidelity = benchmark.analyze_and_print_result(
@@ -138,8 +149,8 @@ def get_circuits_and_metrics(
     benchmark = import_benchmark_module(benchmark_name)
 
     # Call the QED-C submodule to get the circuits and creation information.
-    # Note that phase estimation doesn't have a methods parameter.
-    if benchmark_name.lower() != "phase estimation":
+    # Note that phase estimation doesn't have a methods argument.
+    if benchmark_name != QEDC_Benchmark_Names.PHASE_ESTIMATION:
         circuits, circuit_metrics = benchmark.run(
             min_qubits=min_qubits,
             max_qubits=max_qubits,
