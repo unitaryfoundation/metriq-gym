@@ -96,11 +96,17 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
 
         result_object = CountsWrapper(qc, counts)
 
-        _, fidelity = benchmark.analyze_and_print_result(
-            qc, result_object, int(num_qubits), int(s_str), job_data.shots
-        )
+        if job_data.benchmark_name.lower() == "phase estimation":
+            _, fidelity = benchmark.analyze_and_print_result(
+                qc, result_object, int(num_qubits) - 1, float(s_str), job_data.shots
+            )
 
-        metrics.store_metric(int(num_qubits), int(s_str), "fidelity", fidelity)
+        else:
+            _, fidelity = benchmark.analyze_and_print_result(
+                qc, result_object, int(num_qubits), int(s_str), job_data.shots
+            )
+
+        metrics.store_metric(num_qubits, s_str, "fidelity", fidelity)
 
     return metrics.circuit_metrics
 
