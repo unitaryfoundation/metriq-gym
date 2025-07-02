@@ -47,7 +47,7 @@ def import_benchmark_module(benchmark_name: str) -> types.ModuleType:
     if benchmark_name.lower() == "bernstein-vazirani":
         module_name = "qedc.bernstein_vazirani.bv_benchmark"
 
-    elif benchmark_name.lower() == "phase-estimation":
+    elif benchmark_name.lower() == "phase estimation":
         module_name = "qedc.phase_estimation.pe_benchmark"
 
     return importlib.import_module(module_name)
@@ -118,7 +118,7 @@ def get_circuits_and_metrics(
 
     # Call the QED-C submodule to get the circuits and creation information.
     # Note that phase estimation doesn't have a methods parameter.
-    if benchmark_name.lower != "phase_estimation":
+    if benchmark_name.lower() != "phase estimation":
         circuits, circuit_metrics = benchmark.run(
             min_qubits=min_qubits,
             max_qubits=max_qubits,

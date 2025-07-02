@@ -18,6 +18,7 @@ class JobType(StrEnum):
     MIRROR_CIRCUITS = "Mirror Circuits"
     WORMHOLE = "Wormhole"
     BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
+    PHASE_ESTIMATION = "Phase Estimation"
 
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
@@ -28,6 +29,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.MIRROR_CIRCUITS: MirrorCircuits,
     JobType.WORMHOLE: Wormhole,
     JobType.BERNSTEIN_VAZIRANI: QEDCBenchmarks,
+    JobType.PHASE_ESTIMATION: QEDCBenchmarks,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -38,6 +40,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.MIRROR_CIRCUITS: MirrorCircuitsData,
     JobType.WORMHOLE: WormholeData,
     JobType.BERNSTEIN_VAZIRANI: QEDCData,
+    JobType.PHASE_ESTIMATION: QEDCData,
 }
 
 SCHEMA_MAPPING = {
@@ -48,6 +51,7 @@ SCHEMA_MAPPING = {
     JobType.MIRROR_CIRCUITS: "mirror_circuits.schema.json",
     JobType.WORMHOLE: "wormhole.schema.json",
     JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.schema.json",
+    JobType.PHASE_ESTIMATION: "phase_estimation.schema.json",
 }
 
 
