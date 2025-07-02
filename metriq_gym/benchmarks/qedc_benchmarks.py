@@ -18,17 +18,6 @@ from metriq_gym.helpers.qedc_helpers import QEDC_Metrics, analyze_results, get_c
 from qiskit import QuantumCircuit
 
 
-class QEDCResult(BenchmarkResult):
-    """
-    Stores the results from running a QED-C benchmark.
-
-    Results:
-        circuit_metrics: Stores all QED-C metrics to output.
-    """
-
-    circuit_metrics: QEDC_Metrics
-
-
 @dataclass
 class QEDCData(BenchmarkData):
     """
@@ -58,8 +47,19 @@ class QEDCData(BenchmarkData):
     benchmark_name: str
 
 
+class QEDCResult(BenchmarkResult):
+    """
+    Stores the results from running a QED-C benchmark.
+
+    Results:
+        circuit_metrics: Stores all QED-C metrics to output.
+    """
+
+    circuit_metrics: QEDC_Metrics
+
+
 class QEDCBenchmarks(Benchmark):
-    """Benchmark class for Bernstein-Vazirani experiments."""
+    """Benchmark class for QED-C experiments."""
 
     def dispatch_handler(self, device: QuantumDevice) -> QEDCData:
         # For more information on the parameters, view the schema for this benchmark.
