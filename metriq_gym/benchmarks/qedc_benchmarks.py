@@ -1,8 +1,8 @@
 """
-Bernstein-Vazirani Benchmark for metriq-gym
-Credit to QED-C for implementing the benchmark.
+A general structure for dispatching and polling QED-C benchmarks.
+Credit to QED-C for implementing the benchmarks.
 
-The benchmark generates N circuits for X qubits ranging from min_qubits to max_qubits.
+The benchmarks generate N circuits for M qubits ranging from min_qubits to max_qubits.
 Each circuit is then run, and the metrics are computed.
 """
 
@@ -19,7 +19,9 @@ from qiskit import QuantumCircuit
 
 
 class QEDCResult(BenchmarkResult):
-    """Stores the results from running Bernstein-Vazirani benchmark.
+    """
+    Stores the results from running a QED-C benchmark.
+
     Results:
         circuit_metrics: Stores all QED-C metrics to output.
     """
@@ -29,7 +31,9 @@ class QEDCResult(BenchmarkResult):
 
 @dataclass
 class QEDCData(BenchmarkData):
-    """Stores the input parameters or metadata for Bernstein-Vazirani benchmark.
+    """
+    Stores the input parameters or metadata for a QED-C benchmark.
+
     Parameters/Metadata:
         shots: number of shots for each circuit to be ran with.
         min_qubits: minimum number of qubits to start generating circuits for the benchmark.

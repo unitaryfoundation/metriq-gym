@@ -53,7 +53,16 @@ QEDC_Metrics = dict[str, dict[str, dict[str, float]]]
 
 
 def import_benchmark_module(benchmark_name: str) -> types.ModuleType:
-    """Import the correct module"""
+    """
+    Import the correct module
+
+    Args:
+        benchmark_name: the name of the benchmark being ran.
+
+    Returns:
+        benchmark: the module imported for the benchmark.
+
+    """
 
     if benchmark_name == QEDC_Benchmark_Names.BERNSTEIN_VAZIRANI:
         module_name = "qedc.bernstein_vazirani.bv_benchmark"
@@ -76,7 +85,7 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
     Uses QED-C submodule to obtain calculations.
 
     Args:
-        job_data: the BernsteinVaziraniData object for the job.
+        job_data: the QEDCData object for the job.
         counts_list: a list of all counts objects, each index corresponds to a circuit.
 
     Returns:
@@ -145,6 +154,23 @@ def get_circuits_and_metrics(
     shots: int,
     benchmark_name: str,
 ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
+    """
+    Uses QED-C submodule to obtain circuits and circuit metrics.
+
+    Args:
+        min_qubits: minimum number of qubits to start generating circuits for the benchmark.
+        max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
+        skip_qubits: the step size for generating circuits from the min to max qubit sizes.
+        max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
+        shots: number of shots for each circuit to be ran with.
+        benchmark_name: the name of the benchmark being ran.
+
+    Returns:
+        circuits: the list of quantum circuits for the benchmark.
+        circuit_metrics: the circuit metrics at the time of circuit creation.
+        circuit_identifiers: the unique identifiers for each circuit (num qubits, secret str).
+    """
+
     # Import the correct module
     benchmark = import_benchmark_module(benchmark_name)
 
