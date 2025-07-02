@@ -50,6 +50,9 @@ def import_benchmark_module(benchmark_name: str) -> types.ModuleType:
     elif benchmark_name.lower() == "phase estimation":
         module_name = "qedc.phase_estimation.pe_benchmark"
 
+    elif benchmark_name.lower() == "hidden shift":
+        module_name = "qedc.hidden_shift.hs_benchmark"
+
     return importlib.import_module(module_name)
 
 

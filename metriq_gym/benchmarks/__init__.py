@@ -19,6 +19,7 @@ class JobType(StrEnum):
     WORMHOLE = "Wormhole"
     BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
     PHASE_ESTIMATION = "Phase Estimation"
+    HIDDEN_SHIFT = "Hidden Shift"
 
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
@@ -30,6 +31,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.WORMHOLE: Wormhole,
     JobType.BERNSTEIN_VAZIRANI: QEDCBenchmarks,
     JobType.PHASE_ESTIMATION: QEDCBenchmarks,
+    JobType.HIDDEN_SHIFT: QEDCBenchmarks,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -41,6 +43,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.WORMHOLE: WormholeData,
     JobType.BERNSTEIN_VAZIRANI: QEDCData,
     JobType.PHASE_ESTIMATION: QEDCData,
+    JobType.HIDDEN_SHIFT: QEDCData,
 }
 
 SCHEMA_MAPPING = {
@@ -52,6 +55,7 @@ SCHEMA_MAPPING = {
     JobType.WORMHOLE: "wormhole.schema.json",
     JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.schema.json",
     JobType.PHASE_ESTIMATION: "phase_estimation.schema.json",
+    JobType.HIDDEN_SHIFT: "hidden_shift.schema.json",
 }
 
 
