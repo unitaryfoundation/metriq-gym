@@ -20,6 +20,7 @@ class JobType(StrEnum):
     BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
     PHASE_ESTIMATION = "Phase Estimation"
     HIDDEN_SHIFT = "Hidden Shift"
+    QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
 
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
@@ -32,6 +33,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BERNSTEIN_VAZIRANI: QEDCBenchmarks,
     JobType.PHASE_ESTIMATION: QEDCBenchmarks,
     JobType.HIDDEN_SHIFT: QEDCBenchmarks,
+    JobType.QUANTUM_FOURIER_TRANSFORM: QEDCBenchmarks,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -44,6 +46,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.BERNSTEIN_VAZIRANI: QEDCData,
     JobType.PHASE_ESTIMATION: QEDCData,
     JobType.HIDDEN_SHIFT: QEDCData,
+    JobType.QUANTUM_FOURIER_TRANSFORM: QEDCData,
 }
 
 SCHEMA_MAPPING = {
@@ -56,6 +59,7 @@ SCHEMA_MAPPING = {
     JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.schema.json",
     JobType.PHASE_ESTIMATION: "phase_estimation.schema.json",
     JobType.HIDDEN_SHIFT: "hidden_shift.schema.json",
+    JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.schema.json",
 }
 
 

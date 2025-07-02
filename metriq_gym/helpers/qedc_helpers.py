@@ -53,6 +53,9 @@ def import_benchmark_module(benchmark_name: str) -> types.ModuleType:
     elif benchmark_name.lower() == "hidden shift":
         module_name = "qedc.hidden_shift.hs_benchmark"
 
+    elif benchmark_name.lower() == "quantum fourier transform":
+        module_name = "qedc.quantum_fourier_transform.qft_benchmark"
+
     return importlib.import_module(module_name)
 
 
@@ -100,11 +103,20 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
         result_object = CountsWrapper(qc, counts)
 
         if job_data.benchmark_name.lower() == "phase estimation":
+            # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
                 qc, result_object, int(num_qubits) - 1, float(s_str), job_data.shots
             )
 
+        elif job_data.benchmark_name.lower() == "quantum fourier transform":
+            # Requires an additional "method" argument.
+            # Fixed to 1, but will be changed once we support different methods.
+            _, fidelity = benchmark.analyze_and_print_result(
+                qc, result_object, int(num_qubits), int(s_str), job_data.shots, 1
+            )
+
         else:
+            # Default call for Bernstein-Vazirani and Hidden Shift.
             _, fidelity = benchmark.analyze_and_print_result(
                 qc, result_object, int(num_qubits), int(s_str), job_data.shots
             )
