@@ -129,10 +129,9 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
             )
 
         elif job_data.benchmark_name == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
-            # Requires an additional "method" argument.
-            # Fixed to 1, but will be changed once we support different methods.
+            # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits), int(s_str), job_data.num_shots, 1
+                qc, result_object, int(num_qubits), int(s_str), job_data.num_shots, job_data.method
             )
 
         else:
@@ -153,6 +152,7 @@ def get_circuits_and_metrics(
     max_circuits: int,
     num_shots: int,
     benchmark_name: str,
+    method: int,
 ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
     """
     Uses QED-C submodule to obtain circuits and circuit metrics.
@@ -164,6 +164,7 @@ def get_circuits_and_metrics(
         max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
         num_shots: number of shots for each circuit to be ran with.
         benchmark_name: the name of the benchmark being ran.
+        method: which QED-C method to run the benchmark with.
 
     Returns:
         circuits: the list of quantum circuits for the benchmark.
@@ -183,7 +184,7 @@ def get_circuits_and_metrics(
             skip_qubits=skip_qubits,
             max_circuits=max_circuits,
             num_shots=num_shots,
-            method=1,
+            method=method,
             get_circuits=True,
         )
     else:

@@ -34,6 +34,7 @@ class QEDCData(BenchmarkData):
         circuit_identifiers: the unique identifiers for circuits (num qubits, secret str),
                              used to preserve order when polling.
         benchmark_name: the name of the benchmark being ran.
+        method: which QED-C method to run the benchmark with.
     """
 
     num_shots: int
@@ -45,6 +46,7 @@ class QEDCData(BenchmarkData):
     circuits: list[QuantumCircuit]
     circuit_identifiers: list[tuple[str, str]]
     benchmark_name: str
+    method: int
 
 
 class QEDCResult(BenchmarkResult):
@@ -69,6 +71,7 @@ class QEDCBenchmarks(Benchmark):
         max_qubits = self.params.max_qubits
         skip_qubits = self.params.skip_qubits
         max_circuits = self.params.max_circuits
+        method = self.params.method
 
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
             min_qubits=min_qubits,
@@ -77,6 +80,7 @@ class QEDCBenchmarks(Benchmark):
             max_circuits=max_circuits,
             num_shots=num_shots,
             benchmark_name=benchmark_name,
+            method=method,
         )
 
         return QEDCData.from_quantum_job(
@@ -90,6 +94,7 @@ class QEDCBenchmarks(Benchmark):
             circuits=circuits,
             circuit_identifiers=circuit_identifiers,
             benchmark_name=benchmark_name,
+            method=method,
         )
 
     def poll_handler(
