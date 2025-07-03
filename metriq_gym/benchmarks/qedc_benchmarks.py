@@ -38,16 +38,9 @@ class QEDCData(BenchmarkData):
         method: which QED-C method to run the benchmark with.
     """
 
-    num_shots: int
-    min_qubits: int
-    max_qubits: int
-    skip_qubits: int
-    max_circuits: int
     circuit_metrics: QEDC_Metrics
     circuits: list[QuantumCircuit]
     circuit_identifiers: list[tuple[str, str]]
-    benchmark_name: str
-    method: int
 
 
 class QEDCResult(BenchmarkResult):
@@ -74,7 +67,6 @@ class QEDCBenchmarks(Benchmark):
 
         return QEDCData.from_quantum_job(
             quantum_job=device.run(circuits, shots=num_shots),
-            **self.params.model_dump(),
             circuit_metrics=circuit_metrics,
             circuits=circuits,
             circuit_identifiers=circuit_identifiers,
@@ -89,6 +81,6 @@ class QEDCBenchmarks(Benchmark):
         counts_list = flatten_counts(result_data)
 
         # Call the QED-C method after some pre-processing to obtain metrics.
-        circuit_metrics = analyze_results(job_data, counts_list)
+        circuit_metrics = analyze_results(self.params.model_dump(), job_data, counts_list)
 
         return QEDCResult(circuit_metrics=circuit_metrics)

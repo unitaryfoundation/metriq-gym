@@ -76,12 +76,15 @@ def import_benchmark_module(benchmark_name: str) -> types.ModuleType:
     return importlib.import_module(module_name)
 
 
-def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_Metrics:
+def analyze_results(
+    params: dict[str, float | str], job_data: "QEDCData", counts_list: list[MeasCount]
+) -> QEDC_Metrics:
     """
     Iterates over each circuit group and secret int to process results.
     Uses QED-C submodule to obtain calculations.
 
     Args:
+        params: the parameters the benchmark ran with and benchmark_name.
         job_data: the QEDCData object for the job.
         counts_list: a list of all counts objects, each index corresponds to a circuit.
 
@@ -103,10 +106,11 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
                 return self.counts
 
     # Import the correct module
-    benchmark = import_benchmark_module(job_data.benchmark_name)
+    benchmark_name = str(params["benchmark_name"])
+    benchmark = import_benchmark_module(benchmark_name)
 
-    # Initialize metrics module in QED-C submodule.
-    benchmark.qedc_benchmarks_init()
+    # Initialize metrics module using qiskit in QED-C submodule.
+    benchmark.qedc_benchmarks_init(api="qiskit")
 
     # Restore circuit metrics dictionary from the dispatch data
     metrics.circuit_metrics = job_data.circuit_metrics
@@ -119,22 +123,27 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
 
         result_object = CountsWrapper(qc, counts)
 
-        if job_data.benchmark_name == QEDC_Benchmark_Names.PHASE_ESTIMATION:
+        if benchmark_name == QEDC_Benchmark_Names.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits) - 1, float(s_str), job_data.num_shots
+                qc, result_object, int(num_qubits) - 1, float(s_str), params["num_shots"]
             )
 
-        elif job_data.benchmark_name == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
+        elif benchmark_name == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits), int(s_str), job_data.num_shots, job_data.method
+                qc,
+                result_object,
+                int(num_qubits),
+                int(s_str),
+                params["num_shots"],
+                params["method"],
             )
 
         else:
             # Default call for Bernstein-Vazirani and Hidden Shift.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits), int(s_str), job_data.num_shots
+                qc, result_object, int(num_qubits), int(s_str), params["num_shots"]
             )
 
         metrics.store_metric(num_qubits, s_str, "fidelity", fidelity)
