@@ -3069,19 +3069,19 @@ visualization = ["matplotlib"]
 
 [[package]]
 name = "pyqrack"
-version = "1.59.0"
+version = "1.61.0"
 description = "pyqrack - Pure Python vm6502q/qrack Wrapper"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "pyqrack-1.59.0-py3-none-macosx_13_0_x86_64.whl", hash = "sha256:ecc23a9f7a10e11e16c583dd8e6d798c799b8c36e9f04053844117f970e617dd"},
-    {file = "pyqrack-1.59.0-py3-none-macosx_14_0_arm64.whl", hash = "sha256:d16e514d811a835f01580be96243c5b70f22f44e6b001220eed319ccb8a21fa5"},
-    {file = "pyqrack-1.59.0-py3-none-macosx_15_0_arm64.whl", hash = "sha256:cdac0939159d11dc756339a76498aa1d8ee0dfd92c58c2abdac900c6c9927c80"},
-    {file = "pyqrack-1.59.0-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:01390516cd17618438624eb4d8e1a5ea98bed0553a4a824fb196ba7aeda5dc95"},
-    {file = "pyqrack-1.59.0-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:80af82940a7482a5e454fe5e6faba23a957c6b0825a1eccff922f146addc2f00"},
-    {file = "pyqrack-1.59.0-py3-none-win_amd64.whl", hash = "sha256:c42868e990e5f86f9b6a0816d10f5226b4e681815e4ac2c3af0ec8ed16d897a7"},
-    {file = "pyqrack-1.59.0.tar.gz", hash = "sha256:1d1567af845d6ca24caaa550650f1189ce7f4c1691ad6ba146b3bbf5e99a497b"},
+    {file = "pyqrack-1.61.0-py3-none-macosx_13_0_x86_64.whl", hash = "sha256:3350b3e45f448c01c480aebbc4d49b425dd031baeb9c5a0cb12039afcd8569e7"},
+    {file = "pyqrack-1.61.0-py3-none-macosx_14_0_arm64.whl", hash = "sha256:5b26796dcd0bfdf9e2ca4b0540b9de86777c4aac00601daa2d071004dbcd3b54"},
+    {file = "pyqrack-1.61.0-py3-none-macosx_15_0_arm64.whl", hash = "sha256:8e9546c7390201e354805ec7a4486c5ebec315311f1d419ca5963fe7077ba4dd"},
+    {file = "pyqrack-1.61.0-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:28e0aeb337c8199403747f64990df59e8436193a934c1ac7a34410e1a6ca0c54"},
+    {file = "pyqrack-1.61.0-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:48bcfc6bbd9369c9e5661a193f8fba91a1cd2c4a0bf0951551e85de554026c04"},
+    {file = "pyqrack-1.61.0-py3-none-win_amd64.whl", hash = "sha256:fa4b1ee9013de91a8d792bf2fa195f835f177a1398942d6a077ba9e4ae0b67d3"},
+    {file = "pyqrack-1.61.0.tar.gz", hash = "sha256:c82305101a22fec153fbb16a5b00131f0466c93c25787effc50d2ec1a29334c1"},
 ]
 
 [package.extras]
@@ -4747,4 +4747,4 @@ dev = []
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "37705e25539027e46126a1c2550cb397f45c689bdbf5ba395150d7335a53eab2"
+content-hash = "9d02944e75df33734c29ccc85a689aca40d019cb9b132a0599dacd6774cf055e"

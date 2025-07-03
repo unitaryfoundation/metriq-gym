@@ -30,7 +30,7 @@ include = [
 
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
-pyqrack = "^1.59.0"
+pyqrack = "^1.61.0"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
