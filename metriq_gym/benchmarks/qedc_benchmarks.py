@@ -21,21 +21,13 @@ from qiskit import QuantumCircuit
 @dataclass
 class QEDCData(BenchmarkData):
     """
-    Stores the input parameters or metadata for a QED-C benchmark.
-    Note that any benchmark specific parameters will be added on to these.
+    Stores metadata for a QED-C benchmark.
 
-    Parameters/Metadata:
-        num_shots: number of shots for each circuit to be ran with.
-        min_qubits: minimum number of qubits to start generating circuits for the benchmark.
-        max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
-        skip_qubits: the step size for generating circuits from the min to max qubit sizes.
-        max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
+    Metadata:
         circuit_metrics: stores QED-C circuit creation metrics data.
         circuits: the list of quantum circuits ran, it's needed to poll the results with QED-C.
         circuit_identifiers: the unique identifiers for circuits (num qubits, secret str),
                              used to preserve order when polling.
-        benchmark_name: the name of the benchmark being ran.
-        method: which QED-C method to run the benchmark with.
     """
 
     circuit_metrics: QEDC_Metrics
