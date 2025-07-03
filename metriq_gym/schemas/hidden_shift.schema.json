@@ -13,9 +13,9 @@
     "num_shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
-      "default": 100,
+      "default": 1000,
       "minimum": 1,
-      "examples": [1000]
+      "examples": [5000]
     },
     "min_qubits": {
       "type": "integer",
