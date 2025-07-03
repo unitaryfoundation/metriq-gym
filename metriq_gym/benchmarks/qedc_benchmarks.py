@@ -22,6 +22,7 @@ from qiskit import QuantumCircuit
 class QEDCData(BenchmarkData):
     """
     Stores the input parameters or metadata for a QED-C benchmark.
+    Note that any benchmark specific parameters will be added on to these.
 
     Parameters/Metadata:
         num_shots: number of shots for each circuit to be ran with.
@@ -65,36 +66,18 @@ class QEDCBenchmarks(Benchmark):
 
     def dispatch_handler(self, device: QuantumDevice) -> QEDCData:
         # For more information on the parameters, view the schema for this benchmark.
-        benchmark_name = self.params.benchmark_name
         num_shots = self.params.num_shots
-        min_qubits = self.params.min_qubits
-        max_qubits = self.params.max_qubits
-        skip_qubits = self.params.skip_qubits
-        max_circuits = self.params.max_circuits
-        method = self.params.method
 
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
-            min_qubits=min_qubits,
-            max_qubits=max_qubits,
-            skip_qubits=skip_qubits,
-            max_circuits=max_circuits,
-            num_shots=num_shots,
-            benchmark_name=benchmark_name,
-            method=method,
+            params=self.params.model_dump(),
         )
 
         return QEDCData.from_quantum_job(
             quantum_job=device.run(circuits, shots=num_shots),
-            num_shots=num_shots,
-            min_qubits=min_qubits,
-            max_qubits=max_qubits,
-            skip_qubits=skip_qubits,
-            max_circuits=max_circuits,
+            **self.params.model_dump(),
             circuit_metrics=circuit_metrics,
             circuits=circuits,
             circuit_identifiers=circuit_identifiers,
-            benchmark_name=benchmark_name,
-            method=method,
         )
 
     def poll_handler(

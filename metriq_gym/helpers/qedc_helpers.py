@@ -143,25 +143,13 @@ def analyze_results(job_data: "QEDCData", counts_list: list[MeasCount]) -> QEDC_
 
 
 def get_circuits_and_metrics(
-    min_qubits: int,
-    max_qubits: int,
-    skip_qubits: int,
-    max_circuits: int,
-    num_shots: int,
-    benchmark_name: str,
-    method: int,
+    params: dict[str, float | str],
 ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
     """
     Uses QED-C submodule to obtain circuits and circuit metrics.
 
     Args:
-        min_qubits: minimum number of qubits to start generating circuits for the benchmark.
-        max_qubits: maximum number of qubits to stop generating circuits for the benchmark.
-        skip_qubits: the step size for generating circuits from the min to max qubit sizes.
-        max_circuits: maximum number of circuits generated for each qubit size in the benchmark.
-        num_shots: number of shots for each circuit to be ran with.
-        benchmark_name: the name of the benchmark being ran.
-        method: which QED-C method to run the benchmark with.
+        params: the parameters to run the benchmark with, also includes benchmark_name.
 
     Returns:
         circuits: the list of quantum circuits for the benchmark.
@@ -170,16 +158,14 @@ def get_circuits_and_metrics(
     """
 
     # Import the correct module
-    benchmark = import_benchmark_module(benchmark_name)
+    benchmark = import_benchmark_module(str(params["benchmark_name"]))
+
+    # Remove benchmark_name so it can be passed into the run call
+    params.pop("benchmark_name", None)
 
     # Call the QED-C submodule to get the circuits and creation information.
     circuits, circuit_metrics = benchmark.run(
-        min_qubits=min_qubits,
-        max_qubits=max_qubits,
-        skip_qubits=skip_qubits,
-        max_circuits=max_circuits,
-        num_shots=num_shots,
-        method=method,
+        **params,
         get_circuits=True,
     )
 
