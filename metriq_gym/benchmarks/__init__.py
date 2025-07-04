@@ -5,6 +5,10 @@ from metriq_gym.benchmarks.qml_kernel import QMLKernel, QMLKernelData
 from metriq_gym.benchmarks.clops import Clops, ClopsData
 from metriq_gym.benchmarks.quantum_volume import QuantumVolume, QuantumVolumeData
 from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
+
+from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData
+
+# from metriq_gym.job_type import JobType
 from metriq_gym.benchmarks.mirror_circuits import MirrorCircuits, MirrorCircuitsData
 from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData
 
@@ -14,6 +18,7 @@ class JobType(StrEnum):
     CLOPS = "CLOPS"
     QML_KERNEL = "QML Kernel"
     QUANTUM_VOLUME = "Quantum Volume"
+    LinearRampQAOA = "Linear Ramp QAOA"
     MIRROR_CIRCUITS = "Mirror Circuits"
     WORMHOLE = "Wormhole"
 
@@ -23,6 +28,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.CLOPS: Clops,
     JobType.QML_KERNEL: QMLKernel,
     JobType.QUANTUM_VOLUME: QuantumVolume,
+    JobType.LinearRampQAOA: LinearRampQAOA,
     JobType.MIRROR_CIRCUITS: MirrorCircuits,
     JobType.WORMHOLE: Wormhole,
 }
@@ -32,6 +38,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.CLOPS: ClopsData,
     JobType.QML_KERNEL: QMLKernelData,
     JobType.QUANTUM_VOLUME: QuantumVolumeData,
+    JobType.LinearRampQAOA: LinearRampQAOAData,
     JobType.MIRROR_CIRCUITS: MirrorCircuitsData,
     JobType.WORMHOLE: WormholeData,
 }
@@ -41,6 +48,7 @@ SCHEMA_MAPPING = {
     JobType.CLOPS: "clops.schema.json",
     JobType.QML_KERNEL: "qml_kernel.schema.json",
     JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
+    JobType.LinearRampQAOA: "lr_qaoa.schema.json",
     JobType.MIRROR_CIRCUITS: "mirror_circuits.schema.json",
     JobType.WORMHOLE: "wormhole.schema.json",
 }
