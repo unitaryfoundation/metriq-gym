@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from qiskit import QuantumCircuit
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
-from metriq_gym.helpers.task_helpers import flatten_counts, flatten_job_ids
+from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 
 
@@ -240,11 +240,9 @@ class Wormhole(Benchmark):
     """Benchmark class for Wormhole experiments."""
 
     def dispatch_handler(self, device: QuantumDevice) -> WormholeData:
-        """Runs the benchmark and returns job metadata."""
-        quantum_job: QuantumJob | list[QuantumJob] = device.run(
-            wormhole_circuit(self.params.num_qubits), shots=self.params.shots
+        return WormholeData.from_quantum_job(
+            device.run(wormhole_circuit(self.params.num_qubits), shots=self.params.shots)
         )
-        return WormholeData(provider_job_ids=flatten_job_ids(quantum_job))
 
     def poll_handler(
         self,

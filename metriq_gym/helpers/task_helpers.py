@@ -1,4 +1,3 @@
-from qbraid import QuantumJob
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
 
@@ -17,9 +16,3 @@ def flatten_counts(result_data: list[GateModelResultData]) -> list[MeasCount]:
         elif result.measurement_counts is not None:
             flat_counts.append(result.measurement_counts)
     return flat_counts
-
-
-def flatten_job_ids(quantum_job: QuantumJob | list[QuantumJob]) -> list[str]:
-    return (
-        [quantum_job.id] if isinstance(quantum_job, QuantumJob) else [job.id for job in quantum_job]
-    )

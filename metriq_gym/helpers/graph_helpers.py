@@ -21,7 +21,10 @@ class GraphColoring:
     num_colors: int = field(init=False)
 
     def __post_init__(self):
-        self.num_colors = max(self.edge_color_map.values()) + 1
+        if self.edge_color_map:
+            self.num_colors = max(self.edge_color_map.values()) + 1
+        else:
+            self.num_colors = 0
 
     @classmethod
     def from_dict(cls, data: dict) -> "GraphColoring":
@@ -57,6 +60,11 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     that can be executed without interference. These pairs are grouped by "color." The coloring reduces
     the complexity of the benchmarking process by organizing the graph into independent sets of qubit pairs.
 
+    Chooses between:
+      - One-factorization (optimal) for complete graphs,
+      - Bipartite edge-coloring for bipartite graphs,
+      - Greedy edge-coloring otherwise.
+
     Args:
         topology_graph: The topology graph (coupling map) of the quantum device.
 
@@ -65,12 +73,14 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     """
     num_nodes = topology_graph.num_nodes()
 
-    # Graphs are bipartite, so use that feature to prevent extra colors from greedy search.
-    # This graph is colored using a bipartite edge-coloring algorithm.
-    edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
+    if rx.is_bipartite(topology_graph):
+        edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
+    else:
+        edge_color_map = rx.graph_greedy_edge_color(topology_graph)
 
-    # Get the index of the edges.
     edge_index_map = dict(topology_graph.edge_index_map())
     return GraphColoring(
-        num_nodes=num_nodes, edge_color_map=edge_color_map, edge_index_map=edge_index_map
+        num_nodes=num_nodes,
+        edge_color_map=edge_color_map,
+        edge_index_map=edge_index_map,
     )
