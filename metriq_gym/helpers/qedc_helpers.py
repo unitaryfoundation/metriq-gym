@@ -97,13 +97,11 @@ def analyze_results(
         A wrapper class to enable support with QED-C's method to analyze results.
         """
 
-        def __init__(self, qc: QuantumCircuit, counts: dict[str, int]):
-            self.qc = qc
+        def __init__(self, counts: dict[str, int]):
             self.counts = counts
 
-        def get_counts(self, qc):
-            if qc == self.qc:
-                return self.counts
+        def get_counts(self, _):
+            return self.counts
 
     # Import the correct module
     benchmark_name = str(params["benchmark_name"])
@@ -119,20 +117,18 @@ def analyze_results(
     for curr_idx, (num_qubits, s_str) in enumerate(job_data.circuit_identifiers):
         counts: dict[str, int] = counts_list[curr_idx]
 
-        qc = job_data.circuits[curr_idx]
-
-        result_object = CountsWrapper(qc, counts)
+        result_object = CountsWrapper(counts)
 
         if benchmark_name == QEDC_Benchmark_Names.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits) - 1, float(s_str), params["num_shots"]
+                None, result_object, int(num_qubits) - 1, float(s_str), params["num_shots"]
             )
 
         elif benchmark_name == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc,
+                None,
                 result_object,
                 int(num_qubits),
                 int(s_str),
@@ -143,7 +139,7 @@ def analyze_results(
         else:
             # Default call for Bernstein-Vazirani and Hidden Shift.
             _, fidelity = benchmark.analyze_and_print_result(
-                qc, result_object, int(num_qubits), int(s_str), params["num_shots"]
+                None, result_object, int(num_qubits), int(s_str), params["num_shots"]
             )
 
         metrics.store_metric(num_qubits, s_str, "fidelity", fidelity)

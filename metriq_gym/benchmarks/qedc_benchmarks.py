@@ -15,8 +15,6 @@ from metriq_gym.helpers.task_helpers import flatten_counts
 
 from metriq_gym.helpers.qedc_helpers import QEDC_Metrics, analyze_results, get_circuits_and_metrics
 
-from qiskit import QuantumCircuit
-
 
 @dataclass
 class QEDCData(BenchmarkData):
@@ -25,13 +23,11 @@ class QEDCData(BenchmarkData):
 
     Metadata:
         circuit_metrics: stores QED-C circuit creation metrics data.
-        circuits: the list of quantum circuits ran, it's needed to poll the results with QED-C.
         circuit_identifiers: the unique identifiers for circuits (num qubits, secret str),
                              used to preserve order when polling.
     """
 
     circuit_metrics: QEDC_Metrics
-    circuits: list[QuantumCircuit]
     circuit_identifiers: list[tuple[str, str]]
 
 
@@ -60,7 +56,6 @@ class QEDCBenchmarks(Benchmark):
         return QEDCData.from_quantum_job(
             quantum_job=device.run(circuits, shots=num_shots),
             circuit_metrics=circuit_metrics,
-            circuits=circuits,
             circuit_identifiers=circuit_identifiers,
         )
 
