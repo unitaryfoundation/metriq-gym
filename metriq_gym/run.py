@@ -1,6 +1,7 @@
 import argparse
 from dataclasses import asdict
 from datetime import datetime
+import os
 import sys
 import logging
 import uuid
@@ -17,7 +18,11 @@ from qbraid.runtime import (
     load_provider,
 )
 
-from metriq_gym.benchmarks import BENCHMARK_DATA_CLASSES, BENCHMARK_HANDLERS
+from metriq_gym.benchmarks import (
+    BENCHMARK_DATA_CLASSES,
+    BENCHMARK_HANDLERS,
+    get_available_benchmarks,
+)
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
 from metriq_gym.cli import parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError
@@ -69,30 +74,82 @@ def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
 
 
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
+    """Dispatch multiple benchmark configurations to a quantum device.
+
+    Enables comprehensive device characterization by running the same benchmark
+    type with different parameters or multiple benchmark types in sequence.
+
+    Args:
+        args: CLI arguments with benchmark configs, provider, and device
+        job_manager: Tracks dispatched jobs for later polling
+
+    Note: Continues processing remaining configs if individual configs fail.
+    """
     print("Starting job dispatch...")
+
     try:
         device = setup_device(args.provider, args.device)
     except QBraidSetupError:
         return
 
-    params = load_and_validate(args.input_file)
-    print(f"Dispatching {params.benchmark_name} benchmark job on {args.device} device...")
+    results = []
+    successful_jobs = []
 
-    job_type = JobType(params.benchmark_name)
-    handler: Benchmark = setup_benchmark(args, params, job_type)
-    job_data: BenchmarkData = handler.dispatch_handler(device)
-    job_id = job_manager.add_job(
-        MetriqGymJob(
-            id=str(uuid.uuid4()),
-            job_type=job_type,
-            params=params.model_dump(),
-            data=asdict(job_data),
-            provider_name=args.provider,
-            device_name=args.device,
-            dispatch_time=datetime.now(),
-        )
+    for config_file in args.benchmark_configs:
+        try:
+            if not os.path.exists(config_file):
+                results.append(f"✗ {config_file}: Configuration file not found")
+                continue
+
+            params = load_and_validate(config_file)
+
+            # Validate that the benchmark exists
+            available_benchmarks = get_available_benchmarks()
+            if params.benchmark_name not in available_benchmarks:
+                results.append(
+                    f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
+                )
+                continue
+
+            job_type = JobType(params.benchmark_name)
+
+            print(
+                f"Dispatching {params.benchmark_name} benchmark from {config_file} on {args.device}..."
+            )
+
+            handler: Benchmark = setup_benchmark(args, params, job_type)
+            job_data: BenchmarkData = handler.dispatch_handler(device)
+
+            job_id = job_manager.add_job(
+                MetriqGymJob(
+                    id=str(uuid.uuid4()),
+                    job_type=job_type,
+                    params=params.model_dump(exclude_none=True),
+                    data=asdict(job_data),
+                    provider_name=args.provider,
+                    device_name=args.device,
+                    dispatch_time=datetime.now(),
+                )
+            )
+
+            results.append(
+                f"✓ {params.benchmark_name} ({config_file}) dispatched with ID: {job_id}"
+            )
+            successful_jobs.append(job_id)
+
+        except Exception as e:
+            error_details = f"{type(e).__name__}: {str(e)}"
+            results.append(f"✗ {config_file} failed: {error_details}")
+
+    print("\nSummary:")
+    for result in results:
+        print(f"  {result}")
+
+    print(
+        f"\nSuccessfully dispatched {len(successful_jobs)}/{len(args.benchmark_configs)} benchmarks."
     )
-    print(f"Job dispatched with ID: {job_id}")
+    if successful_jobs:
+        print("Use 'mgym poll' to check job status.")
 
 
 def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -104,7 +161,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
     quantum_jobs = [
-        load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data))
+        (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
         for job_id in job_data.provider_job_ids
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
@@ -131,6 +188,20 @@ def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(metriq_job)
 
 
+def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
+    metriq_job = prompt_for_job(args, job_manager)
+    if metriq_job:
+        try:
+            job_manager.delete_job(metriq_job.id)
+            print(f"Job {metriq_job.id} deleted successfully.")
+        except ValueError:
+            print(f"Error: Job {metriq_job.id} could not be deleted. It may not exist.")
+        except Exception as e:
+            print(f"An unexpected error occurred while deleting the job: {e}")
+    else:
+        print("No job selected for deletion.")
+
+
 def main() -> int:
     """Main entry point for the CLI."""
     load_dotenv()
@@ -143,6 +214,8 @@ def main() -> int:
         view_job(args, job_manager)
     elif args.action == "poll":
         poll_job(args, job_manager)
+    elif args.action == "delete":
+        delete_job(args, job_manager)
     else:
         logging.error("Invalid action specified. Run with --help for usage information.")
         return 1

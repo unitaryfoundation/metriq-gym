@@ -53,7 +53,7 @@ jobs:
       run: |
         git submodule update --init --recursive
 
-    - name: Install dependencies
+    - name: Install project *dependencies only*
       run: |
         poetry install --no-root
 
@@ -68,6 +68,11 @@ jobs:
         poetry run stubgen --no-analysis
         poetry run mypy
 
-    - name: Run tests with pytest
+    - name: Install project and CLI command
+      run: |
+        poetry install
+
+    - name: Run tests
       run: |
         poetry run pytest
+
