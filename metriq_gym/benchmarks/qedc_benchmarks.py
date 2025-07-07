@@ -21,7 +21,7 @@ from types import ModuleType
 from enum import StrEnum
 
 
-class QEDC_Benchmark_Names(StrEnum):
+class QEDC_Benchmark_Name(StrEnum):
     """Store names of all supported QED-C benchmarks."""
 
     BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
@@ -30,11 +30,11 @@ class QEDC_Benchmark_Names(StrEnum):
     QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
 
 
-QEDC_BENCHMARK_IMPORTS: dict[QEDC_Benchmark_Names, str] = {
-    QEDC_Benchmark_Names.BERNSTEIN_VAZIRANI: "qedc.bernstein_vazirani.bv_benchmark",
-    QEDC_Benchmark_Names.PHASE_ESTIMATION: "qedc.phase_estimation.pe_benchmark",
-    QEDC_Benchmark_Names.HIDDEN_SHIFT: "qedc.hidden_shift.hs_benchmark",
-    QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM: "qedc.quantum_fourier_transform.qft_benchmark",
+QEDC_BENCHMARK_IMPORTS: dict[QEDC_Benchmark_Name, str] = {
+    QEDC_Benchmark_Name.BERNSTEIN_VAZIRANI: "qedc.bernstein_vazirani.bv_benchmark",
+    QEDC_Benchmark_Name.PHASE_ESTIMATION: "qedc.phase_estimation.pe_benchmark",
+    QEDC_Benchmark_Name.HIDDEN_SHIFT: "qedc.hidden_shift.hs_benchmark",
+    QEDC_Benchmark_Name.QUANTUM_FOURIER_TRANSFORM: "qedc.quantum_fourier_transform.qft_benchmark",
 }
 
 """
@@ -107,10 +107,10 @@ def import_benchmark_module(benchmark_name: str) -> ModuleType:
         benchmark_name: the name of the benchmark being ran.
     """
 
-    benchmark_enum: QEDC_Benchmark_Names
+    benchmark_enum: QEDC_Benchmark_Name
 
     try:
-        benchmark_enum = QEDC_Benchmark_Names(benchmark_name)
+        benchmark_enum = QEDC_Benchmark_Name(benchmark_name)
 
     except ValueError:
         raise ValueError(f"Invalid QED-C benchmark name: '{benchmark_name}'")
@@ -163,13 +163,13 @@ def analyze_results(
 
         result_object = CountsWrapper(counts)
 
-        if QEDC_Benchmark_Names(benchmark_name) == QEDC_Benchmark_Names.PHASE_ESTIMATION:
+        if QEDC_Benchmark_Name(benchmark_name) == QEDC_Benchmark_Name.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
                 None, result_object, int(num_qubits) - 1, float(circuit_id), params["num_shots"]
             )
 
-        elif QEDC_Benchmark_Names(benchmark_name) == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
+        elif QEDC_Benchmark_Name(benchmark_name) == QEDC_Benchmark_Name.QUANTUM_FOURIER_TRANSFORM:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
                 None,
