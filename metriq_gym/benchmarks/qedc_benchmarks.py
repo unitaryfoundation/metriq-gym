@@ -210,6 +210,7 @@ def get_circuits_and_metrics(
     # Call the QED-C submodule to get the circuits and creation information.
     circuits, circuit_metrics = benchmark.run(
         **params,
+        api="qiskit",
         get_circuits=True,
     )
 
