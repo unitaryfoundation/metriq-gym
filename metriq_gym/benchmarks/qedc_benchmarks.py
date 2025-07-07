@@ -104,7 +104,15 @@ def import_benchmark_module(benchmark_name: str) -> ModuleType:
         benchmark_name: the name of the benchmark being ran.
     """
 
-    module_name = QEDC_BENCHMARK_IMPORTS[QEDC_Benchmark_Names(benchmark_name)]
+    benchmark_enum: QEDC_Benchmark_Names
+
+    try:
+        benchmark_enum = QEDC_Benchmark_Names(benchmark_name)
+
+    except ValueError:
+        raise ValueError(f"Invalid QED-C benchmark name: '{benchmark_name}'")
+
+    module_name = QEDC_BENCHMARK_IMPORTS[benchmark_enum]
 
     return import_module(module_name)
 
