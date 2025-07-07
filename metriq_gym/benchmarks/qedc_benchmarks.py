@@ -42,9 +42,12 @@ Type: QEDC_Metrics
 Description: 
     The structure for all returned QED-C circuit metrics. 
     The first key represents the number of qubits for the group of circuits.
-    The second key represents the unique identifier (secret str) for a circuit. 
+    The second key represents the unique identifier for a circuit in the group. 
+        - This may be a secret string for Bernstein-Vazirani, theta value for Phase-Estimation, 
+          and so on. Benchmark specific documentation can be found in QED-C's 
+          QC-App-Oriented-Benchmarks repository.
     The third key represents the metric being stored.
-Example:
+Example for Bernstein-Vazirani:
 {
 '3':    {
         '1': {'create_time': 0.16371703147888184,
@@ -77,7 +80,7 @@ class QEDCData(BenchmarkData):
 
     Metadata:
         circuit_metrics: stores QED-C circuit creation metrics data.
-        circuit_identifiers: the unique identifiers for circuits (num qubits, secret str),
+        circuit_identifiers: the unique identifiers for circuits (num qubits, circuit id),
                              used to preserve order when polling.
     """
 
@@ -121,7 +124,7 @@ def analyze_results(
     params: dict[str, float | str], job_data: QEDCData, counts_list: list[MeasCount]
 ) -> QEDC_Metrics:
     """
-    Iterates over each circuit group and secret str to process results.
+    Iterates over each circuit group and circuit id to process results.
     Uses QED-C submodule to obtain calculations.
 
     Args:
@@ -155,7 +158,7 @@ def analyze_results(
     metrics.circuit_metrics = job_data.circuit_metrics
 
     # Iterate and get the metrics for each circuit in the list.
-    for curr_idx, (num_qubits, s_str) in enumerate(job_data.circuit_identifiers):
+    for curr_idx, (num_qubits, circuit_id) in enumerate(job_data.circuit_identifiers):
         counts: dict[str, int] = counts_list[curr_idx]
 
         result_object = CountsWrapper(counts)
@@ -163,7 +166,7 @@ def analyze_results(
         if QEDC_Benchmark_Names(benchmark_name) == QEDC_Benchmark_Names.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                None, result_object, int(num_qubits) - 1, float(s_str), params["num_shots"]
+                None, result_object, int(num_qubits) - 1, float(circuit_id), params["num_shots"]
             )
 
         elif QEDC_Benchmark_Names(benchmark_name) == QEDC_Benchmark_Names.QUANTUM_FOURIER_TRANSFORM:
@@ -172,7 +175,7 @@ def analyze_results(
                 None,
                 result_object,
                 int(num_qubits),
-                int(s_str),
+                int(circuit_id),
                 params["num_shots"],
                 params["method"],
             )
@@ -180,10 +183,10 @@ def analyze_results(
         else:
             # Default call for Bernstein-Vazirani and Hidden Shift.
             _, fidelity = benchmark.analyze_and_print_result(
-                None, result_object, int(num_qubits), int(s_str), params["num_shots"]
+                None, result_object, int(num_qubits), int(circuit_id), params["num_shots"]
             )
 
-        metrics.store_metric(num_qubits, s_str, "fidelity", fidelity)
+        metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
 
     return metrics.circuit_metrics
 
@@ -201,7 +204,7 @@ def get_circuits_and_metrics(
     Returns:
         circuits: the list of quantum circuits for the benchmark.
         circuit_metrics: the circuit metrics at the time of circuit creation.
-        circuit_identifiers: the unique identifiers for each circuit (num qubits, secret str).
+        circuit_identifiers: the unique identifiers for each circuit (num qubits, circuit id).
     """
 
     # Import the correct module
@@ -221,9 +224,9 @@ def get_circuits_and_metrics(
     circuit_identifiers = []
     flat_circuits = []
     for num_qubits in circuit_metrics.keys():
-        for s_str in circuit_metrics[num_qubits].keys():
-            circuit_identifiers.append((num_qubits, s_str))
-            flat_circuits.append(circuits[num_qubits][s_str])
+        for circuit_id in circuit_metrics[num_qubits].keys():
+            circuit_identifiers.append((num_qubits, circuit_id))
+            flat_circuits.append(circuits[num_qubits][circuit_id])
 
     return flat_circuits, circuit_metrics, circuit_identifiers
 
