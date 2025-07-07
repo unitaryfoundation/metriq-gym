@@ -181,6 +181,7 @@ def analyze_results(
 
 
 def get_circuits_and_metrics(
+    benchmark_name: str,
     params: dict[str, float | str],
 ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
     """
@@ -196,10 +197,7 @@ def get_circuits_and_metrics(
     """
 
     # Import the correct module
-    benchmark = import_benchmark_module(str(params["benchmark_name"]))
-
-    # Remove benchmark_name so it can be passed into the run call
-    params.pop("benchmark_name", None)
+    benchmark = import_benchmark_module(benchmark_name)
 
     # Call the QED-C submodule to get the circuits and creation information.
     circuits, circuit_metrics = benchmark.run(
@@ -227,9 +225,11 @@ class QEDCBenchmark(Benchmark):
     def dispatch_handler(self, device: QuantumDevice) -> QEDCData:
         # For more information on the parameters, view the schema for this benchmark.
         num_shots = self.params.num_shots
+        benchmark_name = self.params.benchmark_name
 
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
-            params=self.params.model_dump(),
+            benchmark_name=benchmark_name,
+            params=self.params.model_dump(exclude={"benchmark_name"}),
         )
 
         return QEDCData.from_quantum_job(
