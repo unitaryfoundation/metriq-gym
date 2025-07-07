@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class QEDC_Benchmark_Names(StrEnum):
-    """Store names of all supported QEDC Benchmarks"""
+    """Store names of all supported QED-C benchmarks."""
 
     BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
     PHASE_ESTIMATION = "Phase Estimation"
@@ -29,7 +29,7 @@ QEDC_BENCHMARK_IMPORTS: dict[QEDC_Benchmark_Names, str] = {
 """
 Type: QEDC_Metrics
 Description: 
-    The structure for all returned QEDC circuit metrics. 
+    The structure for all returned QED-C circuit metrics. 
     The first key represents the number of qubits for the group of circuits.
     The second key represents the unique identifier (secret str) for a circuit. 
     The third key represents the metric being stored.
@@ -61,14 +61,10 @@ QEDC_Metrics = dict[str, dict[str, dict[str, float]]]
 
 def import_benchmark_module(benchmark_name: str) -> types.ModuleType:
     """
-    Import the correct module
+    Import the correct module.
 
     Args:
         benchmark_name: the name of the benchmark being ran.
-
-    Returns:
-        benchmark: the module imported for the benchmark.
-
     """
 
     module_name = QEDC_BENCHMARK_IMPORTS[QEDC_Benchmark_Names(benchmark_name)]
@@ -80,7 +76,7 @@ def analyze_results(
     params: dict[str, float | str], job_data: "QEDCData", counts_list: list[MeasCount]
 ) -> QEDC_Metrics:
     """
-    Iterates over each circuit group and secret int to process results.
+    Iterates over each circuit group and secret str to process results.
     Uses QED-C submodule to obtain calculations.
 
     Args:

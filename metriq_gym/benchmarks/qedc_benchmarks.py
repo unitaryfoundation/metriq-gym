@@ -42,7 +42,7 @@ class QEDCResult(BenchmarkResult):
     circuit_metrics: QEDC_Metrics
 
 
-class QEDCBenchmarks(Benchmark):
+class QEDCBenchmark(Benchmark):
     """Benchmark class for QED-C experiments."""
 
     def dispatch_handler(self, device: QuantumDevice) -> QEDCData:

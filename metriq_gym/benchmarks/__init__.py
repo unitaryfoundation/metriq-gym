@@ -7,7 +7,7 @@ from metriq_gym.benchmarks.quantum_volume import QuantumVolume, QuantumVolumeDat
 from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
 from metriq_gym.benchmarks.mirror_circuits import MirrorCircuits, MirrorCircuitsData
 from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData
-from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmarks, QEDCData
+from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData
 
 
 class JobType(StrEnum):
@@ -30,10 +30,10 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.QUANTUM_VOLUME: QuantumVolume,
     JobType.MIRROR_CIRCUITS: MirrorCircuits,
     JobType.WORMHOLE: Wormhole,
-    JobType.BERNSTEIN_VAZIRANI: QEDCBenchmarks,
-    JobType.PHASE_ESTIMATION: QEDCBenchmarks,
-    JobType.HIDDEN_SHIFT: QEDCBenchmarks,
-    JobType.QUANTUM_FOURIER_TRANSFORM: QEDCBenchmarks,
+    JobType.BERNSTEIN_VAZIRANI: QEDCBenchmark,
+    JobType.PHASE_ESTIMATION: QEDCBenchmark,
+    JobType.HIDDEN_SHIFT: QEDCBenchmark,
+    JobType.QUANTUM_FOURIER_TRANSFORM: QEDCBenchmark,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
