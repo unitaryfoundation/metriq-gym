@@ -50,6 +50,7 @@
       "description": "Which QED-C method to run the benchmark with.",
       "default": 1,
       "minimum": 1,
+      "maximum": 2,
       "examples": [2]
     }
   },

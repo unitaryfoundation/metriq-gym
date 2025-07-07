@@ -44,13 +44,6 @@
       "default": 3,
       "minimum": 1,
       "examples": [9]
-    },
-    "method": {
-      "type": "integer",
-      "description": "Which QED-C method to run the benchmark with.",
-      "default": 1,
-      "minimum": 1,
-      "examples": [2]
     }
   },
   "required": ["benchmark_name"]
