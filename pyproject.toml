@@ -20,7 +20,7 @@ mgym = "metriq_gym.run:main"
 packages = [
     { include = "metriq_gym", from = "." },
     { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" },
-    { include = "qedc", from = "submodules/QC-App-Oriented-Benchmarks" }
+    { include = "*", from = "submodules/QC-App-Oriented-Benchmarks" }
 ]
 include = [
     { path = "LICENSE", format = ["sdist", "wheel"] },

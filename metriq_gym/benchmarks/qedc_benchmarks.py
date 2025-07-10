@@ -14,7 +14,7 @@ from qbraid.runtime.result_data import MeasCount
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 
-from qedc._common import metrics
+from _common import metrics
 from importlib import import_module
 from qiskit import QuantumCircuit
 from types import ModuleType
@@ -31,10 +31,10 @@ class QEDC_Benchmark_Name(StrEnum):
 
 
 QEDC_BENCHMARK_IMPORTS: dict[QEDC_Benchmark_Name, str] = {
-    QEDC_Benchmark_Name.BERNSTEIN_VAZIRANI: "qedc.bernstein_vazirani.bv_benchmark",
-    QEDC_Benchmark_Name.PHASE_ESTIMATION: "qedc.phase_estimation.pe_benchmark",
-    QEDC_Benchmark_Name.HIDDEN_SHIFT: "qedc.hidden_shift.hs_benchmark",
-    QEDC_Benchmark_Name.QUANTUM_FOURIER_TRANSFORM: "qedc.quantum_fourier_transform.qft_benchmark",
+    QEDC_Benchmark_Name.BERNSTEIN_VAZIRANI: "bernstein_vazirani.bv_benchmark",
+    QEDC_Benchmark_Name.PHASE_ESTIMATION: "phase_estimation.pe_benchmark",
+    QEDC_Benchmark_Name.HIDDEN_SHIFT: "hidden_shift.hs_benchmark",
+    QEDC_Benchmark_Name.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.qft_benchmark",
 }
 
 """
@@ -150,9 +150,6 @@ def analyze_results(
     # Import the correct module
     benchmark_name = str(params["benchmark_name"])
     benchmark = import_benchmark_module(benchmark_name)
-
-    # Initialize metrics module using qiskit in QED-C submodule.
-    benchmark.qedc_benchmarks_init(api="qiskit")
 
     # Restore circuit metrics dictionary from the dispatch data
     metrics.circuit_metrics = job_data.circuit_metrics
