@@ -44,7 +44,28 @@
       "default": 3,
       "minimum": 1,
       "examples": [9]
+    },
+    "method": {
+      "type": "integer",
+      "description": "Which QED-C method to run the benchmark with.",
+      "default": 1,
+      "const": 1
+    },
+    "input_value": {
+      "type": "integer",
+      "description": "Specifies the secret int for the benchmark; note that max_circuits must be 1 if this is used.",
+      "examples": [1]
     }
   },
-  "required": ["benchmark_name"]
+  "required": ["benchmark_name"],
+  "if": {
+    "required": ["input_value"]
+  },
+  "then": {
+    "properties": {
+      "max_circuits": {
+        "const": 1
+      }
+    }
+  }
 }
