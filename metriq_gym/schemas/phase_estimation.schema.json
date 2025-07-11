@@ -44,7 +44,35 @@
       "default": 3,
       "minimum": 1,
       "examples": [9]
+    },
+    "method": {
+      "type": "integer",
+      "description": "Which QED-C method to run the benchmark with.",
+      "default": 1,
+      "const": 1
+    },
+    "init_phase": {
+      "type": "number",
+      "description": "Specifies the theta for the benchmark; note that max_circuits must be 1 if this is used.",
+      "examples": [0.125]
+    },
+    "use_midcircuit_measurement": {
+      "type": "boolean",
+      "description": "Creates circuits with mid-circuit measurements.",
+      "default": false,
+      "examples": [true]
+
     }
   },
-  "required": ["benchmark_name"]
+  "required": ["benchmark_name"],
+  "if": {
+    "required": ["init_phase"]
+  },
+  "then": {
+    "properties": {
+      "max_circuits": {
+        "const": 1
+      }
+    }
+  }
 }
