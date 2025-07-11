@@ -14,7 +14,7 @@ authors:
     region: California
     country: US
     website: 'https://unitary.foundation/'
-repository-code: 'https://github.com/unitaryfund/metriq-gym'
+repository-code: 'https://github.com/unitaryfoundation/metriq-gym'
 abstract: >-
   metriq-gym is a Python framework for implementing and
   running standard quantum benchmarks on different quantum
