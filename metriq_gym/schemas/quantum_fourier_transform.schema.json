@@ -52,7 +52,29 @@
       "minimum": 1,
       "maximum": 2,
       "examples": [2]
+    },
+    "input_value": {
+      "type": "integer",
+      "description": "Specifies the secret int for the benchmark; note that max_circuits must be 1 if this is used.",
+      "examples": [1]
+    },
+    "use_midcircuit_measurement": {
+      "type": "boolean",
+      "description": "Creates circuits with mid-circuit measurements.",
+      "default": false,
+      "examples": [true]
+
     }
   },
-  "required": ["benchmark_name"]
+  "required": ["benchmark_name"],
+  "if": {
+    "required": ["input_value"]
+  },
+  "then": {
+    "properties": {
+      "max_circuits": {
+        "const": 1
+      }
+    }
+  }
 }
