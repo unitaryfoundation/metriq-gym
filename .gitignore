@@ -45,3 +45,4 @@ docs/_build/
 .mypy_cache/
 /python=3.12
 .github/workflows/dependabot-automerge.yml
+poetry.lock

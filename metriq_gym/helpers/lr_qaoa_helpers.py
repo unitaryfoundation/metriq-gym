@@ -101,78 +101,17 @@ def random_samples(num_samples: int, n_qubits: int) -> dict:
     return random_samples
 
 
-def PTC_pairs(nq: int) -> list:
-    """Generate pairs of qubits for a 2-qubit gate in a PTC (Parity twine chain) configuration.
-       PTC is the best strategy to create a fully connected graph from a 1D chain of qubits;
-       it comes from https://arxiv.org/abs/2408.10907 and https://arxiv.org/abs/2501.14020
-        and an implementation for QAOA from https://arxiv.org/abs/2505.17944
+def SWAP_pairs(nq: int) -> list:
+    """Generate pairs of qubits for a 2-qubit gate in a SWAP configuration.
+       SWAP gates between neighboring pairs in a brickwork pattern.
     Args:
         nq: Number of qubits in the circuit.
     Returns:
         A list of lists, where each inner list contains tuples representing pairs of qubits."""
-
-    list_2q: list[list[tuple]] = [nq * [(0,)]]
-    list_2q[0][0] = (0,)
-    for j in range(1, nq):
-        if len(list_2q[0][j - 1]) == 1:
-            if j % 2:
-                list_2q[0][j] = (j,)
-            else:
-                list_2q[0][j] = (list_2q[0][j - 1][0], nq - 1)
-        else:
-            list_2q[0][j] = (list_2q[0][j - 1][0] + j % 2, list_2q[0][j - 1][1] - 1 + j % 2)
-
+    qubit_order = list(range(nq))
+    list_2q = [[(qubit_order[ii], qubit_order[ii + 1]) for ii in range(0, nq - 1, 2)]]
     for i in range(1, nq):
-        array_i = list_2q[i - 1].copy()
-        if i % 2 == 1:
-            lista = list(list_2q[i - 1][0]) + list(list_2q[i - 1][1])
-            unique_list = tuple(sorted([item for item in lista if lista.count(item) == 1]))
-            array_i[0] = unique_list
-        for j in range(i % 2, nq - 2, 2):
-            lista = (
-                list(list_2q[i - 1][j]) + list(list_2q[i - 1][j + 1]) + list(list_2q[i - 1][j + 2])
-            )
-            unique_list = tuple(sorted([item for item in lista if lista.count(item) == 1]))
-            array_i[j + 1] = unique_list
-        if nq % 2 == i % 2:
-            lista = list(list_2q[i - 1][nq - 1]) + list(list_2q[i - 1][nq - 2])
-            unique_list = tuple(sorted([item for item in lista if lista.count(item) == 1]))
-            array_i[nq - 1] = unique_list
-        list_2q.append(array_i)
+        for j in range(i % 2, nq - 1, 2):
+            qubit_order[j], qubit_order[j + 1] = qubit_order[j + 1], qubit_order[j]
+        list_2q.append([(qubit_order[ii], qubit_order[ii + 1]) for ii in range(i % 2, nq - 1, 2)])
     return list_2q
-
-
-def PTC_decoder(sample: str, p_layer: int, list_parity: list) -> str:
-    """Decodes a sample based on the parity list and the number of layers (p).
-
-    Parameters:
-        sample (str): A binary string representing the sample.
-        p_layer (int): The number of layers in the QAOA circuit.
-        list_parity (list): A list of lists where each sublist contains indices of qubits
-                           that share the same parity in the sample.
-    Returns:
-        str: A binary string representing the decoded sample.
-    """
-
-    depth = len(list_parity)
-    spin = {1: "0", -1: "1"}
-    sz = [(1 if i == "0" else -1) for i in sample]
-    nq = len(sample)
-    x = nq * [0]
-    if p_layer % 2 == 0:
-        list_parity = list_parity[0]
-        list_q = list(range(nq))
-    else:
-        list_parity = list_parity[-1]
-        list_q = list(reversed(range(depth))) + list(range(depth, nq))
-    for i in list_q:
-        if len(list_parity[i]) == 1:
-            x[list_parity[i][0]] = sz[i]
-        else:
-            if x[list_parity[i][0]] != 0:
-                x[list_parity[i][1]] = sz[i] / x[list_parity[i][0]]
-            elif x[list_parity[i][1]] != 0:
-                x[list_parity[i][0]] = sz[i] / x[list_parity[i][1]]
-            else:
-                print(list_parity[i])
-    return "".join(spin[xi] for xi in x)
