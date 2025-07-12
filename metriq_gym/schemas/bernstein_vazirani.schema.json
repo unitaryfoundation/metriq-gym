@@ -1,4 +1,5 @@
 {
+  "_comment": "TODO (424)",
   "$id": "metriq-gym/bernstein_vazirani.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",  
   "title": "Bernstein-Vazirani",
