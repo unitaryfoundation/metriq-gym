@@ -19,11 +19,13 @@ mgym = "metriq_gym.run:main"
 [tool.poetry]
 packages = [
     { include = "metriq_gym", from = "." },
-    { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" }
+    { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" },
+    { include = "*", from = "submodules/QC-App-Oriented-Benchmarks" }
 ]
 include = [
     { path = "LICENSE", format = ["sdist", "wheel"] },
-    { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] }
+    { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] },
+    { path = "submodules/QC-App-Oriented-Benchmarks/LICENSE", format = ["sdist", "wheel"] }
 ]
 
 [tool.poetry.dependencies]
