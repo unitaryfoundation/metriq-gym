@@ -162,8 +162,7 @@ def analyze_results(
 
         result_object = CountsWrapper(counts)
 
-        # These function calls will be modified to be more flexible from QED-C's end.
-        # Which will eliminate these if/else blocks.
+        # Issue (#731) in QC-App-Oriented-Benchmarks will clean this if/else block.
         if QEDC_Benchmark_Name(benchmark_name) == QEDC_Benchmark_Name.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
