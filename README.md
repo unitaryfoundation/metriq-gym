@@ -255,6 +255,8 @@ To pull the latest changes from the submodule's repository:
 ```sh
 cd submodules/qiskit-device-benchmarking
 git pull origin main
+cd submodules/QC-App-Oriented-Benchmarks
+git pull origin master
 ```
 
 Then, commit the updated submodule reference in your main repository.
