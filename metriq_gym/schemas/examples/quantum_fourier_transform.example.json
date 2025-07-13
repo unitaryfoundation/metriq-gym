@@ -1,0 +1,10 @@
+{
+    "benchmark_name": "Quantum Fourier Transform",
+    "num_shots": 1000,
+    "min_qubits": 2,
+    "max_qubits": 6,
+    "skip_qubits": 1,
+    "max_circuits": 3,
+    "method": 1,
+    "use_midcircuit_measurement": false
+}

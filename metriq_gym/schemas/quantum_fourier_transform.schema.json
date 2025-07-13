@@ -1,0 +1,81 @@
+{
+  "_comment": "TODO (424)",
+  "$id": "metriq-gym/quantum_fourier_transform.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "title": "Quantum Fourier Transform",
+  "description": "Quantum Fourier Transform benchmark schema definition, describing parameters for the benchmark.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Quantum Fourier Transform",
+      "description": "Name of the benchmark. Must be 'Quantum Fourier Transform' for this schema."
+    },
+    "num_shots": {
+      "type": "integer",
+      "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [5000]
+    },
+    "min_qubits": {
+      "type": "integer",
+      "description": "Minimum number of qubits to start generating circuits for the benchmark.",
+      "default": 2,
+      "minimum": 2,
+      "examples": [4]
+    },
+    "max_qubits": {
+      "type": "integer",
+      "description": "Maximum number of qubits to stop generating circuits for the benchmark.",
+      "default": 6,
+      "minimum": 2,
+      "examples": [7]
+    },
+    "skip_qubits": {
+      "type": "integer",
+      "description": "The step size for generating circuits from the min to max qubit sizes. ",
+      "default": 1,
+      "minimum": 1,
+      "examples": [2]
+    },
+    "max_circuits": {
+      "type": "integer",
+      "description": "Maximum number of circuits generated for each qubit size in the benchmark.",
+      "default": 3,
+      "minimum": 1,
+      "examples": [9]
+    },
+    "method": {
+      "type": "integer",
+      "description": "Which QED-C method to run the benchmark with.",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 2,
+      "examples": [2]
+    },
+    "input_value": {
+      "type": "integer",
+      "description": "Specifies the secret int for the benchmark; note that max_circuits must be 1 if this is used.",
+      "examples": [1]
+    },
+    "use_midcircuit_measurement": {
+      "type": "boolean",
+      "description": "Creates circuits with mid-circuit measurements.",
+      "default": false,
+      "examples": [true]
+
+    }
+  },
+  "required": ["benchmark_name"],
+  "if": {
+    "required": ["input_value"]
+  },
+  "then": {
+    "properties": {
+      "max_circuits": {
+        "const": 1
+      }
+    }
+  }
+}
