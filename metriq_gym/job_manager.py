@@ -7,7 +7,7 @@ import logging
 from typing import Any
 
 from tabulate import tabulate
-from metriq_gym.benchmarks import JobType
+from metriq_gym.config import JobType
 from metriq_gym.config import JOB_STORAGE_FILE
 
 
