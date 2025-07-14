@@ -20,6 +20,7 @@ from metriq_gym.helpers.task_helpers import flatten_counts
 
 from ._common import metrics
 
+
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
     JobType.BERNSTEIN_VAZIRANI: ".bernstein_vazirani.bv_benchmark",
     JobType.PHASE_ESTIMATION: ".phase_estimation.pe_benchmark",
