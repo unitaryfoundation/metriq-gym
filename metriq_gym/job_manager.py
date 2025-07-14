@@ -7,8 +7,8 @@ import logging
 from typing import Any
 
 from tabulate import tabulate
-from metriq_gym.config import JobType
-from metriq_gym.config import JOB_STORAGE_FILE
+from metriq_gym.constants import JobType
+from metriq_gym.constants import JOB_STORAGE_FILE
 
 
 logger = logging.getLogger(__name__)

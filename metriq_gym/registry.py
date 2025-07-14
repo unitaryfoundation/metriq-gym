@@ -1,4 +1,4 @@
-from enum import StrEnum
+from .constants import JobType
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
 from metriq_gym.benchmarks.qml_kernel import QMLKernel, QMLKernelData
@@ -8,23 +8,6 @@ from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
 from metriq_gym.benchmarks.mirror_circuits import MirrorCircuits, MirrorCircuitsData
 from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData
 from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData
-
-
-JOB_STORAGE_FILE = ".metriq_gym_jobs.jsonl"
-
-
-class JobType(StrEnum):
-    BSEQ = "BSEQ"
-    CLOPS = "CLOPS"
-    QML_KERNEL = "QML Kernel"
-    QUANTUM_VOLUME = "Quantum Volume"
-    MIRROR_CIRCUITS = "Mirror Circuits"
-    WORMHOLE = "Wormhole"
-    BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
-    PHASE_ESTIMATION = "Phase Estimation"
-    HIDDEN_SHIFT = "Hidden Shift"
-    QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
-
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,
