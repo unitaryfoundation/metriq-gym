@@ -18,7 +18,7 @@ from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkR
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
 
-from ._common import metrics
+from _common import metrics
 
 
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
