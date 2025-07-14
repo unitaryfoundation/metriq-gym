@@ -38,7 +38,7 @@ class LocalProvider(QuantumProvider):
                 basis_gates=basis_gates,
             )
 
-            return LocalAerDevice(provider=self, backend=noisy_simulator)
+            return LocalAerDevice(provider=self, backend=noisy_simulator, device_id="aer_simulator_noisy")
 
         else:
             raise ValueError(f"Unknown device identifier: {device_id}")
