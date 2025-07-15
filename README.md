@@ -249,16 +249,6 @@ The system will process each configuration file as a separate job, giving you fu
 
 First, follow the [Developer Setup](#developer-setup) instructions above.
 
-### Updating the submodule
-To pull the latest changes from the submodule's repository:
-
-```sh
-cd submodules/qiskit-device-benchmarking
-git pull origin main
-```
-
-Then, commit the updated submodule reference in your main repository.
-
 ### Style guide
 We don't have a style guide per se, but we recommend that both linter and formatter 
 are run before each commit. In order to guarantee that, please install the pre-commit hook with
