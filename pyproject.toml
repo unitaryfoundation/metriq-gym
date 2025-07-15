@@ -78,10 +78,6 @@ testpaths = [
 markers = [
     "e2e: marks end-to-end test of the CLI workflow",
 ]
-pythonpath = [
-  ".",
-  "submodules/QC-App-Oriented-Benchmarks",
-]
 
 [build-system]
 requires = ["poetry-core"]

@@ -107,7 +107,7 @@ def import_benchmark_module(benchmark_name: str) -> ModuleType:
 
     module_name = QEDC_BENCHMARK_IMPORTS[benchmark_enum]
 
-    return import_module(module_name, package="metriq_gym.benchmarks.external.QEDC")
+    return import_module(module_name)
 
 
 def analyze_results(
