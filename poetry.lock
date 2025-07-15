@@ -3619,21 +3619,21 @@ test = ["pytest", "pytest-asyncio", "pytest-cov"]
 
 [[package]]
 name = "qiskit"
-version = "2.1.0"
+version = "2.1.1"
 description = "An open-source SDK for working with quantum computers at the level of extended quantum circuits, operators, and primitives."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
-    {file = "qiskit-2.1.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:da31bc33685722389a30fa26a22c254411b511718c6b05a8033dde53f65f491f"},
-    {file = "qiskit-2.1.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:4ebfd5f3dd9ed0d0bb59c192412ee9c51ac639914b1c3c76cf3fb67fe848e4a8"},
-    {file = "qiskit-2.1.0-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:b75b39bcf73e4faf6233911331e1087218242abaf46f48b2c8870174fffaf5e1"},
-    {file = "qiskit-2.1.0-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:763ea321d168a2e03b9b5710d35a2e71d44bde72fd7bd980437a172b6834b110"},
-    {file = "qiskit-2.1.0-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:3ad89c7c1a15dd5df1ccf4c725d82b2faeae364d58b73eee800b4cd73be9990b"},
-    {file = "qiskit-2.1.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3169a93a8edf0bb791315dcf0dc9d74519f49ec62bcb5d0ac4e5f63717e3982a"},
-    {file = "qiskit-2.1.0-cp39-abi3-win_amd64.whl", hash = "sha256:5755e482392d8c9f9491cde013ce54b2bf30b1c36cfa85c69051259650c7983d"},
-    {file = "qiskit-2.1.0.tar.gz", hash = "sha256:b25233d547779cbb4ee384548e0c5525599212140ceb371879b735b20df5fc9e"},
+    {file = "qiskit-2.1.1-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:00f8fe1980a80e8e79e01352f2502cd3ca4fe89d07872bc9a244ba9cba304a7d"},
+    {file = "qiskit-2.1.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:e00985d1b348bf8cc60b686a64a150af2043538e81a61b48400ff71064588fdd"},
+    {file = "qiskit-2.1.1-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:10f546148c86fd15cdbc68270e1d3937a021bd718779dff95f912c8b7cfad7bd"},
+    {file = "qiskit-2.1.1-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:d3765cef67ccc8b3d54b86ede2266c282039da045be1b10e64660a4bbf815680"},
+    {file = "qiskit-2.1.1-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:ca95a1ab710eb3e0fc65dd876734b5c6fc6df1bb78249f86913d77ed1984983f"},
+    {file = "qiskit-2.1.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8b41c66958c2e0550bc1047524cd754dce2277bea0a1db1085c052cc5bb07ec6"},
+    {file = "qiskit-2.1.1-cp39-abi3-win_amd64.whl", hash = "sha256:e7225798221ecf0c8a5cf2e96c37d6d9d00674a412e8c397542fe387909b80db"},
+    {file = "qiskit-2.1.1.tar.gz", hash = "sha256:148f62d314cd138a1f4da305c6293b19c73115323e77123b13a048cdcbc1fcdd"},
 ]
 
 [package.dependencies]
