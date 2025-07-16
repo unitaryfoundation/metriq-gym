@@ -179,7 +179,8 @@ def analyze_results(
     # Optionally plotting metrics
     metrics.aggregate_metrics()
     title = f"{benchmark_name} ({params.get('method', '1')})"
-    metrics.circuit_metrics["subtitle"] = title
+    backend_id = "<unknown>"
+    metrics.circuit_metrics["subtitle"] = f"device = {backend_id}"
     metrics.plot_metrics(f"Benchmark Results - {title}) - qBraid")
     metrics.circuit_metrics.pop("subtitle", None)
 
