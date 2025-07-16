@@ -180,7 +180,7 @@ def analyze_results(
     metrics.aggregate_metrics()
     title = f"{benchmark_name} ({params.get('method', '1')})"
     metrics.circuit_metrics["subtitle"] = title
-    metrics.plot_metrics(f"Benchmark Results - {title}) - Qiskit")
+    metrics.plot_metrics(f"Benchmark Results - {title}) - qBraid")
     metrics.circuit_metrics.pop("subtitle", None)
 
     return metrics.circuit_metrics
