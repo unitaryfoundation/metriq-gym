@@ -176,6 +176,13 @@ def analyze_results(
         # Store the fidelity.
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
 
+    # Optionally plotting metrics
+    metrics.aggregate_metrics()
+    title = f"{benchmark_name} ({params.get('method', '1')})"
+    metrics.circuit_metrics["subtitle"] = title
+    metrics.plot_metrics(f"Benchmark Results - {title}) - Qiskit")
+    metrics.circuit_metrics.pop("subtitle", None)
+
     return metrics.circuit_metrics
 
 
