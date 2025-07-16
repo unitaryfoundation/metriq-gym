@@ -19,6 +19,7 @@ from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
 
 from _common import metrics
+from _common.qiskit import execute as ex 
 
 
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
@@ -75,7 +76,7 @@ class QEDCData(BenchmarkData):
                              used to preserve order when polling.
     """
 
-    circuit_metrics: QEDC_Metrics
+    circuit_metrics: QEDC_Metrics | None
     circuit_identifiers: list[tuple[str, str]]
 
 
@@ -178,6 +179,7 @@ def analyze_results(
 
 def get_circuits_and_metrics(
     benchmark_name: str,
+    extra_metrics: bool, 
     params: dict[str, float | str],
 ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
     """
@@ -204,6 +206,10 @@ def get_circuits_and_metrics(
     # Remove the subtitle key to keep our desired format.
     circuit_metrics.pop("subtitle", None)
 
+    # Copy create time metric if storing additional metrics.
+    if extra_metrics:
+        metrics.circuit_metrics = circuit_metrics
+
     # Store the circuit identifiers and a flat list of circuits.
     circuit_identifiers = []
     flat_circuits = []
@@ -211,6 +217,24 @@ def get_circuits_and_metrics(
         for circuit_id in circuit_metrics[num_qubits].keys():
             circuit_identifiers.append((num_qubits, circuit_id))
             flat_circuits.append(circuits[num_qubits][circuit_id])
+            
+            # Store additional metrics when True.
+            if extra_metrics:
+                # Compute circuit properties (depth, etc) and store to active circuit object
+                qc = circuits[num_qubits][circuit_id]
+                ex.compute_and_store_circuit_info(
+                    qc,
+                    str(num_qubits),
+                    str(circuit_id),
+                    do_transpile_metrics=True,
+                    use_normalized_depth=True
+                )
+
+    # Return additional metrics if desired, else None.
+    if extra_metrics:
+        circuit_metrics = metrics.circuit_metrics
+    else:
+        circuit_metrics = None
 
     return flat_circuits, circuit_metrics, circuit_identifiers
 
@@ -222,9 +246,11 @@ class QEDCBenchmark(Benchmark):
         # For more information on the parameters, view the schema for this benchmark.
         num_shots = self.params.num_shots
         benchmark_name = self.params.benchmark_name
+        extra_metrics = self.params.extra_metrics
 
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
             benchmark_name=benchmark_name,
+            extra_metrics=extra_metrics,
             params=self.params.model_dump(exclude={"benchmark_name"}),
         )
 
