@@ -62,7 +62,12 @@
       "description": "Creates circuits with mid-circuit measurements.",
       "default": false,
       "examples": [true]
-
+    },
+    "extra_metrics": {
+      "type": "boolean",
+      "description": "Determines whether to store circuit depth, width, and more metrics.",
+      "default": false,
+      "examples": [true]
     }
   },
   "required": ["benchmark_name"],
