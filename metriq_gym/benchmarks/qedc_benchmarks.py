@@ -180,8 +180,9 @@ def analyze_results(
     metrics.aggregate_metrics()
     title = f"{benchmark_name} ({params.get('method', '1')})"
     backend_id = "<unknown>"
+    filters = ["fidelity", "hf_fidelity", "depth", "2q", "vbplot"]
     metrics.circuit_metrics["subtitle"] = f"device = {backend_id}"
-    metrics.plot_metrics(f"Benchmark Results - {title}) - qBraid")
+    metrics.plot_metrics(f"Benchmark Results - {title}) - qBraid", filters=filters)
     metrics.circuit_metrics.pop("subtitle", None)
 
     return metrics.circuit_metrics
