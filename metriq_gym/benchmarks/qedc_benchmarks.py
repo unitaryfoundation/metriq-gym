@@ -22,10 +22,10 @@ from _common import metrics
 
 
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
-    JobType.BERNSTEIN_VAZIRANI: ".bernstein_vazirani.bv_benchmark",
-    JobType.PHASE_ESTIMATION: ".phase_estimation.pe_benchmark",
-    JobType.HIDDEN_SHIFT: ".hidden_shift.hs_benchmark",
-    JobType.QUANTUM_FOURIER_TRANSFORM: ".quantum_fourier_transform.qft_benchmark",
+    JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.bv_benchmark",
+    JobType.PHASE_ESTIMATION: "phase_estimation.pe_benchmark",
+    JobType.HIDDEN_SHIFT: "hidden_shift.hs_benchmark",
+    JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.qft_benchmark",
 }
 
 """
