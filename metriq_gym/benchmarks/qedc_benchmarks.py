@@ -19,7 +19,7 @@ from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
 
 from _common import metrics
-from _common.qiskit import execute as ex 
+from _common.qiskit import execute as ex
 
 
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
@@ -142,7 +142,7 @@ def analyze_results(
     benchmark_name = str(params["benchmark_name"])
     benchmark = import_benchmark_module(benchmark_name)
 
-    # Restore circuit metrics dictionary from the dispatch data if needed
+    # Restore circuit metrics from the dispatch data if needed
     if params["extra_metrics"]:
         metrics.circuit_metrics = job_data.circuit_metrics
 
@@ -173,6 +173,7 @@ def analyze_results(
                 None, result_object, int(num_qubits), int(circuit_id), params["num_shots"]
             )
 
+        # Store the fidelity.
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
 
     return metrics.circuit_metrics
@@ -180,7 +181,7 @@ def analyze_results(
 
 def get_circuits_and_metrics(
     benchmark_name: str,
-    extra_metrics: bool, 
+    extra_metrics: bool,
     params: dict[str, float | str],
 ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
     """
@@ -218,7 +219,7 @@ def get_circuits_and_metrics(
         for circuit_id in circuit_metrics[num_qubits].keys():
             circuit_identifiers.append((num_qubits, circuit_id))
             flat_circuits.append(circuits[num_qubits][circuit_id])
-            
+
             # Store additional metrics when True.
             if extra_metrics:
                 # Compute circuit properties (depth, etc) and store to active circuit object
@@ -228,7 +229,7 @@ def get_circuits_and_metrics(
                     str(num_qubits),
                     str(circuit_id),
                     do_transpile_metrics=True,
-                    use_normalized_depth=True
+                    use_normalized_depth=True,
                 )
 
     # Return additional metrics if desired, else None.
