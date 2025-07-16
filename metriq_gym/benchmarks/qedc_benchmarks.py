@@ -23,10 +23,10 @@ from _common.qiskit import execute as ex
 
 
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
-    JobType.BERNSTEIN_VAZIRANI: ".bernstein_vazirani.bv_benchmark",
-    JobType.PHASE_ESTIMATION: ".phase_estimation.pe_benchmark",
-    JobType.HIDDEN_SHIFT: ".hidden_shift.hs_benchmark",
-    JobType.QUANTUM_FOURIER_TRANSFORM: ".quantum_fourier_transform.qft_benchmark",
+    JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.bv_benchmark",
+    JobType.PHASE_ESTIMATION: "phase_estimation.pe_benchmark",
+    JobType.HIDDEN_SHIFT: "hidden_shift.hs_benchmark",
+    JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.qft_benchmark",
 }
 
 """
@@ -251,7 +251,7 @@ class QEDCBenchmark(Benchmark):
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
             benchmark_name=benchmark_name,
             extra_metrics=extra_metrics,
-            params=self.params.model_dump(exclude={"benchmark_name"}),
+            params=self.params.model_dump(exclude={"benchmark_name", "extra_metrics"}),
         )
 
         return QEDCData.from_quantum_job(
