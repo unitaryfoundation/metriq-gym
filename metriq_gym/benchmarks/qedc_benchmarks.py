@@ -220,7 +220,7 @@ def get_circuits_and_metrics(
             circuit_identifiers.append((num_qubits, circuit_id))
             flat_circuits.append(circuits[num_qubits][circuit_id])
 
-            # Store additional metrics when True.
+            # Optionally storing extra metrics.
             if extra_metrics:
                 # Compute circuit properties (depth, etc) and store to active circuit object
                 qc = circuits[num_qubits][circuit_id]
@@ -232,7 +232,7 @@ def get_circuits_and_metrics(
                     use_normalized_depth=True,
                 )
 
-    # Return additional metrics if desired, else None.
+    # Optionally returning extra metrics.
     if extra_metrics:
         circuit_metrics = metrics.circuit_metrics
     else:
