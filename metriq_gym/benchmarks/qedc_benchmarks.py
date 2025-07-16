@@ -142,8 +142,9 @@ def analyze_results(
     benchmark_name = str(params["benchmark_name"])
     benchmark = import_benchmark_module(benchmark_name)
 
-    # Restore circuit metrics dictionary from the dispatch data
-    metrics.circuit_metrics = job_data.circuit_metrics
+    # Restore circuit metrics dictionary from the dispatch data if needed
+    if params["extra_metrics"]:
+        metrics.circuit_metrics = job_data.circuit_metrics
 
     # Iterate and get the metrics for each circuit in the list.
     for curr_idx, (num_qubits, circuit_id) in enumerate(job_data.circuit_identifiers):
