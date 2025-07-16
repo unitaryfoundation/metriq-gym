@@ -43,3 +43,7 @@ docs/_build/
 
 # mypy
 .mypy_cache/
+
+# QC-App-Oriented-Benchmarks
+__data/
+__images/
