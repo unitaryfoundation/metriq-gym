@@ -62,8 +62,14 @@
     "extra_metrics": {
       "type": "boolean",
       "description": "Determines whether to store circuit depth, width, and more metrics.",
-      "default": false,
-      "examples": [true]
+      "default": true,
+      "examples": [false]
+    },
+    "plot_metrics": {
+      "type": "boolean",
+      "description": "Determines whether to plot metrics and store them.",
+      "default": true,
+      "examples": [false]
     }
   },
   "required": ["benchmark_name"],

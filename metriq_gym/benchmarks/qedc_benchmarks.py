@@ -177,13 +177,14 @@ def analyze_results(
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
 
     # Optionally plotting metrics
-    metrics.aggregate_metrics()
-    title = f"{benchmark_name} ({params.get('method', '1')})"
-    backend_id = "<unknown>"
-    filters = ["fidelity", "hf_fidelity", "depth", "2q", "vbplot"]
-    metrics.circuit_metrics["subtitle"] = f"device = {backend_id}"
-    metrics.plot_metrics(f"Benchmark Results - {title}) - qBraid", filters=filters)
-    metrics.circuit_metrics.pop("subtitle", None)
+    if params["plot_metrics"]:
+        metrics.aggregate_metrics()
+        title = f"{benchmark_name} ({params.get('method', '1')})"
+        backend_id = "<unknown>"
+        filters = ["fidelity", "hf_fidelity", "depth", "2q", "vbplot"]
+        metrics.circuit_metrics["subtitle"] = f"device = {backend_id}"
+        metrics.plot_metrics(f"Benchmark Results - {title}) - qBraid", filters=filters)
+        metrics.circuit_metrics.pop("subtitle", None)
 
     return metrics.circuit_metrics
 
@@ -262,7 +263,9 @@ class QEDCBenchmark(Benchmark):
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
             benchmark_name=benchmark_name,
             extra_metrics=extra_metrics,
-            params=self.params.model_dump(exclude={"benchmark_name", "extra_metrics"}),
+            params=self.params.model_dump(
+                exclude={"benchmark_name", "extra_metrics", "plot_metrics"}
+            ),
         )
 
         return QEDCData.from_quantum_job(
