@@ -181,10 +181,13 @@ def analyze_results(
         # Compute statistics for metrics.
         metrics.aggregate_metrics()
 
-        # Set the title and device name.
-        title = f"{benchmark_name} ({params.get('method', '1')})"
-        backend_id = "<unknown>"
-        metrics.circuit_metrics["subtitle"] = f"device = {backend_id}"
+        # Set the plot titles.
+        provider_name = "qBraid"
+        device_name = "<unknown>"
+
+        benchmark_title = f"{benchmark_name} ({params.get('method', '1')})"
+        suptitle = f"Benchmark Results - {benchmark_title} - {provider_name}"
+        metrics.circuit_metrics["subtitle"] = f"device = {device_name}"
 
         # Determine which metrics to plot.
         if params["extra_metrics"]:
@@ -194,7 +197,7 @@ def analyze_results(
             filters = ["fidelity", "hf_fidelity"]
 
         # Plot the metrics.
-        metrics.plot_metrics(f"Benchmark Results - {title}) - qBraid", filters=filters)
+        metrics.plot_metrics(suptitle=suptitle, filters=filters)
 
         # Remove subtilte key.
         metrics.circuit_metrics.pop("subtitle", None)
