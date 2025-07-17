@@ -229,7 +229,7 @@ def get_circuits_and_metrics(
     # Remove the subtitle key to keep our desired format.
     circuit_metrics.pop("subtitle", None)
 
-    # Copy any creation metrics if storing additional metrics.
+    # Optionally copy creation metrics
     if extra_metrics:
         metrics.circuit_metrics = circuit_metrics
 
