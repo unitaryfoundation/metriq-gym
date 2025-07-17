@@ -178,12 +178,25 @@ def analyze_results(
 
     # Optionally plotting metrics
     if params["plot_metrics"]:
+        # Compute statistics for metrics.
         metrics.aggregate_metrics()
+
+        # Set the title and device name.
         title = f"{benchmark_name} ({params.get('method', '1')})"
         backend_id = "<unknown>"
-        filters = ["fidelity", "hf_fidelity", "depth", "2q", "vbplot"]
         metrics.circuit_metrics["subtitle"] = f"device = {backend_id}"
+
+        # Determine which metrics to plot.
+        if params["extra_metrics"]:
+            filters = ["fidelity", "hf_fidelity", "depth", "2q", "vbplot"]
+        else:
+            metrics.do_volumetric_plots = False
+            filters = ["fidelity", "hf_fidelity"]
+
+        # Plot the metrics.
         metrics.plot_metrics(f"Benchmark Results - {title}) - qBraid", filters=filters)
+
+        # Remove subtilte key.
         metrics.circuit_metrics.pop("subtitle", None)
 
     return metrics.circuit_metrics
@@ -218,7 +231,7 @@ def get_circuits_and_metrics(
     # Remove the subtitle key to keep our desired format.
     circuit_metrics.pop("subtitle", None)
 
-    # Copy create time metric if storing additional metrics.
+    # Copy any creation metrics if storing additional metrics.
     if extra_metrics:
         metrics.circuit_metrics = circuit_metrics
 
