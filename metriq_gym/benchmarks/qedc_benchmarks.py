@@ -42,22 +42,17 @@ Description:
 Example for Bernstein-Vazirani:
 {
 '3':    {
-        '1': {'create_time': 0.16371703147888184,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '2': {'create_time': 0.0005087852478027344,
-              'fidelity': 1.0,
+        '2': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         },
 '4':    {
-        '1': {'create_time': 0.0005209445953369141,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '3': {'create_time': 0.00047206878662109375,
-              'fidelity': 1.0,
+        '3': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '5': {'create_time': 0.0005078315734863281,
-              'fidelity': 1.0,
+        '5': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         }
 }
