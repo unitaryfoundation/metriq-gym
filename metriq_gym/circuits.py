@@ -139,6 +139,16 @@ def single_cost_layer_SWAP_circuit(
         if dd < num_qubits - 1:
             if (i, j) in graph.edges():
                 qc.rzz(2 * graph[i][j]["weight"] * gamma, dd, dd + 1)
+    depth = len(sequence_2q) - 1
+    num_qubits = graph.number_of_nodes()
+    qc = QuantumCircuit(num_qubits)  # Add a layer to the swap network
+
+    first_layer = sequence_2q[0]
+    for nn, (i, j) in enumerate(first_layer):
+        dd = 2 * nn + (depth % 2) * (layer_p_i % 2)
+        if dd < num_qubits - 1:
+            if (i, j) in graph.edges():
+                qc.rzz(2 * graph[i][j]["weight"] * gamma, dd, dd + 1)
     for kk, layer in enumerate(sequence_2q[1:-1]):
         for nn, (i, j) in enumerate(layer):
             # Determine which matrix element is required from the current permutation
