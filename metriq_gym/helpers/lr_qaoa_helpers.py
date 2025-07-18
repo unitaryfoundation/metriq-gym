@@ -72,9 +72,9 @@ def objective_func(samples_dict: dict, graph: nx.Graph, optimal: str) -> dict:
         if cost > max_cost:
             print(f"There is a better cost than that of CPLEX: {cost - max_cost}")
         shots += counts
-    r = total_cost / (max_cost * shots)
+    approx_ratio = total_cost / (max_cost * shots)
     probability /= shots
-    return {"r": r, "probability": probability}
+    return {"approx_ratio": approx_ratio, "probability": probability}
 
 
 def random_samples(num_samples: int, n_qubits: int) -> dict:

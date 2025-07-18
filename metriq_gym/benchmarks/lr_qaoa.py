@@ -139,7 +139,6 @@ def calc_trial_stats(
     graph: nx.graph,
     optimal_sol: str,
     samples: dict[str, int],
-    shots: int,
     confidence_level: float,
     num_random_trials: int,
 ) -> TrialStats:
@@ -151,7 +150,6 @@ def calc_trial_stats(
         graph_type: Type of graph used in the experiment.
         seed": Seed for graph and the random number generator.
         samples: A dictionary of bitstrings to counts measured from the backend.
-        shots: Number of measurement shots performed on the quantum circuit.
         confidence_level: Specified confidence level for the benchmarking.
         num_random_trials: random sampler number of trails
         circuit_encoding: Direct: if the quantum circuit is compatible with the device layout, SWAP: used in fully connected case for non-fully connected devices, e.g., IBM's heavy-hex layout.
@@ -161,11 +159,11 @@ def calc_trial_stats(
     """
     nq = graph.number_of_nodes()  # number of qubits
     shots = sum(samples.values())
-    random_samples_dict = random_samples(shots, len(graph.nodes()))
     approx_ratio_random_list = []
     for _ in range(num_random_trials):
+        random_samples_dict = random_samples(shots, len(graph.nodes()))
         approx_ratio_random_list.append(
-            objective_func(random_samples_dict, graph, optimal_sol)["r"]
+            objective_func(random_samples_dict, graph, optimal_sol)["approx_ratio"]
         )
     approx_ratio_random_mean = statistics.mean(approx_ratio_random_list)
     approx_ratio_random_std = statistics.pstdev(approx_ratio_random_list)
@@ -207,7 +205,6 @@ def calc_stats(data: LinearRampQAOAData, samples: list[MeasCount]) -> AggregateS
                 graph=data.graph,
                 optimal_sol=data.optimal_sol,
                 samples=samples[num_circ],
-                shots=data.shots,
                 confidence_level=data.confidence_level,
                 num_random_trials=data.num_random_trials,
             )
@@ -232,6 +229,10 @@ def calc_stats(data: LinearRampQAOAData, samples: list[MeasCount]) -> AggregateS
         math.prod(stat[ith_layer].p_value for stat in trial_stats) ** (1 / num_trials)
         for ith_layer in range(len(data.p_layers))
     ]
+    confidence_pass = [
+        all(stat[ith_layer].confidence_pass for stat in trial_stats)
+        for ith_layer in range(len(data.p_layers))
+    ]
 
     return AggregateStats(
         trial_stats=trial_stats,
@@ -241,10 +242,7 @@ def calc_stats(data: LinearRampQAOAData, samples: list[MeasCount]) -> AggregateS
         approx_ratio_random=approx_ratio_random,
         probability=probability,
         p_value=p_value,
-        confidence_pass=[
-            all(stat[ith_layer].confidence_pass for stat in trial_stats)
-            for ith_layer in range(len(data.p_layers))
-        ],
+        confidence_pass=confidence_pass,
     )
 
 

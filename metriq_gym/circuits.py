@@ -113,6 +113,7 @@ def single_cost_layer_fully_connected_device(gamma: Parameter, graph: nx.Graph) 
             qubit_pair = (permutations[k], permutations[k + 1])
             qc.rzz(2 * gamma * graph[qubit_pair[0]][qubit_pair[1]]["weight"], *qubit_pair)
             permutations[k], permutations[k + 1] = permutations[k + 1], permutations[k]
+    return qc
 
 
 def single_cost_layer_SWAP_circuit(
