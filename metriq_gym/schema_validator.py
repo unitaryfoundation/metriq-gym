@@ -4,7 +4,8 @@ from typing import Any
 from jsonschema import validate
 from pydantic import BaseModel, create_model, Field
 
-from metriq_gym.benchmarks import SCHEMA_MAPPING, JobType
+from metriq_gym.constants import JobType
+from metriq_gym.registry import SCHEMA_MAPPING
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -38,25 +39,25 @@ def create_pydantic_model(schema: dict[str, Any]) -> Any:
         "array": list,
         "object": dict,
     }
-    
+
     required_fields = set(schema.get("required", []))
     field_definitions = {}
-    
+
     for field_name, field_schema in schema["properties"].items():
         field_type = type_mapping[field_schema["type"]]
         has_default = "default" in field_schema
         is_required = field_name in required_fields
-        
+
         # Build Field parameters
         field_params = {}
-        
+
         if has_default:
             field_params["default"] = field_schema["default"]
         elif not is_required:
             field_params["default"] = None
         else:
             field_params["default"] = ...  # Required field
-            
+
         # Add constraints if they exist
         if "minimum" in field_schema:
             field_params["ge"] = field_schema["minimum"]
@@ -68,11 +69,11 @@ def create_pydantic_model(schema: dict[str, Any]) -> Any:
             field_params["min_length"] = field_schema["minLength"]
         if "maxLength" in field_schema:
             field_params["max_length"] = field_schema["maxLength"]
-            
+
         # Create final type, avoiding variable reassignment
         final_type = field_type | None if not is_required and not has_default else field_type
         field_definitions[field_name] = (final_type, Field(**field_params))
-    
+
     model = create_model(schema["title"], **field_definitions)
     model.model_rebuild()
     return model

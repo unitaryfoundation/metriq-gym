@@ -19,16 +19,18 @@ mgym = "metriq_gym.run:main"
 [tool.poetry]
 packages = [
     { include = "metriq_gym", from = "." },
-    { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" }
+    { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" },
+    { include = "*", from = "submodules/QC-App-Oriented-Benchmarks" }
 ]
 include = [
     { path = "LICENSE", format = ["sdist", "wheel"] },
-    { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] }
+    { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] },
+    { path = "submodules/QC-App-Oriented-Benchmarks/LICENSE", format = ["sdist", "wheel"] }
 ]
 
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
-pyqrack = "^1.61.0"
+pyqrack = "^1.64.1"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
@@ -48,10 +50,10 @@ ruamel-yaml-clib = [
 dev = ["qiskit-device-benchmarking"]
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.16.1"
+mypy = "^1.17.0"
 pre-commit = "^4.1.0"
 pytest = "^8.4.1"
-ruff = "^0.12.2"
+ruff = "^0.12.3"
 sphinx = "^8.2.3"
 types-tabulate = "^0.9.0.20241207"
 deptry = "^0.23.0"
