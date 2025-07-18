@@ -245,9 +245,8 @@ def get_circuits_and_metrics(
             # Optionally storing extra metrics.
             if extra_metrics:
                 # Compute circuit properties (depth, etc) and store to active circuit object
-                qc = circuits[num_qubits][circuit_id]
                 ex.compute_and_store_circuit_info(
-                    qc,
+                    circuits[num_qubits][circuit_id],
                     str(num_qubits),
                     str(circuit_id),
                     do_transpile_metrics=True,
