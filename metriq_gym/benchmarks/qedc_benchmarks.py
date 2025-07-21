@@ -171,7 +171,7 @@ def analyze_results(
         # Store the fidelity.
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
 
-    # Optionally plotting metrics
+    # Optional plotting metrics.
     if params["plot_metrics"]:
         # Compute statistics for metrics.
         metrics.aggregate_metrics()
