@@ -63,6 +63,7 @@ def test_prepare_fully_connected_layout_lrqaoa_circuits(num_qubits, p_layers):
 
 
 def test_calc_stats_pass():
+    random.seed(123)
     num_qubits = 5
     graph = nx.Graph()
     graph.add_nodes_from(range(num_qubits))
@@ -89,13 +90,16 @@ def test_calc_stats_pass():
         circuit_encoding="Direct",
     )
     counts = [
-        {"01010": 40, "10101": 30, "11000": 20},
+        {"01010": 40, "10101": 30, "11000": 30},
         {"01010": 50, "10101": 50},
-        {"00000": 40, "10101": 30, "01010": 20},
+        {"00000": 50, "10101": 30, "01010": 20},
         {"11111": 50, "10101": 50},
         {"01010": 50, "10101": 50},
         {"11111": 50, "00000": 50},
     ]
     stats = calc_stats(job_data, counts)
-    assert stats.confidence_pass == [True, True, False]  # All trials pass confidence level
+    assert stats.confidence_pass == [True, True, False]
     assert len(stats.confidence_pass) == len(p_layers)
+    assert [round(i, 6) for i in stats.probability] == [0.6, 1.0, 0.25]
+    assert [round(i, 6) for i in stats.approx_ratio] == [0.645, 1.0, 0.25]
+    assert [round(i, 1) for i in stats.approx_ratio_random] == [0.5, 0.5, 0.5]
