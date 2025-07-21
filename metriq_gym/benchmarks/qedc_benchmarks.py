@@ -254,10 +254,9 @@ def get_circuits_and_metrics(
                 )
 
     # Optionally returning extra metrics.
+    circuit_metrics = None
     if extra_metrics:
-        circuit_metrics = metrics.circuit_metrics
-    else:
-        circuit_metrics = None
+        circuit_metrics = metrics.circuit_metrics        
 
     return flat_circuits, circuit_metrics, circuit_identifiers
 
