@@ -181,7 +181,7 @@ def analyze_results(
         device_name = "<unknown>"
 
         # Set plot titles.
-        benchmark_title = f"{benchmark_name} ({params.get('method', '1')})"
+        benchmark_title = f"{benchmark_name} ({params.get("method", "1")})"
         suptitle = f"Benchmark Results - {benchmark_title} - {provider_name}"
         metrics.circuit_metrics["subtitle"] = f"device = {device_name}"
 
