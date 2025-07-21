@@ -181,8 +181,8 @@ def analyze_results(
         device_name = "<unknown>"
 
         # Set plot titles.
-        benchmark_title = f"{benchmark_name} ({params.get("method", "1")})"
-        suptitle = f"Benchmark Results - {benchmark_title} - {provider_name}"
+        benchmark_title = f"{benchmark_name} ({params.get('method', '1')})"
+        subtitle = f"Benchmark Results - {benchmark_title} - {provider_name}"
         metrics.circuit_metrics["subtitle"] = f"device = {device_name}"
 
         # Determine which metrics to plot.
@@ -193,7 +193,7 @@ def analyze_results(
             filters = ["fidelity", "hf_fidelity"]
 
         # Plot the metrics.
-        metrics.plot_metrics(suptitle=suptitle, filters=filters)
+        metrics.plot_metrics(subtitle, filters=filters)
 
         # Remove subtilte key.
         metrics.circuit_metrics.pop("subtitle", None)
@@ -256,7 +256,7 @@ def get_circuits_and_metrics(
     # Optionally returning extra metrics.
     circuit_metrics = None
     if extra_metrics:
-        circuit_metrics = metrics.circuit_metrics        
+        circuit_metrics = metrics.circuit_metrics
 
     return flat_circuits, circuit_metrics, circuit_identifiers
 
