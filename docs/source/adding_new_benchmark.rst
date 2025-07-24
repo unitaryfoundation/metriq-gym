@@ -3,7 +3,7 @@ Adding a New Benchmark
 
 This guide explains how to integrate a new benchmark into **metriq-gym**. The process involves several steps:
 
-1.  Define the core Python structures (classes and `:code:dataclass` objects).
+1.  Define the core Python structures (classes and :code:`dataclass` objects).
 2.  Create a JSON Schema to validate benchmark parameters.
 3.  Provide an example schema for convenience.
 4.  Register the new benchmark within the package so it becomes accessible to the rest of the system.
@@ -13,21 +13,21 @@ Defining a New Benchmark
 
 1.  **Create a New Python File**
 
-    In the `:file:benchmarks` directory of the `:code:metriq-gym` package, add a new file named
-    :file:`benchmarks/<NEW_BENCHMARK>.py` (replace `:code:<NEW_BENCHMARK>` with a descriptive name).
+    In the :file:`benchmarks` directory of the :code:`metriq-gym` package, add a new file named
+    :file:`benchmarks/<NEW_BENCHMARK>.py` (replace :code:`<NEW_BENCHMARK>` with a descriptive name).
 
 2.  **Implement the Benchmark Class**
 
-    In this new file, define a class that inherits from `:code:Benchmark`. You must override:
+    In this new file, define a class that inherits from :code:`Benchmark`. You must override:
 
-    -   `:code:dispatch_handler()`: Houses the logic for preprocessing and dispatching the benchmark job to the quantum device. This may include things like creating the circuits, running those circuits on classical simulators, etc.
-    -   `:code:poll_handler()`: Houses the logic for retrieving and processing results from the quantum device or simulator.
+    -   :code:`dispatch_handler()`: Houses the logic for preprocessing and dispatching the benchmark job to the quantum device. This may include things like creating the circuits, running those circuits on classical simulators, etc.
+    -   :code:`poll_handler()`: Houses the logic for retrieving and processing results from the quantum device or simulator.
 
 3.  **Create the Data Classes**
 
-    Define two `:code:dataclass` objects: one that will contain intermediate data after pre-processing and dispatching
-    (inheriting from `:code:BenchmarkData`), and one to hold the benchmark’s output results (inheriting from
-    `:code:BenchmarkResult`).
+    Define two :code:`dataclass` objects: one that will contain intermediate data after pre-processing and dispatching
+    (inheriting from :code:`BenchmarkData`), and one to hold the benchmark’s output results (inheriting from
+    :code:`BenchmarkResult`).
 
     Example:
 
@@ -132,7 +132,7 @@ Registering the New Benchmark
 
 1.  **Add to `constants.py`**
 
-    Open the :file:`metriq_gym/constants.py` file and add your new benchmark's name to the `:code:JobType` enumeration. The key (e.g., `NEW_BENCHMARK`) should be uppercase, and the value should be the human-readable string name.
+    Open the :file:`metriq_gym/constants.py` file and add your new benchmark's name to the :code:`JobType` enumeration. The key (e.g., `NEW_BENCHMARK`) should be uppercase, and the value should be the human-readable string name.
 
     .. code-block:: python
 
@@ -155,7 +155,7 @@ Registering the New Benchmark
         from metriq_gym.benchmarks.new_benchmark import NewBenchmark, NewBenchmarkData
         ...
 
-    Then, add a new entry to each of the three mapping dictionaries: `:code:BENCHMARK_HANDLERS`, `:code:BENCHMARK_DATA_CLASSES`, and `:code:SCHEMA_MAPPING`.
+    Then, add a new entry to each of the three mapping dictionaries: :code:`BENCHMARK_HANDLERS`, :code:`BENCHMARK_DATA_CLASSES`, and :code:`SCHEMA_MAPPING`.
 
     .. code-block:: python
 
