@@ -1,4 +1,4 @@
-## Adding a New Benchmark
+Adding a New Benchmark
 ######################
 
 This guide explains how to integrate a new benchmark into **metriq-gym**. The process involves several steps:
@@ -8,8 +8,7 @@ This guide explains how to integrate a new benchmark into **metriq-gym**. The pr
 3.  Provide an example schema for convenience.
 4.  Register the new benchmark within the package so it becomes accessible to the rest of the system.
 
-***
-## Defining a New Benchmark
+Defining a New Benchmark
 ************************
 
 1.  **Create a New Python File**
@@ -69,8 +68,7 @@ This guide explains how to integrate a new benchmark into **metriq-gym**. The pr
                 # TODO: Implement logic for retrieving and processing results
                 pass
 
-***
-## Defining the Schema
+Defining the Schema
 *******************
 
 To standardize and validate the input parameters for each benchmark, **metriq-gym** uses JSON Schema. Add a new file
@@ -113,8 +111,7 @@ and should be modified to fit the specific requirements of your benchmark.
 
 This schema ensures that any job payload for the new benchmark meets the required format and constraints.
 
-***
-## Example Schema
+Example Schema
 **************
 
 Provide a sample JSON file demonstrating how to supply parameters for this benchmark. Place this file in
@@ -130,8 +127,7 @@ Provide a sample JSON file demonstrating how to supply parameters for this bench
 
 This file offers a reference for developers and users on how to structure the JSON payload for your new benchmark.
 
-***
-## Registering the New Benchmark
+Registering the New Benchmark
 *****************************
 
 1.  **Add to `constants.py`**
@@ -182,8 +178,7 @@ This file offers a reference for developers and users on how to structure the JS
 
     By doing so, the new benchmark is linked to its job type, data class, and JSON schema.
 
-***
-## Final Steps
+Final Steps
 ***********
 
 -   **Testing**: Verify that your benchmark can be successfully dispatched, polled, and completed using an appropriate
