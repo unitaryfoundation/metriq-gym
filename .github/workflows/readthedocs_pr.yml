@@ -1,0 +1,35 @@
+name: Read the Docs PR Preview
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened] # Trigger on PR open, new commits, or reopen
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  add_preview_link:
+    runs-on: ubuntu-latest
+    # Grant permissions for the action to write comments/statuses
+    permissions:
+      pull-requests: write
+      contents: read
+      statuses: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Add Read the Docs preview link
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { owner, repo, number } = context.issue;
+          const readthedocsBaseUrl = `https://${repo.toLowerCase()}--${number}.org.readthedocs.build/en/${number}/`;
+          
+          // Post a comment with the preview link
+          github.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: number,
+            body: `📚 Documentation preview for this PR is available at: [${readthedocsBaseUrl}](${readthedocsBaseUrl})`
+          });
