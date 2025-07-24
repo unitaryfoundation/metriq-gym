@@ -15,6 +15,7 @@ To install ``metriq-gym`` run ::
 
    API-doc <api.rst>
    User Guide <user_guide.rst>
+   End-to-End Tutorial <end_to_end_tutorial>
    Adding a new benchmark <adding_new_benchmark.rst>
 
 
