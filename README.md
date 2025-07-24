@@ -51,9 +51,16 @@ Before you begin, ensure you have the following installed:
 First, clone the repository and navigate to the project directory:
 
 ```sh
-git clone https://github.com/unitaryfoundation/metriq-gym.git
+git clone --recurse-submodules https://github.com/unitaryfoundation/metriq-gym.git
 cd metriq-gym
 ```
+
+If you've already cloned the repo (with or without submodules), run:
+
+```bash
+git pull --recurse-submodules
+```
+to keep it up to date.
 
 ### Installation
 Once you have `poetry` installed and the repository cloned, run:
@@ -78,15 +85,6 @@ eval $(poetry env activate)
 All Python commands below should be run in the virtual environment.
 
 ## Running benchmarks
-
-### Credential management
-
-To run on hardware, each hardware provider offers API tokens that are required to interact with their quantum devices.
-In order to run on these devices, you will need to follow the instructions on the respective pages of the providers and
-obtain API keys from them.
-
-The `.env.example` file illustrates how to specify the API keys once you have acquired them. You will need to create a
-`.env` file in the same directory as `.env.example` and populate the values of these variables accordingly.
 
 ### Workflow
 
@@ -124,10 +122,10 @@ By default, the JSON file will be saved in the current working directory with th
 
 For quick testing without access to cloud hardware, `metriq-gym` can dispatch jobs to a local simulator.
 At the moment the Qiskit Aer simulator is supported. Specify the `local` provider and the
-`aer_simulator` device:
+`aer_simulator` device. Example (from the project root directory):
 
 ```sh
-mgym dispatch examples/adder.json --provider local --device aer_simulator
+mgym dispatch metriq_gym/schemas/examples/qml_kernel.example.json --provider local --device aer_simulator
 ```
 
 Polling local simulator jobs works the same way:
@@ -135,6 +133,15 @@ Polling local simulator jobs works the same way:
 ```sh
 mgym poll --job_id <METRIQ_GYM_JOB_ID>
 ```
+
+### Credential management
+
+To run on hardware, each hardware provider offers API tokens that are required to interact with their quantum devices.
+In order to run on these devices, you will need to follow the instructions on the respective pages of the providers and
+obtain API keys from them.
+
+The `.env.example` file illustrates how to specify the API keys once you have acquired them. You will need to create a
+`.env` file in the same directory as `.env.example` and populate the values of these variables accordingly.
 
 ### View jobs
 
