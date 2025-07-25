@@ -1,36 +1,33 @@
 version: 2
 
 build:
-  os: ubuntu-22.04
+  os: ubuntu-22.04 # Stable LTS release
   tools:
-    python: "3.13"
+    python: "3.13" # Consistent with your choice
 
+  # All build steps are now explicitly defined within 'commands'.
   commands:
-    # --- 1. Clone, Build, and Install Qrack C++ Library from Source ---
-    # Moved apt-get installs to the dedicated 'apt' section below.
+    # --- 1. Install System Build Dependencies & OpenCL (without apt-get update) ---
+    # This directly attempts to install the packages. If apt needs to update its lists
+    # and hits the permission error, this step will fail.
+    - apt-get install -y cmake build-essential ocl-icd-opencl-dev opencl-headers
 
+    # --- 2. Clone, Build, and Install Qrack C++ Library from Source ---
     - git clone https://github.com/unitaryfoundation/qrack.git /tmp/qrack_cpp_src
     - cd /tmp/qrack_cpp_src
     - mkdir build && cd build
     - cmake ..
-    - make install # This should now work as system packages are installed by 'apt:' block
+    - make install # This should install the .so files after dependencies are met.
 
+    # Return to the main project's root directory.
     - cd $READTHEDOCS_ROOT
 
-    # --- 2. Install Poetry and Python Dependencies ---
+    # --- 3. Install Poetry and Python Dependencies ---
     - python -m pip install poetry
     - poetry install --extras docs
 
-    # --- 3. Build Sphinx Documentation ---
+    # --- 4. Build Sphinx Documentation ---
     - poetry run sphinx-build -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
-
-# NEW: Dedicated 'apt' section for system packages
-apt:
-  packages:
-    - cmake
-    - build-essential
-    - ocl-icd-opencl-dev
-    - opencl-headers
 
 submodules:
   include: all
