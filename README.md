@@ -3,6 +3,7 @@
 [![Unitary Foundation](https://img.shields.io/badge/Supported%20By-Unitary%20Foundation-FFFF00.svg)](https://unitary.foundation)
 [![PyPI version](https://img.shields.io/pypi/v/metriq-gym.svg?color=blue)](https://pypi.org/project/metriq-gym/)
 [![Downloads](https://static.pepy.tech/badge/metriq-gym)](https://pepy.tech/project/metriq-gym)
+[![Doc Status](https://readthedocs.org/projects/metriq-gym/badge/?version=latest)](https://metriq-gym.readthedocs.io/en/latest/)
 [![Discord Chat](https://img.shields.io/badge/dynamic/json?color=orange&label=Discord&query=approximate_presence_count&suffix=%20online.&url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2FJqVGmpkP96%3Fwith_counts%3Dtrue)](http://discord.unitary.foundation)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
