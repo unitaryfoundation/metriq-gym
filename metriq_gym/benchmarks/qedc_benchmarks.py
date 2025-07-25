@@ -19,6 +19,7 @@ from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
 
 from _common import metrics
+from _common.qiskit import execute as ex
 
 
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
@@ -41,22 +42,17 @@ Description:
 Example for Bernstein-Vazirani:
 {
 '3':    {
-        '1': {'create_time': 0.16371703147888184,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '2': {'create_time': 0.0005087852478027344,
-              'fidelity': 1.0,
+        '2': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         },
 '4':    {
-        '1': {'create_time': 0.0005209445953369141,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '3': {'create_time': 0.00047206878662109375,
-              'fidelity': 1.0,
+        '3': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '5': {'create_time': 0.0005078315734863281,
-              'fidelity': 1.0,
+        '5': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         }
 }
@@ -75,7 +71,7 @@ class QEDCData(BenchmarkData):
                              used to preserve order when polling.
     """
 
-    circuit_metrics: QEDC_Metrics
+    circuit_metrics: QEDC_Metrics | None
     circuit_identifiers: list[tuple[str, str]]
 
 
@@ -141,8 +137,9 @@ def analyze_results(
     benchmark_name = str(params["benchmark_name"])
     benchmark = import_benchmark_module(benchmark_name)
 
-    # Restore circuit metrics dictionary from the dispatch data
-    metrics.circuit_metrics = job_data.circuit_metrics
+    # Restore circuit metrics from the dispatch data if needed
+    if params["extra_metrics"]:
+        metrics.circuit_metrics = job_data.circuit_metrics
 
     # Iterate and get the metrics for each circuit in the list.
     for curr_idx, (num_qubits, circuit_id) in enumerate(job_data.circuit_identifiers):
@@ -171,13 +168,42 @@ def analyze_results(
                 None, result_object, int(num_qubits), int(circuit_id), params["num_shots"]
             )
 
+        # Store the fidelity.
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
+
+    # Optional plotting metrics.
+    if params["plot_metrics"]:
+        # Compute statistics for metrics.
+        metrics.aggregate_metrics()
+
+        # Set backend information for plot titles.
+        provider_name = "qBraid"
+        device_name = "<unknown>"
+
+        # Set plot titles.
+        benchmark_title = f"{benchmark_name} ({params.get('method', '1')})"
+        subtitle = f"Benchmark Results - {benchmark_title} - {provider_name}"
+        metrics.circuit_metrics["subtitle"] = f"device = {device_name}"
+
+        # Determine which metrics to plot.
+        if params["extra_metrics"]:
+            filters = ["fidelity", "hf_fidelity", "depth", "2q", "vbplot"]
+        else:
+            metrics.do_volumetric_plots = False
+            filters = ["fidelity", "hf_fidelity"]
+
+        # Plot the metrics.
+        metrics.plot_metrics(subtitle, filters=filters)
+
+        # Remove subtilte key.
+        metrics.circuit_metrics.pop("subtitle", None)
 
     return metrics.circuit_metrics
 
 
 def get_circuits_and_metrics(
     benchmark_name: str,
+    extra_metrics: bool,
     params: dict[str, float | str],
 ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
     """
@@ -204,6 +230,10 @@ def get_circuits_and_metrics(
     # Remove the subtitle key to keep our desired format.
     circuit_metrics.pop("subtitle", None)
 
+    # Optionally copy any initial creation metrics (i.e. create_time).
+    if extra_metrics:
+        metrics.circuit_metrics = circuit_metrics
+
     # Store the circuit identifiers and a flat list of circuits.
     circuit_identifiers = []
     flat_circuits = []
@@ -211,6 +241,22 @@ def get_circuits_and_metrics(
         for circuit_id in circuit_metrics[num_qubits].keys():
             circuit_identifiers.append((num_qubits, circuit_id))
             flat_circuits.append(circuits[num_qubits][circuit_id])
+
+            # Optionally storing extra metrics.
+            if extra_metrics:
+                # Compute circuit properties (depth, etc.) and store to active circuit object.
+                ex.compute_and_store_circuit_info(
+                    circuits[num_qubits][circuit_id],
+                    str(num_qubits),
+                    str(circuit_id),
+                    do_transpile_metrics=True,
+                    use_normalized_depth=True,
+                )
+
+    # Optionally returning extra metrics.
+    circuit_metrics = None
+    if extra_metrics:
+        circuit_metrics = metrics.circuit_metrics
 
     return flat_circuits, circuit_metrics, circuit_identifiers
 
@@ -222,10 +268,14 @@ class QEDCBenchmark(Benchmark):
         # For more information on the parameters, view the schema for this benchmark.
         num_shots = self.params.num_shots
         benchmark_name = self.params.benchmark_name
+        extra_metrics = self.params.extra_metrics
 
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
             benchmark_name=benchmark_name,
-            params=self.params.model_dump(exclude={"benchmark_name"}),
+            extra_metrics=extra_metrics,
+            params=self.params.model_dump(
+                exclude={"benchmark_name", "extra_metrics", "plot_metrics"}
+            ),
         )
 
         return QEDCData.from_quantum_job(
