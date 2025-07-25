@@ -1,15 +1,12 @@
 version: 2
 
 build:
-  os: ubuntu-22.04 # Use a stable LTS release
+  os: ubuntu-22.04 # A stable LTS release
   tools:
-    python: "3.13" # Ensure this matches or is compatible with your pyproject.toml's python version
+    python: "3.13" # Using 3.13 as per your project's choice
 
-  # IMPORTANT: This section overrides Read the Docs' default build process.
-  # We are explicitly instructing it to use Poetry.
   commands:
     # 1. Install Poetry itself into the Read the Docs virtual environment.
-    #    Read the Docs usually provides a base virtualenv that 'pip' is installed in.
     - python -m pip install poetry
 
     # 2. Install your project's dependencies, including the 'docs' extra.
@@ -18,14 +15,21 @@ build:
     - poetry install --extras docs
 
     # 3. Build the Sphinx documentation using 'poetry run'.
-    #    'poetry run' ensures that the sphinx-build command uses the Python interpreter
-    #    and packages from the Poetry-managed virtual environment.
     #    Adjust 'docs/source' to your actual Sphinx source directory.
     - poetry run sphinx-build -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
 
+# New section to explicitly handle Git submodules
+# Read the Docs will automatically clone and update these.
+submodules:
+  include: all # This tells RTD to process all submodules defined in your .gitmodules file.
+  # If you only had specific submodules needed for docs, you could list them like:
+  # include:
+  #   - submodules/qiskit-device-benchmarking
+  # depth: 1 # Optional: speeds up cloning by only fetching the latest commit for submodules too
+
 # You can keep the sphinx block for clarity, but 'commands' will take precedence.
 sphinx:
-  configuration: docs/source/conf.py # This is still useful for some RTD features even with commands
+  configuration: docs/source/conf.py
 
 # Other optional configurations
 formats: all
