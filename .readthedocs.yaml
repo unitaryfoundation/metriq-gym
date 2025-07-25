@@ -1,35 +1,64 @@
 version: 2
 
 build:
-  os: ubuntu-22.04 # A stable LTS release
+  os: ubuntu-22.04 # Use a stable LTS release for Read the Docs builds
   tools:
-    python: "3.13" # Using 3.13 as per your project's choice
+    python: "3.13" # Ensure this matches or is compatible with your pyproject.toml's python version.
 
+  # This 'commands' section overrides Read the Docs' default build process.
+  # We are explicitly defining every step to ensure all dependencies (system and Python) are met.
   commands:
-    # 1. Install Poetry itself into the Read the Docs virtual environment.
-    - python -m pip install poetry
+    # --- 1. Install System Build Dependencies & OpenCL ---
+    # Update package lists to ensure we can install the latest versions of dependencies.
+    - sudo apt-get update
+    # Install essential tools for compiling C++ projects (cmake, build-essential which includes g++)
+    # and OpenCL development libraries (ocl-icd-opencl-dev provides libOpenCL.so.1).
+    - sudo apt-get install -y cmake build-essential ocl-icd-opencl-dev opencl-headers
 
-    # 2. Install your project's dependencies, including the 'docs' extra.
-    #    Poetry is smart enough to detect the active virtual environment created by RTD
-    #    and will install dependencies into it.
+    # --- 2. Clone, Build, and Install Qrack C++ Library from Source ---
+    # This section ensures that libqrack_pinvoke.so is built and available on the system.
+
+    # Clone the Qrack C++ repository into a temporary directory.
+    - git clone https://github.com/unitaryfoundation/qrack.git /tmp/qrack_cpp_src
+
+    # Navigate into the cloned Qrack source directory.
+    - cd /tmp/qrack_cpp_src
+    # Create a build directory and move into it (standard CMake practice).
+    - mkdir build && cd build
+    # Configure the Qrack project build using CMake.
+    - cmake ..
+    # Compile and install Qrack. 'sudo make install' places the compiled shared library
+    # (libqrack_pinvoke.so) into standard system library paths (e.g., /usr/local/lib).
+    - sudo make install
+
+    # Return to the main project's root directory.
+    # $READTHEDOCS_ROOT is an environment variable pointing to the root of your 'metriq-gym' repository.
+    - cd $READTHEDOCS_ROOT
+
+    # --- 3. Install Poetry and Python Dependencies ---
+    # Install Poetry itself into the Read the Docs virtual environment.
+    - python -m pip install poetry
+    # Install your project's Python dependencies, including the 'docs' extra group.
+    # Poetry automatically detects and uses the virtual environment set up by Read the Docs.
     - poetry install --extras docs
 
-    # 3. Build the Sphinx documentation using 'poetry run'.
-    #    Adjust 'docs/source' to your actual Sphinx source directory.
+    # --- 4. Build Sphinx Documentation ---
+    # Execute the Sphinx build process. 'poetry run' ensures that Sphinx uses the Python
+    # interpreter and all packages from the Poetry-managed virtual environment.
+    # Ensure 'docs/source' is the correct path to your Sphinx source directory.
     - poetry run sphinx-build -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
 
-# New section to explicitly handle Git submodules
-# Read the Docs will automatically clone and update these.
+# Configuration for Git Submodules
+# This ensures that any submodules (like 'qiskit-device-benchmarking') are correctly cloned and initialized.
 submodules:
-  include: all # This tells RTD to process all submodules defined in your .gitmodules file.
-  # If you only had specific submodules needed for docs, you could list them like:
-  # include:
-  #   - submodules/qiskit-device-benchmarking
-  # depth: 1 # Optional: speeds up cloning by only fetching the latest commit for submodules too
+  include: all
+  # depth: 1 # Optional: You can uncomment this if your submodules are very large and you only need the latest commit.
 
-# You can keep the sphinx block for clarity, but 'commands' will take precedence.
+# Sphinx configuration (can remain for clarity, even though 'commands' override the build execution)
 sphinx:
-  configuration: docs/source/conf.py
+  configuration: docs/source/conf.py # Adjust this path if your conf.py is located elsewhere within your docs directory.
+  builder: html
+  fail_on_warning: false # Set to true if you want documentation warnings to cause the build to fail.
 
-# Other optional configurations
+# Specify output formats for Read the Docs (e.g., HTML, PDF, ePub).
 formats: all
