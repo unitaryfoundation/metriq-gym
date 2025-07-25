@@ -5,18 +5,16 @@ build:
   tools:
     python: "3.13" # Ensure this matches or is compatible with your pyproject.toml's python version.
 
-  # This 'commands' section overrides Read the Docs' default build process.
-  # We are explicitly defining every step to ensure all dependencies (system and Python) are met.
   commands:
     # --- 1. Install System Build Dependencies & OpenCL ---
     # Update package lists to ensure we can install the latest versions of dependencies.
-    - sudo apt-get update
+    - apt-get update # REMOVED sudo
     # Install essential tools for compiling C++ projects (cmake, build-essential which includes g++)
     # and OpenCL development libraries (ocl-icd-opencl-dev provides libOpenCL.so.1).
-    - sudo apt-get install -y cmake build-essential ocl-icd-opencl-dev opencl-headers
+    - apt-get install -y cmake build-essential ocl-icd-opencl-dev opencl-headers # REMOVED sudo
 
     # --- 2. Clone, Build, and Install Qrack C++ Library from Source ---
-    # This section ensures that libqrack_pinvoke.so is built and available on the system.
+    # The 'make install' step is crucial as it places libqrack_pinvoke.so in a system-wide path.
 
     # Clone the Qrack C++ repository into a temporary directory.
     - git clone https://github.com/unitaryfoundation/qrack.git /tmp/qrack_cpp_src
@@ -27,38 +25,26 @@ build:
     - mkdir build && cd build
     # Configure the Qrack project build using CMake.
     - cmake ..
-    # Compile and install Qrack. 'sudo make install' places the compiled shared library
+    # Compile and install Qrack. 'make install' places the compiled shared library
     # (libqrack_pinvoke.so) into standard system library paths (e.g., /usr/local/lib).
-    - sudo make install
+    - make install # REMOVED sudo
 
     # Return to the main project's root directory.
-    # $READTHEDOCS_ROOT is an environment variable pointing to the root of your 'metriq-gym' repository.
     - cd $READTHEDOCS_ROOT
 
     # --- 3. Install Poetry and Python Dependencies ---
-    # Install Poetry itself into the Read the Docs virtual environment.
     - python -m pip install poetry
-    # Install your project's Python dependencies, including the 'docs' extra group.
-    # Poetry automatically detects and uses the virtual environment set up by Read the Docs.
     - poetry install --extras docs
 
     # --- 4. Build Sphinx Documentation ---
-    # Execute the Sphinx build process. 'poetry run' ensures that Sphinx uses the Python
-    # interpreter and all packages from the Poetry-managed virtual environment.
-    # Ensure 'docs/source' is the correct path to your Sphinx source directory.
     - poetry run sphinx-build -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
 
-# Configuration for Git Submodules
-# This ensures that any submodules (like 'qiskit-device-benchmarking') are correctly cloned and initialized.
 submodules:
   include: all
-  # depth: 1 # Optional: You can uncomment this if your submodules are very large and you only need the latest commit.
 
-# Sphinx configuration (can remain for clarity, even though 'commands' override the build execution)
 sphinx:
-  configuration: docs/source/conf.py # Adjust this path if your conf.py is located elsewhere within your docs directory.
+  configuration: docs/source/conf.py
   builder: html
-  fail_on_warning: false # Set to true if you want documentation warnings to cause the build to fail.
+  fail_on_warning: false
 
-# Specify output formats for Read the Docs (e.g., HTML, PDF, ePub).
 formats: all
