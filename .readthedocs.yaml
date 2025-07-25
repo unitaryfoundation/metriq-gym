@@ -1,9 +1,31 @@
 version: 2
 
 build:
-  os: ubuntu-24.04
+  os: ubuntu-22.04 # Use a stable LTS release
   tools:
-    python: "3.13"
+    python: "3.13" # Ensure this matches or is compatible with your pyproject.toml's python version
 
+  # IMPORTANT: This section overrides Read the Docs' default build process.
+  # We are explicitly instructing it to use Poetry.
+  commands:
+    # 1. Install Poetry itself into the Read the Docs virtual environment.
+    #    Read the Docs usually provides a base virtualenv that 'pip' is installed in.
+    - python -m pip install poetry
+
+    # 2. Install your project's dependencies, including the 'docs' extra.
+    #    Poetry is smart enough to detect the active virtual environment created by RTD
+    #    and will install dependencies into it.
+    - poetry install --extras docs
+
+    # 3. Build the Sphinx documentation using 'poetry run'.
+    #    'poetry run' ensures that the sphinx-build command uses the Python interpreter
+    #    and packages from the Poetry-managed virtual environment.
+    #    Adjust 'docs/source' to your actual Sphinx source directory.
+    - poetry run sphinx-build -T -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
+
+# You can keep the sphinx block for clarity, but 'commands' will take precedence.
 sphinx:
-   configuration: docs/source/conf.py
+  configuration: docs/source/conf.py # This is still useful for some RTD features even with commands
+
+# Other optional configurations
+formats: all
