@@ -1,20 +1,11 @@
 version: 2
 
 build:
-  os: ubuntu-24.04 # Using a recent Ubuntu image
+  os: ubuntu-22.04 # Use 'ubuntu-22.04' as 'ubuntu-24.04' might not be fully supported yet or is causing issues.
+                  # Read the Docs often lags a bit behind new Ubuntu releases.
   tools:
-    python: "3.13" # Pinning to Python 3.13 as per your request and pyproject.toml compatibility
+    python: "3.13"
 
-python:
-  install:
-    # Use 'pip' as the method, but then run Poetry commands manually
-    - method: pip
-      path: .
-      requirements: requirements.txt # We'll generate this from poetry
-
-# Commands to run before building Sphinx documentation
-# This is where we install poetry and then use it to install dependencies
-build:
   commands:
     # Install Poetry itself using pip
     - pip install poetry
@@ -24,11 +15,17 @@ build:
     - poetry config virtualenvs.in-project true
 
     # Use Poetry to install all your project dependencies, including dev dependencies.
-    # --no-root is important to prevent issues if your project is also
-    # being installed as a package during the Sphinx build.
     - poetry install --no-root --with dev
 
+python:
+  install:
+    # Use 'pip' as the method, but then run Poetry commands manually
+    - method: pip
+      path: .
+      # No 'requirements.txt' needed here as Poetry handles it in 'build.commands'
+
+
 sphinx:
-  configuration: docs/source/conf.py # Path to your Sphinx conf.py file
-  builder: html # Explicitly set the builder to html
-  fail_on_warning: false # Optional: Set to true if you want warnings to fail the build
+  configuration: docs/source/conf.py
+  builder: html
+  fail_on_warning: false
