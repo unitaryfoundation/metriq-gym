@@ -1,8 +1,7 @@
 version: 2
 
 build:
-  os: ubuntu-22.04 # Use 'ubuntu-22.04' as 'ubuntu-24.04' might not be fully supported yet or is causing issues.
-                  # Read the Docs often lags a bit behind new Ubuntu releases.
+  os: ubuntu-22.04
   tools:
     python: "3.13"
 
@@ -11,21 +10,25 @@ build:
     - pip install poetry
 
     # Configure Poetry to create virtualenvs inside the project directory
-    # This makes it easier for subsequent steps to find dependencies
     - poetry config virtualenvs.in-project true
 
     # Use Poetry to install all your project dependencies, including dev dependencies.
     - poetry install --no-root --with dev
 
+    # Navigate into the docs/source directory before running make html
+    # This ensures Sphinx generates output relative to docs/source
+    - cd docs/source
+
+    # Run the make html command to build the documentation
+    # By default, Sphinx will put the output in ./_build/html relative to the current dir (docs/source)
+    - make html
+
 python:
   install:
-    # Use 'pip' as the method, but then run Poetry commands manually
     - method: pip
       path: .
-      # No 'requirements.txt' needed here as Poetry handles it in 'build.commands'
-
 
 sphinx:
-  configuration: docs/source/conf.py
+  configuration: docs/source/conf.py # This confirms your conf.py location
   builder: html
   fail_on_warning: false
