@@ -1,9 +1,17 @@
 version: 2
 
 build:
-  os: ubuntu-24.04
+  os: ubuntu-24.04 # Using a recent Ubuntu image
   tools:
-    python: "3.13"
+    python: "3.13" # Pinning to Python 3.13 as per your request and pyproject.toml compatibility
+
+python:
+  install:
+    - method: poetry # Tell Read the Docs to use Poetry for installation
+      path: . # The path to your Poetry project (usually the root of your repo)
+      args: [--with, dev, --no-root] # Install main dependencies, dev dependencies, and don't install the root project in editable mode
 
 sphinx:
-   configuration: docs/source/conf.py
+  configuration: docs/source/conf.py # Path to your Sphinx conf.py file
+  builder: html # Explicitly set the builder to html
+  fail_on_warning: false # Optional: Set to true if you want warnings to fail the build
