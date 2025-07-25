@@ -15,12 +15,12 @@ build:
     # Use Poetry to install all your project dependencies, including dev dependencies.
     - poetry install --no-root --with dev
 
-    # Navigate into the docs/source directory before running make html
-    # This ensures Sphinx generates output relative to docs/source
-    - cd docs/source
+    # --- REMOVE THIS LINE: - cd docs/source ---
+    # The 'make html' command should be run from the project root where your Makefile is.
+    # The Makefile's SOURCEDIR and BUILDDIR handle the paths relative to its location.
 
-    # Run the make html command to build the documentation
-    # By default, Sphinx will put the output in ./_build/html relative to the current dir (docs/source)
+    # Run the make html command from the project root.
+    # Your Makefile is in the project root, and it knows where docs/source is.
     - make html
 
 python:
@@ -29,6 +29,6 @@ python:
       path: .
 
 sphinx:
-  configuration: docs/source/conf.py # This confirms your conf.py location
+  configuration: docs/source/conf.py # This is correctly pointing to your conf.py
   builder: html
   fail_on_warning: false
