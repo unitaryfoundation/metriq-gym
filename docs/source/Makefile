@@ -3,10 +3,10 @@
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
-SPHINXOPTS    ?=
-SPHINXBUILD   ?= sphinx-build
-SOURCEDIR      = docs/source
-BUILDDIR      = _build
+SPHINXOPTS     ?=
+SPHINXBUILD    ?= sphinx-build
+SOURCEDIR      = docs/source  # <--- THIS MUST BE CHANGED IN YOUR ACTUAL REPO'S MAKEFILE
+BUILDDIR       = _build       # This will place _build at the project root
 
 # Put it first so that "make" without argument is like "make help".
 help:

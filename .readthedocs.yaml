@@ -6,22 +6,10 @@ build:
     python: "3.13"
 
   commands:
-    # Install Poetry itself using pip
     - pip install poetry
-
-    # Configure Poetry to create virtualenvs inside the project directory
     - poetry config virtualenvs.in-project true
-
-    # Use Poetry to install all your project dependencies, including dev dependencies.
     - poetry install --no-root --with dev
-
-    # --- REMOVE THIS LINE: - cd docs/source ---
-    # The 'make html' command should be run from the project root where your Makefile is.
-    # The Makefile's SOURCEDIR and BUILDDIR handle the paths relative to its location.
-
-    # Run the make html command from the project root.
-    # Your Makefile is in the project root, and it knows where docs/source is.
-    - make html
+    - make html # THIS MUST BE CALLED FROM THE ROOT
 
 python:
   install:
@@ -29,6 +17,6 @@ python:
       path: .
 
 sphinx:
-  configuration: docs/source/conf.py # This is correctly pointing to your conf.py
+  configuration: docs/source/conf.py # This is good practice to keep for clarity/validation
   builder: html
   fail_on_warning: false
