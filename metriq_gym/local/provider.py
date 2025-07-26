@@ -10,10 +10,10 @@ class LocalProvider(QuantumProvider):
     def __init__(self):
         super().__init__()
         self.device = LocalAerDevice(provider=self)
-        self._devices: dict[str, LocalAerDevice] = {"aer_simulator": self.device}
+        self._devices: dict[str, LocalAerDevice] = {}
 
     def get_devices(self, **_):
-        return list(self._devices.values())
+        return [self.device, *self._devices.values()]
 
     def get_device(self, device_id):
         if device_id in self._devices:

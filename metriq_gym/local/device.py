@@ -28,13 +28,13 @@ def _make_profile(
 class LocalAerDevice(QuantumDevice):
     def __init__(
         self, *, provider, device_id: str = "aer_simulator", backend: AerSimulator | None = None
-    ):
+    ) -> None:
         backend = backend or AerSimulator()
         super().__init__(_make_profile(device_id=device_id, backend=backend))
         self._backend = self.profile.extra["backend"]
         self._provider = provider
 
-    def status(self):
+    def status(self) -> DeviceStatus:
         return DeviceStatus.ONLINE
 
     def submit(
