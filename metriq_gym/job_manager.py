@@ -116,7 +116,7 @@ class JobManager:
                 except TypeError as e:
                     self._log_skip(line_number, f"Data structure mismatch: {e}")
                 except Exception as e:
-                    logger.warning(line_number, f"Unexpected exception ({type(e).__name__}): {e}")
+                    logger.warning(f"{line_number}Unexpected exception ({type(e).__name__}): {e}")
                 else:
                     self.jobs.append(job)
 
