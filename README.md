@@ -166,7 +166,7 @@ To run on IBM hardware, you will also require an IBM token. To obtain this, plea
 Platform](https://quantum.ibm.com/) and include the API token in the local `.env` file as previously described.
 
 The `schemas/examples/` directory houses example JSON configuration files that define the benchmark to run. In this
-case, we use the `bseq_example.json` file as we want to run a BSEQ job. The following dispatches a
+case, we use the `bseq.example.json` file as we want to run a BSEQ job. The following dispatches a
 job on the ibm-sherbrooke device for BSEQ.
 
 ```sh
@@ -292,7 +292,7 @@ poetry run mypy
 The project uses [Sphinx](https://www.sphinx-doc.org/en/master/) to generate documentation. To build the HTML
 documentation:
 
-1.Navigate to the docs/ directory:
+1. Navigate to the docs/ directory:
 ```sh
 cd docs/
 ```
