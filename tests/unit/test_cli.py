@@ -3,7 +3,7 @@ from tabulate import tabulate
 import pytest
 from unittest.mock import MagicMock
 from metriq_gym.cli import LIST_JOBS_HEADERS, list_jobs
-from metriq_gym.benchmarks import JobType
+from metriq_gym.constants import JobType
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 
 
