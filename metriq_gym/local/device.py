@@ -8,13 +8,10 @@ from .job import LocalAerJob
 
 
 def _make_profile(
-    backend: AerSimulator | None = None, device_id: str = "aer_simulator"
+    *, device_id: str = "aer_simulator", backend: AerSimulator | None = None
 ) -> TargetProfile:
-    """Creates a TargetProfile for a given backend or a default one."""
-    # If no backend is provided, create a default AerSimulator.
-    if backend is None:
-        backend = AerSimulator()
-
+    device_id = "aer_simulator"
+    backend = backend or AerSimulator()
     cfg = backend.configuration()
     return TargetProfile(
         device_id=device_id,
@@ -30,16 +27,10 @@ def _make_profile(
 
 class LocalAerDevice(QuantumDevice):
     def __init__(
-        self,
-        *,
-        provider,
-        backend: AerSimulator | None = None,
-        device_id: str = "aer_simulator",
+        self, *, provider, device_id: str = "aer_simulator", backend: AerSimulator | None = None
     ):
-        """Initializes the device, accepting an optional backend."""
-        # Create the profile using our new flexible function
-        profile = _make_profile(backend=backend, device_id=device_id)
-        super().__init__(profile)
+        backend = backend or AerSimulator()
+        super().__init__(_make_profile(device_id=device_id, backend=backend))
         self._backend = self.profile.extra["backend"]
         self._provider = provider
 

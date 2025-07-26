@@ -1,7 +1,7 @@
 import pytest
-from unittest.mock import patch, MagicMock
-from metriq_gym.local.provider import LocalProvider
-from metriq_gym.local.device import LocalAerDevice
+from unittest.mock import MagicMock, patch
+
+from metriq_gym.local.provider import LocalProvider, LocalAerDevice
 
 
 def test_get_devices_returns_list_with_device():
@@ -24,39 +24,27 @@ def test_get_device_with_invalid_id_raises():
         provider.get_device("invalid_id")
 
 
-def test_get_device_noisy_raises_without_backend_name():
-    """Verifies it raises an error if noise_backend is missing."""
+def test_get_device_with_noise_model():
     provider = LocalProvider()
-    with pytest.raises(ValueError, match="argument is required"):
-        provider.get_device("aer_simulator_noisy")
+    with (
+        patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
+        patch("metriq_gym.local.provider.NoiseModel") as mock_noise,
+        patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
+    ):
+        backend = MagicMock()
+        backend.name = "fake_backend"
+        mock_service.return_value.backends.return_value = [backend]
+        mock_service.return_value.backend.return_value = backend
+        noise_model = MagicMock()
+        mock_noise.from_backend.return_value = noise_model
+        aer_backend = MagicMock()
+        mock_aer.from_backend.return_value = aer_backend
 
+        device_name = mock_service.return_value.backends.return_value[0].name
+        device = provider.get_device(device_name)
 
-@patch("qiskit_ibm_runtime.QiskitRuntimeService")
-@patch("qiskit_aer.noise.NoiseModel")
-@patch("qiskit_aer.AerSimulator")
-def test_get_device_noisy_happy_path(mock_aer_simulator, mock_noise_model, mock_runtime_service):
-    """Tests that the noisy simulator is constructed and returned correctly."""
-    # 1. Setup Mocks
-    mock_real_backend = MagicMock()
-    mock_real_backend.configuration.return_value.coupling_map = [[0, 1]]
-
-    # Mock the service to return our mock backend
-    mock_runtime_service.return_value.backend.return_value = mock_real_backend
-
-    # Mock the NoiseModel class
-    mock_noise_model.from_backend.return_value.basis_gates = ["cx", "rz"]
-
-    # 2. Run Code
-    provider = LocalProvider()
-    device = provider.get_device("aer_simulator_noisy", noise_backend="ibm_fake_brisbane")
-
-    # 3. Assertions
-    assert isinstance(device, LocalAerDevice)
-
-    mock_runtime_service.return_value.backend.assert_called_with("ibm_fake_brisbane")
-
-    mock_aer_simulator.assert_called_with(
-        noise_model=mock_noise_model.from_backend.return_value,
-        coupling_map=[[0, 1]],
-        basis_gates=["cx", "rz"],
-    )
+        assert isinstance(device, LocalAerDevice)
+        mock_service.return_value.backend.assert_called_once_with(device_name)
+        mock_noise.from_backend.assert_called_once_with(backend)
+        mock_aer.from_backend.assert_called_once_with(backend, noise_model=noise_model)
+        assert provider.get_device(device_name) is device

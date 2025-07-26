@@ -129,6 +129,12 @@ At the moment the Qiskit Aer simulator is supported. Specify the `local` provide
 mgym dispatch metriq_gym/schemas/examples/qml_kernel.example.json --provider local --device aer_simulator
 ```
 
+You can also create a noisy simulator based on an IBM backend by passing the backend name as the device:
+
+```sh
+mgym dispatch metriq_gym/schemas/examples/qml_kernel.example.json --provider local --device ibm_<BACKEND>
+```
+
 Polling local simulator jobs works the same way:
 
 ```sh
