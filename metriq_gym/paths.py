@@ -3,15 +3,17 @@ from pathlib import Path
 from importlib.metadata import distribution, PackageNotFoundError
 from platformdirs import user_data_dir, user_cache_dir
 
+AUTHOR_FALLBACK = "Unitary Foundation"
+
 
 def _load_app_meta(dist_name: str) -> tuple[str, str]:
     try:
         dist = distribution(dist_name)
         meta = dist.metadata
         name = meta["Name"] or dist_name
-        author = meta.get("Author", "unknown-author")
+        author = meta.get("Author", AUTHOR_FALLBACK)
     except PackageNotFoundError:
-        name, author = dist_name, "unknown-author"
+        name, author = dist_name, AUTHOR_FALLBACK
     return name, author
 
 
