@@ -19,7 +19,7 @@ _APP_NAME, _APP_AUTHOR = _load_app_meta("metriq-gym")
 
 
 def get_data_db_path(filename: str = "localdb.jsonl") -> Path:
-    base = Path(os.environ.get("MGYM_LOCAL_DB_DIR", user_data_dir(_APP_NAME, _APP_AUTHOR)))
+    base = Path(os.environ.get("MGYM_LOCAL_DB_DIR") or user_data_dir(_APP_NAME, _APP_AUTHOR))
     base.mkdir(parents=True, exist_ok=True)
     return base / filename
 
