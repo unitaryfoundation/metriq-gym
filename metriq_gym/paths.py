@@ -26,7 +26,7 @@ def get_data_db_path(filename: str = "localdb.jsonl") -> Path:
 
 def get_local_simulator_cache_dir(subfolder: str = "jobs") -> Path:
     base = Path(
-        os.environ.get("MGYM_LOCAL_SIMULATOR_CACHE_DIR", user_cache_dir(_APP_NAME, _APP_AUTHOR))
+        os.environ.get("MGYM_LOCAL_SIMULATOR_CACHE_DIR") or user_cache_dir(_APP_NAME, _APP_AUTHOR)
     )
     jobs = base / subfolder
     jobs.mkdir(parents=True, exist_ok=True)
