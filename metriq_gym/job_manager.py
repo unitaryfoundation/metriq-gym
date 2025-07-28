@@ -8,7 +8,7 @@ from typing import Any
 
 from tabulate import tabulate
 from metriq_gym.constants import JobType
-from metriq_gym.constants import JOB_STORAGE_FILE
+from metriq_gym.paths import get_data_db_path
 
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class MetriqGymJob:
 # TODO: https://github.com/unitaryfoundation/metriq-gym/issues/51
 class JobManager:
     jobs: list[MetriqGymJob]
-    jobs_file = JOB_STORAGE_FILE
+    jobs_file = get_data_db_path()
 
     def __init__(self):
         self._load_jobs()
