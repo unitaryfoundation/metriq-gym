@@ -24,7 +24,8 @@ def mock_backend():
 def test_status_returns_online(mock_provider, mock_backend):
     with patch("metriq_gym.local.device._make_profile") as mock_make_profile:
         mock_make_profile.return_value = MagicMock(extra={"backend": mock_backend})
-        device = LocalAerDevice(provider=mock_provider)
+        device = LocalAerDevice(provider=mock_provider, backend=mock_backend, device_id="test")
+        mock_make_profile.assert_called_once_with(device_id="test", backend=mock_backend)
         assert device.status() == DeviceStatus.ONLINE
 
 
@@ -33,7 +34,9 @@ def test_submit_returns_local_aer_job(mock_provider, mock_backend):
         mock_make_profile.return_value = MagicMock(
             device_id="test_device", extra={"backend": mock_backend}
         )
-        device = LocalAerDevice(provider=mock_provider)
+        device = LocalAerDevice(
+            provider=mock_provider, device_id="test_device", backend=mock_backend
+        )
         input_circuit = QuantumCircuit(2)
         job = device.submit(input_circuit, shots=N_SHOTS)
         assert isinstance(job, LocalAerJob)
