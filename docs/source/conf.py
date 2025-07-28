@@ -7,8 +7,8 @@ sys.path.insert(0, os.path.abspath("../../../"))
 
 
 project = "metriq-gym"
-copyright = "2024, Unitary Fund"
-author = "Unitary Fund"
+copyright = "2024, Unitary Foundation"
+author = "Unitary Foundation"
 release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
