@@ -131,6 +131,11 @@ class JobManager:
     def get_jobs(self) -> list[MetriqGymJob]:
         return self.jobs
 
+    def get_latest_job(self) -> MetriqGymJob:
+        if not self.jobs:
+            raise ValueError("No jobs available")
+        return self.jobs[-1]
+
     def get_job(self, job_id: str) -> MetriqGymJob:
         for job in self.jobs:
             if job.id == job_id:

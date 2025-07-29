@@ -16,6 +16,8 @@ LIST_JOBS_HEADERS = ["Metriq-gym Job Id", "Provider", "Device", "Type", "Dispatc
 
 JOB_ID_ARG_ALIASES = ["--job_id", "--job-id", "--jobid"]
 
+LATEST_JOB_ID = "latest"
+
 
 def list_jobs(jobs: list[MetriqGymJob], show_index: bool = False) -> None:
     """List jobs recorded in the job manager.
@@ -40,6 +42,8 @@ def list_jobs(jobs: list[MetriqGymJob], show_index: bool = False) -> None:
 
 def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqGymJob | None:
     if args.job_id:
+        if args.job_id == LATEST_JOB_ID:
+            return job_manager.get_latest_job()
         return job_manager.get_job(args.job_id)
     jobs = job_manager.get_jobs()
     if not jobs:
@@ -110,9 +114,7 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     poll_parser = subparsers.add_parser("poll", help="Poll jobs")
-    poll_parser.add_argument(
-        *JOB_ID_ARG_ALIASES, type=str, required=False, help="Job ID to poll (optional)"
-    )
+    poll_parser.add_argument("job_id", type=str, nargs="?", help="Job ID to poll (optional)")
     poll_parser.add_argument(
         "--json",
         nargs="?",
@@ -122,13 +124,9 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     view_parser = subparsers.add_parser("view", help="View jobs")
-    view_parser.add_argument(
-        *JOB_ID_ARG_ALIASES, type=str, required=False, help="Job ID to view (optional)"
-    )
+    view_parser.add_argument("job_id", type=str, nargs="?", help="Job ID to view (optional)")
 
     delete_parser = subparsers.add_parser("delete", help="Delete jobs")
-    delete_parser.add_argument(
-        *JOB_ID_ARG_ALIASES, type=str, required=False, help="Job ID to delete (optional)"
-    )
+    delete_parser.add_argument("job_id", type=str, nargs="?", help="Job ID to delete (optional)")
 
     return parser.parse_args()
