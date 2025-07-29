@@ -25,7 +25,11 @@ class LocalProvider(QuantumProvider):
             service = QiskitRuntimeService()
             backend = service.backend(device_id)
             noise_model = NoiseModel.from_backend(backend)
-            aer_backend = AerSimulator.from_backend(backend, noise_model=noise_model)
+            aer_backend = AerSimulator.from_backend(
+                backend,
+                noise_model=noise_model,
+                basis_gates=AerSimulator().configuration().basis_gates,
+            )
         except Exception as exc:  # pragma: no cover - network exceptions
             raise ValueError("Unknown device identifier") from exc
 
