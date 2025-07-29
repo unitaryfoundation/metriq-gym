@@ -2,7 +2,7 @@
 name = "metriq-gym"
 description = "Framework for implementing and running standard quantum benchmarks on different quantum devices by different providers."
 authors = [
-    { name = "Unitary Foundation team" }
+    { name = "Unitary Foundation team", email = "metriq@unitary.foundation"}
 ]
 maintainers = [
     { name = "Alessandro Cosentino", email = "alessandro@unitary.foundation"},
@@ -36,7 +36,7 @@ python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
 qiskit = ">=1.4.3,<3.0"
 qiskit-aer = "^0.17.1"
-qiskit-ibm-runtime = "^0.38.0"
+qiskit-ibm-runtime = "^0.40.1"
 scipy = "^1.16.0"
 tabulate = "^0.9.0"
 qbraid = {extras = ["ionq", "qiskit", "braket", "azure", "cirq"], version = "^0.9.8"}
@@ -46,6 +46,7 @@ ruamel-yaml-clib = [
     { version = "0.2.8", markers = "sys_platform == 'darwin' and platform_machine == 'x86_64'" }
 ]
 myst-nb = "^1.3.0"
+platformdirs = "^4.3.8"
 
 [tool.poetry.extras]
 dev = ["qiskit-device-benchmarking"]
