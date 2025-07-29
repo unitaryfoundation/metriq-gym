@@ -126,12 +126,12 @@ Refer to the `schemas/examples/` directory for example configuration files for s
 If running on quantum cloud hardware, the jobs will be added to a polling queue. The status of the queue can be checked with
 
 ```sh
-mgym poll --job_id <METRIQ_GYM_JOB_ID>
+mgym poll <METRIQ_GYM_JOB_ID>
 ```
 
 where `<METRIQ_GYM_JOB_ID>` is the assigned job ID of the job that was dispatched as provided by `metriq-gym`. 
 
-Alternatively, the `poll` action can be used without the `--job_id` flag to view all dispatched jobs, 
+Alternatively, the `poll` action can be used without any argument to view all dispatched jobs, 
 and select the one that is of interest.
 
 ```sh
@@ -140,7 +140,7 @@ mgym poll
 
 In order to export results to a JSON file, you can use the `--json` flag with the `poll` action.
 ```sh
-mgym poll --job_id <METRIQ_GYM_JOB_ID> --json
+mgym poll <METRIQ_GYM_JOB_ID> --json
 ```
 This will create a JSON file with the results and the metadata of the job identified by `<METRIQ_GYM_JOB_ID>`.
 By default, the JSON file will be saved in the current working directory with the name `<METRIQ_GYM_JOB_ID>.json`.
@@ -164,7 +164,7 @@ mgym dispatch metriq_gym/schemas/examples/qml_kernel.example.json --provider loc
 Polling local simulator jobs works the same way:
 
 ```sh
-mgym poll --job_id <METRIQ_GYM_JOB_ID>
+mgym poll <METRIQ_GYM_JOB_ID>
 ```
 
 ### Credential management
@@ -185,10 +185,10 @@ This will display basic information about each job, including its ID, backend, j
 mgym view
 ```
 In order to view the details of a specific job (e.g., the parameters the job was launched with), 
-you can use the `view` action with the `--job_id` flag or select the job by index from the list of all dispatched jobs.
+you can use the `view` action and pass the job's id as argument, or select the job by index from the list of all dispatched jobs.
 
 ```sh
-mgym view --job_id <METRIQ_GYM_JOB_ID>
+mgym view <METRIQ_GYM_JOB_ID>
 ```
 
 ### Example: Benchmarking Bell state effective qubits (BSEQ) on IBM hardware
@@ -227,7 +227,7 @@ We can confirm that the job has indeed been dispatched and retrieve the associat
 We can use the "poll" action to check the status of our job:
 
 ```sh
-mgym poll --job_id 93a06a18-41d8-475a-a030-339fbf3accb9
+mgym poll 93a06a18-41d8-475a-a030-339fbf3accb9
 ```
 
 Doing so gives us the results of our job (if it has completed):
