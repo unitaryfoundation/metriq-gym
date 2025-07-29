@@ -1604,7 +1604,7 @@ description = "Lightweight in-process concurrent programming"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "sys_platform == \"darwin\" and platform_machine == \"x86_64\" or (sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\") and (platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\")"
+markers = "platform_machine == \"x86_64\" or platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\""
 files = [
     {file = "greenlet-3.2.3-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:1afd685acd5597349ee6d7a88a8bec83ce13c106ac78c196ee9dde7c04fe87be"},
     {file = "greenlet-3.2.3-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:761917cac215c61e9dc7324b2606107b3b292a8349bdebb31503ab4de3f559ac"},
@@ -4036,22 +4036,22 @@ scipy = ">=1.0"
 
 [[package]]
 name = "qiskit-ibm-runtime"
-version = "0.38.0"
+version = "0.40.1"
 description = "IBM Quantum client for Qiskit Runtime."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 markers = "platform_machine == \"arm64\" or platform_machine == \"x86_64\" or sys_platform != \"darwin\" or platform_machine != \"arm64\" and platform_machine != \"x86_64\""
 files = [
-    {file = "qiskit_ibm_runtime-0.38.0-py3-none-any.whl", hash = "sha256:5b2030737874e75b86e6b466fcf0dca72f567a469976d784ae27a36a9b33e440"},
-    {file = "qiskit_ibm_runtime-0.38.0.tar.gz", hash = "sha256:965e9382eb8a9880bb7f601b19d6da741a8973a301ee0c9d9ef0e479c1de3449"},
+    {file = "qiskit_ibm_runtime-0.40.1-py3-none-any.whl", hash = "sha256:5a67e4c55b6e0a2bc9041c1ec7b8c5adc43a50f7dfb8a2521a0c2f3ed4aaa712"},
+    {file = "qiskit_ibm_runtime-0.40.1.tar.gz", hash = "sha256:83fd172357a28d69b3289009a724ec14d70c4367dbb5aa140ffd63aa101c3ae1"},
 ]
 
 [package.dependencies]
 ibm-platform-services = ">=0.22.6"
 numpy = ">=1.13"
 packaging = "*"
-pydantic = ">=2.5.0,<2.10"
+pydantic = ">=2.5.0"
 python-dateutil = ">=2.8.0"
 qiskit = ">=1.4.1"
 requests = ">=2.19"
@@ -5349,4 +5349,4 @@ dev = []
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "d8973dddb9d0a697d3b362d9bd6989d15aae60f84c9b25f61da3a57795b6e045"
+content-hash = "2fb4f8092c3458b98b0b65d0d2900029d913107dc48f615fdacedbd217a1d7f9"
