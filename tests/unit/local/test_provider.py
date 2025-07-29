@@ -39,6 +39,7 @@ def test_get_device_with_noise_model():
         mock_noise.from_backend.return_value = noise_model
         aer_backend = MagicMock()
         mock_aer.from_backend.return_value = aer_backend
+        mock_aer.return_value.configuration.return_value.basis_gates = ["h"]
 
         device_name = mock_service.return_value.backends.return_value[0].name
         device = provider.get_device(device_name)
@@ -46,5 +47,9 @@ def test_get_device_with_noise_model():
         assert isinstance(device, LocalAerDevice)
         mock_service.return_value.backend.assert_called_once_with(device_name)
         mock_noise.from_backend.assert_called_once_with(backend)
-        mock_aer.from_backend.assert_called_once_with(backend, noise_model=noise_model)
+        mock_aer.from_backend.assert_called_once_with(
+            backend,
+            noise_model=noise_model,
+            basis_gates=mock_aer.return_value.configuration.return_value.basis_gates,
+        )
         assert provider.get_device(device_name) is device
