@@ -13,7 +13,7 @@ def _load_app_meta(dist_name: str) -> tuple[str, str]:
         dist = distribution(dist_name)
         meta = dist.metadata
         name = meta["Name"] or dist_name
-        author = meta.get("Author", AUTHOR_FALLBACK)
+        author = meta.get("Author") or meta.get("Author-email") or AUTHOR_FALLBACK
     except PackageNotFoundError:
         name, author = dist_name, AUTHOR_FALLBACK
     return name, author
