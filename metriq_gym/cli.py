@@ -14,8 +14,6 @@ logger.setLevel(logging.INFO)
 
 LIST_JOBS_HEADERS = ["Metriq-gym Job Id", "Provider", "Device", "Type", "Dispatch time (UTC)"]
 
-JOB_ID_ARG_ALIASES = ["--job_id", "--job-id", "--jobid"]
-
 LATEST_JOB_ID = "latest"
 
 
