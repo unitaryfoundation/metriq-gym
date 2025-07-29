@@ -41,7 +41,7 @@ Four easy steps to get started with `metriq-gym`!
 3. Dispatch it to a quantum device or simulator.
 
     ```sh
-    mgym dispatch wormhole.example.json --p local --d aer_simulator
+    mgym dispatch wormhole.example.json -p local -d aer_simulator
     ```
 4. Poll the job to get the results.
 
