@@ -30,10 +30,10 @@ def get_data_db_path(filename: str = DEFAULT_DB_FILENAME) -> Path:
     Otherwise, a user-specific data directory is used. The function ensures the base directory exists.
 
     Args:
-        filename (str): The name of the database file. Defaults to DEFAULT_DB_FILENAME.
+        filename: The name of the database file. Defaults to DEFAULT_DB_FILENAME.
 
     Returns:
-        Path: The full path to the database file.
+        The full path to the database file.
     """
     base = Path(os.environ.get("MGYM_LOCAL_DB_DIR") or user_data_dir(_APP_NAME, _APP_AUTHOR))
     base.mkdir(parents=True, exist_ok=True)
@@ -44,15 +44,15 @@ def get_local_simulator_cache_dir(subfolder: str = DEFAULT_JOBS_SUBFOLDER) -> Pa
     """
     Returns the path to the local simulator cache directory, creating it if it does not exist.
 
-    The base directory is determined by the "MGYM_LOCAL_SIMULATOR_CACHE_DIR" environment variable if set,
+    The base directory is determined by the `MGYM_LOCAL_SIMULATOR_CACHE_DIR` environment variable if set,
     otherwise it defaults to the user's cache directory for the application. A subfolder can be specified,
     which will be created under the base directory.
 
     Args:
-        subfolder (str): Name of the subfolder within the cache directory. Defaults to DEFAULT_JOBS_SUBFOLDER.
+        subfolder: Name of the subfolder within the cache directory. Defaults to DEFAULT_JOBS_SUBFOLDER.
 
     Returns:
-        Path: The full path to the cache subfolder, guaranteed to exist.
+        The full path to the cache subfolder, guaranteed to exist.
     """
     base = Path(
         os.environ.get("MGYM_LOCAL_SIMULATOR_CACHE_DIR") or user_cache_dir(_APP_NAME, _APP_AUTHOR)
