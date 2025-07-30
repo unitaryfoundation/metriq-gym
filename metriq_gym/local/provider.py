@@ -28,7 +28,7 @@ class LocalProvider(QuantumProvider):
             aer_backend = AerSimulator.from_backend(
                 backend,
                 noise_model=noise_model,
-                basis_gates=AerSimulator().configuration().basis_gates,
+                basis_gates=self._default_basis_gates,
             )
         except Exception as exc:  # pragma: no cover - network exceptions
             raise ValueError("Unknown device identifier") from exc
