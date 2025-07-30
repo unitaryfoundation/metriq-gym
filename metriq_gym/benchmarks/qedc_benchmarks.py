@@ -186,11 +186,9 @@ def analyze_results(
         metrics.circuit_metrics["subtitle"] = f"device = {device_name}"
 
         # Determine which metrics to plot.
+        filters = ["fidelity", "hf_fidelity"]
         if params["extra_metrics"]:
-            filters = ["fidelity", "hf_fidelity", "depth", "2q", "vbplot"]
-        else:
-            metrics.do_volumetric_plots = False
-            filters = ["fidelity", "hf_fidelity"]
+            filters += ["depth", "2q", "vbplot"]
 
         # Plot the metrics.
         metrics.plot_metrics(subtitle, filters=filters)
