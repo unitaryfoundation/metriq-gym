@@ -58,18 +58,6 @@
       "type": "integer",
       "description": "Specifies the secret int for the benchmark; note that max_circuits must be 1 if this is used.",
       "examples": [1]
-    },
-    "extra_metrics": {
-      "type": "boolean",
-      "description": "Determines whether to store circuit depth, width, and more metrics.",
-      "default": true,
-      "examples": [false]
-    },
-    "plot_metrics": {
-      "type": "boolean",
-      "description": "Determines whether to plot metrics and store them.",
-      "default": true,
-      "examples": [false]
     }
   },
   "required": ["benchmark_name"],

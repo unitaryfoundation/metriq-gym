@@ -6,7 +6,5 @@
     "skip_qubits": 1,
     "max_circuits": 3,
     "method": 1,
-    "use_midcircuit_measurement": false,
-    "extra_metrics": true,
-    "plot_metrics": true
+    "use_midcircuit_measurement": false
 }
