@@ -1,5 +1,5 @@
 import uuid
-from qbraid import QPROGRAM
+from qbraid import QPROGRAM, load_program
 from qbraid.runtime import QuantumDevice, DeviceStatus, TargetProfile
 from qbraid.programs import ExperimentType, ProgramSpec
 from qiskit import QuantumCircuit
@@ -36,6 +36,11 @@ class LocalAerDevice(QuantumDevice):
 
     def status(self) -> DeviceStatus:
         return DeviceStatus.ONLINE
+
+    def transform(self, run_input):
+        program = load_program(run_input)
+        program.transform(self)
+        return program.program
 
     def submit(
         self, run_input: QPROGRAM | list[QPROGRAM], *, shots: int | None = None, **kwargs
