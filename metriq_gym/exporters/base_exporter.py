@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import importlib.metadata
 from metriq_gym.benchmarks.benchmark import BenchmarkResult
 from metriq_gym.job_manager import MetriqGymJob
 
@@ -12,7 +11,7 @@ class BaseExporter(ABC):
 
     def as_dict(self):
         return {
-            "version": importlib.metadata.version("metriq-gym"),
+            "version": self.metriq_gym_job.version,
             "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),
             "provider": self.metriq_gym_job.provider_name,
             "device": self.metriq_gym_job.device_name,
