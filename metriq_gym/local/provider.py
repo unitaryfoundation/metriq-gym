@@ -1,7 +1,6 @@
 from qbraid.runtime import QuantumProvider
 from qiskit_aer import AerSimulator
 from qiskit_ibm_runtime import QiskitRuntimeService
-from qiskit_aer.noise import NoiseModel
 
 from metriq_gym.local.device import LocalAerDevice
 
@@ -22,10 +21,7 @@ class LocalProvider(QuantumProvider):
         if device_id == "aer_simulator":
             return self.device
         try:
-            service = QiskitRuntimeService()
-            backend = service.backend(device_id)
-            noise_model = NoiseModel.from_backend(backend)
-            aer_backend = AerSimulator.from_backend(backend, noise_model=noise_model)
+            aer_backend = AerSimulator.from_backend(QiskitRuntimeService().backend(device_id))
         except Exception as exc:  # pragma: no cover - network exceptions
             raise ValueError("Unknown device identifier") from exc
 

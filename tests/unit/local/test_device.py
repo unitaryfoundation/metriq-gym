@@ -2,9 +2,10 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from qiskit import QuantumCircuit
+from qbraid.runtime import DeviceStatus
+
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.local.job import LocalAerJob
-from qbraid.runtime import DeviceStatus
 
 N_SHOTS = 1024
 
@@ -42,3 +43,24 @@ def test_submit_returns_local_aer_job(mock_provider, mock_backend):
         assert isinstance(job, LocalAerJob)
         assert job.device == device
         assert job.result().data.measurement_counts == {"00": N_SHOTS}
+
+
+def test_transform_functionality(mock_provider):
+    mock_run_input = MagicMock()
+    mock_program = MagicMock()
+    mock_program.program = "transformed_program"
+
+    with (
+        patch(
+            "metriq_gym.local.device.load_program", return_value=mock_program
+        ) as mock_load_program,
+        patch("metriq_gym.local.device._make_profile") as mock_make_profile,
+    ):
+        mock_make_profile.return_value.extra = {"backend": "mock_backend"}
+        device = LocalAerDevice(provider=mock_provider)
+
+        result = device.transform(mock_run_input)
+        mock_load_program.assert_called_once_with(mock_run_input)
+        mock_program.transform.assert_called_once_with(device)
+
+        assert result == "transformed_program"
