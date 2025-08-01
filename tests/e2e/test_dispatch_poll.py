@@ -1,5 +1,4 @@
 import json
-import re
 import subprocess
 from pathlib import Path
 
@@ -26,7 +25,7 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
     # ------------------------------------------------------------------
     example_cfg = Path(__file__).parent.resolve() / "test_benchmark.json"
 
-    dispatch_cmd = subprocess.run(
+    subprocess.run(
         [
             "mgym",
             "dispatch",
@@ -41,15 +40,6 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
         check=True,
     )
 
-    # Define the expected CLI output format
-    DISPATCH_OUTPUT_FORMAT = "dispatched with ID: {}"
-
-    # Extract the UUID using the defined format
-    uuid_regex = DISPATCH_OUTPUT_FORMAT.format(r"([0-9a-f-]{36})")
-    m = re.search(uuid_regex, dispatch_cmd.stdout)
-    assert m, f"Could not parse job_id from:\n{dispatch_cmd.stdout}"
-    job_id = m.group(1)
-
     # ------------------------------------------------------------------
     # 2. Poll the same job and export the JSON payload
     # ------------------------------------------------------------------
@@ -58,8 +48,7 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
         [
             "mgym",
             "poll",
-            "--job_id",
-            job_id,
+            "latest",
             "--json",
             str(outfile),  # temp file to keep the repo clean
         ],
@@ -87,11 +76,10 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
         [
             "mgym",
             "delete",
-            "--job_id",
-            job_id,
+            "latest",
         ],
         capture_output=True,
         text=True,
         check=True,
     )
-    assert f"Job {job_id} deleted successfully" in delete_cmd.stdout, "Failed to delete the job"
+    assert "deleted successfully" in delete_cmd.stdout, "Failed to delete the job"

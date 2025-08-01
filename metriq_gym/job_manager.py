@@ -8,7 +8,7 @@ from typing import Any
 
 from tabulate import tabulate
 from metriq_gym.constants import JobType
-from metriq_gym.constants import JOB_STORAGE_FILE
+from metriq_gym.paths import get_data_db_path
 
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class MetriqGymJob:
 # TODO: https://github.com/unitaryfoundation/metriq-gym/issues/51
 class JobManager:
     jobs: list[MetriqGymJob]
-    jobs_file = JOB_STORAGE_FILE
+    jobs_file = get_data_db_path()
 
     def __init__(self):
         self._load_jobs()
@@ -71,11 +71,10 @@ class JobManager:
 
     def _load_jobs(self):
         """
-        Initialize the job list by loading valid jobs from the local JSONL file.
-        This method reads the `.metriq_gym_jobs.jsonl` file line by line,
-        attempting to deserialize each entry into a `MetriqGymJob` object.
-        It skips invalid or outdated entries without raising exceptions,
-        while logging the reasons for each skip.
+        Initialize the job list by loading valid jobs from the local JSONL db file.
+
+        It reads the file line by line, attempting to deserialize each entry into a `MetriqGymJob` object.
+        It skips invalid or outdated entries without raising exceptions, while logging the reasons for each skip.
 
         Jobs may be skipped for the following reasons:
         - JSON decoding errors
@@ -116,7 +115,7 @@ class JobManager:
                 except TypeError as e:
                     self._log_skip(line_number, f"Data structure mismatch: {e}")
                 except Exception as e:
-                    logger.warning(line_number, f"Unexpected exception ({type(e).__name__}): {e}")
+                    logger.warning(f"{line_number} Unexpected exception ({type(e).__name__}): {e}")
                 else:
                     self.jobs.append(job)
 
@@ -131,6 +130,11 @@ class JobManager:
 
     def get_jobs(self) -> list[MetriqGymJob]:
         return self.jobs
+
+    def get_latest_job(self) -> MetriqGymJob:
+        if not self.jobs:
+            raise ValueError("No jobs available")
+        return self.jobs[-1]
 
     def get_job(self, job_id: str) -> MetriqGymJob:
         for job in self.jobs:
