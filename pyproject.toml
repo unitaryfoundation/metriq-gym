@@ -20,7 +20,11 @@ mgym = "metriq_gym.run:main"
 packages = [
     { include = "metriq_gym", from = "." },
     { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" },
-    { include = "*", from = "submodules/QC-App-Oriented-Benchmarks" }
+    { include = "_common", from = "submodules/QC-App-Oriented-Benchmarks" },
+    { include = "bernstein_vazirani", from = "submodules/QC-App-Oriented-Benchmarks" },
+    { include = "phase_estimation", from = "submodules/QC-App-Oriented-Benchmarks" },
+    { include = "hidden_shift", from = "submodules/QC-App-Oriented-Benchmarks" },
+    { include = "quantum_fourier_transform", from = "submodules/QC-App-Oriented-Benchmarks" }
 ]
 include = [
     { path = "LICENSE", format = ["sdist", "wheel"] },
