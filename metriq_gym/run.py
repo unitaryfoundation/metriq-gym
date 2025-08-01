@@ -178,7 +178,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         return
 
     quantum_jobs = [
-        load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data))
+        (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
         for job_id in job_data.provider_job_ids
     ]
 
