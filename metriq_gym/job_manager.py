@@ -163,7 +163,7 @@ class JobManager:
                 self.jobs[idx] = updated_job
                 break
         else:
-            raise ValueError(f"Job with id {updated_job.id} not found")
+            raise ValueError(f"Cannot update job: job with id {updated_job.id} not found")
 
         temp_file = f"{self.jobs_file}.tmp"
         try:
