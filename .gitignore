@@ -1,5 +1,7 @@
 # Metriq
 .metriq_gym_jobs.jsonl
+localdb.jsonl
+*jobs/
 
 # Sphinx
 _build
