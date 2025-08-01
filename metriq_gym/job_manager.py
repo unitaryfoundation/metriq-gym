@@ -24,7 +24,9 @@ class MetriqGymJob:
     provider_name: str
     device_name: str
     dispatch_time: datetime
-    version: str = field(default_factory=lambda: importlib.metadata.version("metriq-gym"))
+    app_version: str | None = field(
+        default_factory=lambda: importlib.metadata.version("metriq-gym")
+    )
     result_data: list[dict[str, Any]] | None = None
 
     def to_table_row(self) -> list[str]:
@@ -42,8 +44,8 @@ class MetriqGymJob:
     @staticmethod
     def deserialize(data: str) -> "MetriqGymJob":
         job_dict = json.loads(data)
-        version = job_dict.get("version", importlib.metadata.version("metriq-gym"))
-        job = MetriqGymJob(**{**job_dict, "version": version})
+        app_version = job_dict.get("app_version")
+        job = MetriqGymJob(**{**job_dict, "app_version": app_version})
         job.job_type = JobType(job_dict["job_type"])
         job.dispatch_time = datetime.fromisoformat(job_dict["dispatch_time"])
         return job
