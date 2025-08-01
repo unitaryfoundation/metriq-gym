@@ -88,7 +88,7 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     print("Starting job dispatch...")
 
     try:
-        device = setup_device(args.provider, args.device)
+        device: QuantumDevice = setup_device(args.provider, args.device)
     except QBraidSetupError:
         return
 

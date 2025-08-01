@@ -1,7 +1,5 @@
 from enum import StrEnum
 
-JOB_STORAGE_FILE = ".metriq_gym_jobs.jsonl"
-
 
 class JobType(StrEnum):
     BSEQ = "BSEQ"
