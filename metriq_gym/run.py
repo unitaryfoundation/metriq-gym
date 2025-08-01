@@ -120,12 +120,15 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             handler: Benchmark = setup_benchmark(args, params, job_type)
             job_data: BenchmarkData = handler.dispatch_handler(device)
 
+            job_dict = asdict(job_data)
+            job_dict["cache"] = None
+
             job_id = job_manager.add_job(
                 MetriqGymJob(
                     id=str(uuid.uuid4()),
                     job_type=job_type,
                     params=params.model_dump(exclude_none=True),
-                    data=asdict(job_data),
+                    data=job_dict,
                     provider_name=args.provider,
                     device_name=args.device,
                     dispatch_time=datetime.now(),
@@ -158,14 +161,31 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         return
     print("Polling job...")
     job_type: JobType = JobType(metriq_job.job_type)
-    job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
+    job_data_dict = dict(metriq_job.data)
+
+    cache = job_data_dict.pop("cache", None)
+    job_data: BenchmarkData = setup_job_data_class(job_type)(**job_data_dict)
+
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
+
+    if cache:
+        cache_result_data = [GateModelResultData.from_dict(c) for c in cache]
+        results = handler.poll_handler(job_data, cache_result_data, [])
+        if hasattr(args, "json"):
+            JsonExporter(metriq_job, results).export(args.json)
+        else:
+            CliExporter(metriq_job, results).export()
+        return
+
     quantum_jobs = [
-        (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
+        load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data))
         for job_id in job_data.provider_job_ids
     ]
+
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
+        metriq_job.data["cache"] = [r.to_dict() for r in result_data]
+        job_manager.update_job(metriq_job)
         results = handler.poll_handler(job_data, result_data, quantum_jobs)
         if hasattr(args, "json"):
             JsonExporter(metriq_job, results).export(args.json)

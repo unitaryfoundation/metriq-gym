@@ -155,3 +155,23 @@ class JobManager:
             logger.error(f"Failed to delete job with id {job_id}: {e}")
             if os.path.exists(temp_file):
                 os.remove(temp_file)
+
+    def update_job(self, updated_job: MetriqGymJob) -> None:
+        """Persist updated job information to disk."""
+        for idx, job in enumerate(self.jobs):
+            if job.id == updated_job.id:
+                self.jobs[idx] = updated_job
+                break
+        else:
+            raise ValueError(f"Job with id {updated_job.id} not found")
+
+        temp_file = f"{self.jobs_file}.tmp"
+        try:
+            with open(temp_file, "w") as file:
+                for job in self.jobs:
+                    file.write(job.serialize() + "\n")
+            os.replace(temp_file, self.jobs_file)
+        except Exception as e:
+            logger.error(f"Failed to update job with id {updated_job.id}: {e}")
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
