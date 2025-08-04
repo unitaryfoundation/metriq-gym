@@ -1,5 +1,6 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+import importlib.metadata
 import json
 import os
 import pprint
@@ -24,6 +25,9 @@ class MetriqGymJob:
     device_name: str
     dispatch_time: datetime
     suite_id: str | None = None
+    app_version: str | None = field(
+        default_factory=lambda: importlib.metadata.version("metriq-gym")
+    )
     result_data: list[dict[str, Any]] | None = None
 
     def to_table_row(self, show_suite_id: bool) -> list[str | None]:
@@ -47,10 +51,9 @@ class MetriqGymJob:
     @staticmethod
     def deserialize(data: str) -> "MetriqGymJob":
         job_dict = json.loads(data)
-        job = MetriqGymJob(**job_dict)
-        job.job_type = JobType(job_dict["job_type"])
-        job.dispatch_time = datetime.fromisoformat(job_dict["dispatch_time"])
-        return job
+        job_dict["job_type"] = JobType(job_dict["job_type"])
+        job_dict["dispatch_time"] = datetime.fromisoformat(job_dict["dispatch_time"])
+        return MetriqGymJob(**job_dict)
 
     def __str__(self) -> str:
         rows: list[list[str | None]] = [
