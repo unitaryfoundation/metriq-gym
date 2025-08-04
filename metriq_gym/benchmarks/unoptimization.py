@@ -1,10 +1,14 @@
 """Quantum circuit unoptimiation benchmark for the Metriq Gym
 
 The quantum circuit unoptimization benchmark is based on the following paper:
-    X.
+    Quantum circuit unoptimization
+    Mori, Yusei and Hakoshima, Hideaki and Sudo, Kyohei and Mori, Toshio and Mitarai, Kosuke and Fujii, Keisuke
+    Phys. Rev. Res., Volume 7, Issue 2, Pages 023139, (2025)
 
 A generalized version of the unoptimization protocol for error mitigation
-software can also be found as a companion [software repository](X) to the above paper.
+software can also be found as a companion [software
+repository](https://github.com/unitaryfoundation/circuit-unoptimization) to the
+above paper.
 """
 
 import random
