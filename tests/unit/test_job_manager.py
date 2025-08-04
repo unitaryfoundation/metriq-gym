@@ -209,4 +209,4 @@ def test_job_app_version_serialization_and_export(monkeypatch):
 
     exporter = JsonExporter(loaded_job, BenchmarkResult())
     export_dict = exporter.as_dict()
-    assert export_dict["version"] == "1.0"
+    assert export_dict["app_version"] == "1.0"

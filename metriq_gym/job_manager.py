@@ -44,11 +44,9 @@ class MetriqGymJob:
     @staticmethod
     def deserialize(data: str) -> "MetriqGymJob":
         job_dict = json.loads(data)
-        app_version = job_dict.get("app_version")
-        job = MetriqGymJob(**{**job_dict, "app_version": app_version})
-        job.job_type = JobType(job_dict["job_type"])
-        job.dispatch_time = datetime.fromisoformat(job_dict["dispatch_time"])
-        return job
+        job_dict["job_type"] = JobType(job_dict["job_type"])
+        job_dict["dispatch_time"] = datetime.fromisoformat(job_dict["dispatch_time"])
+        return MetriqGymJob(**job_dict)
 
     def __str__(self) -> str:
         rows = [

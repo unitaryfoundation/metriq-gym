@@ -11,7 +11,7 @@ class BaseExporter(ABC):
 
     def as_dict(self):
         return {
-            "version": self.metriq_gym_job.app_version,
+            "app_version": self.metriq_gym_job.app_version,
             "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),
             "provider": self.metriq_gym_job.provider_name,
             "device": self.metriq_gym_job.device_name,
