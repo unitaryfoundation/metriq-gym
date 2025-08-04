@@ -313,7 +313,7 @@ def synthesize(qc: QuantumCircuit, optimization_level: int = 3) -> QuantumCircui
 def calculate_peak_probability(shots: int, count_results: MeasCount) -> tuple[float, str]:
     """Calculate the peaked probability of a quantum circuit."""
     if not count_results:
-        return 0.0, None
+        return 0.0, ""
 
     max_count_outcome: str = max(count_results, key=count_results.get)
     expectation_value: float = count_results[max_count_outcome] / shots
