@@ -29,6 +29,7 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
         [
             "mgym",
             "dispatch",
+            "job",
             str(example_cfg),
             "-p",
             "local",
@@ -48,6 +49,7 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
         [
             "mgym",
             "poll",
+            "job",
             "latest",
             "--json",
             str(outfile),  # temp file to keep the repo clean

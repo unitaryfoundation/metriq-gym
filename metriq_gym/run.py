@@ -23,8 +23,8 @@ from metriq_gym.registry import (
     BENCHMARK_HANDLERS,
     get_available_benchmarks,
 )
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
-from metriq_gym.cli import parse_arguments, prompt_for_job
+from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from metriq_gym.cli import list_jobs, parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError
 from metriq_gym.exporters.cli_exporter import CliExporter
 from metriq_gym.exporters.json_exporter import JsonExporter
@@ -32,9 +32,12 @@ from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.qplatform.job import job_status
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import JobType
+from metriq_gym.suite_parser import parse_suite_file
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
+
+available_benchmarks = get_available_benchmarks()
 
 
 def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
@@ -74,6 +77,60 @@ def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
 
 
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
+    """Dispatch a single benchmark configuration to a quantum device.
+
+    Args:
+        args: CLI arguments with benchmark config, provider, and device
+        job_manager: Tracks dispatched jobs for later polling
+
+    Note: Continues processing remaining configs if individual configs fail.
+    """
+    print(f"Starting dispatch on {args.provider}:{args.device}...")
+
+    try:
+        device: QuantumDevice = setup_device(args.provider, args.device)
+    except QBraidSetupError:
+        return
+
+    config_file = args.config
+
+    if not os.path.exists(config_file):
+        print(f"✗ {config_file}: Configuration file not found")
+        return
+
+    # Load and validate the benchmark configuration
+    params = load_and_validate(config_file)
+
+    # Validate that the benchmark exists
+    if params.benchmark_name not in available_benchmarks:
+        print(
+            f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
+        )
+        return
+
+    job_type = JobType(params.benchmark_name)
+
+    print(f"Dispatching {params.benchmark_name}...")
+
+    handler: Benchmark = setup_benchmark(args, params, job_type)
+    job_data: BenchmarkData = handler.dispatch_handler(device)
+
+    job_id = job_manager.add_job(
+        MetriqGymJob(
+            id=str(uuid.uuid4()),
+            job_type=job_type,
+            params=params.model_dump(exclude_none=True),
+            data=asdict(job_data),
+            provider_name=args.provider,
+            device_name=args.device,
+            dispatch_time=datetime.now(),
+        )
+    )
+
+    print(f"✓ {params.benchmark_name} dispatched with metriq-gym Job ID: {job_id}")
+
+
+def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Dispatch multiple benchmark configurations to a quantum device.
 
     Enables comprehensive device characterization by running the same benchmark
@@ -85,26 +142,34 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     Note: Continues processing remaining configs if individual configs fail.
     """
-    print("Starting job dispatch...")
+    print(f"Starting suite dispatch on {args.provider}:{args.device}...")
 
     try:
         device: QuantumDevice = setup_device(args.provider, args.device)
     except QBraidSetupError:
         return
 
+    config_file = args.suite_config
+
+    if not os.path.exists(config_file):
+        print(f"✗ {config_file}: Configuration file not found")
+        return
+
+    # Load and validate the benchmark configuration
+    suite = parse_suite_file(config_file)
+    if not suite.benchmarks:
+        print(f"✗ {config_file}: No benchmarks found in the suite")
+        return
+
     results = []
     successful_jobs = []
 
-    for config_file in args.benchmark_configs:
+    suite_id = str(uuid.uuid4())
+    for benchmark_entry in suite.benchmarks:
         try:
-            if not os.path.exists(config_file):
-                results.append(f"✗ {config_file}: Configuration file not found")
-                continue
-
-            params = load_and_validate(config_file)
+            params = validate_and_create_model(benchmark_entry.config)
 
             # Validate that the benchmark exists
-            available_benchmarks = get_available_benchmarks()
             if params.benchmark_name not in available_benchmarks:
                 results.append(
                     f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
@@ -114,7 +179,7 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             job_type = JobType(params.benchmark_name)
 
             print(
-                f"Dispatching {params.benchmark_name} benchmark from {config_file} on {args.device}..."
+                f"Dispatching {benchmark_entry.name} ({params.benchmark_name}) from {suite.name}..."
             )
 
             handler: Benchmark = setup_benchmark(args, params, job_type)
@@ -122,6 +187,7 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
             job_id = job_manager.add_job(
                 MetriqGymJob(
+                    suite_id=suite_id,
                     id=str(uuid.uuid4()),
                     job_type=job_type,
                     params=params.model_dump(exclude_none=True),
@@ -133,21 +199,22 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             )
 
             results.append(
-                f"✓ {params.benchmark_name} ({config_file}) dispatched with ID: {job_id}"
+                f"✓ {benchmark_entry.name} ({params.benchmark_name}) from {suite.name} dispatched with metriq-gym Job ID: {job_id}"
             )
             successful_jobs.append(job_id)
 
         except Exception as e:
             error_details = f"{type(e).__name__}: {str(e)}"
-            results.append(f"✗ {config_file} failed: {error_details}")
+            results.append(
+                f"✗ {benchmark_entry.name} ({params.benchmark_name}) from {suite.name} failed: {error_details}"
+            )
 
     print("\nSummary:")
     for result in results:
         print(f"  {result}")
 
-    print(
-        f"\nSuccessfully dispatched {len(successful_jobs)}/{len(args.benchmark_configs)} benchmarks."
-    )
+    print(f"\nDispatch complete for suite {suite.name} with metriq-gym Suite ID {suite_id}.")
+    print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(suite.benchmarks)} benchmarks.")
     if successful_jobs:
         print("Use 'mgym poll' to check job status.")
 
@@ -157,6 +224,45 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not metriq_job:
         return
     print("Polling job...")
+    result = fetch_result(metriq_job, args)
+    if result is None:
+        print(f"Job {metriq_job.id} is not yet completed or has no results.")
+        return
+    export_result(args, metriq_job, result)
+
+
+def poll_suite(args, job_manager):
+    if not args.suite_id:
+        print("Suite ID is required to poll suite results.")
+        return
+    jobs = job_manager.get_jobs_by_suite_id(args.suite_id)
+    if not jobs:
+        print(f"No jobs found for suite ID {args.suite_id}.")
+        return
+    results: list[BenchmarkResult] = []
+    for metriq_job in jobs:
+        result = fetch_result(metriq_job, args)
+        if result is not None:
+            results.append(result)
+            export_result(args, metriq_job, result)
+
+
+def aggregate_results(results: list[BenchmarkResult]) -> BenchmarkResult:
+    if not results:
+        return BenchmarkResult()
+    return results[0]
+
+
+def export_result(
+    args: argparse.Namespace, metriq_job: MetriqGymJob, result: BenchmarkResult
+) -> None:
+    if hasattr(args, "json"):
+        JsonExporter(metriq_job, result).export(args.json)
+    else:
+        CliExporter(metriq_job, result).export()
+
+
+def fetch_result(metriq_job: MetriqGymJob, args: argparse.Namespace) -> BenchmarkResult | None:
     job_type: JobType = JobType(metriq_job.job_type)
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
@@ -166,11 +272,8 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
-        results = handler.poll_handler(job_data, result_data, quantum_jobs)
-        if hasattr(args, "json"):
-            JsonExporter(metriq_job, results).export(args.json)
-        else:
-            CliExporter(metriq_job, results).export()
+        result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
+        return result
     else:
         print("Job is not yet completed. Current status:")
         for task in quantum_jobs:
@@ -180,12 +283,25 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
                 msg += f" (position {info.queue_position})"
             print(msg)
         print("Please try again later.")
+        return None
 
 
 def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     metriq_job = prompt_for_job(args, job_manager)
     if metriq_job:
         print(metriq_job)
+
+
+def view_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
+    if not args.suite_id:
+        print("Suite ID is required to view suite jobs.")
+        return
+    jobs = job_manager.get_jobs_by_suite_id(args.suite_id)
+    if not jobs:
+        print(f"No jobs found for suite ID {args.suite_id}.")
+        return
+    print(f"Jobs for suite ID {args.suite_id}:")
+    list_jobs(jobs, show_index=False, show_suite_id=False)
 
 
 def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -209,11 +325,20 @@ def main() -> int:
     job_manager = JobManager()
 
     if args.action == "dispatch":
-        dispatch_job(args, job_manager)
+        if args.dispatch_action == "suite":
+            dispatch_suite(args, job_manager)
+        elif args.dispatch_action == "job":
+            dispatch_job(args, job_manager)
     elif args.action == "view":
-        view_job(args, job_manager)
+        if args.view_action == "suite":
+            view_suite(args, job_manager)
+        elif args.view_action == "job":
+            view_job(args, job_manager)
     elif args.action == "poll":
-        poll_job(args, job_manager)
+        if args.poll_action == "suite":
+            poll_suite(args, job_manager)
+        elif args.poll_action == "job":
+            poll_job(args, job_manager)
     elif args.action == "delete":
         delete_job(args, job_manager)
     else:
