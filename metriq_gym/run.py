@@ -319,33 +319,31 @@ def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
 
 def main() -> int:
-    """Main entry point for the CLI."""
     load_dotenv()
     args = parse_arguments()
     job_manager = JobManager()
 
-    if args.action == "dispatch":
-        if args.dispatch_action == "suite":
-            dispatch_suite(args, job_manager)
-        elif args.dispatch_action == "job":
-            dispatch_job(args, job_manager)
-    elif args.action == "view":
-        if args.view_action == "suite":
-            view_suite(args, job_manager)
-        elif args.view_action == "job":
-            view_job(args, job_manager)
-    elif args.action == "poll":
-        if args.poll_action == "suite":
-            poll_suite(args, job_manager)
-        elif args.poll_action == "job":
-            poll_job(args, job_manager)
-    elif args.action == "delete":
-        delete_job(args, job_manager)
-    else:
-        logging.error("Invalid action specified. Run with --help for usage information.")
-        return 1
+    RESOURCE_ACTION_TABLE = {
+        "suite": {
+            "dispatch": dispatch_suite,
+            "poll": poll_suite,
+        },
+        "job": {
+            "dispatch": dispatch_job,
+            "poll": poll_job,
+            "view": view_job,
+            "delete": delete_job,
+        },
+    }
 
-    return 0
+    resource_table = RESOURCE_ACTION_TABLE.get(args.resource)
+    if resource_table:
+        action_handler = resource_table.get(args.action)
+        if action_handler:
+            action_handler(args, job_manager)
+            return 0
+    logging.error("Invalid command. Run with --help for usage information.")
+    return 1
 
 
 if __name__ == "__main__":

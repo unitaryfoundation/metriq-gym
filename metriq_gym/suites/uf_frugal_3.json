@@ -1,6 +1,6 @@
 {
   "name": "verified_uf_suite",
-  "description": "Verified Unitary Foundation Suite withe the three most frugal benchmarks.",
+  "description": "Verified Unitary Foundation Suite with the three most frugal benchmarks.",
   "benchmarks": [
     {
         "name": "wormhole_7_qubits",
