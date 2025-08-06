@@ -6,15 +6,15 @@ from metriq_gym.local.device import LocalAerDevice
 
 
 class LocalProvider(QuantumProvider):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.device = LocalAerDevice(provider=self)
         self._devices: dict[str, LocalAerDevice] = {}
 
-    def get_devices(self, **_):
+    def get_devices(self, **_) -> list[LocalAerDevice]:
         return [self.device, *self._devices.values()]
 
-    def get_device(self, device_id):
+    def get_device(self, device_id: str) -> LocalAerDevice:
         if device_id in self._devices:
             return self._devices[device_id]
 

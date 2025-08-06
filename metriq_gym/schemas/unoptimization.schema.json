@@ -1,0 +1,49 @@
+{
+    "$id": "metriq-gym/unoptimization.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",  
+    "title": "Unoptimization",
+    "description": "The Unoptimization benchmark schema definition, describing the Unoptimization benchmark configuration.",
+    "type": "object",
+    "properties": {
+      "benchmark_name": {
+        "type": "string",
+        "const": "Unoptimization",
+        "description": "Name of the benchmark. Must be 'Unoptimization' for this schema."
+      },
+      "shots": {
+        "type": "integer",
+        "description": "Number of measurement shots (repetitions) to use for the benchmark.",
+        "default": 10000,
+        "minimum": 1,
+        "examples": [10000]
+      },
+      "iterations": {
+        "type": "integer",
+        "description": "Number of unoptimization iterations to perform.",
+        "default": 5,
+        "minimum": 1,
+        "examples": [5]
+      },
+      "strategy": {
+        "type": "string",
+        "description": "Unoptimization circuit strategy.",
+        "enum": ["concatenated", "random"],
+        "default": "concatenated",
+        "examples": ["random", "concatenated"]
+      },
+      "decomposition_method": {
+        "type": "string",
+        "description": "Gate decomposition method used in quantum circuit unoptimization.",
+        "enum": ["default", "kak", "basis"],
+        "default": "default",
+        "examples": ["default", "kak", "basis"]
+      },
+      "num_qubits": {
+        "type": "integer",
+        "description": "Number of qubits to use for the benchmark.",
+        "default": 5
+      }
+    },
+    "required": ["benchmark_name"]
+  }
+  

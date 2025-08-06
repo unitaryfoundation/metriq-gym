@@ -1,0 +1,7 @@
+{
+    "benchmark_name": "Unoptimization",
+    "num_qubits": 5,
+    "shots": 10000,
+    "strategy": "concatenated",
+    "decomposition_method": "default"
+}
