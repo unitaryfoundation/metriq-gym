@@ -17,7 +17,9 @@ from qbraid.runtime import (
     load_job,
     load_provider,
 )
+from tabulate import tabulate
 
+from metriq_gym.exporters.dict_exporter import DictExporter
 from metriq_gym.registry import (
     BENCHMARK_DATA_CLASSES,
     BENCHMARK_HANDLERS,
@@ -38,6 +40,8 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
 
 available_benchmarks = get_available_benchmarks()
+
+COMMON_SUITE_KEYS = ["provider", "device", "timestamp", "app_version"]
 
 
 def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
@@ -228,10 +232,10 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if result is None:
         print(f"Job {metriq_job.id} is not yet completed or has no results.")
         return
-    export_result(args, metriq_job, result)
+    export_job_result(args, metriq_job, result)
 
 
-def poll_suite(args, job_manager):
+def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not args.suite_id:
         print("Suite ID is required to poll suite results.")
         return
@@ -242,18 +246,55 @@ def poll_suite(args, job_manager):
     results: list[BenchmarkResult] = []
     for metriq_job in jobs:
         result = fetch_result(metriq_job, args)
-        if result is not None:
+        if result is None:
+            print(f"Job {metriq_job.id} is not yet completed or has no results.")
+            return
+        else:
             results.append(result)
-            export_result(args, metriq_job, result)
+    export_suite_results(args, jobs, results)
 
 
 def aggregate_results(results: list[BenchmarkResult]) -> BenchmarkResult:
-    if not results:
-        return BenchmarkResult()
-    return results[0]
+    raise NotImplementedError("Aggregate results logic is not implemented yet.")
 
 
-def export_result(
+def print_selected(d, selected_keys):
+    for k in selected_keys:
+        if k in d:
+            print(f"{k}: {d[k]}")
+
+
+def export_suite_results(args, jobs: list[MetriqGymJob], results: list[BenchmarkResult]) -> None:
+    if not jobs:
+        return
+
+    records = []
+    for job, result in zip(jobs, results):
+        records.append(DictExporter(job, result).export())
+
+    if hasattr(args, "json"):
+        raise NotImplementedError("JSON export of suite results is not implemented yet.")
+    else:
+        print("\n--- Suite Metadata ---")
+        print_selected(records[0], COMMON_SUITE_KEYS)
+        print("\n--- Suite Results ---")
+        print(tabulate_job_results(records))
+
+
+def tabulate_job_results(records, sep=" – "):
+    flat = {}
+    for r in records:
+        jt = r["job_type"]
+        for metric, value in r["results"].items():
+            flat[f"{jt}{sep}{metric}"] = value
+
+    headers = sorted(flat.keys())
+
+    row = [flat[h] for h in headers]
+    return tabulate([row], headers=headers, floatfmt=".4g")
+
+
+def export_job_result(
     args: argparse.Namespace, metriq_job: MetriqGymJob, result: BenchmarkResult
 ) -> None:
     if hasattr(args, "json"):
@@ -318,6 +359,23 @@ def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         print("No job selected for deletion.")
 
 
+def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
+    if not args.suite_id:
+        print("Suite ID is required to delete suite jobs.")
+        return
+    jobs = job_manager.get_jobs_by_suite_id(args.suite_id)
+    if not jobs:
+        print(f"No jobs found for suite ID {args.suite_id}.")
+        return
+    for job in jobs:
+        try:
+            job_manager.delete_job(job.id)
+            print(f"Job {job.id} deleted successfully.")
+        except Exception as e:
+            print(f"Failed to delete job {job.id}: {e}")
+    print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
+
+
 def main() -> int:
     load_dotenv()
     args = parse_arguments()
@@ -327,6 +385,7 @@ def main() -> int:
         "suite": {
             "dispatch": dispatch_suite,
             "poll": poll_suite,
+            "delete": delete_suite,
         },
         "job": {
             "dispatch": dispatch_job,

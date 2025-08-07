@@ -140,6 +140,14 @@ def parse_arguments() -> argparse.Namespace:
         help="Suite ID to view jobs for",
     )
 
+    suite_delete = suite_subparsers.add_parser("delete", help="Delete a suite")
+    suite_delete.add_argument(
+        "suite_id",
+        type=str,
+        nargs="?",
+        help="Suite ID to delete",
+    )
+
     # Job resource group
     job_parser = resource_parsers.add_parser("job", help="Job operations")
     job_subparsers = job_parser.add_subparsers(dest="action", required=True, help="Job action")

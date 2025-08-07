@@ -3,6 +3,13 @@
   "description": "Verified Unitary Foundation Suite with the three most frugal benchmarks.",
   "benchmarks": [
     {
+        "name": "BSEQ",
+        "config": {
+            "benchmark_name": "BSEQ",
+            "shots": 1000
+        }
+    },
+    {
         "name": "wormhole_7_qubits",
         "config": {
             "benchmark_name": "Wormhole",
@@ -16,13 +23,6 @@
             "benchmark_name": "QML Kernel",
             "num_qubits": 20,
             "shots": 1024
-        }
-    },
-    {
-        "name": "BSEQ",
-        "config": {
-            "benchmark_name": "BSEQ",
-            "shots": 1000
         }
     }
   ]
