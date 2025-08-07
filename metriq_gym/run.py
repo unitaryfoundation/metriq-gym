@@ -310,7 +310,7 @@ def fetch_result(metriq_job: MetriqGymJob, args: argparse.Namespace) -> Benchmar
         result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
         return result
     else:
-        print("Job is not yet completed. Current status:")
+        print("Job is not yet completed. Current status of tasks:")
         for task in quantum_jobs:
             info = job_status(task)
             msg = f"- {task.id}: {info.status.value}"

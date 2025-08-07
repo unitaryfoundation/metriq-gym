@@ -1,18 +1,18 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class BenchmarkEntry(BaseModel):
     name: str = Field(..., description="Unique name for the benchmark in the suite")
-    config: Dict[str, Any] = Field(..., description="Benchmark configuration dictionary")
+    config: dict[str, Any] = Field(..., description="Benchmark configuration dictionary")
 
 
 class Suite(BaseModel):
     name: str = Field(..., description="Suite name")
-    benchmarks: List[BenchmarkEntry] = Field(..., description="List of benchmarks in the suite")
+    benchmarks: list[BenchmarkEntry] = Field(..., description="List of benchmarks in the suite")
 
 
 def parse_suite_file(path: str | Path) -> Suite:
