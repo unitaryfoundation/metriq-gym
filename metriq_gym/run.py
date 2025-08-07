@@ -209,9 +209,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
         except Exception as e:
             error_details = f"{type(e).__name__}: {str(e)}"
-            results.append(
-                f"✗ {benchmark_entry.name} ({params.benchmark_name}) from {suite.name} failed: {error_details}"
-            )
+            results.append(f"✗ {benchmark_entry.name} from {suite.name} failed: {error_details}")
 
     print("\nSummary:")
     for result in results:
@@ -252,10 +250,6 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         else:
             results.append(result)
     export_suite_results(args, jobs, results)
-
-
-def aggregate_results(results: list[BenchmarkResult]) -> BenchmarkResult:
-    raise NotImplementedError("Aggregate results logic is not implemented yet.")
 
 
 def print_selected(d, selected_keys):
