@@ -11,10 +11,9 @@ def store_env(monkeypatch, tmp_path):
 
 
 @pytest.mark.e2e
-def test_dispatch_and_poll_local_simulator(tmp_path):
+def test_dispatch_and_poll_single_job_on_local_simulator(tmp_path):
     """
-    End-to-end test of the CLI workflow:
-
+    End-to-end test of the CLI workflow for a single job on the local simulator
         1. dispatch   -> returns a Metriq-Gym job_id
         2. poll       -> succeeds immediately for the local simulator
         3. validate   -> JSON result file contains measurement counts
@@ -28,6 +27,7 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
     subprocess.run(
         [
             "mgym",
+            "job",
             "dispatch",
             str(example_cfg),
             "-p",
@@ -47,6 +47,7 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
     poll_cmd = subprocess.run(
         [
             "mgym",
+            "job",
             "poll",
             "latest",
             "--json",
@@ -75,6 +76,7 @@ def test_dispatch_and_poll_local_simulator(tmp_path):
     delete_cmd = subprocess.run(
         [
             "mgym",
+            "job",
             "delete",
             "latest",
         ],
