@@ -2,6 +2,7 @@ import pytest
 import networkx as nx
 import random
 from metriq_gym.benchmarks.lr_qaoa import prepare_qaoa_circuit, LinearRampQAOAData, calc_stats
+from metriq_gym.circuits import distribute_edges
 
 
 @pytest.mark.parametrize("num_qubits, p_layers", [(5, [10]), [10, [5, 7]]])
@@ -103,3 +104,15 @@ def test_calc_stats_pass():
     assert [round(i, 6) for i in stats.probability] == [0.6, 1.0, 0.25]
     assert [round(i, 6) for i in stats.approx_ratio] == [0.645, 1.0, 0.25]
     assert [round(i, 1) for i in stats.approx_ratio_random] == [0.5, 0.5, 0.5]
+
+
+@pytest.mark.parametrize("width, length", [(5, 5), (7, 7), (3, 3)])
+def test_distributed_edges(width, length):
+    # Heavy-Hex layout
+    graph = nx.hexagonal_lattice_graph(width, length)
+    layers = distribute_edges(graph)
+    assert len(layers) == 3
+    # Square layout
+    graph = nx.grid_2d_graph(width, length)
+    layers = distribute_edges(graph)
+    assert len(layers) == 4

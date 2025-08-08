@@ -11,14 +11,10 @@ from qbraid.runtime.result_data import MeasCount
 from qiskit import QuantumCircuit, ClassicalRegister
 
 from metriq_gym.circuits import qaoa_circuit
+from metriq_gym.circuits import GraphType, EncodingType
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
-
-from typing import Literal
-
-GraphType = Literal["1D", "NL", "FC"]
-EncodingType = Literal["Direct", "SWAP"]
 
 
 def weighted_maxcut_solver(graph: nx.Graph) -> str:
@@ -393,17 +389,10 @@ class LinearRampQAOA(Benchmark):
                 linear_ramp = list(range(1, p_layer_i + 1))
                 betas = [i * delta_beta / p_layer_i for i in reversed(linear_ramp)]
                 gammas = [i * delta_gamma / p_layer_i for i in linear_ramp]
-                circuits_with_params.append(
-                    circuit.assign_parameters((betas, gammas))
-                )  # assing linear ramp parameters
-        quantum_job: QuantumJob | list[QuantumJob] = device.run(circuits_with_params, shots=shots)
-        provider_job_ids = (
-            [quantum_job.id]
-            if isinstance(quantum_job, QuantumJob)
-            else [job.id for job in quantum_job]
-        )
-        return LinearRampQAOAData(
-            provider_job_ids=provider_job_ids,
+                circuits_with_params.append(circuit.assign_parameters((betas, gammas)))
+
+        return LinearRampQAOAData.from_quantum_job(
+            quantum_job=device.run(circuits_with_params, shots=shots),
             num_qubits=num_qubits,
             graph=graph,
             optimal_sol=optimal_sol,
