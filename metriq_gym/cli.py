@@ -13,13 +13,16 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 LIST_JOBS_HEADERS = ["Metriq-gym Job Id", "Provider", "Device", "Type", "Dispatch time (UTC)"]
+LIST_JOBS_HEADERS_FULL = ["Suite ID"] + LIST_JOBS_HEADERS
 
 LATEST_JOB_ID = "latest"
 
 JOB_ID_ARGUMENT_NAME = "job_id"
 
 
-def list_jobs(jobs: list[MetriqGymJob], show_index: bool = False) -> None:
+def list_jobs(
+    jobs: list[MetriqGymJob], show_index: bool = False, show_suite_id: bool = True
+) -> None:
     """List jobs recorded in the job manager.
 
     Args:
@@ -32,8 +35,8 @@ def list_jobs(jobs: list[MetriqGymJob], show_index: bool = False) -> None:
     # Display jobs in a tabular format.
     print(
         tabulate(
-            [job.to_table_row() for job in jobs],
-            headers=LIST_JOBS_HEADERS,
+            [job.to_table_row(show_suite_id=show_suite_id) for job in jobs],
+            headers=LIST_JOBS_HEADERS if not show_suite_id else LIST_JOBS_HEADERS_FULL,
             tablefmt="grid",
             showindex=show_index,
         )
@@ -88,36 +91,40 @@ def parse_arguments() -> argparse.Namespace:
         - Same benchmark type can be run multiple times with different configurations
     """
     parser = argparse.ArgumentParser(description="Metriq-Gym benchmarking CLI")
-    subparsers = parser.add_subparsers(dest="action", required=True, help="Action to perform")
-
-    dispatch_parser = subparsers.add_parser("dispatch", help="Dispatch jobs")
-
-    dispatch_parser.add_argument(
-        "benchmark_configs",
-        type=str,
-        nargs="+",
-        help="Path(s) to benchmark configuration files. Multiple files can be specified to run multiple benchmarks.",
+    resource_parsers = parser.add_subparsers(
+        dest="resource", required=True, help="Resource (suite/job)"
     )
 
-    dispatch_parser.add_argument(
+    # Suite resource group
+    suite_parser = resource_parsers.add_parser("suite", help="Suite operations")
+    suite_subparsers = suite_parser.add_subparsers(
+        dest="action", required=True, help="Suite action"
+    )
+
+    suite_dispatch = suite_subparsers.add_parser("dispatch", help="Dispatch a suite of jobs")
+    suite_dispatch.add_argument("suite_config", type=str, help="Path to suite configuration file.")
+    suite_dispatch.add_argument(
         "-p",
         "--provider",
         type=str,
         choices=get_providers() + ["local"],
         help="String identifier for backend provider service",
     )
-    dispatch_parser.add_argument(
+    suite_dispatch.add_argument(
         "-d",
         "--device",
         type=str,
         help="Backend to use",
     )
 
-    poll_parser = subparsers.add_parser("poll", help="Poll jobs")
-    poll_parser.add_argument(
-        JOB_ID_ARGUMENT_NAME, type=str, nargs="?", help="Job ID to poll (optional)"
+    suite_poll = suite_subparsers.add_parser("poll", help="Poll suite jobs")
+    suite_poll.add_argument(
+        "suite_id",
+        type=str,
+        nargs="?",
+        help="Suite ID to poll results for",
     )
-    poll_parser.add_argument(
+    suite_poll.add_argument(
         "--json",
         nargs="?",
         required=False,
@@ -125,14 +132,57 @@ def parse_arguments() -> argparse.Namespace:
         help="Export results to JSON file (optional)",
     )
 
-    view_parser = subparsers.add_parser("view", help="View jobs")
-    view_parser.add_argument(
-        JOB_ID_ARGUMENT_NAME, type=str, nargs="?", help="Job ID to view (optional)"
+    suite_view = suite_subparsers.add_parser("view", help="View suite jobs")
+    suite_view.add_argument(
+        "suite_id",
+        type=str,
+        nargs="?",
+        help="Suite ID to view jobs for",
     )
 
-    delete_parser = subparsers.add_parser("delete", help="Delete jobs")
-    delete_parser.add_argument(
-        JOB_ID_ARGUMENT_NAME, type=str, nargs="?", help="Job ID to delete (optional)"
+    suite_delete = suite_subparsers.add_parser("delete", help="Delete a suite")
+    suite_delete.add_argument(
+        "suite_id",
+        type=str,
+        nargs="?",
+        help="Suite ID to delete",
+    )
+
+    # Job resource group
+    job_parser = resource_parsers.add_parser("job", help="Job operations")
+    job_subparsers = job_parser.add_subparsers(dest="action", required=True, help="Job action")
+
+    job_dispatch = job_subparsers.add_parser("dispatch", help="Dispatch a single job")
+    job_dispatch.add_argument("config", type=str, help="Path to job configuration file.")
+    job_dispatch.add_argument(
+        "-p",
+        "--provider",
+        type=str,
+        choices=get_providers() + ["local"],
+        help="String identifier for backend provider service",
+    )
+    job_dispatch.add_argument(
+        "-d",
+        "--device",
+        type=str,
+        help="Backend to use",
+    )
+
+    job_poll = job_subparsers.add_parser("poll", help="Poll job")
+    job_view = job_subparsers.add_parser("view", help="View job")
+    job_delete = job_subparsers.add_parser("delete", help="Delete job")
+
+    for subparser in [job_poll, job_view, job_delete]:
+        subparser.add_argument(
+            JOB_ID_ARGUMENT_NAME, type=str, nargs="?", help="Job ID to operate on (optional)"
+        )
+
+    job_poll.add_argument(
+        "--json",
+        nargs="?",
+        required=False,
+        default=argparse.SUPPRESS,
+        help="Export results to JSON file (optional)",
     )
 
     return parser.parse_args()

@@ -1,0 +1,29 @@
+{
+  "name": "verified_uf_suite",
+  "description": "Verified Unitary Foundation Suite with the three most frugal benchmarks.",
+  "benchmarks": [
+    {
+        "name": "BSEQ",
+        "config": {
+            "benchmark_name": "BSEQ",
+            "shots": 1000
+        }
+    },
+    {
+        "name": "wormhole_7_qubits",
+        "config": {
+            "benchmark_name": "Wormhole",
+            "num_qubits": 7,
+            "shots": 8192
+        }
+    },
+    {
+        "name": "qml",
+        "config": {
+            "benchmark_name": "QML Kernel",
+            "num_qubits": 20,
+            "shots": 1024
+        }
+    }
+  ]
+}
