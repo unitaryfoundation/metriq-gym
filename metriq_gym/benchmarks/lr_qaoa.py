@@ -51,6 +51,10 @@ def cost_maxcut(bitstring: str, graph: nx.Graph) -> float:
     Returns:
     float: The computed cost of the Max-Cut solution.
     """
+    if len(bitstring) != graph.number_of_nodes():
+        raise ValueError(
+            f"Bitstring length: {len(bitstring)} must match the number of nodes in the graph: {graph.number_of_nodes()}."
+        )
     cost = 0
     for i, j in graph.edges():
         if bitstring[i] + bitstring[j] in ["10", "01"]:

@@ -1,8 +1,14 @@
 import pytest
 import networkx as nx
 import random
-from metriq_gym.benchmarks.lr_qaoa import prepare_qaoa_circuit, LinearRampQAOAData, calc_stats
-from metriq_gym.circuits import distribute_edges
+from metriq_gym.benchmarks.lr_qaoa import (
+    prepare_qaoa_circuit,
+    calc_stats,
+    cost_maxcut,
+    weighted_maxcut_solver,
+)
+from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOAData
+from metriq_gym.circuits import distribute_edges, SWAP_pairs
 
 
 @pytest.mark.parametrize("num_qubits, p_layers", [(5, [10]), [10, [5, 7]]])
@@ -116,3 +122,30 @@ def test_distributed_edges(width, length):
     graph = nx.grid_2d_graph(width, length)
     layers = distribute_edges(graph)
     assert len(layers) == 4
+
+
+@pytest.mark.parametrize("nq", [6, 10, 16])
+def test_simulated_annealing_solver(nq):
+    graph = nx.random_regular_graph(3, nq)
+    possible_weights = [0.1, 0.2, 0.3, 0.5, 1.0]
+    for u, v in graph.edges():
+        graph[u][v]["weight"] = random.choice(possible_weights)
+
+    optimal_solution = weighted_maxcut_solver(graph)
+    assert len(optimal_solution) == nq
+    assert all(bit in "01" for bit in optimal_solution)
+
+    # Check if the solution is valid
+    cost = cost_maxcut(optimal_solution, graph)
+    assert cost >= 0
+
+
+@pytest.mark.parametrize("nq", [5, 10, 15, 20])
+def test_swap_network(nq):
+    list_pairs = SWAP_pairs(nq)
+    assert len(list_pairs) == nq
+    assert [len(layer) for layer in list_pairs] == (
+        len(list_pairs) * [nq // 2]
+        if nq % 2 == 1
+        else [(nq // 2 if i % 2 == 0 else nq // 2 - 1) for i in range(len(list_pairs))]
+    )
