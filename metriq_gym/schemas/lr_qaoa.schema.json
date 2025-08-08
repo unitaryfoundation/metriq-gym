@@ -22,14 +22,15 @@
       "examples": [10, 20, 100]
     },
     "p_layers": {
-      "type": "list",
       "description": "List of the different layers depth of LR-QAOA.",
-      "minimum": [3],
+      "type": "array",
+      "items": {"type": "integer"},
+      "minItems": 3,
       "examples": [[3,4,5], [3]],
       "default": [3, 5, 7, 10, 15, 20]
     },
     "delta_beta": {
-      "type": "float",
+      "type": "number",
       "description": "Beta parameters slope in the linear function of LR-QAOA.",
       "default":0.3,
       "minimum": 0.0,
@@ -37,7 +38,7 @@
       "examples": [0.1, 0.3, 0.5]
     },
     "delta_gamma": {
-      "type": "float",
+      "type": "number",
       "description": "Gamma parameters slope in the linear function of LR-QAOA.",
       "default":0.3,
       "minimum": 0.0,
@@ -66,10 +67,10 @@
       "examples": [10, 20, 100]
     },
     "confidence_level": {
-      "type": "float",
+      "type": "number",
       "description": "Confidence level for establishing LR-QAOA success criteria. Must be between 0 and 1.",
-      "minimum": 0,
-      "maximum": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
       "default": 0.995,
       "examples": [0.995, 0.999]
     },

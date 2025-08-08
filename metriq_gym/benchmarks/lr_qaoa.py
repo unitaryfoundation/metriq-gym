@@ -1,12 +1,13 @@
 import math
 import statistics
 import networkx as nx
+import rustworkx as rx
 from scipy import stats
 from dataclasses import dataclass
 import random
 import dimod
 from dimod.reference.samplers.simulated_annealing import SimulatedAnnealingSampler
-
+import warnings
 
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
@@ -124,7 +125,7 @@ def random_samples(num_samples: int, n_qubits: int) -> dict:
 class LinearRampQAOAData(BenchmarkData):
     provider_job_ids: list[str]
     num_qubits: int
-    graph: nx.Graph
+    graph_info: list[list]
     graph_type: GraphType
     optimal_sol: str
     trials: int
@@ -138,14 +139,13 @@ class LinearRampQAOAData(BenchmarkData):
     circuit_encoding: EncodingType
 
 
-@dataclass
 class LinearRampQAOAResult(BenchmarkResult):
     num_qubits: int
     approx_ratio: list[float]
     probability: list[float]
     confidence_pass: list[bool]
     p_value: list[float]
-    trials: list[int]
+    trials: int
 
 
 def prepare_qaoa_circuit(
@@ -231,7 +231,7 @@ class AggregateStats:
 
 
 def calc_trial_stats(
-    graph: nx.graph,
+    graph_info: list[list],
     optimal_sol: str,
     samples: dict[str, int],
     confidence_level: float,
@@ -252,6 +252,9 @@ def calc_trial_stats(
     Returns:
         A `TrialStats` object containing the calculated statistics.
     """
+    graph = nx.Graph()
+    graph.add_nodes_from(range(len(optimal_sol)))
+    graph.add_weighted_edges_from(graph_info)
     nq = graph.number_of_nodes()  # number of qubits
     shots = sum(samples.values())
     approx_ratio_random_list = []
@@ -265,7 +268,7 @@ def calc_trial_stats(
     results_qpu = objective_func(samples, graph, optimal_sol)
     approx_ratio = results_qpu["approx_ratio"]
     t_score = (approx_ratio - approx_ratio_random_mean) / approx_ratio_random_std
-    p_val = 1 - stats.t.cdf(t_score, df=num_random_trials - 1)
+    p_val = float(1 - stats.t.cdf(t_score, df=num_random_trials - 1))
 
     return TrialStats(
         qubits=nq,
@@ -297,7 +300,7 @@ def calc_stats(data: LinearRampQAOAData, samples: list[MeasCount]) -> AggregateS
         trial_p = []
         for p_layer in data.p_layers:
             trial_stat = calc_trial_stats(
-                graph=data.graph,
+                graph_info=data.graph_info,
                 optimal_sol=data.optimal_sol,
                 samples=samples[num_circ],
                 confidence_level=data.confidence_level,
@@ -321,7 +324,7 @@ def calc_stats(data: LinearRampQAOAData, samples: list[MeasCount]) -> AggregateS
         for ith_layer in range(len(data.p_layers))
     ]
     p_value = [
-        math.prod(stat[ith_layer].p_value for stat in trial_stats) ** (1 / num_trials)
+        float(math.prod(stat[ith_layer].p_value for stat in trial_stats) ** (1 / num_trials))
         for ith_layer in range(len(data.p_layers))
     ]
     confidence_pass = [
@@ -355,8 +358,14 @@ class LinearRampQAOA(Benchmark):
         confidence_level = self.params.confidence_level
 
         random.seed(seed)  # set seed for reproducibility
-        graph_device = device.coupling_map.graph.to_undirected()
-        edges_device = edges = list(graph_device.edge_list())
+        if hasattr(device, "coupling_map") and getattr(device, "value") is not None:
+            graph_device = device.coupling_map.graph.to_undirected()
+        else:
+            # if the device does not have a coupling map associated treat it as a fully connected
+            graph_device = rx.generators.complete_graph(num_qubits)
+            warnings.warn("The device does not have a 'coupling_map' attribute.", UserWarning)
+
+        edges_device = edges = list({tuple(sorted(edge)) for edge in graph_device.edge_list()})
         circuit_encoding: EncodingType = "Direct"
         if graph_type == "1D":
             edges = [(i, i + 1) for i in range(num_qubits - 1)]
@@ -381,7 +390,8 @@ class LinearRampQAOA(Benchmark):
         possible_weights = [0.1, 0.2, 0.3, 0.5, 1.0]
         graph = nx.Graph()
         graph.add_nodes_from(range(num_qubits))
-        graph.add_weighted_edges_from([(i, j, random.choice(possible_weights)) for i, j in edges])
+        graph_info = [(i, j, random.choice(possible_weights)) for i, j in edges]
+        graph.add_weighted_edges_from(graph_info)
         optimal_sol = weighted_maxcut_solver(graph)
         circuits = prepare_qaoa_circuit(
             graph=graph,
@@ -395,12 +405,12 @@ class LinearRampQAOA(Benchmark):
                 linear_ramp = list(range(1, p_layer_i + 1))
                 betas = [i * delta_beta / p_layer_i for i in reversed(linear_ramp)]
                 gammas = [i * delta_gamma / p_layer_i for i in linear_ramp]
-                circuits_with_params.append(circuit.assign_parameters((betas, gammas)))
+                circuits_with_params.append(circuit.assign_parameters(betas + gammas))
 
         return LinearRampQAOAData.from_quantum_job(
             quantum_job=device.run(circuits_with_params, shots=shots),
             num_qubits=num_qubits,
-            graph=graph,
+            graph_info=graph_info,
             optimal_sol=optimal_sol,
             shots=shots,
             confidence_level=confidence_level,
@@ -421,12 +431,19 @@ class LinearRampQAOA(Benchmark):
         quantum_jobs: list[QuantumJob],
     ) -> LinearRampQAOAResult:
         stats: AggregateStats = calc_stats(job_data, flatten_counts(result_data))
-
+        print(
+            type(job_data.num_qubits),
+            type(stats.approx_ratio[0]),
+            type(stats.probability[0]),
+            type(stats.confidence_pass[0]),
+            type(stats.p_value[0]),
+            type(stats.trials),
+        )
         return LinearRampQAOAResult(
             num_qubits=job_data.num_qubits,
-            p_layers=job_data.p_layers,
             approx_ratio=stats.approx_ratio,
             probability=stats.probability,
             confidence_pass=stats.confidence_pass,
             p_value=stats.p_value,
+            trials=stats.trials,
         )

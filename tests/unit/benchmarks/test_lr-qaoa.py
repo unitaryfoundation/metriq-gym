@@ -75,15 +75,14 @@ def test_calc_stats_pass():
     graph = nx.Graph()
     graph.add_nodes_from(range(num_qubits))
     possible_weights = [0.1, 0.2, 0.3, 0.5, 1.0]
-    graph.add_weighted_edges_from(
-        [[i, i + 1, random.choice(possible_weights)] for i in range(num_qubits - 1)]
-    )
+    graph_info = [[i, i + 1, random.choice(possible_weights)] for i in range(num_qubits - 1)]
+    graph.add_weighted_edges_from(graph_info)
     p_layers = [3, 5, 7]
     trials = 2
     job_data = LinearRampQAOAData(
         provider_job_ids=["test_job_id"],
         num_qubits=5,
-        graph=graph,
+        graph_info=graph_info,
         graph_type="1D",
         optimal_sol="10101",
         trials=trials,
