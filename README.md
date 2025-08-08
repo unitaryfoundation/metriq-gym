@@ -41,12 +41,12 @@ Four easy steps to get started with `metriq-gym`!
 3. Dispatch it to a quantum device or simulator.
 
     ```sh
-    mgym dispatch wormhole.example.json -p local -d aer_simulator
+    mgym job dispatch wormhole.example.json -p local -d aer_simulator
     ```
 4. Poll the job to get the results.
 
     ```sh
-    mgym poll latest
+    mgym job poll latest
     ```
 
 You will see the results of the benchmark printed in your terminal. E.g.
@@ -111,14 +111,16 @@ eval $(poetry env activate)
 ```
 All Python commands below should be run in the virtual environment.
 
-## Running benchmarks
+## Workflow
 
-### Workflow
+metriq-gym supports two type of resources: benchmarks and suites of benchmarks.
 
-You can dispatch benchmark jobs by specifying one or more configuration files for the benchmarks you wish to run. 
+### Single benchmarks
+
+You can dispatch benchmark jobs by specifying a configuration file for the benchmark you wish to run.
 
 ```sh
-mgym dispatch <BENCHMARK_CONFIG_1> <BENCHMARK_CONFIG_2> ... --provider <PROVIDER> --device <DEVICE>
+mgym job dispatch <BENCHMARK_CONFIG> --provider <PROVIDER> --device <DEVICE>
 ```
 
 Refer to the `schemas/examples/` directory for example configuration files for supported benchmarks.
@@ -126,7 +128,7 @@ Refer to the `schemas/examples/` directory for example configuration files for s
 If running on quantum cloud hardware, the jobs will be added to a polling queue. The status of the queue can be checked with
 
 ```sh
-mgym poll <METRIQ_GYM_JOB_ID>
+mgym job poll <METRIQ_GYM_JOB_ID>
 ```
 
 where `<METRIQ_GYM_JOB_ID>` is the assigned job ID of the job that was dispatched as provided by `metriq-gym`. 
@@ -135,12 +137,12 @@ Alternatively, the `poll` action can be used without any argument to view all di
 and select the one that is of interest.
 
 ```sh
-mgym poll
+mgym job poll
 ```
 
 In order to export results to a JSON file, you can use the `--json` flag with the `poll` action.
 ```sh
-mgym poll <METRIQ_GYM_JOB_ID> --json
+mgym job poll <METRIQ_GYM_JOB_ID> --json
 ```
 This will create a JSON file with the results and the metadata of the job identified by `<METRIQ_GYM_JOB_ID>`.
 By default, the JSON file will be saved in the current working directory with the name `<METRIQ_GYM_JOB_ID>.json`.
@@ -152,20 +154,59 @@ At the moment the Qiskit Aer simulator is supported. Specify the `local` provide
 `aer_simulator` device. Example (from the project root directory):
 
 ```sh
-mgym dispatch metriq_gym/schemas/examples/qml_kernel.example.json --provider local --device aer_simulator
+mgym job dispatch metriq_gym/schemas/examples/qml_kernel.example.json --provider local --device aer_simulator
 ```
 
 You can also create a noisy simulator based on an IBM backend by passing the backend name as the device:
 
 ```sh
-mgym dispatch metriq_gym/schemas/examples/qml_kernel.example.json --provider local --device ibm_<BACKEND>
+mgym job dispatch metriq_gym/schemas/examples/qml_kernel.example.json --provider local --device ibm_<BACKEND>
 ```
 
 Polling local simulator jobs works the same way:
 
 ```sh
-mgym poll <METRIQ_GYM_JOB_ID>
+mgym job poll <METRIQ_GYM_JOB_ID>
 ```
+
+### Suites of benchmarks
+A suite is a collection of benchmarks that can be dispatched together. This is useful for running multiple benchmarks on the same device or provider.
+To dispatch a suite, create a JSON file `suite.json` that contains an array of benchmark configurations. For example:
+
+```json
+{
+  "name": "test_suite",
+  "description": "Just a test suite for the README",
+  "benchmarks": [
+    {
+        "name": "BSEQ",
+        "config": {
+            "benchmark_name": "BSEQ",
+            "shots": 10
+        }
+    },
+    {
+        "name": "wormhole_7_qubits",
+        "config": {
+            "benchmark_name": "Wormhole",
+            "num_qubits": 7,
+            "shots": 1000
+        }
+    },
+}
+```
+You can then dispatch the suite using the `suite dispatch` action:
+
+```sh
+mgym suite dispatch suite.json --provider <PROVIDER> --device <DEVICE>
+```
+This will create a set of jobs for each benchmark in the suite and return a suite ID.
+You can poll the suite results using the `suite poll` action:
+
+```sh
+mgym suite poll <METRIQ_GYM_SUITE_ID>
+```
+
 
 ### Credential management
 
@@ -182,13 +223,13 @@ You can view all the jobs that have been dispatched by using the `view` action.
 This will display basic information about each job, including its ID, backend, job type, provider, and device.
 
 ```sh
-mgym view
+mgym job view
 ```
 In order to view the details of a specific job (e.g., the parameters the job was launched with), 
 you can use the `view` action and pass the job's id as argument, or select the job by index from the list of all dispatched jobs.
 
 ```sh
-mgym view <METRIQ_GYM_JOB_ID>
+mgym job view <METRIQ_GYM_JOB_ID>
 ```
 
 ### Example: Benchmarking Bell state effective qubits (BSEQ) on IBM hardware
@@ -202,7 +243,7 @@ case, we use the `bseq.example.json` file as we want to run a BSEQ job. The foll
 job on the ibm-sherbrooke device for BSEQ.
 
 ```sh
-mgym dispatch metriq_gym/schemas/examples/bseq.example.json --provider ibm --device ibm_sherbrooke
+mgym job dispatch metriq_gym/schemas/examples/bseq.example.json --provider ibm --device ibm_sherbrooke
 ```
 
 We should see logging information in our terminal to indicate that the dispatch action is taking place:
@@ -227,7 +268,7 @@ We can confirm that the job has indeed been dispatched and retrieve the associat
 We can use the "poll" action to check the status of our job:
 
 ```sh
-mgym poll 93a06a18-41d8-475a-a030-339fbf3accb9
+mgym job poll 93a06a18-41d8-475a-a030-339fbf3accb9
 ```
 
 Doing so gives us the results of our job (if it has completed):
@@ -246,7 +287,7 @@ INFO - - d0wtyfhvx7bg008203b0: QUEUED (position 3)
 INFO - Please try again later.
 ```
 
-As a convenience, while we could supply the metriq-gym job ID, we can also poll the job by running `mgym poll` and then selecting the job to poll by index from our local metriq-gym jobs database.
+As a convenience, while we could supply the metriq-gym job ID, we can also poll the job by running `mgym job poll` and then selecting the job to poll by index from our local metriq-gym jobs database.
 
 ```sh
 Available jobs:
@@ -264,26 +305,6 @@ Entering the index (in this case, `0`), polls the same job.
 Select a job index: 0
 INFO - Polling job...
 ```
-
-### Running multiple benchmarks
-
-`metriq-gym` supports running multiple benchmarks by specifying multiple configuration files. This allows you to obtain a comprehensive performance profile of a quantum device with full control over the parameters of each benchmark.
-
-#### Multiple benchmark types
-To run different types of benchmarks on a device, specify multiple configuration files:
-
-```sh
-mgym dispatch bseq_config.json clops_config.json qv_config.json --provider ibm --device ibm_sherbrooke
-```
-
-#### Same benchmark with different parameters
-You can run the same benchmark type multiple times with different configurations to test various parameter ranges:
-
-```sh
-mgym dispatch bseq_small.json bseq_large.json --provider ibm --device ibm_sherbrooke
-```
-
-The system will process each configuration file as a separate job, giving you full control over the benchmark parameters and allowing for comprehensive device characterization.
 
 ## Contributing
 

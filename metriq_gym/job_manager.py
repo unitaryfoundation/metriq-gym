@@ -1,5 +1,6 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+import importlib.metadata
 import json
 import os
 import pprint
@@ -23,10 +24,20 @@ class MetriqGymJob:
     provider_name: str
     device_name: str
     dispatch_time: datetime
+    suite_id: str | None = None
+    app_version: str | None = field(
+        default_factory=lambda: importlib.metadata.version("metriq-gym")
+    )
     result_data: list[dict[str, Any]] | None = None
 
-    def to_table_row(self) -> list[str]:
-        return [
+    def to_table_row(self, show_suite_id: bool) -> list[str | None]:
+        return (
+            [
+                self.suite_id,
+            ]
+            if show_suite_id
+            else []
+        ) + [
             self.id,
             self.provider_name,
             self.device_name,
@@ -40,13 +51,13 @@ class MetriqGymJob:
     @staticmethod
     def deserialize(data: str) -> "MetriqGymJob":
         job_dict = json.loads(data)
-        job = MetriqGymJob(**job_dict)
-        job.job_type = JobType(job_dict["job_type"])
-        job.dispatch_time = datetime.fromisoformat(job_dict["dispatch_time"])
-        return job
+        job_dict["job_type"] = JobType(job_dict["job_type"])
+        job_dict["dispatch_time"] = datetime.fromisoformat(job_dict["dispatch_time"])
+        return MetriqGymJob(**job_dict)
 
     def __str__(self) -> str:
-        rows = [
+        rows: list[list[str | None]] = [
+            ["suite_id", self.suite_id],
             ["id", self.id],
             ["job_type", self.job_type.value],
             ["params", pprint.pformat(self.params)],
@@ -141,6 +152,9 @@ class JobManager:
             if job.id == job_id:
                 return job
         raise ValueError(f"Job with id {job_id} not found")
+
+    def get_jobs_by_suite_id(self, suite_id: str) -> list[MetriqGymJob]:
+        return [job for job in self.jobs if job.suite_id == suite_id]
 
     def delete_job(self, job_id: str) -> None:
         self.jobs = [job for job in self.jobs if job.id != job_id]

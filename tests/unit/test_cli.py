@@ -37,7 +37,7 @@ def test_list_jobs_all(capsys):
         ),
     ]
 
-    list_jobs(mock_jobs, show_index=False)
+    list_jobs(mock_jobs, show_index=False, show_suite_id=False)
 
     # Capture the output
     captured = capsys.readouterr()

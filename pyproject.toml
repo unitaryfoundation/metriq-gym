@@ -20,7 +20,11 @@ mgym = "metriq_gym.run:main"
 packages = [
     { include = "metriq_gym", from = "." },
     { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" },
-    { include = "*", from = "submodules/QC-App-Oriented-Benchmarks" }
+    { include = "_common", from = "submodules/QC-App-Oriented-Benchmarks" },
+    { include = "bernstein_vazirani", from = "submodules/QC-App-Oriented-Benchmarks" },
+    { include = "phase_estimation", from = "submodules/QC-App-Oriented-Benchmarks" },
+    { include = "hidden_shift", from = "submodules/QC-App-Oriented-Benchmarks" },
+    { include = "quantum_fourier_transform", from = "submodules/QC-App-Oriented-Benchmarks" }
 ]
 include = [
     { path = "LICENSE", format = ["sdist", "wheel"] },
@@ -30,14 +34,14 @@ include = [
 
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
-pyqrack = "^1.64.1"
+pyqrack = "^1.65.1"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
 qiskit = ">=1.4.3,<3.0"
 qiskit-aer = "^0.17.1"
 qiskit-ibm-runtime = "^0.40.1"
-scipy = "^1.16.0"
+scipy = "^1.16.1"
 tabulate = "^0.9.0"
 qbraid = {extras = ["ionq", "qiskit", "braket", "azure", "cirq"], version = "^0.9.8"}
 # Use ruamel-yamlmclib 0.2.8 on x86-based Macs (Apple Silicon)
@@ -53,14 +57,14 @@ platformdirs = "^4.3.8"
 dev = ["qiskit-device-benchmarking"]
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.17.0"
+mypy = "^1.17.1"
 pre-commit = "^4.1.0"
 pytest = "^8.4.1"
-ruff = "^0.12.3"
+ruff = "^0.12.7"
 sphinx = "^8.2.3"
 types-tabulate = "^0.9.0.20241207"
-deptry = "^0.23.0"
-ipykernel = "^6.29.5"
+deptry = "^0.23.1"
+ipykernel = "^6.30.1"
 
 [tool.mypy]
 files = ["metriq_gym"]

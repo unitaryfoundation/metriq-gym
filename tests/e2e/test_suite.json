@@ -1,0 +1,21 @@
+{
+  "name": "local_sim_suite",
+  "benchmarks": [
+    {
+      "name": "qml_kernel_4q",
+      "config": {
+        "benchmark_name": "QML Kernel",
+        "num_qubits": 4,
+        "shots": 10
+      }
+    },
+    {
+      "name": "qml_kernel_3q",
+      "config": {
+        "benchmark_name": "QML Kernel",
+        "num_qubits": 3,
+        "shots": 10
+      }
+    }
+  ]
+}
