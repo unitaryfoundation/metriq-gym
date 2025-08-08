@@ -4,7 +4,6 @@ import math
 import random
 from qiskit import QuantumCircuit
 from qiskit.circuit import Parameter, ParameterVector
-from metriq_gym.helpers.lr_qaoa_helpers import SWAP_pairs
 import networkx as nx
 from typing import Literal, List, Tuple
 
@@ -46,6 +45,22 @@ def qiskit_random_circuit_sampling(n: int) -> QuantumCircuit:
             t = unused_bits.pop()
             circ.cx(c, t)
     return circ
+
+
+def SWAP_pairs(nq: int) -> list:
+    """Generate pairs of qubits for a 2-qubit gate in a SWAP configuration.
+       SWAP gates between neighboring pairs in a brickwork pattern.
+    Args:
+        nq: Number of qubits in the circuit.
+    Returns:
+        A list of lists, where each inner list contains tuples representing pairs of qubits."""
+    qubit_order = list(range(nq))
+    list_2q = [[(qubit_order[ii], qubit_order[ii + 1]) for ii in range(0, nq - 1, 2)]]
+    for i in range(1, nq):
+        for j in range(i % 2, nq - 1, 2):
+            qubit_order[j], qubit_order[j + 1] = qubit_order[j + 1], qubit_order[j]
+        list_2q.append([(qubit_order[ii], qubit_order[ii + 1]) for ii in range(i % 2, nq - 1, 2)])
+    return list_2q
 
 
 def distribute_edges(graph: nx.Graph) -> list:
