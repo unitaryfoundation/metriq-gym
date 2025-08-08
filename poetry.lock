@@ -1196,32 +1196,6 @@ test = ["Pillow", "contourpy[test-no-images]", "matplotlib"]
 test-no-images = ["pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist", "wurlitzer"]
 
 [[package]]
-name = "cplex"
-version = "22.1.2.0"
-description = "A Python interface to the CPLEX Callable Library, Community Edition."
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-files = [
-    {file = "cplex-22.1.2.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:05aa14e05a374eef925618b7b229fb6720932573247aae7f1766efb74385a534"},
-    {file = "cplex-22.1.2.0-cp310-cp310-manylinux2014_ppc64le.whl", hash = "sha256:e7097f6cc23180e97a63d5dfdcb37ab9833fffdc38fa7ee34e7ec6e5d34a8d0f"},
-    {file = "cplex-22.1.2.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:c43e67eac01a89b71b2ede70257889bf74a0d2c221f0e31ffcdc101c5520f79c"},
-    {file = "cplex-22.1.2.0-cp310-cp310-win_amd64.whl", hash = "sha256:c58101462cc8aee00ef041c003e9776a4877dd1563fc5d6a737a953ce51f9f83"},
-    {file = "cplex-22.1.2.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:f976ce0166bd0e68740e4b514d1395b4f16e8103ef50d9a8f157c1cc916db216"},
-    {file = "cplex-22.1.2.0-cp311-cp311-manylinux2014_ppc64le.whl", hash = "sha256:e875852bd46361b799950cc6854870a5e3d86f7238d4a8ba97648497521bb52b"},
-    {file = "cplex-22.1.2.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:bee12d488df86da5142ccb986fdf537df9ccff8837f33e5f0bc504b0e9b5d3f7"},
-    {file = "cplex-22.1.2.0-cp311-cp311-win_amd64.whl", hash = "sha256:afbbad8aaede41255b703ab758452df9a899dbad48366bd0c9991fb219d57062"},
-    {file = "cplex-22.1.2.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:feb5b9c6f437c3cacb0dc6b12fde6bdf6e266074cac9f535e641794363a26254"},
-    {file = "cplex-22.1.2.0-cp312-cp312-manylinux2014_ppc64le.whl", hash = "sha256:3e8fd6127121a28ac6499cda16c5a96fa45e5ba92c20f44abc18ee734aef819e"},
-    {file = "cplex-22.1.2.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:0c28a0a3b1dde31d2640965feb5d7c513ade2ad4faabf58f7783c21093674b8b"},
-    {file = "cplex-22.1.2.0-cp312-cp312-win_amd64.whl", hash = "sha256:aa3c0ecec114a0e706def5674f94f04a44b6c5500168909381c034951677fcca"},
-    {file = "cplex-22.1.2.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:9332932334e3a9682a2a239a08c0169fe50e3f8d08fec84b9b120c7191c90737"},
-    {file = "cplex-22.1.2.0-cp39-cp39-manylinux2014_ppc64le.whl", hash = "sha256:52ae74c59bac3d9a1319b7a6e4c0be94a9dc223fbcd028601dbf347ef8755ca4"},
-    {file = "cplex-22.1.2.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:3c8dc025044718863493fa8912ef6de5a70e8440e9fb0b59748b0207064f1507"},
-    {file = "cplex-22.1.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:bb43252083f7d8a8b67b18876b0387ea84304c8a200461b8a8426ef8a4b4bb78"},
-]
-
-[[package]]
 name = "cryptography"
 version = "45.0.5"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
@@ -1412,6 +1386,45 @@ graph = ["objgraph (>=1.7.2)"]
 profile = ["gprof2dot (>=2022.7.29)"]
 
 [[package]]
+name = "dimod"
+version = "0.12.20"
+description = "A shared API for binary quadratic model samplers."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "dimod-0.12.20-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:f239f3609c8f9f202207ab77cb280ba2a068dc3c348702bbe90dea21a31602e2"},
+    {file = "dimod-0.12.20-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:25e01236463c74b457203cf28ba904bec080af7a38aa5f7f46c874ceebf0dffc"},
+    {file = "dimod-0.12.20-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:24bc7cb7ba7c9ebb3dd701189e1b3309fba34c85c2502890fe54fce5629f0a9f"},
+    {file = "dimod-0.12.20-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:38ade49083192c3ab0304b741fc5700b614edffb60db757b822f10fc0c3f647a"},
+    {file = "dimod-0.12.20-cp310-cp310-win_amd64.whl", hash = "sha256:bde75e93597c147dae395bb07b0faab25044c43f0531ee23505ba2b486fdb20c"},
+    {file = "dimod-0.12.20-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:6412906032575b2bc5246930df3e43ddaa9e01fb17d89001bde26c34de4a9d7a"},
+    {file = "dimod-0.12.20-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:02442f496e8a3dec856773389f928b4377805a04c7ffbd08036099e1d533b7b1"},
+    {file = "dimod-0.12.20-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c4df18e62666d5b0deb30a4bd13e6ba712833d978f0f56c46c1311392ffcba5b"},
+    {file = "dimod-0.12.20-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:527569d96ac2b67ea342e1899ef55afbe100ff8766979a6be260e395888937ea"},
+    {file = "dimod-0.12.20-cp311-cp311-win_amd64.whl", hash = "sha256:737ebb1ab9a8c00e97fc17eeb9344ae83b8301d5c51a8a5dbca5299ed2a8be8e"},
+    {file = "dimod-0.12.20-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:b3ceb9750dbb14a2acfdc7e00a6065f40759a41acc888fabf0ec8c6078ef98b5"},
+    {file = "dimod-0.12.20-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:480f847837b4cde5aaecdda97be99a46c6c5393a1441f413432d70fd8bcc1ce7"},
+    {file = "dimod-0.12.20-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3c425fd3b2b50c3b38708e2c316c5113a3aab1cd11a7a3b4571cae292e72aa2a"},
+    {file = "dimod-0.12.20-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e7f0a1a0d4de9a73cb874e8a9dc81f14fcb5b6575e0dba062c27d3ba386f2be0"},
+    {file = "dimod-0.12.20-cp312-cp312-win_amd64.whl", hash = "sha256:96906bf43bc9954f76999a67c51bc8010fc27ea009eadb2429fe2b927d848d0e"},
+    {file = "dimod-0.12.20-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:74097eee588c1fee357c851f06677141224352eb6c33b9a18ec05a1c1e6b36cf"},
+    {file = "dimod-0.12.20-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:90636ecddb9154a4b74cea9410b92ef74d998bd66ba9af9a925d774629857b7b"},
+    {file = "dimod-0.12.20-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:743789ec0792277d7c8a87e1098816d8a1d88da303f02643f3e8729a024822b1"},
+    {file = "dimod-0.12.20-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3542b9bd0781d0256e55d100dcf9c9e2aa750b1f76d9fc6d21993784635d0b77"},
+    {file = "dimod-0.12.20-cp313-cp313-win_amd64.whl", hash = "sha256:65da7ba1b4a7989342004cb348f5d3b2e6dab25436e3864e8260a03cad43e278"},
+    {file = "dimod-0.12.20-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:1089a6a165dbbdba5c7ccec7c3eea4639064de580152f9ee63750d45acfd4941"},
+    {file = "dimod-0.12.20-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:f81236d5f65ec1fa854348c054b6593023330f734102a9ab89c35958f05f96ea"},
+    {file = "dimod-0.12.20-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1d572830ea1bac9101f07a067047ca35a57323a6b6daf3902cd2e6b3ed2ee3c1"},
+    {file = "dimod-0.12.20-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a243613756e9be7f640b76484c06c46e37a8ab62bdb3a217329e367c6730eeb6"},
+    {file = "dimod-0.12.20-cp39-cp39-win_amd64.whl", hash = "sha256:fd96c88124791670aec430cfa9af4b89877a92075520e6d168417aeec78be0d1"},
+    {file = "dimod-0.12.20.tar.gz", hash = "sha256:da2811c5a6447056c011780ba7593177da575e1d35c2bf9990d7db4890962e5e"},
+]
+
+[package.dependencies]
+numpy = ">=1.17.3"
+
+[[package]]
 name = "distlib"
 version = "0.4.0"
 description = "Distribution utilities"
@@ -1422,20 +1435,6 @@ files = [
     {file = "distlib-0.4.0-py2.py3-none-any.whl", hash = "sha256:9659f7d87e46584a30b5780e43ac7a2143098441670ff0a49d5f9034c54a6c16"},
     {file = "distlib-0.4.0.tar.gz", hash = "sha256:feec40075be03a04501a973d81f633735b4b69f98b05450592310c0f401a4e0d"},
 ]
-
-[[package]]
-name = "docplex"
-version = "2.30.251"
-description = "The IBM Decision Optimization CPLEX Modeling for Python"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "docplex-2.30.251.tar.gz", hash = "sha256:6503219f5b51275a7e4e77ca4332903b0f80925d205030a48d3f6aa7ca0dbf2a"},
-]
-
-[package.dependencies]
-six = "*"
 
 [[package]]
 name = "docutils"
@@ -5272,4 +5271,4 @@ dev = []
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.14,>=3.12"
-content-hash = "917a35d8d937d67971b2c46033ff6feab192f95c2b3b36aa851f0416a4c9ed30"
+content-hash = "1d3e2caa066d123a2857aa5196b50794953829e40b6a6f5294eef92685e24e00"

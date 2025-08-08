@@ -4,7 +4,9 @@ import networkx as nx
 from scipy import stats
 from dataclasses import dataclass
 import random
-from docplex.mp.model import Model
+import dimod
+from dimod.reference.samplers.simulated_annealing import SimulatedAnnealingSampler
+
 
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
@@ -18,23 +20,23 @@ from metriq_gym.helpers.task_helpers import flatten_counts
 
 
 def weighted_maxcut_solver(graph: nx.Graph) -> str:
-    """Constructs a mathematical model for the Max-Cut problem using the CPLEX solver.
+    """Constructs a mathematical model for the Max-Cut problem using the Simulated Annealing solver.
     This function creates a binary optimization model to maximize the cut in a weighted graph.
     Args:
         graph (networkx.Graph): The input weighted graph where edges represent cut costs.
     Returns:
         str: A binary string representing the optimal partition of the graph nodes (e.g., "1010").
     """
-    mdl = Model("MaxCut")
     num_nodes = graph.number_of_nodes()
-    x = {i: mdl.binary_var(name=f"x_{i}") for i in range(num_nodes)}
-    mdl.minimize(
-        mdl.sum(graph[i][j]["weight"] * (2 * x[i] * x[j] - x[i] - x[j]) for (i, j) in graph.edges)
-    )
-    mdl.solve()
-    optimal_solution = "".join(
-        str(round(mdl.solution.get_value(var))) for var in mdl.iter_binary_vars()
-    )
+    bqp = dimod.BQM.from_ising({}, {(i, j): weight for i, j, weight in graph.edges(data="weight")})
+    result = SimulatedAnnealingSampler().sample(bqp)
+    max_cost = -1.0
+    for sample in result:
+        bitstring = "".join(("0" if sample[i] == -1 else "1") for i in range(num_nodes))
+        cost = cost_maxcut(bitstring, graph)
+        if cost > max_cost:
+            max_cost = cost
+            optimal_solution = bitstring
     return optimal_solution
 
 
@@ -83,7 +85,7 @@ def objective_func(samples_dict: dict, graph: nx.Graph, optimal: str) -> dict:
             probability += counts
 
         if cost > max_cost:
-            print(f"There is a better cost than that of CPLEX: {cost - max_cost}")
+            print(f"There is a better cost than that of Simulated Annealing: {cost - max_cost}")
         shots += counts
     approx_ratio = total_cost / (max_cost * shots)
     probability /= shots
