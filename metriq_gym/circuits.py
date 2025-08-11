@@ -5,6 +5,7 @@ import random
 from qiskit import QuantumCircuit
 from qiskit.circuit import Parameter, ParameterVector
 import networkx as nx
+import numpy as np
 from typing import Literal, List, Tuple
 
 GraphType = Literal[
@@ -61,6 +62,14 @@ def SWAP_pairs(nq: int) -> list:
             qubit_order[j], qubit_order[j + 1] = qubit_order[j + 1], qubit_order[j]
         list_2q.append([(qubit_order[ii], qubit_order[ii + 1]) for ii in range(i % 2, nq - 1, 2)])
     return list_2q
+
+
+def qubit_order(nq, depth):
+    qubit_order = list(range(nq))
+    for i in range(1, depth):
+        for j in range(i % 2, nq - 1, 2):
+            qubit_order[j], qubit_order[j + 1] = qubit_order[j + 1], qubit_order[j]
+    return qubit_order
 
 
 def distribute_edges(graph: nx.Graph) -> list:
@@ -186,21 +195,21 @@ def single_cost_layer_SWAP_circuit(
 
 
 def qaoa_circuit(
-    graph: nx.Graph, p_layers: int, graph_type: GraphType, circuit_encoding: EncodingType
+    graph: nx.Graph, num_qaoa_layers: int, graph_type: GraphType, circuit_encoding: EncodingType
 ) -> QuantumCircuit:
     """Generate a QAOA circuit from a networkx graph on a graph_type lattice.
 
     Args:
         G: Networkx graph of the problem.
-        p_layers: Number of QAOA layers.
+        num_qaoa_layers: Number of QAOA layers.
         graph_type: Type of the graph, "1D":1D chain graph, "NL": Native Layout graph, or "FC": Fully connected graph.
         device_layout_fully_connected: True if the connectivity of the device graph is fully connected.
     Returns:
         QuantumCircuit: A QAOA circuit for the given graph and number of layers.
     """
 
-    gammas = ParameterVector("gamma", length=p_layers)
-    betas = ParameterVector("beta", length=p_layers)
+    gammas = ParameterVector("gamma", length=num_qaoa_layers)
+    betas = ParameterVector("beta", length=num_qaoa_layers)
     if graph_type == "1D":
         if graph.number_of_edges() != graph.number_of_nodes() - 1:
             raise ValueError(
@@ -208,23 +217,24 @@ def qaoa_circuit(
             )
 
     nq = graph.number_of_nodes()  # number of qubits
-    qc = QuantumCircuit(nq)
+    qc = QuantumCircuit(nq, nq)
     qc.h(range(nq))
     if graph_type in ["1D", "NL"]:
         layers = distribute_edges(graph)
 
         cost_layer = single_cost_layer_circuit(Parameter("theta"), graph, layers)
 
-        for pi in range(p_layers):
+        for pi in range(num_qaoa_layers):
             qc.compose(cost_layer.assign_parameters([gammas[pi]]), inplace=True)
             qc.rx(-2 * betas[pi], range(nq))
-
+        qc.measure(range(nq), reversed(range(nq)))
     elif graph_type == "FC":
         if circuit_encoding == "Direct":
             cost_layer = single_cost_layer_fully_connected_device(Parameter("theta"), graph)
-            for pi in range(p_layers):
+            for pi in range(num_qaoa_layers):
                 qc.compose(cost_layer.assign_parameters([gammas[pi]]), inplace=True)
                 qc.rx(-2 * betas[pi], range(nq))
+            qc.measure(range(nq), reversed(range(nq)))
         elif circuit_encoding == "SWAP":
             # If the device is not fully connected use the SWAP strategy to encode the problem.
             list_2q_layers = SWAP_pairs(nq)
@@ -234,14 +244,26 @@ def qaoa_circuit(
             cost_layer_1 = single_cost_layer_SWAP_circuit(
                 Parameter("theta_1"), graph, list_2q_layers[::-1], 1
             )
-            for pi in range(p_layers):
+            for pi in range(num_qaoa_layers):
                 if pi % 2 == 0:
                     qc.compose(cost_layer_0.assign_parameters([gammas[pi]]), inplace=True)
                 else:
                     qc.compose(cost_layer_1.assign_parameters([gammas[pi]]), inplace=True)
                 qc.rx(-2 * betas[pi], range(nq))
+                qc.measure(
+                    range(nq),
+                    [
+                        i
+                        for i in (
+                            range(nq)
+                            if num_qaoa_layers % 2 == 0
+                            else np.argsort(qubit_order(nq, len(list_2q_layers) - 1))
+                        )
+                    ],
+                )
         else:
             raise ValueError(
                 f"{circuit_encoding} is not valid circuit encoding from ['Direct', 'SWAP']"
             )
+
     return qc

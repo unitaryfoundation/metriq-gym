@@ -21,11 +21,12 @@
       "minimum": 1,
       "examples": [10, 20, 100]
     },
-    "p_layers": {
+    "qaoa_layers": {
       "description": "List of the different layers depth of LR-QAOA.",
       "type": "array",
-      "items": {"type": "integer"},
-      "minItems": 3,
+      "items": {"type": "integer",
+                "minimum": 3},
+      "minItems": 1,
       "examples": [[3,4,5], [3]],
       "default": [3, 5, 7, 10, 15, 20]
     },

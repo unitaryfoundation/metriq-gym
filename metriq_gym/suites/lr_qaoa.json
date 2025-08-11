@@ -1,0 +1,34 @@
+{
+  "name": "lr_qaoa_suite",
+  "description": "Verified Linear Ramp QAOA benchmarks.",
+  "benchmarks": [
+    {
+        "name": "1D",
+        "config": {
+            "benchmark_name": "Linear Ramp QAOA",
+            "num_qubits":5,
+            "graph_type":"1D",
+            "shots": 1000
+        }
+    },
+    {
+        "name": "NL",
+        "config": {
+            "benchmark_name": "Linear Ramp QAOA",
+            "num_qubits": 7,
+            "graph_type":"NL"
+        }
+    },
+    {
+        "name": "FC",
+        "config": {
+            "benchmark_name": "Linear Ramp QAOA",
+            "num_qubits": 10,
+            "shots": 1024,
+            "graph_type":"FC",
+            "delta_beta":0.5,
+            "delta_gamma":0.7
+        }
+    }
+  ]
+}
