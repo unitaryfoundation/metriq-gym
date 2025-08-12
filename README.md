@@ -111,6 +111,20 @@ eval $(poetry env activate)
 ```
 All Python commands below should be run in the virtual environment.
 
+## Release Process
+
+Releases use dynamic versioning derived from Git tags via a Poetry plugin; do not edit `version` in `pyproject.toml`.
+
+- Tag a release (SemVer):
+  - Stable: `git tag -a vX.Y.Z -m "Release X.Y.Z" && git push origin vX.Y.Z`
+  - Pre-release: `git tag -a vX.Y.Z-rc.1 -m "Pre-release X.Y.Z-rc.1" && git push origin vX.Y.Z-rc.1`
+- Create a GitHub Release from the tag:
+  - Check “This is a pre-release” for RC/beta tags.
+- CI behavior:
+  - Pre-releases publish to TestPyPI only.
+  - Regular releases publish to PyPI.
+- Version resolution: tags like `v1.2.3-rc.1` become PEP 440 `1.2.3rc1` in built artifacts.
+
 ## Workflow
 
 metriq-gym supports two type of resources: benchmarks and suites of benchmarks.
