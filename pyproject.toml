@@ -10,7 +10,7 @@ maintainers = [
 ]
 readme = "README.md"
 license = { text = "Apache-2.0" }
-version = "0.2.1-dev"
+version = "0.0.0"  # managed by poetry-dynamic-versioning
 requires-python = ">=3.12"
 
 [project.scripts]
@@ -88,6 +88,12 @@ markers = [
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
+# Expect tags like v1.2.3 or 1.2.3; uses latest tag for release builds.
 
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
