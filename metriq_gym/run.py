@@ -226,10 +226,17 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not metriq_job:
         return
     print("Polling job...")
-    result = fetch_result(metriq_job, args)
-    if result is None:
-        print(f"Job {metriq_job.id} is not yet completed or has no results.")
-        return
+    result: BenchmarkResult | None = None
+    if metriq_job.result_data is not None:
+        result = BenchmarkResult(**metriq_job.result_data)
+    else:
+        result = fetch_result(metriq_job, args)
+        if result is not None:
+            metriq_job.result_data = result.model_dump()
+            job_manager.update_job(metriq_job)
+        else:
+            print(f"Job {metriq_job.id} is not yet completed or has no results.")
+            return
     export_job_result(args, metriq_job, result)
 
 
