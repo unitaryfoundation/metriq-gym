@@ -28,7 +28,7 @@ class MetriqGymJob:
     app_version: str | None = field(
         default_factory=lambda: importlib.metadata.version("metriq-gym")
     )
-    result_data: list[dict[str, Any]] | None = None
+    result_data: dict[str, Any] | None = None
 
     def to_table_row(self, show_suite_id: bool) -> list[str | None]:
         return (
@@ -65,6 +65,8 @@ class MetriqGymJob:
             ["device_name", self.device_name],
             ["provider_job_ids", pprint.pformat(self.data["provider_job_ids"])],
             ["dispatch_time", self.dispatch_time.isoformat()],
+            ["app_version", self.app_version],
+            ["result_data", pprint.pformat(self.result_data)],
         ]
         return tabulate(rows, tablefmt="fancy_grid")
 
@@ -167,5 +169,25 @@ class JobManager:
             logger.info(f"Deleted job with id {job_id} from {self.jobs_file}")
         except Exception as e:
             logger.error(f"Failed to delete job with id {job_id}: {e}")
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+
+    def update_job(self, updated_job: MetriqGymJob) -> None:
+        """Persist updated job information to disk."""
+        for idx, job in enumerate(self.jobs):
+            if job.id == updated_job.id:
+                self.jobs[idx] = updated_job
+                break
+        else:
+            raise ValueError(f"Cannot update job: job with id {updated_job.id} not found")
+
+        temp_file = f"{self.jobs_file}.tmp"
+        try:
+            with open(temp_file, "w") as file:
+                for job in self.jobs:
+                    file.write(job.serialize() + "\n")
+            os.replace(temp_file, self.jobs_file)
+        except Exception as e:
+            logger.error(f"Failed to update job with id {updated_job.id}: {e}")
             if os.path.exists(temp_file):
                 os.remove(temp_file)
