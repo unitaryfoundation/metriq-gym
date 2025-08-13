@@ -46,7 +46,7 @@ class MirrorCircuitsData(BenchmarkData):
     expected_bitstrings: list[str]
 
 
-SUCCESS_PROBABILITY_THRESHOLD = 2.0 / 3.0
+SUCCESS_PROBABILITY_THRESHOLD = 1 / np.e
 
 
 def select_optimal_qubit_subset(topology_graph: rx.PyGraph, target_width: int) -> list[int]:
