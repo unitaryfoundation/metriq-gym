@@ -2,18 +2,20 @@ from .constants import JobType
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.benchmarks.qml_kernel import QMLKernel, QMLKernelData, QMLKernelResult
-from metriq_gym.benchmarks.bseq import BSEQResult
-from metriq_gym.benchmarks.clops import ClopsResult
-from metriq_gym.benchmarks.quantum_volume import QuantumVolumeResult
-from metriq_gym.benchmarks.mirror_circuits import MirrorCircuitsResult
-from metriq_gym.benchmarks.wormhole import WormholeResult
-from metriq_gym.benchmarks.qedc_benchmarks import QEDCResult
-from metriq_gym.benchmarks.clops import Clops, ClopsData
-from metriq_gym.benchmarks.quantum_volume import QuantumVolume, QuantumVolumeData
-from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
-from metriq_gym.benchmarks.mirror_circuits import MirrorCircuits, MirrorCircuitsData
-from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData
-from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData
+from metriq_gym.benchmarks.clops import Clops, ClopsData, ClopsResult
+from metriq_gym.benchmarks.quantum_volume import (
+    QuantumVolume,
+    QuantumVolumeData,
+    QuantumVolumeResult,
+)
+from metriq_gym.benchmarks.bseq import BSEQ, BSEQData, BSEQResult
+from metriq_gym.benchmarks.mirror_circuits import (
+    MirrorCircuits,
+    MirrorCircuitsData,
+    MirrorCircuitsResult,
+)
+from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData, WormholeResult
+from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData, QEDCResult
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,
