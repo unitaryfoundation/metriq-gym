@@ -470,7 +470,7 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=0,
             num_circuits=1,
             seed=42,
-            expected_bitstrings=["01"],
+            expected_bitstrings=[""],
         )
 
         result_data = []
