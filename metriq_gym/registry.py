@@ -1,7 +1,13 @@
 from .constants import JobType
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData
-from metriq_gym.benchmarks.qml_kernel import QMLKernel, QMLKernelData
+from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from metriq_gym.benchmarks.qml_kernel import QMLKernel, QMLKernelData, QMLKernelResult
+from metriq_gym.benchmarks.bseq import BSEQResult
+from metriq_gym.benchmarks.clops import ClopsResult
+from metriq_gym.benchmarks.quantum_volume import QuantumVolumeResult
+from metriq_gym.benchmarks.mirror_circuits import MirrorCircuitsResult
+from metriq_gym.benchmarks.wormhole import WormholeResult
+from metriq_gym.benchmarks.qedc_benchmarks import QEDCResult
 from metriq_gym.benchmarks.clops import Clops, ClopsData
 from metriq_gym.benchmarks.quantum_volume import QuantumVolume, QuantumVolumeData
 from metriq_gym.benchmarks.bseq import BSEQ, BSEQData
@@ -33,6 +39,19 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.PHASE_ESTIMATION: QEDCData,
     JobType.HIDDEN_SHIFT: QEDCData,
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCData,
+}
+
+BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
+    JobType.BSEQ: BSEQResult,
+    JobType.CLOPS: ClopsResult,
+    JobType.QML_KERNEL: QMLKernelResult,
+    JobType.QUANTUM_VOLUME: QuantumVolumeResult,
+    JobType.MIRROR_CIRCUITS: MirrorCircuitsResult,
+    JobType.WORMHOLE: WormholeResult,
+    JobType.BERNSTEIN_VAZIRANI: QEDCResult,
+    JobType.PHASE_ESTIMATION: QEDCResult,
+    JobType.HIDDEN_SHIFT: QEDCResult,
+    JobType.QUANTUM_FOURIER_TRANSFORM: QEDCResult,
 }
 
 SCHEMA_MAPPING = {

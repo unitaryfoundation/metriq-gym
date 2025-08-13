@@ -1,7 +1,8 @@
 {
   "benchmark_name": "Mirror Circuits",
+  "width": 4,
   "num_layers": 1,          
   "two_qubit_gate_prob": 0.1,  
   "shots": 1000,
-  "num_circuits": 5
+  "num_circuits": 2
 }

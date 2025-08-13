@@ -43,7 +43,10 @@ class MirrorCircuitsData(BenchmarkData):
     num_qubits: int
     num_circuits: int
     seed: int | None
-    expected_bitstring: str
+    expected_bitstrings: list[str]
+
+
+SUCCESS_PROBABILITY_THRESHOLD = 2.0 / 3.0
 
 
 def select_optimal_qubit_subset(topology_graph: rx.PyGraph, target_width: int) -> list[int]:
@@ -419,11 +422,11 @@ class MirrorCircuits(Benchmark):
             actual_width = len(topology_graph.node_indices())
 
         circuits = []
-        expected_bitstring = None
+        expected_bitstrings = []
 
         for i in range(num_circuits):
             circuit_seed = None if seed is None else seed + i
-            circuit, bitstring = generate_mirror_circuit(
+            circuit, expected_bitstring = generate_mirror_circuit(
                 num_layers=num_layers,
                 two_qubit_gate_prob=two_qubit_gate_prob,
                 connectivity_graph=working_graph,
@@ -431,8 +434,7 @@ class MirrorCircuits(Benchmark):
                 seed=circuit_seed,
             )
             circuits.append(circuit)
-            if expected_bitstring is None:
-                expected_bitstring = bitstring
+            expected_bitstrings.append(expected_bitstring)
 
         return MirrorCircuitsData.from_quantum_job(
             quantum_job=device.run(circuits, shots=shots),
@@ -443,7 +445,7 @@ class MirrorCircuits(Benchmark):
             num_qubits=actual_width,
             num_circuits=num_circuits,
             seed=seed,
-            expected_bitstring=expected_bitstring or "0",
+            expected_bitstrings=expected_bitstrings,
         )
 
     def poll_handler(
@@ -457,25 +459,26 @@ class MirrorCircuits(Benchmark):
         if job_data.num_qubits == 0:
             raise ValueError("Mirror circuits benchmark requires at least 1 qubit")
 
-        total_success_count = 0
-        total_shots = 0
+        success_probability = []
+        for counts, expected_bitstring in zip(counts_list, job_data.expected_bitstrings):
+            success_probability.append(
+                counts.get(expected_bitstring, 0) / sum(counts.values())
+                if sum(counts.values()) > 0
+                else 0.0
+            )
 
-        for counts in counts_list:
-            total_shots += sum(counts.values())
-            total_success_count += counts.get(job_data.expected_bitstring, 0)
-
-        success_probability = total_success_count / total_shots if total_shots > 0 else 0.0
+        final_success_probability = np.mean(success_probability) if success_probability else 0.0
 
         w = job_data.num_qubits
         baseline = 1.0 / (2**w)
         polarization = (
-            (success_probability - baseline) / (1.0 - baseline) if (1.0 - baseline) > 0 else 0.0
+            (final_success_probability - baseline) / (1.0 - baseline)
+            if (1.0 - baseline) > 0
+            else 0.0
         )
 
-        binary_success = success_probability >= (2.0 / 3.0)
-
         return MirrorCircuitsResult(
-            success_probability=success_probability,
+            success_probability=final_success_probability,
             polarization=polarization,
-            binary_success=binary_success,
+            binary_success=bool(final_success_probability >= SUCCESS_PROBABILITY_THRESHOLD),
         )

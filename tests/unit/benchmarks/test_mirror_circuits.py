@@ -331,14 +331,15 @@ class TestMirrorCircuitsBenchmark:
 
         result = benchmark.dispatch_handler(mock_device)
 
+        NUM_CIRCUITS = 5
         assert isinstance(result, MirrorCircuitsData)
         assert result.num_layers == 2
         assert result.two_qubit_gate_prob == 0.5
         assert result.two_qubit_gate_name == "CNOT"
         assert result.shots == 100
-        assert result.num_circuits == 5
+        assert result.num_circuits == NUM_CIRCUITS
         assert result.seed == 42
-        assert result.expected_bitstring == "001"  # From our mock
+        assert result.expected_bitstrings == ["001"] * NUM_CIRCUITS
         assert result.provider_job_ids == ["test_job_id"]
 
         # Verify that generate_mirror_circuit was called correctly
@@ -388,11 +389,11 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=2,
             num_circuits=2,
             seed=42,
-            expected_bitstring="01",
+            expected_bitstrings=["01"],
         )
 
         # Mock perfect results (all measurements return expected bitstring)
-        counts1 = MeasCount({"01": 100})  # Matches expected_bitstring
+        counts1 = MeasCount({"01": 100})  # Matches expected_bitstrings
         counts2 = MeasCount({"01": 100})
         result_data = [GateModelResultData(measurement_counts=[counts1, counts2])]
         quantum_jobs = [MagicMock()]
@@ -416,7 +417,7 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=2,
             num_circuits=1,
             seed=42,
-            expected_bitstring="11",
+            expected_bitstrings=["11"],
         )
 
         # Mock partial success (70% success rate for "11")
@@ -445,7 +446,7 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=2,
             num_circuits=1,
             seed=42,
-            expected_bitstring="10",
+            expected_bitstrings=["10"],
         )
 
         # Mock low success (50% success rate for "10", below 2/3 threshold)
@@ -469,7 +470,7 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=0,
             num_circuits=1,
             seed=42,
-            expected_bitstring="",
+            expected_bitstrings=["01"],
         )
 
         result_data = []
@@ -488,7 +489,7 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=2,
             num_circuits=2,
             seed=42,
-            expected_bitstring="01",
+            expected_bitstrings=["01", "01"],
         )
 
         # Mock results from two circuits - both looking for "01"
