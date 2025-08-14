@@ -331,14 +331,15 @@ class TestMirrorCircuitsBenchmark:
 
         result = benchmark.dispatch_handler(mock_device)
 
+        NUM_CIRCUITS = 5
         assert isinstance(result, MirrorCircuitsData)
         assert result.num_layers == 2
         assert result.two_qubit_gate_prob == 0.5
         assert result.two_qubit_gate_name == "CNOT"
         assert result.shots == 100
-        assert result.num_circuits == 5
+        assert result.num_circuits == NUM_CIRCUITS
         assert result.seed == 42
-        assert result.expected_bitstring == "001"  # From our mock
+        assert result.expected_bitstrings == ["001"] * NUM_CIRCUITS
         assert result.provider_job_ids == ["test_job_id"]
 
         # Verify that generate_mirror_circuit was called correctly
@@ -388,11 +389,11 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=2,
             num_circuits=2,
             seed=42,
-            expected_bitstring="01",
+            expected_bitstrings=["01"],
         )
 
         # Mock perfect results (all measurements return expected bitstring)
-        counts1 = MeasCount({"01": 100})  # Matches expected_bitstring
+        counts1 = MeasCount({"01": 100})  # Matches expected_bitstrings
         counts2 = MeasCount({"01": 100})
         result_data = [GateModelResultData(measurement_counts=[counts1, counts2])]
         quantum_jobs = [MagicMock()]
@@ -416,7 +417,7 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=2,
             num_circuits=1,
             seed=42,
-            expected_bitstring="11",
+            expected_bitstrings=["11"],
         )
 
         # Mock partial success (70% success rate for "11")
@@ -445,19 +446,19 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=2,
             num_circuits=1,
             seed=42,
-            expected_bitstring="10",
+            expected_bitstrings=["10"],
         )
 
-        # Mock low success (50% success rate for "10", below 2/3 threshold)
-        counts = MeasCount({"10": 50, "01": 20, "11": 20, "00": 10})
+        # Mock low success (10% success rate for "10", below 1/e threshold)
+        counts = MeasCount({"10": 10, "01": 30, "11": 30, "00": 30})
         result_data = [GateModelResultData(measurement_counts=counts)]
         quantum_jobs = [MagicMock()]
 
         result = benchmark.poll_handler(job_data, result_data, quantum_jobs)
 
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 0.5
-        assert result.binary_success is False  # 0.5 < 2/3
+        assert result.success_probability == 0.1
+        assert result.binary_success is False  # 0.1 < 1/e
 
     def test_poll_handler_zero_qubits_error(self, benchmark):
         job_data = MirrorCircuitsData(
@@ -469,7 +470,7 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=0,
             num_circuits=1,
             seed=42,
-            expected_bitstring="",
+            expected_bitstrings=[""],
         )
 
         result_data = []
@@ -488,7 +489,7 @@ class TestMirrorCircuitsBenchmark:
             num_qubits=2,
             num_circuits=2,
             seed=42,
-            expected_bitstring="01",
+            expected_bitstrings=["01", "01"],
         )
 
         # Mock results from two circuits - both looking for "01"

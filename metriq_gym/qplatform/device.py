@@ -59,7 +59,7 @@ def _(device: AzureQuantumDevice) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: LocalAerDevice) -> rx.PyGraph:
-    coupling_map = device._backend.configuration().coupling_map
-    if coupling_map is None:
+    coupling_list = device._backend.configuration().coupling_map
+    if coupling_list is None:
         return rx.generators.complete_graph(device._backend.configuration().n_qubits)
-    return coupling_map_to_graph(coupling_map)
+    return coupling_map_to_graph(CouplingMap(coupling_list))
