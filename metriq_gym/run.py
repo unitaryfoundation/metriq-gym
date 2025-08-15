@@ -282,15 +282,15 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Benchmark
 def tabulate_job_results(records, sep=" – "):
     rows = []
     metric_keys = set()
-    for r in records:
-        metric_keys.update(r["results"].keys())
+    for record in records:
+        metric_keys.update(record["results"].keys())
     metric_keys = sorted(metric_keys)
 
     headers = ["Job Type", "Parameters"] + metric_keys
 
-    for r in records:
-        name = r.get("job_type")
-        params = r.get("params", {})
+    for record in records:
+        name = record.get("job_type")
+        params = record.get("params", {})
         if isinstance(params, dict):
             params_str = ", ".join(
                 f"{k}={v}" for k, v in sorted(params.items()) if k != "benchmark_name"
@@ -299,7 +299,7 @@ def tabulate_job_results(records, sep=" – "):
             params_str = str(params)
         row = [name, params_str]
         for metric in metric_keys:
-            row.append(r["results"].get(metric, ""))
+            row.append(record["results"].get(metric, ""))
         rows.append(row)
 
     return tabulate(rows, headers=headers, floatfmt=".4g")
