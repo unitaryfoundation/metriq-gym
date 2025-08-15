@@ -220,10 +220,10 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     for result in results:
         print(f"  {result}")
 
-    print(f"\nDispatch complete for suite {suite.name} with metriq-gym Suite ID {suite_id}.")
+    print(f"\nDispatch complete for suite {suite.name} with metriq-gym Suite ID {suite_id}")
     print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(suite.benchmarks)} benchmarks.")
     if successful_jobs:
-        print("Use 'mgym poll' to check job status.")
+        print("Use 'mgym {suite,job} poll' to check suite/job status.")
 
 
 def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -268,7 +268,7 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Benchmark
 
     records = []
     for job, result in zip(jobs, results):
-        records.append(DictExporter(job, result).export())
+        records.append(DictExporter(job, result).export() | {"params": job.params})
 
     if hasattr(args, "json"):
         raise NotImplementedError("JSON export of suite results is not implemented yet.")
@@ -280,16 +280,30 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Benchmark
 
 
 def tabulate_job_results(records, sep=" – "):
-    flat = {}
+    rows = []
+
+    metric_keys = set()
     for r in records:
-        jt = r["job_type"]
-        for metric, value in r["results"].items():
-            flat[f"{jt}{sep}{metric}"] = value
+        metric_keys.update(r["results"].keys())
+    metric_keys = sorted(metric_keys)
 
-    headers = sorted(flat.keys())
+    headers = ["job_type", "params"] + metric_keys
 
-    row = [flat[h] for h in headers]
-    return tabulate([row], headers=headers, floatfmt=".4g")
+    for r in records:
+        name = r.get("job_type")
+        params = r.get("params", {})
+        if isinstance(params, dict):
+            params_str = ", ".join(
+                f"{k}={v}" for k, v in sorted(params.items()) if k != "benchmark_name"
+            )
+        else:
+            params_str = str(params)
+        row = [name, params_str]
+        for metric in metric_keys:
+            row.append(r["results"].get(metric, ""))
+        rows.append(row)
+
+    return tabulate(rows, headers=headers, floatfmt=".4g")
 
 
 def export_job_result(
