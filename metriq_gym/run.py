@@ -223,7 +223,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"\nDispatch complete for suite {suite.name} with metriq-gym Suite ID {suite_id}")
     print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(suite.benchmarks)} benchmarks.")
     if successful_jobs:
-        print("Use 'mgym {suite,job} poll' to check suite/job status.")
+        print("Use 'mgym suite poll' or 'mgym job poll' to check suite/job status.")
 
 
 def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -281,13 +281,12 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Benchmark
 
 def tabulate_job_results(records, sep=" – "):
     rows = []
-
     metric_keys = set()
     for r in records:
         metric_keys.update(r["results"].keys())
     metric_keys = sorted(metric_keys)
 
-    headers = ["job_type", "params"] + metric_keys
+    headers = ["Job Type", "Parameters"] + metric_keys
 
     for r in records:
         name = r.get("job_type")
