@@ -10,13 +10,14 @@ maintainers = [
 ]
 readme = "README.md"
 license = { text = "Apache-2.0" }
-version = "0.0.0"  # managed by poetry-dynamic-versioning
+dynamic = ["version"]
 requires-python = ">=3.12"
 
 [project.scripts]
 mgym = "metriq_gym.run:main"
 
 [tool.poetry]
+version = "0.0.0"  # don't touch; managed by poetry-dynamic-versioning
 packages = [
     { include = "metriq_gym", from = "." },
     { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" },
@@ -86,8 +87,8 @@ markers = [
 ]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry-dynamic-versioning]
 enable = true
