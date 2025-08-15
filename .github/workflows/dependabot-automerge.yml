@@ -15,7 +15,7 @@ jobs:
       github.repository == 'unitaryfoundation/metriq-gym'
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Dependabot metadata
         id: metadata
@@ -25,7 +25,7 @@ jobs:
 
       - name: Ask Dependabot to rebase (if needed)
         if: steps.metadata.outputs.has-conflicts == 'true'
-        uses: bbeesley/gha-auto-dependabot-rebase@v1.5.171
+        uses: bbeesley/gha-auto-dependabot-rebase@v1.5.172
         with:
           task: rebase
         env:
