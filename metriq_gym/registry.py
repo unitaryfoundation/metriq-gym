@@ -16,6 +16,7 @@ from metriq_gym.benchmarks.mirror_circuits import (
 )
 from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData, WormholeResult
 from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData, QEDCResult
+from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData, LinearRampQAOAResult
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,
@@ -28,6 +29,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.PHASE_ESTIMATION: QEDCBenchmark,
     JobType.HIDDEN_SHIFT: QEDCBenchmark,
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCBenchmark,
+    JobType.LR_QAOA: LinearRampQAOA,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -41,6 +43,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.PHASE_ESTIMATION: QEDCData,
     JobType.HIDDEN_SHIFT: QEDCData,
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCData,
+    JobType.LR_QAOA: LinearRampQAOAData,
 }
 
 BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
@@ -54,6 +57,7 @@ BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.PHASE_ESTIMATION: QEDCResult,
     JobType.HIDDEN_SHIFT: QEDCResult,
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCResult,
+    JobType.LR_QAOA: LinearRampQAOAResult,
 }
 
 SCHEMA_MAPPING = {
@@ -67,6 +71,7 @@ SCHEMA_MAPPING = {
     JobType.PHASE_ESTIMATION: "phase_estimation.schema.json",
     JobType.HIDDEN_SHIFT: "hidden_shift.schema.json",
     JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.schema.json",
+    JobType.LR_QAOA: "lr_qaoa.schema.json",
 }
 
 

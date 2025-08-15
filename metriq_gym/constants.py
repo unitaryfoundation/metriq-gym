@@ -12,3 +12,4 @@ class JobType(StrEnum):
     PHASE_ESTIMATION = "Phase Estimation"
     HIDDEN_SHIFT = "Hidden Shift"
     QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
+    LR_QAOA = "Linear Ramp QAOA"
