@@ -9,15 +9,28 @@ maintainers = [
     { name = "Vincent Russo", email = "vincent@unitary.foundation"},
 ]
 readme = "README.md"
-license = { text = "Apache-2.0" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 dynamic = ["version"]
 requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Topic :: Scientific/Engineering :: Quantum Computing",
+    "Topic :: System :: Benchmark",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 
 [project.scripts]
 mgym = "metriq_gym.run:main"
 
 [tool.poetry]
-version = "0.0.0"  # don't touch; managed by poetry-dynamic-versioning
 packages = [
     { include = "metriq_gym", from = "." },
     { include = "qiskit_device_benchmarking", from = "submodules/qiskit-device-benchmarking" },
@@ -32,6 +45,7 @@ include = [
     { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] },
     { path = "submodules/QC-App-Oriented-Benchmarks/LICENSE", format = ["sdist", "wheel"] }
 ]
+version = "0.0.0"  # don't touch; managed by poetry-dynamic-versioning
 
 [tool.poetry.dependencies]
 jsonschema = "^4.23.0"
@@ -98,7 +112,7 @@ enable = true
 vcs = "git"
 style = "pep440"
 # Expect tags like v1.2.3 or 1.2.3; uses latest tag for release builds.
-metadata = true
+metadata = false
 
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
