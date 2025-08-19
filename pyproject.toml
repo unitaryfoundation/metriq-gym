@@ -49,7 +49,7 @@ version = "0.0.0"  # don't touch; managed by poetry-dynamic-versioning
 
 [tool.poetry.dependencies]
 jsonschema = "^4.25.1"
-pyqrack = "^1.66.7"
+pyqrack = "^1.66.8"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
