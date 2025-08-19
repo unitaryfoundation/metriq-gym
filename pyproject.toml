@@ -48,7 +48,7 @@ include = [
 version = "0.0.0"  # don't touch; managed by poetry-dynamic-versioning
 
 [tool.poetry.dependencies]
-jsonschema = "^4.23.0"
+jsonschema = "^4.25.1"
 pyqrack = "^1.66.7"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
