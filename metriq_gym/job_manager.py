@@ -1,6 +1,6 @@
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime
-import importlib.metadata
+from metriq_gym._version import __version__
 import json
 import os
 import pprint
@@ -25,9 +25,7 @@ class MetriqGymJob:
     device_name: str
     dispatch_time: datetime
     suite_id: str | None = None
-    app_version: str | None = field(
-        default_factory=lambda: importlib.metadata.version("metriq-gym")
-    )
+    app_version: str | None = __version__
     result_data: dict[str, Any] | None = None
 
     def to_table_row(self, show_suite_id: bool) -> list[str | None]:
