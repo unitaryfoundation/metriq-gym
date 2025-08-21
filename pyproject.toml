@@ -114,6 +114,12 @@ style = "pep440"
 # Expect tags like v1.2.3 or 1.2.3; uses latest tag for release builds.
 metadata = false
 
+[tool.poetry-dynamic-versioning.files."metriq_gym/_version.py"]
+persistent-substitution = true
+initial-content = """
+__version__ = \"0.0.0\"
+"""
+
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
 
