@@ -9,9 +9,23 @@ maintainers = [
     { name = "Vincent Russo", email = "vincent@unitary.foundation"},
 ]
 readme = "README.md"
-license = { text = "Apache-2.0" }
-version = "0.0.0"  # managed by poetry-dynamic-versioning
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+dynamic = ["version"]
 requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Topic :: Scientific/Engineering :: Quantum Computing",
+    "Topic :: System :: Benchmark",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 
 [project.scripts]
 mgym = "metriq_gym.run:main"
@@ -31,10 +45,11 @@ include = [
     { path = "submodules/qiskit-device-benchmarking/LICENSE", format = ["sdist", "wheel"] },
     { path = "submodules/QC-App-Oriented-Benchmarks/LICENSE", format = ["sdist", "wheel"] }
 ]
+version = "0.0.0"  # don't touch; managed by poetry-dynamic-versioning
 
 [tool.poetry.dependencies]
-jsonschema = "^4.23.0"
-pyqrack = "^1.66.7"
+jsonschema = "^4.25.1"
+pyqrack = "^1.66.8"
 python = "<3.14,>=3.12"
 python-dotenv = "^1.0.1"
 pydantic = ">=2.5.0,<2.12"
@@ -60,7 +75,7 @@ dev = ["qiskit-device-benchmarking"]
 mypy = "^1.17.1"
 pre-commit = "^4.3.0"
 pytest = "^8.4.1"
-ruff = "^0.12.8"
+ruff = "^0.12.9"
 sphinx = "^8.2.3"
 types-tabulate = "^0.9.0.20241207"
 deptry = "^0.23.1"
@@ -87,15 +102,24 @@ markers = [
 ]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
 
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
 style = "pep440"
 # Expect tags like v1.2.3 or 1.2.3; uses latest tag for release builds.
-metadata = true
+metadata = false
+
+[tool.poetry-dynamic-versioning.files."metriq_gym/_version.py"]
+persistent-substitution = true
+initial-content = """
+__version__ = \"0.0.0\"
+"""
 
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
