@@ -183,13 +183,12 @@ def test_delete_job(job_manager, sample_job):
     assert len(jobs) == 0
 
 
-def test_job_app_version_serialization_and_export(monkeypatch):
+def test_job_app_version_serialization_and_export():
     """Ensure stored version persists across serialization and is used by exporters."""
-    import importlib.metadata
     from metriq_gym.exporters.json_exporter import JsonExporter
     from metriq_gym.benchmarks.benchmark import BenchmarkResult
+    from metriq_gym import __version__ as expected_version
 
-    monkeypatch.setattr(importlib.metadata, "version", lambda _: "1.0")
     job = MetriqGymJob(
         id="ver_job",
         provider_name="provider",
@@ -200,13 +199,41 @@ def test_job_app_version_serialization_and_export(monkeypatch):
         dispatch_time=datetime.now(),
     )
 
-    assert job.app_version == "1.0"
+    assert job.app_version == expected_version
     serialized = job.serialize()
 
-    monkeypatch.setattr(importlib.metadata, "version", lambda _: "2.0")
     loaded_job = MetriqGymJob.deserialize(serialized)
-    assert loaded_job.app_version == "1.0"
+    assert loaded_job.app_version == expected_version
 
     exporter = JsonExporter(loaded_job, BenchmarkResult())
     export_dict = exporter.as_dict()
-    assert export_dict["app_version"] == "1.0"
+    assert export_dict["app_version"] == expected_version
+
+
+def test_update_job_success(job_manager, sample_job):
+    UPDATED_VALUE = "updated_provider"
+    job_manager.add_job(sample_job)
+    sample_job.provider_name = UPDATED_VALUE
+    job_manager.update_job(sample_job)
+    new_manager = JobManager()
+    job = new_manager.get_job(sample_job.id)
+    assert job.provider_name == UPDATED_VALUE
+
+
+def test_update_job_not_found_raises(job_manager, sample_job):
+    with pytest.raises(ValueError, match="Cannot update job: job with id"):
+        job_manager.update_job(sample_job)
+
+
+def test_update_job_disk_write_failure(monkeypatch, job_manager, sample_job, caplog):
+    job_manager.add_job(sample_job)
+    sample_job.provider_name = "fail_provider"
+
+    # Simulate disk write failure
+    def fail_open(*args, **kwargs):
+        raise OSError("Disk write error")
+
+    monkeypatch.setattr("builtins.open", fail_open)
+    caplog.set_level(logging.ERROR)
+    job_manager.update_job(sample_job)
+    assert any("Failed to update job with id" in r.message for r in caplog.records)

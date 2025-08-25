@@ -6,6 +6,7 @@ on:
 
 jobs:
   build-and-publish:
+    if: github.event.release.prerelease == false
     name: Build and publish Python distributions to PyPI
     runs-on: ubuntu-latest
     environment: pypi
@@ -14,9 +15,10 @@ jobs:
 
     steps:
       - name: Checkout repo + submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
+          fetch-depth: 0  # fetch full history and tags for versioning
 
       - name: Set up Python
         uses: actions/setup-python@v5

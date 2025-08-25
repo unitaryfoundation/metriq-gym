@@ -23,6 +23,7 @@ from metriq_gym.exporters.dict_exporter import DictExporter
 from metriq_gym.registry import (
     BENCHMARK_DATA_CLASSES,
     BENCHMARK_HANDLERS,
+    BENCHMARK_RESULT_CLASSES,
     get_available_benchmarks,
 )
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
@@ -78,6 +79,10 @@ def setup_benchmark(args, params, job_type: JobType) -> Benchmark:
 
 def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
     return BENCHMARK_DATA_CLASSES[job_type]
+
+
+def setup_benchmark_result_class(job_type: JobType) -> type[BenchmarkResult]:
+    return BENCHMARK_RESULT_CLASSES[job_type]
 
 
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -215,10 +220,10 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     for result in results:
         print(f"  {result}")
 
-    print(f"\nDispatch complete for suite {suite.name} with metriq-gym Suite ID {suite_id}.")
+    print(f"\nDispatch complete for suite {suite.name} with metriq-gym Suite ID {suite_id}")
     print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(suite.benchmarks)} benchmarks.")
     if successful_jobs:
-        print("Use 'mgym poll' to check job status.")
+        print("Use 'mgym suite poll' or 'mgym job poll' to check suite/job status.")
 
 
 def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -226,7 +231,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not metriq_job:
         return
     print("Polling job...")
-    result = fetch_result(metriq_job, args)
+    result = fetch_result(metriq_job, args, job_manager)
     if result is None:
         print(f"Job {metriq_job.id} is not yet completed or has no results.")
         return
@@ -243,12 +248,11 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         return
     results: list[BenchmarkResult] = []
     for metriq_job in jobs:
-        result = fetch_result(metriq_job, args)
+        result = fetch_result(metriq_job, args, job_manager)
         if result is None:
             print(f"Job {metriq_job.id} is not yet completed or has no results.")
             return
-        else:
-            results.append(result)
+        results.append(result)
     export_suite_results(args, jobs, results)
 
 
@@ -264,7 +268,7 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Benchmark
 
     records = []
     for job, result in zip(jobs, results):
-        records.append(DictExporter(job, result).export())
+        records.append(DictExporter(job, result).export() | {"params": job.params})
 
     if hasattr(args, "json"):
         raise NotImplementedError("JSON export of suite results is not implemented yet.")
@@ -276,16 +280,29 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Benchmark
 
 
 def tabulate_job_results(records, sep=" – "):
-    flat = {}
-    for r in records:
-        jt = r["job_type"]
-        for metric, value in r["results"].items():
-            flat[f"{jt}{sep}{metric}"] = value
+    rows = []
+    metric_keys = set()
+    for record in records:
+        metric_keys.update(record["results"].keys())
+    metric_keys = sorted(metric_keys)
 
-    headers = sorted(flat.keys())
+    headers = ["Job Type", "Parameters"] + metric_keys
 
-    row = [flat[h] for h in headers]
-    return tabulate([row], headers=headers, floatfmt=".4g")
+    for record in records:
+        name = record.get("job_type")
+        params = record.get("params", {})
+        if isinstance(params, dict):
+            params_str = ", ".join(
+                f"{k}={v}" for k, v in sorted(params.items()) if k != "benchmark_name"
+            )
+        else:
+            params_str = str(params)
+        row = [name, params_str]
+        for metric in metric_keys:
+            row.append(record["results"].get(metric, ""))
+        rows.append(row)
+
+    return tabulate(rows, headers=headers, floatfmt=".4g")
 
 
 def export_job_result(
@@ -297,8 +314,14 @@ def export_job_result(
         CliExporter(metriq_job, result).export()
 
 
-def fetch_result(metriq_job: MetriqGymJob, args: argparse.Namespace) -> BenchmarkResult | None:
+def fetch_result(
+    metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
+) -> BenchmarkResult | None:
     job_type: JobType = JobType(metriq_job.job_type)
+    job_result_type = setup_benchmark_result_class(job_type)
+    if metriq_job.result_data is not None:
+        return job_result_type.model_validate(metriq_job.result_data)
+
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
     quantum_jobs = [
@@ -308,6 +331,9 @@ def fetch_result(metriq_job: MetriqGymJob, args: argparse.Namespace) -> Benchmar
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
         result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
+        # Cache result_data in metriq_job and update job_manager if provided
+        metriq_job.result_data = result.model_dump()
+        job_manager.update_job(metriq_job)
         return result
     else:
         print("Job is not yet completed. Current status of tasks:")
