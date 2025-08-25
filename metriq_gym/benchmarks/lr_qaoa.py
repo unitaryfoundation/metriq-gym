@@ -157,16 +157,9 @@ class LinearRampQAOAData(BenchmarkData):
 
 
 class LinearRampQAOAResult(BenchmarkResult):
-    num_qubits: int
-    qaoa_layers: list[int]
     approx_ratio: list[float]
     random_approx_ratio: float
-    optimal_probability: list[float]
     confidence_pass: list[bool]
-    trials: int
-    graph_type: str
-    delta_gamma: float
-    delta_beta: float
 
 
 def prepare_qaoa_circuit(
@@ -427,14 +420,7 @@ class LinearRampQAOA(Benchmark):
     ) -> LinearRampQAOAResult:
         stats: AggregateStats = calc_stats(job_data, flatten_counts(result_data))
         return LinearRampQAOAResult(
-            num_qubits=job_data.num_qubits,
             approx_ratio=stats.approx_ratio,
             random_approx_ratio=job_data.approx_ratio_random_mean,
-            qaoa_layers=job_data.qaoa_layers,
-            optimal_probability=stats.optimal_probability,
             confidence_pass=stats.confidence_pass,
-            trials=stats.trials,
-            graph_type=job_data.graph_type,
-            delta_gamma=job_data.delta_gamma,
-            delta_beta=job_data.delta_beta,
         )
