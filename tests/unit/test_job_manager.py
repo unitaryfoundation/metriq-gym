@@ -183,13 +183,12 @@ def test_delete_job(job_manager, sample_job):
     assert len(jobs) == 0
 
 
-def test_job_app_version_serialization_and_export(monkeypatch):
+def test_job_app_version_serialization_and_export():
     """Ensure stored version persists across serialization and is used by exporters."""
-    import importlib.metadata
     from metriq_gym.exporters.json_exporter import JsonExporter
     from metriq_gym.benchmarks.benchmark import BenchmarkResult
+    from metriq_gym import __version__ as expected_version
 
-    monkeypatch.setattr(importlib.metadata, "version", lambda _: "1.0")
     job = MetriqGymJob(
         id="ver_job",
         provider_name="provider",
@@ -200,16 +199,15 @@ def test_job_app_version_serialization_and_export(monkeypatch):
         dispatch_time=datetime.now(),
     )
 
-    assert job.app_version == "1.0"
+    assert job.app_version == expected_version
     serialized = job.serialize()
 
-    monkeypatch.setattr(importlib.metadata, "version", lambda _: "2.0")
     loaded_job = MetriqGymJob.deserialize(serialized)
-    assert loaded_job.app_version == "1.0"
+    assert loaded_job.app_version == expected_version
 
     exporter = JsonExporter(loaded_job, BenchmarkResult())
     export_dict = exporter.as_dict()
-    assert export_dict["app_version"] == "1.0"
+    assert export_dict["app_version"] == expected_version
 
 
 def test_update_job_success(job_manager, sample_job):

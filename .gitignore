@@ -1,5 +1,6 @@
 # Metriq
 .metriq_gym_jobs.jsonl
+metriq_gym/_version.py
 
 # Sphinx
 _build

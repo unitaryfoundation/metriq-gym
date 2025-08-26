@@ -74,7 +74,7 @@ dev = ["qiskit-device-benchmarking"]
 mypy = "^1.17.1"
 pre-commit = "^4.3.0"
 pytest = "^8.4.1"
-ruff = "^0.12.9"
+ruff = "^0.12.10"
 sphinx = "^8.2.3"
 types-tabulate = "^0.9.0.20241207"
 deptry = "^0.23.1"
@@ -113,6 +113,12 @@ vcs = "git"
 style = "pep440"
 # Expect tags like v1.2.3 or 1.2.3; uses latest tag for release builds.
 metadata = false
+
+[tool.poetry-dynamic-versioning.files."metriq_gym/_version.py"]
+persistent-substitution = true
+initial-content = """
+__version__ = \"0.0.0\"
+"""
 
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
