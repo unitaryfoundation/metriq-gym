@@ -7,7 +7,6 @@ from dataclasses import dataclass
 import random
 import dimod
 from dimod.reference.samplers.simulated_annealing import SimulatedAnnealingSampler
-import warnings
 
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qbraid.runtime.result_data import MeasCount
@@ -18,6 +17,7 @@ from metriq_gym.circuits import GraphType, EncodingType
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.qplatform.device import connectivity_graph
 
 
 def weighted_maxcut_solver(graph: nx.Graph) -> str:
@@ -330,19 +330,11 @@ class LinearRampQAOA(Benchmark):
         confidence_level = self.params.confidence_level
 
         random.seed(seed)  # set seed for reproducibility
-        if hasattr(device, "coupling_map") and getattr(device, "value") is not None:
-            graph_device = device.coupling_map.graph.to_undirected()
+        if device.id == "aer_simulator" and graph_type == "NL":
+            graph_device = rx.generators.directed_star_graph(num_qubits)
         else:
-            if graph_type == "FC":
-                # if the device does not have a coupling map associated treat it as a fully connected
-                graph_device = rx.generators.complete_graph(num_qubits)
-            elif graph_type == "NL":
-                graph_device = rx.generators.directed_star_graph(num_qubits)
-            elif graph_type == "1D":
-                graph_device = rx.generators.path_graph(num_qubits)
-            warnings.warn("The device does not have a 'coupling_map' attribute.", UserWarning)
-
-        edges_device = edges = list({tuple(sorted(edge)) for edge in graph_device.edge_list()})
+            graph_device = connectivity_graph(device)
+        edges_device = list({tuple(sorted(edge)) for edge in graph_device.edge_list()})
         circuit_encoding: EncodingType = "Direct"
         if graph_type == "1D":
             edges = [(i, i + 1) for i in range(num_qubits - 1)]
@@ -382,7 +374,7 @@ class LinearRampQAOA(Benchmark):
             circuit_encoding=circuit_encoding,
         )
         circuits_with_params = []
-        for trail_i in range(trials):
+        for trial_i in range(trials):
             for p_layer_i, circuit in zip(qaoa_layers, circuits):
                 linear_ramp = list(range(1, p_layer_i + 1))
                 betas = [i * delta_beta / p_layer_i for i in reversed(linear_ramp)]
