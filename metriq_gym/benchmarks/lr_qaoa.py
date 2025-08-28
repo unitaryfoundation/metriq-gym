@@ -331,10 +331,10 @@ class LinearRampQAOA(Benchmark):
 
         random.seed(seed)  # set seed for reproducibility
         if device.id == "aer_simulator" and graph_type == "NL":
-            graph_device = rx.generators.directed_star_graph(num_qubits)
+            graph_device = rx.generators.star_graph(num_qubits)
         else:
             graph_device = connectivity_graph(device)
-        edges_device = list({tuple(sorted(edge)) for edge in graph_device.edge_list()})
+        edges_device = list({(u, v) for u, v in graph_device.edge_list()})
         circuit_encoding: EncodingType = "Direct"
         if graph_type == "1D":
             edges = [(i, i + 1) for i in range(num_qubits - 1)]
