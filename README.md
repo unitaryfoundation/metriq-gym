@@ -61,7 +61,6 @@ You will see the results of the benchmark printed in your terminal. E.g.
  'version': '0.1.3.dev0'}
 ```
 
-
 ### Prerequisites
 
 * [Python](https://www.python.org/downloads/) (version 3.12 or newer)
