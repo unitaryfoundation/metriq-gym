@@ -1,0 +1,86 @@
+{
+  "$id": "metriq-gym/lr_qaoa.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "title": "LR-QAOA",
+  "description": "The LR-QAOA benchmark schema definition, describing parameters for measuring a successful implementation.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Linear Ramp QAOA",
+      "description": "Name of the benchmark. Must be 'Linear Ramp QAOA' for this schema."
+    },
+    "graph_type": {
+      "type": "string",
+      "description": "Type of the graph, '1D':1D chain graph, 'NL': Native Layout graph, or 'FC': Fully connected graph.",
+      "examples":["FC", "NL", "1D"]
+    },
+    "num_qubits": {
+      "type": "integer",
+      "description": "Number of qubits in the LR-QAOA circuit(s).",
+      "minimum": 1,
+      "examples": [10, 20, 100]
+    },
+    "qaoa_layers": {
+      "description": "List of the different layers depth of LR-QAOA.",
+      "type": "array",
+      "items": {"type": "integer",
+                "minimum": 3},
+      "minItems": 1,
+      "examples": [[3,4,5], [3]],
+      "default": [3, 5, 7, 10, 15, 20]
+    },
+    "delta_beta": {
+      "type": "number",
+      "description": "Beta parameters slope in the linear function of LR-QAOA.",
+      "default":0.3,
+      "minimum": 0.0,
+      "maximum": 2.0, 
+      "examples": [0.1, 0.3, 0.5]
+    },
+    "delta_gamma": {
+      "type": "number",
+      "description": "Gamma parameters slope in the linear function of LR-QAOA.",
+      "default":0.3,
+      "minimum": 0.0,
+      "maximum":2.0,
+      "examples": [0.1, 0.3, 0.5, 1.0]
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots (repetitions) per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "trials": {
+      "type": "integer",
+      "description": "Number of circuits to generate and measure for the LR-QAOA test.",
+      "default": 3,
+      "minimum": 1,
+      "examples": [1, 10, 20]
+    },
+    "num_random_trials": {
+      "type": "integer",
+      "description": "Number of circuits to generate and measure for the LR-QAOA test.",
+      "default": 25,
+      "minimum": 10,
+      "examples": [10, 20, 100]
+    },
+    "confidence_level": {
+      "type": "number",
+      "description": "Confidence level for establishing LR-QAOA success criteria. Must be between 0 and 1.",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.995,
+      "examples": [0.995, 0.999]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Seed to create the random weights of the weighted maxcut problem. This problem is solve using LR-QAOA",
+      "default": 123,
+      "examples": [0, 1, 123]
+    }
+  },
+  "required": ["benchmark_name","graph_type", "num_qubits"]
+}
