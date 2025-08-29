@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./docs/assets/logo.svg" alt="metriq-gym logo" width ="450" />
+  <img src="./docs/assets/logo.svg" alt="metriq-gym logo" width="450" />
 </div>
 
 # metriq-gym
