@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any
 
-import os
 from qbraid.runtime import GateModelResultData, JobStatus, QuantumJob, Result
 from qbraid_core import ResourceNotFoundError
 from metriq_gym.local._store import read
