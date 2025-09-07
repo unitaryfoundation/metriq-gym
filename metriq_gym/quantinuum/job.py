@@ -5,6 +5,7 @@ import os
 from qbraid.runtime import GateModelResultData, JobStatus, QuantumJob, Result
 from qbraid_core import ResourceNotFoundError
 from metriq_gym.local._store import read
+from .auth import load_api
 
 
 class QuantinuumJob(QuantumJob):
@@ -28,61 +29,13 @@ class QuantinuumJob(QuantumJob):
         # Lazily fetch results from Quantinuum when first requested
         if self._counts is None:
             try:
-                from pytket.extensions.quantinuum import (  # type: ignore
-                    QuantinuumBackend,
-                    QuantinuumAPI,
-                )
+                from pytket.extensions.quantinuum import QuantinuumBackend  # type: ignore
             except Exception as exc:  # pragma: no cover - optional dependency not installed
                 raise RuntimeError(
                     "Missing dependency: pytket-quantinuum. Install with: poetry add pytket-quantinuum."
                 ) from exc
 
-            raw_api_key = os.getenv("QUANTINUUM_API_KEY")
-            username = os.getenv("QUANTINUUM_USERNAME")
-            password = os.getenv("QUANTINUUM_PASSWORD")
-            api_key = (
-                raw_api_key
-                if raw_api_key and not raw_api_key.strip().startswith("<") and ">" not in raw_api_key
-                else None
-            )
-            if username and password:
-                api = QuantinuumAPI()
-                os.environ["PYTKET_QUANTINUUM_USERNAME"] = username
-                os.environ["PYTKET_QUANTINUUM_PASSWORD"] = password
-                if hasattr(api, "login"):
-                    try:
-                        # Set multiple env var names for compatibility
-                        os.environ["HQS_EMAIL"] = username
-                        os.environ["HQS_PASSWORD"] = password
-                        os.environ["QUANTINUUM_EMAIL"] = username
-                        os.environ["QUANTINUUM_PASSWORD"] = password
-                        api.login()  # type: ignore[attr-defined]
-                    except TypeError:
-                        if hasattr(api, "set_user_credentials"):
-                            api.set_user_credentials(username, password)  # type: ignore[attr-defined]
-                        else:
-                            raise RuntimeError(
-                                "Unable to authenticate: update pytket-quantinuum to a recent version."
-                            )
-                elif hasattr(api, "set_user_credentials"):
-                    api.set_user_credentials(username, password)  # type: ignore[attr-defined]
-                else:
-                    raise RuntimeError(
-                        "Unable to authenticate: update pytket-quantinuum to a recent version."
-                    )
-            elif api_key:
-                try:
-                    api = QuantinuumAPI(api_key=api_key)  # type: ignore[arg-type]
-                except TypeError as exc:
-                    raise RuntimeError(
-                        "Your pytket-quantinuum version does not support api_key in constructor. "
-                        "Either upgrade pytket-quantinuum or use QUANTINUUM_USERNAME/QUANTINUUM_PASSWORD."
-                    ) from exc
-            else:
-                raise RuntimeError(
-                    "Quantinuum credentials not found. Set QUANTINUUM_USERNAME and QUANTINUUM_PASSWORD "
-                    "(recommended), or QUANTINUUM_API_KEY if your pytket-quantinuum supports it."
-                )
+            api = load_api()
 
             if self._device_id is None:
                 raise ResourceNotFoundError("Device id missing for Quantinuum job")
@@ -113,38 +66,8 @@ class QuantinuumJob(QuantumJob):
     def status(self) -> JobStatus:
         # Try to query remote status; if unavailable, fall back to UNKNOWN
         try:
-            from pytket.extensions.quantinuum import QuantinuumBackend, QuantinuumAPI  # type: ignore
-            raw_api_key = os.getenv("QUANTINUUM_API_KEY")
-            username = os.getenv("QUANTINUUM_USERNAME")
-            password = os.getenv("QUANTINUUM_PASSWORD")
-            api_key = (
-                raw_api_key
-                if raw_api_key and not raw_api_key.strip().startswith("<") and ">" not in raw_api_key
-                else None
-            )
-            if username and password:
-                api = QuantinuumAPI()
-                os.environ["PYTKET_QUANTINUUM_USERNAME"] = username
-                os.environ["PYTKET_QUANTINUUM_PASSWORD"] = password
-                if hasattr(api, "login"):
-                    try:
-                        api.login()  # type: ignore[attr-defined]
-                    except TypeError:
-                        if hasattr(api, "set_user_credentials"):
-                            api.set_user_credentials(username, password)  # type: ignore[attr-defined]
-                        else:
-                            return JobStatus.UNKNOWN
-                elif hasattr(api, "set_user_credentials"):
-                    api.set_user_credentials(username, password)  # type: ignore[attr-defined]
-                else:
-                    return JobStatus.UNKNOWN
-            elif api_key:
-                try:
-                    api = QuantinuumAPI(api_key=api_key)  # type: ignore[arg-type]
-                except TypeError:
-                    return JobStatus.UNKNOWN
-            else:
-                return JobStatus.UNKNOWN
+            from pytket.extensions.quantinuum import QuantinuumBackend  # type: ignore
+            api = load_api()
 
             if self._device_id is None:
                 return JobStatus.UNKNOWN
@@ -171,38 +94,8 @@ class QuantinuumJob(QuantumJob):
     def cancel(self) -> bool:
         # Implement cancel if the backend supports it; otherwise, return False.
         try:
-            from pytket.extensions.quantinuum import QuantinuumBackend, QuantinuumAPI  # type: ignore
-            raw_api_key = os.getenv("QUANTINUUM_API_KEY")
-            username = os.getenv("QUANTINUUM_USERNAME")
-            password = os.getenv("QUANTINUUM_PASSWORD")
-            api_key = (
-                raw_api_key
-                if raw_api_key and not raw_api_key.strip().startswith("<") and ">" not in raw_api_key
-                else None
-            )
-            if username and password:
-                api = QuantinuumAPI()
-                os.environ["PYTKET_QUANTINUUM_USERNAME"] = username
-                os.environ["PYTKET_QUANTINUUM_PASSWORD"] = password
-                if hasattr(api, "login"):
-                    try:
-                        api.login()  # type: ignore[attr-defined]
-                    except TypeError:
-                        if hasattr(api, "set_user_credentials"):
-                            api.set_user_credentials(username, password)  # type: ignore[attr-defined]
-                        else:
-                            return False
-                elif hasattr(api, "set_user_credentials"):
-                    api.set_user_credentials(username, password)  # type: ignore[attr-defined]
-                else:
-                    return False
-            elif api_key:
-                try:
-                    api = QuantinuumAPI(api_key=api_key)  # type: ignore[arg-type]
-                except TypeError:
-                    return False
-            else:
-                return False
+            from pytket.extensions.quantinuum import QuantinuumBackend  # type: ignore
+            api = load_api()
 
             if self._device_id is None:
                 return False

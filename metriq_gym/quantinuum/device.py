@@ -10,6 +10,7 @@ from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qiskit import QuantumCircuit
 
 from .job import QuantinuumJob
+from .auth import load_api
 from metriq_gym.local._store import write
 
 
@@ -62,74 +63,17 @@ class QuantinuumDevice(QuantumDevice):
         # Bypass qBraid's default transform path (which expects a Qiskit backend)
         # and directly submit to Quantinuum via pytket-quantinuum when available.
 
-        # Gather credentials from environment
-        raw_api_key = os.getenv("QUANTINUUM_API_KEY")
-        username = os.getenv("QUANTINUUM_USERNAME")
-        password = os.getenv("QUANTINUUM_PASSWORD")
-        api_key = (
-            raw_api_key
-            if raw_api_key and not raw_api_key.strip().startswith("<") and ">" not in raw_api_key
-            else None
-        )
-
         try:
             from pytket.extensions.qiskit import qiskit_to_tk  # type: ignore
-            from pytket.extensions.quantinuum import (  # type: ignore
-                QuantinuumBackend,
-                QuantinuumAPI,
-            )
+            from pytket.extensions.quantinuum import QuantinuumBackend  # type: ignore
         except Exception as exc:  # pragma: no cover - optional dependency not installed
             raise RuntimeError(
                 "Missing dependency: pytket-quantinuum (and pytket-qiskit). "
                 "Install with: poetry add pytket-quantinuum pytket-qiskit."
             ) from exc
 
-        # Initialize API handler (prefer username/password for broad compatibility)
-        api: Any
-        if username and password:
-            api = QuantinuumAPI()
-            # Some versions require credentials via env and a zero-arg login()
-            os.environ["PYTKET_QUANTINUUM_USERNAME"] = username
-            os.environ["PYTKET_QUANTINUUM_PASSWORD"] = password
-            # Legacy/alternate variable names used by some releases
-            os.environ["HQS_EMAIL"] = username
-            os.environ["HQS_PASSWORD"] = password
-            os.environ["QUANTINUUM_EMAIL"] = username
-            os.environ["QUANTINUUM_PASSWORD"] = password
-            if hasattr(api, "login"):
-                try:
-                    api.login()  # type: ignore[attr-defined]
-                except TypeError:
-                    # Older/newer variant expects explicit credentials
-                    if hasattr(api, "set_user_credentials"):
-                        api.set_user_credentials(username, password)  # type: ignore[attr-defined]
-                    else:
-                        raise RuntimeError(
-                            "Unable to authenticate with username/password. Please update pytket-quantinuum."
-                        )
-                except Exception:
-                    # If login still prompted/failed, proceed; backend may re-prompt interactively.
-                    pass
-            elif hasattr(api, "set_user_credentials"):
-                api.set_user_credentials(username, password)  # type: ignore[attr-defined]
-            else:
-                raise RuntimeError(
-                    "Unable to authenticate with username/password. Please update pytket-quantinuum."
-                )
-        elif api_key:
-            # API key flows vary by version; guide user if unsupported in their install
-            try:
-                api = QuantinuumAPI(api_key=api_key)  # type: ignore[arg-type]
-            except TypeError as exc:
-                raise RuntimeError(
-                    "Your pytket-quantinuum version does not support api_key in constructor. "
-                    "Either upgrade pytket-quantinuum or use QUANTINUUM_USERNAME/QUANTINUUM_PASSWORD."
-                ) from exc
-        else:
-            raise RuntimeError(
-                "Quantinuum credentials not found. Set QUANTINUUM_USERNAME and QUANTINUUM_PASSWORD "
-                "(recommended), or QUANTINUUM_API_KEY if your pytket-quantinuum supports it."
-            )
+        # Initialize API handler via shared helper
+        api: Any = load_api()
 
         # Normalize input to list of Qiskit circuits
         if not isinstance(run_input, list):
