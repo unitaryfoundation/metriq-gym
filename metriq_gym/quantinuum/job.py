@@ -52,8 +52,6 @@ class QuantinuumJob(QuantumJob):
                 if hasattr(api, "login"):
                     try:
                         # Set multiple env var names for compatibility
-                        os.environ["PYTKET_QUANTINUUM_USERNAME"] = username
-                        os.environ["PYTKET_QUANTINUUM_PASSWORD"] = password
                         os.environ["HQS_EMAIL"] = username
                         os.environ["HQS_PASSWORD"] = password
                         os.environ["QUANTINUUM_EMAIL"] = username
