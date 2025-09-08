@@ -10,11 +10,10 @@ from .device import QuantinuumDevice
 class QuantinuumProvider(QuantumProvider):
     """qBraid provider for Quantinuum NEXUS targets.
 
-    Advertises a subset of known targets including emulators and syntax
-    checkers (e.g., H1-1E, H1-2E, H1-1SC, H1-2SC). No local fallback is
-    provided; submission/validation requires a Quantinuum account via
-    pytket-quantinuum. Device discovery attempts to list accessible
-    targets when credentials are present.
+    Supports real hardware, emulators (e.g., H1-1E, H1-2E), and syntax
+    checkers (e.g., H1-1SC, H1-2SC). No local fallback is provided; a
+    Quantinuum account is required. Device discovery lists all targets
+    your account can access; otherwise `get_device(id)` works lazily.
     """
 
     def __init__(self) -> None:

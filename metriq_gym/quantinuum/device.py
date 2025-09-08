@@ -13,9 +13,15 @@ from .auth import load_api
 
 
 def _make_profile(device_id: str, num_qubits: int | None = None) -> TargetProfile:
+    # Infer simulator flag from device naming convention:
+    # - '*E' (e.g., H1-1E, H1-2E) are emulators (simulator=True)
+    # - '*SC' are syntax checkers (no execution); treat as non-simulator
+    # - otherwise assume real hardware (simulator=False)
+    did_upper = device_id.upper()
+    is_simulator = did_upper.endswith("E") and not did_upper.endswith("SC")
     return TargetProfile(
         device_id=device_id,
-        simulator=True,
+        simulator=is_simulator,
         experiment_type=ExperimentType.GATE_MODEL,
         num_qubits=(num_qubits if isinstance(num_qubits, int) and num_qubits > 0 else 0),
         program_spec=ProgramSpec(QuantumCircuit),
