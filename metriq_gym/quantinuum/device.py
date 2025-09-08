@@ -31,9 +31,81 @@ class QuantinuumDevice(QuantumDevice):
         self._provider = provider
 
     def status(self) -> DeviceStatus:
-        # We expose emulators, which are typically available.
-        # For production, this could query NEXUS for availability.
-        return DeviceStatus.ONLINE
+        """Return live device status from Quantinuum when possible.
+
+        Attempts to query the Quantinuum API for the device's current state.
+        Falls back to UNKNOWN if status cannot be determined.
+        """
+        try:
+            from pytket.extensions.quantinuum import QuantinuumBackend  # type: ignore
+            api = load_api()
+
+            # First try instance-level status accessors
+            try:
+                backend = QuantinuumBackend(self.id, api_handler=api)
+                for attr in (
+                    "device_state",
+                    "device_status",
+                    "get_device_status",
+                    "status",
+                    "get_status",
+                ):
+                    fn = getattr(backend, attr, None)
+                    if callable(fn):
+                        try:
+                            val = fn()
+                            if isinstance(val, str):
+                                low = val.lower()
+                                if any(x in low for x in ("online", "available", "ready")):
+                                    return DeviceStatus.ONLINE
+                                if any(x in low for x in ("offline", "unavailable")):
+                                    return DeviceStatus.OFFLINE
+                                if "maint" in low:
+                                    # If qBraid DeviceStatus has no MAINTENANCE, treat as OFFLINE
+                                    return DeviceStatus.OFFLINE
+                        except TypeError:
+                            # Some variants may require arguments; skip
+                            pass
+            except Exception:
+                # If backend init fails (e.g., no access), continue to list-based discovery
+                pass
+
+            # Fallback: inspect available_devices metadata for this device
+            avail = getattr(QuantinuumBackend, "available_devices", None)
+            if callable(avail):
+                try:
+                    devices = avail(api_handler=api)
+                except TypeError:
+                    devices = avail()
+                for item in devices or []:
+                    name = None
+                    status_val = None
+                    if isinstance(item, str):
+                        name = item
+                    elif isinstance(item, dict):
+                        name = item.get("name") or item.get("device_name") or item.get("label")
+                        status_val = (
+                            item.get("status")
+                            or item.get("state")
+                            or item.get("availability")
+                            or item.get("is_online")
+                        )
+                    if name == self.id:
+                        if isinstance(status_val, bool):
+                            return DeviceStatus.ONLINE if status_val else DeviceStatus.OFFLINE
+                        if isinstance(status_val, str):
+                            low = status_val.lower()
+                            if any(x in low for x in ("online", "available", "ready")):
+                                return DeviceStatus.ONLINE
+                            if any(x in low for x in ("offline", "unavailable")):
+                                return DeviceStatus.OFFLINE
+                        # If device is listed but no status flag is provided, assume unknown
+                        return DeviceStatus.UNKNOWN
+
+        except Exception:
+            # On any error, prefer an honest UNKNOWN rather than assuming ONLINE
+            pass
+        return DeviceStatus.UNKNOWN
 
     def transform(self, run_input):
         program = load_program(run_input)
