@@ -8,11 +8,13 @@ from .device import QuantinuumDevice, SUPPORTED_EMULATORS
 
 
 class QuantinuumProvider(QuantumProvider):
-    """qBraid provider for Quantinuum NEXUS emulator devices.
+    """qBraid provider for Quantinuum NEXUS targets.
 
-    This implementation advertises H1-1E and H1-2E.
-    No local fallback is provided; submission requires a
-    Quantinuum account (via pytket-quantinuum).
+    Advertises a subset of known targets including emulators and syntax
+    checkers (e.g., H1-1E, H1-2E, H1-1SC, H1-2SC). No local fallback is
+    provided; submission/validation requires a Quantinuum account via
+    pytket-quantinuum. Device discovery attempts to list accessible
+    targets when credentials are present.
     """
 
     def __init__(self) -> None:

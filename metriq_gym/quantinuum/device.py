@@ -14,9 +14,12 @@ from metriq_gym.local._store import write
 
 
 SUPPORTED_EMULATORS = {
-    # Quantinuum emulator device identifiers (NEXUS)
+    # Quantinuum NEXUS targets (subset we expose by default)
     "H1-1E": {"num_qubits": 20},
     "H1-2E": {"num_qubits": 20},
+    # Syntax checkers (no execution, accessibility varies)
+    "H1-1SC": {"num_qubits": 20},
+    "H1-2SC": {"num_qubits": 20},
 }
 
 
@@ -104,34 +107,13 @@ class QuantinuumDevice(QuantumDevice):
         except Exception as exc:
             raise RuntimeError(f"Failed to submit job to Quantinuum backend: {exc}") from exc
 
-        # Normalize handle and fetch result synchronously (emulator expected to be quick)
+        # Normalize handle and derive a job id string; do not fetch results here.
         handle = handles[0] if isinstance(handles, list) and handles else handles
-        try:
-            result = backend.get_result(handle)
-            # Extract counts (single-circuit submission)
-            counts = None
-            get_counts = getattr(result, "get_counts", None)
-            if callable(get_counts):
-                try:
-                    counts = get_counts(0)
-                except TypeError:
-                    counts = get_counts()
-            if counts is None:
-                counts = getattr(result, "counts", None)
-            if counts is None:
-                raise RuntimeError("Unable to extract measurement counts from result")
-        except Exception as exc:
-            raise RuntimeError("Failed to retrieve results from Quantinuum backend.") from exc
-
-        # Persist results locally for polling via metriq-gym
-        job_id = uuid.uuid4().hex
-        write(
-            job_id,
-            {
-                "job_id": job_id,
-                "device_id": self.id,
-                "counts": counts,
-            },
+        job_id: str = (
+            getattr(handle, "job_id", None)
+            or getattr(handle, "id", None)
+            or str(handle)
+            or uuid.uuid4().hex
         )
         return QuantinuumJob(job_id, device=self)
 
