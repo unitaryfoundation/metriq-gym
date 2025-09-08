@@ -10,7 +10,6 @@ from qiskit import QuantumCircuit
 
 from .job import QuantinuumJob
 from .auth import load_api
-from metriq_gym.local._store import write
 
 
 SUPPORTED_EMULATORS = {
