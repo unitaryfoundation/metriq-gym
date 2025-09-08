@@ -4,15 +4,6 @@ import os
 from typing import Any
 
 
-def _clean(val: str | None) -> str | None:
-    if not val:
-        return None
-    v = val.strip()
-    if not v or v.startswith("<") and v.endswith(">"):
-        return None
-    return v
-
-
 def load_api() -> Any:
     """Create and authenticate a QuantinuumAPI instance.
 
@@ -26,9 +17,9 @@ def load_api() -> Any:
             "Missing dependency: pytket-quantinuum. Install with: poetry add pytket-quantinuum"
         ) from exc
 
-    api_key = _clean(os.getenv("QUANTINUUM_API_KEY"))
-    username = _clean(os.getenv("QUANTINUUM_USERNAME") or os.getenv("QUANTINUUM_EMAIL"))
-    password = _clean(os.getenv("QUANTINUUM_PASSWORD"))
+    api_key = os.getenv("QUANTINUUM_API_KEY")
+    username = os.getenv("QUANTINUUM_USERNAME") or os.getenv("QUANTINUUM_EMAIL")
+    password = os.getenv("QUANTINUUM_PASSWORD")
 
     # Prefer username/password for broad compatibility
     if username and password:
@@ -73,4 +64,3 @@ def load_api() -> Any:
         "Quantinuum credentials not found. Set QUANTINUUM_USERNAME and QUANTINUUM_PASSWORD (recommended), "
         "or QUANTINUUM_API_KEY if your pytket-quantinuum supports it."
     )
-
