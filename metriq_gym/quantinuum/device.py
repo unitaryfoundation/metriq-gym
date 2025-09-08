@@ -12,36 +12,22 @@ from .job import QuantinuumJob
 from .auth import load_api
 
 
-SUPPORTED_EMULATORS = {
-    # Quantinuum NEXUS targets (subset we expose by default)
-    "H1-1E": {"num_qubits": 20},
-    "H1-2E": {"num_qubits": 20},
-    # Syntax checkers (no execution, accessibility varies)
-    "H1-1SC": {"num_qubits": 20},
-    "H1-2SC": {"num_qubits": 20},
-}
-
-
-def _make_profile(device_id: str) -> TargetProfile:
-    meta = SUPPORTED_EMULATORS.get(device_id)
-    if meta is None:
-        raise ValueError("Unknown Quantinuum device identifier")
-
+def _make_profile(device_id: str, num_qubits: int | None = None) -> TargetProfile:
     return TargetProfile(
         device_id=device_id,
         simulator=True,
         experiment_type=ExperimentType.GATE_MODEL,
-        num_qubits=meta["num_qubits"],
+        num_qubits=(num_qubits if isinstance(num_qubits, int) and num_qubits > 0 else 0),
         program_spec=ProgramSpec(QuantumCircuit),
-        basis_gates=None,  # Unknown; supplied by remote at runtime
+        basis_gates=None,  # Provided by remote at runtime
         provider_name="quantinuum",
         extra={},
     )
 
 
 class QuantinuumDevice(QuantumDevice):
-    def __init__(self, *, provider: Any, device_id: str) -> None:
-        super().__init__(_make_profile(device_id))
+    def __init__(self, *, provider: Any, device_id: str, num_qubits: int | None = None) -> None:
+        super().__init__(_make_profile(device_id, num_qubits))
         self._provider = provider
 
     def status(self) -> DeviceStatus:

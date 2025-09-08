@@ -4,7 +4,7 @@ from typing import Any
 
 from qbraid.runtime import QuantumProvider
 
-from .device import QuantinuumDevice, SUPPORTED_EMULATORS
+from .device import QuantinuumDevice
 
 
 class QuantinuumProvider(QuantumProvider):
@@ -23,41 +23,38 @@ class QuantinuumProvider(QuantumProvider):
 
     def get_devices(self, **_: Any) -> list[QuantinuumDevice]:
         # If credentials and pytket are available, list accessible devices
+        devices: list[QuantinuumDevice] = []
         try:
             from pytket.extensions.quantinuum import QuantinuumBackend  # type: ignore
             from .auth import load_api
 
             api = load_api()
             avail = getattr(QuantinuumBackend, "available_devices", None)
-            names: list[str] = []
             if callable(avail):
                 try:
                     res = avail(api_handler=api)
                 except TypeError:
                     res = avail()
                 for item in res or []:
+                    name: str | None = None
+                    n_qubits: int | None = None
                     if isinstance(item, str):
-                        names.append(item)
+                        name = item
                     elif isinstance(item, dict):
-                        nm = item.get("name") or item.get("device_name") or item.get("label")
-                        if nm:
-                            names.append(nm)
-            # Filter to supported emulator set if present
-            candidates = [n for n in names if n in SUPPORTED_EMULATORS] or list(
-                SUPPORTED_EMULATORS.keys()
-            )
-            return [self.get_device(did) for did in candidates]
+                        name = item.get("name") or item.get("device_name") or item.get("label")
+                        n_qubits = item.get("n_qubits") or item.get("num_qubits")
+                    if name:
+                        devices.append(QuantinuumDevice(provider=self, device_id=name, num_qubits=n_qubits))
         except Exception:
-            # Fallback to known emulator identifiers
-            return [self.get_device(did) for did in SUPPORTED_EMULATORS.keys()]
+            # If discovery fails (e.g., no creds), return empty list; get_device will still work lazily
+            pass
+        return devices
 
     def get_device(self, device_id: str) -> QuantinuumDevice:
         if device_id in self._devices:
             return self._devices[device_id]
 
-        if device_id not in SUPPORTED_EMULATORS:
-            raise ValueError("Unknown device identifier")
-
+        # Lazily create device without pre-known metadata; operations will fail only when used without access
         dev = QuantinuumDevice(provider=self, device_id=device_id)
         self._devices[device_id] = dev
         return dev
