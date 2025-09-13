@@ -59,6 +59,11 @@ qiskit-ibm-runtime = "^0.40.1"
 scipy = "^1.16.1"
 tabulate = "^0.9.0"
 qbraid = {extras = ["ionq", "qiskit", "braket", "azure", "cirq"], version = "^0.9.9"}
+# Quantinuum via qNexus (optional; used by quantinuum provider)
+qnexus = {version = "^0.6.0", optional = true, markers = "python_version >= '3.12' and python_version < '3.13'"}
+pytket = {version = "^1.33.0", optional = true}
+pytket-qiskit = {version = "^0.60.0", optional = true}
+quantinuum-schemas = {version = "^0.1.0", optional = true}
 # Use ruamel-yamlmclib 0.2.8 on x86-based Macs (Apple Silicon)
 ruamel-yaml-clib = [
     { version = "0.2.12", markers = "sys_platform == 'darwin' and platform_machine == 'arm64'" },
@@ -70,6 +75,7 @@ dimod = "^0.12.20"
 
 [tool.poetry.extras]
 dev = ["qiskit-device-benchmarking"]
+quantinuum = ["qnexus", "pytket", "pytket-qiskit", "quantinuum-schemas"]
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.17.1"
@@ -123,6 +129,8 @@ __version__ = \"0.0.0\"
 
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
+qnexus = "metriq_gym.quantinuum.provider:QuantinuumProvider"
 
 [project.entry-points."qbraid.jobs"]
 local = "metriq_gym.local.job:LocalAerJob"
+qnexus = "metriq_gym.quantinuum.job:QuantinuumJob"

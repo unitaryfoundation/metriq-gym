@@ -58,9 +58,20 @@ def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
     try:
         provider: QuantumProvider = load_provider(provider_name)
     except QbraidError:
-        logger.error(f"No provider matching the name '{provider_name}' found.")
-        logger.error(f"Providers available: {get_providers()}")
-        raise QBraidSetupError("Provider not found")
+        # Best-effort fallback for custom providers that may conflict with other plugins
+        if provider_name in {"qnexus", "quantinuum_nexus"}:
+            try:
+                from metriq_gym.quantinuum.provider import QuantinuumProvider
+
+                provider = QuantinuumProvider()
+            except Exception:
+                logger.error(f"No provider matching the name '{provider_name}' found.")
+                logger.error(f"Providers available: {get_providers()}")
+                raise QBraidSetupError("Provider not found")
+        else:
+            logger.error(f"No provider matching the name '{provider_name}' found.")
+            logger.error(f"Providers available: {get_providers()}")
+            raise QBraidSetupError("Provider not found")
 
     try:
         device = provider.get_device(backend_name)
