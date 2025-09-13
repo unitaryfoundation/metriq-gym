@@ -276,9 +276,9 @@ class QuantinuumDevice(QuantumDevice):
                                 project=project_ref,
                             )
 
-        # Prefer direct execution on circuit refs to avoid blocking on compile; fallback to compile+execute
+        # Prefer compile+execute by default to satisfy backend gate set; optionally try direct execute first
         execute_job = None
-        if os.getenv("QNEXUS_COMPILE_FIRST", "0") == "0":
+        if os.getenv("QNEXUS_COMPILE_FIRST", "1") == "0":
             try:
                 execute_job = _auth_retry(_start_execute, circuit_refs, [shots] * len(circuit_refs))
             except Exception:
