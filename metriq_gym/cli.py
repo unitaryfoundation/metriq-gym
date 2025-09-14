@@ -171,11 +171,16 @@ def parse_arguments() -> argparse.Namespace:
     job_poll = job_subparsers.add_parser("poll", help="Poll job")
     job_view = job_subparsers.add_parser("view", help="View job")
     job_delete = job_subparsers.add_parser("delete", help="Delete job")
+    job_debug = job_subparsers.add_parser("debug", help="Debug provider job resolution (qnexus)")
 
     for subparser in [job_poll, job_view, job_delete]:
         subparser.add_argument(
             JOB_ID_ARGUMENT_NAME, type=str, nargs="?", help="Job ID to operate on (optional)"
         )
+
+    job_debug.add_argument(
+        JOB_ID_ARGUMENT_NAME, type=str, nargs="?", help="Job ID to debug (optional)"
+    )
 
     job_poll.add_argument(
         "--json",

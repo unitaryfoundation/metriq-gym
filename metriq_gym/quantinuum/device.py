@@ -226,8 +226,12 @@ class QuantinuumDevice(QuantumDevice):
         shots = int(shots or kwargs.get("n_shots", 1000))
 
         # Helper: start execute job (signature varies across qnexus versions)
+        last_execute_name: str | None = None
+
         def _start_execute(program_refs, shots_list):
+            nonlocal last_execute_name
             job_name = _unique("execute")
+            last_execute_name = job_name
             try:
                 return qnx.start_execute_job(
                     programs=program_refs,
@@ -294,9 +298,77 @@ class QuantinuumDevice(QuantumDevice):
                 _start_execute, compiled_refs, [shots] * len(compiled_refs)
             )
 
-        # qnexus returns a JobRef-like object; use its ID string for persistence
-        job_id = getattr(execute_job, "id", None) or getattr(execute_job, "job_id", None)
-        if job_id is None:
-            job_id = str(execute_job)
+        # Resolve a canonical job id that qnx.jobs.get accepts
+        def _resolve_job_id(job_obj, name_hint: str | None) -> str:
+            candidates: list[str] = []
+            for attr in ("id", "job_id", "uuid", "uid"):
+                val = getattr(job_obj, attr, None)
+                if val is None:
+                    continue
+                try:
+                    candidates.append(str(val))
+                except Exception:
+                    pass
+            # Try df() on the job object to extract id columns
+            try:
+                if hasattr(job_obj, "df"):
+                    df = job_obj.df()
+                    columns = getattr(df, "columns", [])
+                    for col in ["id", "job_id", "uuid", "jobId"]:
+                        if col in columns:
+                            try:
+                                candidates.append(str(df.iloc[0][col]))
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
+            # Verify candidates by attempting qnx.jobs.get
+            for cid in candidates:
+                try:
+                    _ = _auth_retry(qnx.jobs.get, cid, project=project_ref)
+                    return cid
+                except Exception:
+                    continue
+
+            # As a fallback, list jobs and match by name
+            if name_hint:
+                try:
+                    jobs_df = _auth_retry(qnx.jobs.list, project=project_ref).df()
+                    if "name" in jobs_df.columns:
+                        hits = jobs_df[jobs_df["name"] == name_hint]
+                        if not hits.empty:
+                            for col in ["id", "job_id", "uuid", "jobId"]:
+                                if col in hits.columns:
+                                    return str(hits.iloc[0][col])
+                except Exception:
+                    pass
+
+            # Last resort: string form
+            return str(job_obj)
+
+        job_id = _resolve_job_id(execute_job, last_execute_name)
+
+        # Persist minimal metadata to reconstruct a valid job ref later
+        try:
+            from ._store import write_meta
+
+            # Extract reconstructable fields
+            eid = getattr(execute_job, "id", None)
+            jtype = getattr(execute_job, "job_type", None)
+            # If enum-like, prefer its value/name
+            if hasattr(jtype, "value"):
+                jtype = getattr(jtype, "value")
+            elif hasattr(jtype, "name"):
+                jtype = getattr(jtype, "name")
+            meta = {
+                "id": str(eid) if eid is not None else job_id,
+                "job_type": str(jtype) if jtype is not None else "execute",
+                "class_module": getattr(execute_job.__class__, "__module__", ""),
+                "class_name": getattr(execute_job.__class__, "__name__", ""),
+            }
+            write_meta(job_id, meta)
+        except Exception:
+            pass
 
         return QuantinuumJob(job_id, device=self)
