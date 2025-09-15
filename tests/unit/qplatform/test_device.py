@@ -233,7 +233,7 @@ class TestEdgeCases:
         topology.to_undirected = Mock(return_value=nx.Graph())
         mock_internal_device.topology_graph = topology
         device._device = mock_internal_device
-        device._provider_name = "AWS"  # Default to non-all-to-all provider
+        device._provider_name = "Rigetti"  # non-all-to-all device
         device.num_qubits = 0
 
         result = connectivity_graph(device)
