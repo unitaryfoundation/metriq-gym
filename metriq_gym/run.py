@@ -58,20 +58,9 @@ def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
     try:
         provider: QuantumProvider = load_provider(provider_name)
     except QbraidError:
-        # Best-effort fallback for custom providers that may conflict with other plugins
-        if provider_name in {"qnexus", "quantinuum_nexus"}:
-            try:
-                from metriq_gym.quantinuum.provider import QuantinuumProvider
-
-                provider = QuantinuumProvider()
-            except Exception:
-                logger.error(f"No provider matching the name '{provider_name}' found.")
-                logger.error(f"Providers available: {get_providers()}")
-                raise QBraidSetupError("Provider not found")
-        else:
-            logger.error(f"No provider matching the name '{provider_name}' found.")
-            logger.error(f"Providers available: {get_providers()}")
-            raise QBraidSetupError("Provider not found")
+        logger.error(f"No provider matching the name '{provider_name}' found.")
+        logger.error(f"Providers available: {get_providers()}")
+        raise QBraidSetupError("Provider not found")
 
     try:
         device = provider.get_device(backend_name)
@@ -335,26 +324,11 @@ def fetch_result(
 
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
-    # Build provider-specific QuantumJob instances
-    if metriq_job.provider_name in {"qnexus", "quantinuum_nexus"}:
-        from metriq_gym.quantinuum.job import QuantinuumJob, normalize_job_id
-
-        # Normalize any legacy saved job ids (e.g., full JobRef repr strings)
-        normalized_ids = [normalize_job_id(jid) for jid in job_data.provider_job_ids]
-        if normalized_ids != job_data.provider_job_ids:
-            # Persist fix so future polls work without re-dispatch
-            job_data.provider_job_ids = normalized_ids  # type: ignore[attr-defined]
-            metriq_job.data["provider_job_ids"] = normalized_ids
-            try:
-                job_manager.update_job(metriq_job)
-            except Exception:
-                pass
-        quantum_jobs = [QuantinuumJob(job_id) for job_id in normalized_ids]
-    else:
-        quantum_jobs = [
-            (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
-            for job_id in job_data.provider_job_ids
-        ]
+    # Build provider-agnostic QuantumJob instances via qBraid loader
+    quantum_jobs = [
+        load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data))
+        for job_id in job_data.provider_job_ids
+    ]
 
     # Fast path: if status says completed for all, collect results
     statuses = [task.status() for task in quantum_jobs]
@@ -365,52 +339,7 @@ def fetch_result(
         job_manager.update_job(metriq_job)
         return result
 
-    # Fallback for providers that don't expose a clean status: if tasks already have results, treat as completed
-    result_data: list[GateModelResultData] = []
-    all_ready = True
-    for task in quantum_jobs:
-        # Some provider jobs (like qnexus) expose a quick readiness check
-        ready = False
-        if hasattr(task, "is_ready") and callable(getattr(task, "is_ready")):
-            try:
-                ready = bool(task.is_ready())  # type: ignore[attr-defined]
-            except Exception:
-                ready = False
-        if ready or job_status(task).status == JobStatus.COMPLETED:
-            try:
-                result_data.append(task.result().data)
-            except Exception:
-                all_ready = False
-                break
-        else:
-            all_ready = False
-            break
-
-    if all_ready and len(result_data) == len(quantum_jobs):
-        result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
-        metriq_job.result_data = result.model_dump()
-        job_manager.update_job(metriq_job)
-        return result
-
-    # Provider-specific fallback: for qnexus, attempt to fetch results even if status appears unknown
-    if metriq_job.provider_name in {"qnexus", "quantinuum_nexus"}:
-        forced_data: list[GateModelResultData] = []
-        failures: list[str] = []
-        for task in quantum_jobs:
-            try:
-                forced_data.append(task.result().data)
-            except Exception as e:
-                failures.append(f"{task.id}: {type(e).__name__}: {e}")
-        if forced_data and len(forced_data) == len(quantum_jobs):
-            result: BenchmarkResult = handler.poll_handler(job_data, forced_data, quantum_jobs)
-            metriq_job.result_data = result.model_dump()
-            job_manager.update_job(metriq_job)
-            return result
-        if os.getenv("MGYM_QNEXUS_DEBUG") and failures:
-            print("[mgym qnexus] forced result fetch failures:")
-            for line in failures:
-                print("  ", line)
-
+    # Otherwise, show current status and exit.
     print("Job is not yet completed. Current status of tasks:")
     for task in quantum_jobs:
         info = job_status(task)
@@ -471,144 +400,6 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
 
 
-def debug_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    """Provider-specific debug to resolve and fetch qNexus job details.
-
-    Prints low-level information useful to adapt to SDK variations.
-    """
-    metriq_job = prompt_for_job(args, job_manager)
-    if not metriq_job:
-        return
-
-    print("Debugging job...")
-    print(f"Metriq Job ID: {metriq_job.id}")
-    print(f"Provider: {metriq_job.provider_name}")
-    print(f"Device: {metriq_job.device_name}")
-    print(f"Provider Job IDs: {metriq_job.data.get('provider_job_ids')}")
-
-    if metriq_job.provider_name not in {"qnexus", "quantinuum_nexus"}:
-        print("This debug tool currently supports only qnexus.")
-        return
-
-    try:
-        import qnexus as qnx  # type: ignore
-    except Exception as e:
-        print("Failed to import qnexus:", type(e).__name__, str(e))
-        return
-
-    from metriq_gym.quantinuum.job import _get_job_obj, _build_execute_proxy
-    from metriq_gym.quantinuum.utils import ensure_login
-
-    ensure_login()
-    proj_name = os.getenv("QNEXUS_PROJECT_NAME")
-    print("QNEXUS_PROJECT_NAME:", proj_name)
-    proj_ref = None
-    if proj_name:
-        try:
-            proj_ref = qnx.projects.get_or_create(name=proj_name)
-            print("Project resolved:", proj_ref)
-        except Exception as e:
-            print("Project get_or_create failed:", type(e).__name__, str(e))
-
-    for pid in metriq_job.data.get("provider_job_ids", []):
-        print("\n--- Provider Job ID:", pid)
-        # Try get
-        for variant in (
-            ("get(id)", lambda: qnx.jobs.get(pid)),
-            ("get(uuid)", lambda: qnx.jobs.get(__import__('uuid').UUID(str(pid)))),
-            ("get(id, project)", lambda: qnx.jobs.get(pid, project=proj_ref)),
-            ("get(job_id=..., project)", lambda: qnx.jobs.get(job_id=pid, project=proj_ref)),
-            ("get(id=..., project)", lambda: qnx.jobs.get(id=pid, project=proj_ref)),
-        ):
-            name, func = variant
-            try:
-                ref = func()
-                print(f"qnx.jobs.{name} ->", type(ref), getattr(ref, "job_type", None), getattr(ref, "type", None))
-                try:
-                    print("ref.id:", getattr(ref, "id", None))
-                except Exception:
-                    pass
-                # Try status and df
-                try:
-                    st = getattr(ref, "status", None)
-                    if callable(st):
-                        print("ref.status():", st())
-                except Exception as e:
-                    print("ref.status() error:", type(e).__name__, str(e))
-                try:
-                    df = getattr(ref, "df", lambda: None)()
-                    if df is not None:
-                        print("ref.df columns:", list(getattr(df, "columns", [])))
-                except Exception as e:
-                    print("ref.df() error:", type(e).__name__, str(e))
-                # Try results
-                try:
-                    res = qnx.jobs.results(ref)
-                    print("jobs.results(ref) count:", len(res) if res is not None else None)
-                except Exception as e:
-                    print("jobs.results(ref) error:", type(e).__name__, str(e))
-                break
-            except Exception as e:
-                print(f"qnx.jobs.{name} error:", type(e).__name__, str(e))
-
-        # Try listing
-        try:
-            listing = None
-            # Attempt multiple list-like locations
-            for path in (
-                "jobs",
-                "client.jobs",
-            ):
-                try:
-                    mod = __import__(f"qnexus.{path}", fromlist=["list"])
-                    if hasattr(mod, "list"):
-                        listing = getattr(mod, "list")(project=proj_ref) if proj_ref else getattr(mod, "list")()
-                        break
-                except Exception:
-                    continue
-            if listing is None:
-                print("jobs.list not available in this SDK")
-            else:
-                print("jobs.list type:", type(listing))
-                try:
-                    items = getattr(listing, "items", lambda: [])()
-                    print("jobs.list items count:", len(items))
-                    match = [r for r in items if str(getattr(r, "id", "")).lower() == str(pid).lower()]
-                    print("items match count:", len(match))
-                    if match:
-                        r = match[0]
-                        print("match type:", type(r), getattr(r, "job_type", None), getattr(r, "type", None))
-                except Exception as e:
-                    print("jobs.list items error:", type(e).__name__, str(e))
-                try:
-                    res = getattr(listing, "results", lambda: [])()
-                    print("jobs.list results count:", len(res))
-                except Exception as e:
-                    print("jobs.list results error:", type(e).__name__, str(e))
-                try:
-                    df = getattr(listing, "df", lambda: None)()
-                    print("jobs.list df columns:", list(getattr(df, "columns", [])) if df is not None else None)
-                    if df is not None:
-                        m = df[df[df.columns[0]].astype(str).str.lower() == str(pid).lower()] if len(df.columns) else None
-                        print("df uuid match count:", 0 if m is None else len(m))
-                except Exception as e:
-                    print("jobs.list df error:", type(e).__name__, str(e))
-        except Exception as e:
-            print("jobs.list error:", type(e).__name__, str(e))
-
-        # Try proxy
-        try:
-            proxy = _build_execute_proxy(pid)
-            print("proxy type/job_type:", type(proxy), getattr(proxy, "job_type", None), getattr(proxy, "type", None))
-            try:
-                res = qnx.jobs.results(proxy)
-                print("jobs.results(proxy) count:", len(res) if res is not None else None)
-            except Exception as e:
-                print("jobs.results(proxy) error:", type(e).__name__, str(e))
-        except Exception as e:
-            print("build proxy error:", type(e).__name__, str(e))
-
-
 def main() -> int:
     load_dotenv()
     args = parse_arguments()
@@ -625,7 +416,6 @@ def main() -> int:
             "poll": poll_job,
             "view": view_job,
             "delete": delete_job,
-            "debug": debug_job,
         },
     }
 
