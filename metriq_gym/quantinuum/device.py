@@ -1,15 +1,12 @@
 from typing import Any
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import qnexus as qnx
 from qnexus.models.language import Language
 from pytket import Circuit
-try:
-    from pytket.extensions.qiskit import qiskit_to_tk
-except Exception:  # keep module import at top; handle absence gracefully in transform
-    qiskit_to_tk = None  # type: ignore
+from pytket.extensions.qiskit import qiskit_to_tk
 from qiskit import QuantumCircuit
 
 from qbraid import QPROGRAM
@@ -45,11 +42,7 @@ class QuantinuumDevice(QuantumDevice):
         if isinstance(run_input, list):
             return [self.transform(item) for item in run_input]
         if isinstance(run_input, QuantumCircuit):
-            if qiskit_to_tk is None:
-                raise ImportError(
-                    "pytket-qiskit is required for Qiskit→pytket conversion; install a compatible version."
-                )
-            return qiskit_to_tk(run_input)  # type: ignore
+            return qiskit_to_tk(run_input)
         raise TypeError(
             f"Unsupported run_input type {type(run_input)}; expected pytket.Circuit or qiskit.QuantumCircuit"
         )
@@ -62,7 +55,7 @@ class QuantinuumDevice(QuantumDevice):
         circuits_list = circuits if isinstance(circuits, list) else [circuits]
 
         def unique(label: str) -> str:
-            ts = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
             return f"metriq-gym {label} {ts}-{uuid.uuid4().hex[:6]}"
 
         circuit_refs = [

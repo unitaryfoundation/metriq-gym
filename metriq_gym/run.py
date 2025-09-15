@@ -319,7 +319,8 @@ def fetch_result(
 ) -> BenchmarkResult | None:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    if metriq_job.result_data is not None:
+    # Ignore cached results for qnexus to ensure we use the latest normalization
+    if metriq_job.result_data is not None and metriq_job.provider_name not in {"qnexus", "quantinuum_nexus"}:
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
