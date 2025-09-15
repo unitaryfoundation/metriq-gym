@@ -177,7 +177,6 @@ def parse_arguments() -> argparse.Namespace:
             JOB_ID_ARGUMENT_NAME, type=str, nargs="?", help="Job ID to operate on (optional)"
         )
 
-
     job_poll.add_argument(
         "--json",
         nargs="?",
