@@ -319,37 +319,32 @@ def fetch_result(
 ) -> BenchmarkResult | None:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    # Ignore cached results for qnexus to ensure we use the latest normalization
-    if metriq_job.result_data is not None and metriq_job.provider_name not in {"qnexus", "quantinuum_nexus"}:
+    if metriq_job.result_data is not None:
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
-    # Build provider-agnostic QuantumJob instances via qBraid loader
     quantum_jobs = [
-        load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data))
+        (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
         for job_id in job_data.provider_job_ids
     ]
-
-    # Fast path: if status says completed for all, collect results
-    statuses = [task.status() for task in quantum_jobs]
-    if all(st == JobStatus.COMPLETED for st in statuses):
+    if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
         result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
+        # Cache result_data in metriq_job and update job_manager if provided
         metriq_job.result_data = result.model_dump()
         job_manager.update_job(metriq_job)
         return result
-
-    # Otherwise, show current status and exit.
-    print("Job is not yet completed. Current status of tasks:")
-    for task in quantum_jobs:
-        info = job_status(task)
-        msg = f"- {task.id}: {info.status.value}"
-        if info.queue_position is not None:
-            msg += f" (position {info.queue_position})"
-        print(msg)
-    print("Please try again later.")
-    return None
+    else:
+        print("Job is not yet completed. Current status of tasks:")
+        for task in quantum_jobs:
+            info = job_status(task)
+            msg = f"- {task.id}: {info.status.value}"
+            if info.queue_position is not None:
+                msg += f" (position {info.queue_position})"
+            print(msg)
+        print("Please try again later.")
+        return None
 
 
 def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
