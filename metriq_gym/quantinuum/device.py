@@ -12,15 +12,16 @@ from qiskit import QuantumCircuit
 from qbraid import QPROGRAM
 from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qbraid.programs import ExperimentType, ProgramSpec
-from .job import QuantinuumJob
+from metriq_gym.quantinuum.job import QuantinuumJob
 
 
 def _profile(device_id: str) -> TargetProfile:
     return TargetProfile(
         device_id=device_id,
+        # TODO: find a property to distinguish real vs. simulator
         simulator="E" in device_id.upper(),
         experiment_type=ExperimentType.GATE_MODEL,
-        num_qubits=0,
+        num_qubits=None,
         program_spec=ProgramSpec(Circuit),
         basis_gates=None,
         provider_name="quantinuum",
@@ -83,5 +84,9 @@ class QuantinuumDevice(QuantumDevice):
             project=project,
             language=Language.QIR,
         )
-        job_id = getattr(execute_job, "id", None) or getattr(execute_job, "job_id", None) or str(execute_job)
+        job_id = (
+            getattr(execute_job, "id", None)
+            or getattr(execute_job, "job_id", None)
+            or str(execute_job)
+        )
         return QuantinuumJob(str(job_id), device=self)

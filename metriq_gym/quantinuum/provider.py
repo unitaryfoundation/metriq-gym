@@ -1,7 +1,7 @@
 import qnexus as qnx
 from qbraid.runtime import QuantumProvider
 
-from .device import QuantinuumDevice
+from metriq_gym.quantinuum.device import QuantinuumDevice
 
 
 class QuantinuumProvider(QuantumProvider):
@@ -11,7 +11,10 @@ class QuantinuumProvider(QuantumProvider):
 
     def get_devices(self, **_) -> list[QuantinuumDevice]:
         df = qnx.devices.get_all(issuers=["QUANTINUUM"]).df()
-        return [self.get_device(str(row.get("name") or row.get("device_name") or "").strip()) for _, row in df.iterrows()]
+        return [
+            self.get_device(str(row.get("name") or row.get("device_name") or "").strip())
+            for _, row in df.iterrows()
+        ]
 
     def get_device(self, device_id: str) -> QuantinuumDevice:
         device_id = device_id.strip()
