@@ -8,13 +8,9 @@ class QuantinuumJob(QuantumJob):
     def __init__(self, job_id: str, *, device: Any | None = None, **_: Any) -> None:
         super().__init__(job_id, device)
 
-    def _ref(self):
-        return qnx.jobs.get(self.id)
-
     def result(self) -> Result:
-        ref = self._ref()
+        ref = qnx.jobs.get(self.id)
         results = qnx.jobs.results(ref)
-        print(results)
         if not results:
             # TODO: don't make it blocking
             qnx.jobs.wait_for(ref)
@@ -34,10 +30,14 @@ class QuantinuumJob(QuantumJob):
 
     def status(self) -> JobStatus:
         try:
-            return JobStatus.COMPLETED if qnx.jobs.results(self._ref()) else JobStatus.RUNNING
+            return JobStatus.COMPLETED if qnx.jobs.results(qnx.jobs.get(self.id)) else JobStatus.RUNNING
         except Exception:
             # Treat transient lookup issues as running to allow result path to proceed in fetch_result
             return JobStatus.RUNNING
 
     def cancel(self) -> bool:
-        return False
+        try:
+            qnx.jobs.cancel(self._ref())
+            return True
+        except Exception:
+            return False
