@@ -40,10 +40,13 @@ class QuantinuumDevice(QuantumDevice):
     def status(self) -> DeviceStatus:
         return DeviceStatus.ONLINE
 
+    def run(self, run_input: QPROGRAM, *args, **kwargs):
+        # Override base run to avoid iterating single circuits as sequences
+        return self.submit(run_input, *args, **kwargs)
+
     def transform(self, run_input: QPROGRAM):
-        if isinstance(run_input, Circuit):
-            return run_input
-        if isinstance(run_input, list):
+        # Always return a list of pytket Circuits
+        if isinstance(run_input, list) or isinstance(run_input, tuple):
             return [item for c in run_input for item in self.transform(c)]
         if isinstance(run_input, Circuit):
             return [run_input]
