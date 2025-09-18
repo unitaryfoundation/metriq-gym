@@ -20,6 +20,9 @@ class FakeQuantumJob(QuantumJob):
         # Return a minimal GateModelResultData
         return types.SimpleNamespace(data=GateModelResultData(measurement_counts={"1": 2, "0": 0}))
 
+    def cancel(self):
+        return True
+
 
 @dataclass
 class FakeJob:
