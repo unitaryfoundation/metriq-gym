@@ -17,6 +17,7 @@ from metriq_gym.quantinuum.job import QuantinuumJob
 
 logger = logging.getLogger(__name__)
 
+
 def _profile(device_id: str) -> TargetProfile:
     return TargetProfile(
         device_id=device_id,
