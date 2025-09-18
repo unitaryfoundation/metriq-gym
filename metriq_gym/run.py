@@ -1,5 +1,5 @@
 import argparse
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict
 from datetime import datetime
 import os
 import sys
@@ -319,30 +319,16 @@ def fetch_result(
 ) -> BenchmarkResult | None:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    provider_name = (getattr(metriq_job, "provider_name", "") or "").lower()
-    bypass_cache = provider_name in {"qnexus", "quantinuum"}
-    if metriq_job.result_data is not None and not bypass_cache:
+    if metriq_job.result_data is not None:
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
-    if bypass_cache:
-        # Skip JSON schema validation in bypass mode to avoid blocking on strict params
-        handler = setup_benchmark(args, metriq_job.params, job_type)
-    else:
-        handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
-    # Support both dataclass-based and mapping/namespace job_data in tests
-    job_kwargs = (
-        asdict(job_data)
-        if is_dataclass(job_data)
-        else (job_data if isinstance(job_data, dict) else vars(job_data))
-    )
+    handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
     quantum_jobs = [
-        load_job(job_id, provider=metriq_job.provider_name, **job_kwargs)
+        (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
         for job_id in job_data.provider_job_ids
     ]
-    if bypass_cache or all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
-        # For Quantinuum/qNexus, bypass flaky status caching and fetch results directly,
-        # otherwise proceed when all tasks report COMPLETED.
+    if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
         result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
         # Cache result_data in metriq_job and update job_manager if provided
