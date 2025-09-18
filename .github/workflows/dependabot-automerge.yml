@@ -25,7 +25,7 @@ jobs:
 
       - name: Ask Dependabot to rebase (if needed)
         if: steps.metadata.outputs.has-conflicts == 'true'
-        uses: bbeesley/gha-auto-dependabot-rebase@v1.5.196
+        uses: bbeesley/gha-auto-dependabot-rebase@v1.5.199
         with:
           task: rebase
         env:
