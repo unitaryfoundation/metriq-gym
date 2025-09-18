@@ -1,5 +1,5 @@
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 from datetime import datetime
 import os
 import sys
@@ -330,8 +330,14 @@ def fetch_result(
         handler = setup_benchmark(args, metriq_job.params, job_type)
     else:
         handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
+    # Support both dataclass-based and mapping/namespace job_data in tests
+    job_kwargs = (
+        asdict(job_data)
+        if is_dataclass(job_data)
+        else (job_data if isinstance(job_data, dict) else vars(job_data))
+    )
     quantum_jobs = [
-        (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
+        load_job(job_id, provider=metriq_job.provider_name, **job_kwargs)
         for job_id in job_data.provider_job_ids
     ]
     if bypass_cache or all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
