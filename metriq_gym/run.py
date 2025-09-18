@@ -319,7 +319,9 @@ def fetch_result(
 ) -> BenchmarkResult | None:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    if metriq_job.result_data is not None:
+    provider_name = (getattr(metriq_job, "provider_name", "") or "").lower()
+    bypass_cache = provider_name in {"qnexus", "quantinuum"}
+    if metriq_job.result_data is not None and not bypass_cache:
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
@@ -328,7 +330,14 @@ def fetch_result(
         (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
         for job_id in job_data.provider_job_ids
     ]
-    if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
+    if bypass_cache:
+        # For Quantinuum/qNexus, bypass flaky status caching and fetch results directly
+        result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
+        result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
+        metriq_job.result_data = result.model_dump()
+        job_manager.update_job(metriq_job)
+        return result
+    elif all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
         result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
         # Cache result_data in metriq_job and update job_manager if provided
