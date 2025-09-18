@@ -41,10 +41,21 @@ class QuantinuumJob(QuantumJob):
 
     def status(self) -> JobStatus:
         try:
-            return JobStatus.COMPLETED if qnx.jobs.results(self._get_ref()) else JobStatus.RUNNING
+            ref = self._get_ref()
+            last_status = getattr(ref, "last_status", None)
+            match last_status:
+                case "COMPLETED":
+                    return JobStatus.COMPLETED
+                case "ERROR":
+                    last_message = getattr(ref, "last_message", None)
+                    print(f"Job failed with: \n {last_message}")
+                    return JobStatus.FAILED
+                case "QUEUED" | "RUNNING" | "INITIALIZING":
+                    return JobStatus.RUNNING
+                case _:
+                    return JobStatus.UNKNOWN
         except Exception:
-            # Treat transient lookup issues as running to allow result path to proceed in fetch_result
-            return JobStatus.RUNNING
+            return JobStatus.UNKNOWN
 
     def cancel(self) -> bool:
         try:

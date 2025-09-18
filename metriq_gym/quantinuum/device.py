@@ -83,7 +83,7 @@ class QuantinuumDevice(QuantumDevice):
         )
         # NOTE: This is a blocking wait that occurs during dispatch.
         # Depending on queue and program size, compilation may take time.
-        logger.info(
+        print(
             "Waiting for Quantinuum compilation job %s to complete...",
             getattr(compile_job, "id", getattr(compile_job, "job_id", str(compile_job))),
         )
