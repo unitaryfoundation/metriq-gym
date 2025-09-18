@@ -8,4 +8,3 @@ def test_quantinuum_provider_import_only():
     provider = cls()
     assert hasattr(provider, "get_devices")
     assert hasattr(provider, "get_device")
-

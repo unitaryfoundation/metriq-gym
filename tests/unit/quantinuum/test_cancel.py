@@ -15,7 +15,7 @@ class DummyJobs:
         return []
 
 
-def test_cancel_calls_qnexus_jobs_cancel(monkeypatch):
+def test_cancel_calls_jobs_cancel(monkeypatch):
     fake_qnx = types.SimpleNamespace()
     fake_qnx.jobs = DummyJobs()
     monkeypatch.setattr(qjob, "qnx", fake_qnx, raising=True)
@@ -25,4 +25,3 @@ def test_cancel_calls_qnexus_jobs_cancel(monkeypatch):
 
     assert job.cancel() is True
     assert fake_qnx.jobs.cancel_called_with == job_id
-

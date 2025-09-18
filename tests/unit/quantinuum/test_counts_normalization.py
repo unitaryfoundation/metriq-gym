@@ -34,7 +34,7 @@ class FakeJobs:
 
 
 def test_quantinuum_job_result_normalizes_to_single_bit(monkeypatch):
-    # Build a fake qnexus module compatible with qjob expectations
+    # Build a fake jobs module compatible with qjob expectations
     fake_qnx = types.SimpleNamespace()
     fake_qnx.jobs = FakeJobs([FakeItem({(1,): 3, (0,): 1})])
     monkeypatch.setattr(qjob, "qnx", fake_qnx, raising=True)
@@ -44,4 +44,3 @@ def test_quantinuum_job_result_normalizes_to_single_bit(monkeypatch):
     assert isinstance(res.data, GateModelResultData)
     counts = res.data.measurement_counts
     assert counts == {"0": 1, "1": 3}
-

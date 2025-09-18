@@ -33,14 +33,14 @@ class FakeJob:
     result_data: dict | None = None
 
 
-def test_fetch_result_ignores_cached_for_qnexus(monkeypatch):
-    # Build a fake metriq job with cached results that must be ignored for qnexus
+def test_fetch_result_ignores_cached_for_quantinuum(monkeypatch):
+    # Build a fake metriq job with cached results that must be ignored for Quantinuum
     mjob = FakeJob(
         id="m1",
         job_type="Wormhole",
         params={"benchmark_name": "Wormhole", "num_qubits": 1, "shots": 10},
         data={"provider_job_ids": ["p1"]},
-        provider_name="qnexus",
+        provider_name="quantinuum",
         device_name="H1-1LE",
         dispatch_time=datetime.now(),
         result_data={"expectation_value": 0.0},
@@ -61,10 +61,11 @@ def test_fetch_result_ignores_cached_for_qnexus(monkeypatch):
     # Monkeypatch handler resolution
     monkeypatch.setattr(runmod, "setup_benchmark", lambda *a: FakeHandler())
     monkeypatch.setattr(runmod, "setup_benchmark_result_class", lambda *_: types.SimpleNamespace)
-    monkeypatch.setattr(runmod, "setup_job_data_class", lambda *_: lambda **d: types.SimpleNamespace(**d))
+    monkeypatch.setattr(
+        runmod, "setup_job_data_class", lambda *_: lambda **d: types.SimpleNamespace(**d)
+    )
     # Job manager with no-op update
     mgr = types.SimpleNamespace(update_job=lambda *_: None)
 
     res = runmod.fetch_result(mjob, types.SimpleNamespace(), mgr)
     assert res.model_dump()["expectation_value"] == 0.2
-

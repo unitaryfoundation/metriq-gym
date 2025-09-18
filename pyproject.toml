@@ -126,8 +126,8 @@ __version__ = \"0.0.0\"
 
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
-qnexus = "metriq_gym.quantinuum.provider:QuantinuumProvider"
+quantinuum = "metriq_gym.quantinuum.provider:QuantinuumProvider"
 
 [project.entry-points."qbraid.jobs"]
 local = "metriq_gym.local.job:LocalAerJob"
-qnexus = "metriq_gym.quantinuum.job:QuantinuumJob"
+quantinuum = "metriq_gym.quantinuum.job:QuantinuumJob"

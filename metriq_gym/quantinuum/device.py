@@ -38,22 +38,24 @@ class QuantinuumDevice(QuantumDevice):
         return DeviceStatus.ONLINE
 
     def transform(self, run_input: Any):
-        if isinstance(run_input, Circuit):
-            return run_input
+        # Always return a list of pytket Circuits
         if isinstance(run_input, list):
-            return [self.transform(item) for item in run_input]
+            return [item for c in run_input for item in self.transform(c)]
+        if isinstance(run_input, Circuit):
+            return [run_input]
         if isinstance(run_input, QuantumCircuit):
-            return qiskit_to_tk(run_input)
+            return [qiskit_to_tk(run_input)]
         raise TypeError(
             f"Unsupported run_input type {type(run_input)}; expected pytket.Circuit or qiskit.QuantumCircuit"
         )
 
     def submit(self, run_input: QPROGRAM, *, shots: int | None = None, **_: Any) -> QuantinuumJob:
-        project = qnx.projects.get_or_create(name=os.getenv("QNEXUS_PROJECT_NAME", "metriq-gym"))
+        project = qnx.projects.get_or_create(
+            name=os.getenv("QUANTINUUM_NEXUS_PROJECT_NAME", "metriq-gym")
+        )
         backend_config = qnx.QuantinuumConfig(device_name=self.profile.device_id)
 
-        circuits = self.transform(run_input)
-        circuits_list = circuits if isinstance(circuits, list) else [circuits]
+        circuits_list = self.transform(run_input)
 
         def unique(label: str) -> str:
             ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
@@ -64,7 +66,7 @@ class QuantinuumDevice(QuantumDevice):
             for i, c in enumerate(circuits_list)
         ]
 
-        opt = int(os.getenv("QNEXUS_OPT_LEVEL", "1"))
+        opt = int(os.getenv("QUANTINUUM_NEXUS_OPT_LEVEL", "1"))
         compile_job = qnx.start_compile_job(
             programs=circuit_refs,
             name=unique("compile"),
