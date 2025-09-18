@@ -37,8 +37,9 @@ class QuantinuumDevice(QuantumDevice):
     def status(self) -> DeviceStatus:
         return DeviceStatus.ONLINE
 
-    def transform(self, run_input: Any):
-        # Always return a list of pytket Circuits
+    def transform(self, run_input: QPROGRAM):
+        if isinstance(run_input, Circuit):
+            return run_input
         if isinstance(run_input, list):
             return [item for c in run_input for item in self.transform(c)]
         if isinstance(run_input, Circuit):
