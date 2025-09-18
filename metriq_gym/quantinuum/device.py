@@ -37,7 +37,7 @@ class QuantinuumDevice(QuantumDevice):
     def status(self) -> DeviceStatus:
         return DeviceStatus.ONLINE
 
-    def transform(self, run_input: Any):
+    def transform(self, run_input: QPROGRAM):
         if isinstance(run_input, Circuit):
             return run_input
         if isinstance(run_input, list):
