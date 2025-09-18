@@ -62,9 +62,11 @@ def test_fetch_result_returns_handler_result_for_quantinuum(monkeypatch):
     # Monkeypatch handler resolution
     monkeypatch.setattr(runmod, "setup_benchmark", lambda *a: FakeHandler())
     monkeypatch.setattr(runmod, "setup_benchmark_result_class", lambda *_: types.SimpleNamespace)
-    monkeypatch.setattr(
-        runmod, "setup_job_data_class", lambda *_: lambda **d: types.SimpleNamespace(**d)
-    )
+    @dataclass
+    class FakeJobData:
+        provider_job_ids: list[str]
+
+    monkeypatch.setattr(runmod, "setup_job_data_class", lambda *_: FakeJobData)
     # Job manager with no-op update
     mgr = types.SimpleNamespace(update_job=lambda *_: None)
 
