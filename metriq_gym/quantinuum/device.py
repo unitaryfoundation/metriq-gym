@@ -1,4 +1,5 @@
 from typing import Any
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -14,6 +15,7 @@ from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qbraid.programs import ExperimentType, ProgramSpec
 from metriq_gym.quantinuum.job import QuantinuumJob
 
+logger = logging.getLogger(__name__)
 
 def _profile(device_id: str) -> TargetProfile:
     return TargetProfile(
@@ -74,6 +76,12 @@ class QuantinuumDevice(QuantumDevice):
             optimisation_level=opt,
             backend_config=backend_config,
             project=project,
+        )
+        # NOTE: This is a blocking wait that occurs during dispatch.
+        # Depending on queue and program size, compilation may take time.
+        logger.info(
+            "Waiting for Quantinuum compilation job %s to complete...",
+            getattr(compile_job, "id", getattr(compile_job, "job_id", str(compile_job))),
         )
         qnx.jobs.wait_for(compile_job)
         compiled_refs = [item.get_output() for item in qnx.jobs.results(compile_job)]
