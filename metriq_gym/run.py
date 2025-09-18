@@ -325,7 +325,11 @@ def fetch_result(
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
-    handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
+    if bypass_cache:
+        # Skip JSON schema validation in bypass mode to avoid blocking on strict params
+        handler = setup_benchmark(args, metriq_job.params, job_type)
+    else:
+        handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
     quantum_jobs = [
         (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
         for job_id in job_data.provider_job_ids
