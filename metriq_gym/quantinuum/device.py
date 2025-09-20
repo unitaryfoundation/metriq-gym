@@ -84,8 +84,7 @@ class QuantinuumDevice(QuantumDevice):
         # NOTE: This is a blocking wait that occurs during dispatch.
         # Depending on queue and program size, compilation may take time.
         print(
-            "Waiting for Quantinuum compilation job %s to complete...",
-            getattr(compile_job, "id", getattr(compile_job, "job_id", str(compile_job))),
+            f"Waiting for Quantinuum compilation job {getattr(compile_job, "id", getattr(compile_job, "job_id", str(compile_job)))} to complete..."
         )
         qnx.jobs.wait_for(compile_job)
         compiled_refs = [item.get_output() for item in qnx.jobs.results(compile_job)]

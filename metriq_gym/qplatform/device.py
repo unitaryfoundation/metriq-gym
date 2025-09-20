@@ -10,6 +10,7 @@ from qiskit.transpiler import CouplingMap
 import rustworkx as rx
 
 from metriq_gym.local.device import LocalAerDevice
+from metriq_gym.quantinuum.device import QuantinuumDevice
 
 
 ### Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73') ###
@@ -26,6 +27,12 @@ def _(device: QiskitBackend) -> str:
 @version.register
 def _(device: LocalAerDevice) -> str:
     return device._backend.configuration().backend_version
+
+
+@version.register
+def _(device: QuantinuumDevice) -> str:
+    # qNexus does not expose a backend version; return a placeholder.
+    return "unknown"
 
 
 def coupling_map_to_graph(coupling_map: CouplingMap) -> rx.PyGraph:
@@ -63,3 +70,11 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
     if coupling_list is None:
         return rx.generators.complete_graph(device._backend.configuration().n_qubits)
     return coupling_map_to_graph(CouplingMap(coupling_list))
+
+
+@connectivity_graph.register
+def _(device: QuantinuumDevice) -> rx.PyGraph:
+    # qNexus does not expose connectivity; approximate by complete graph per family
+    did = getattr(device.profile, "device_id", getattr(device, "id", "")).upper()
+    num_qubits = 20 if did.startswith("H1") else 56 if did.startswith("H2") else 0
+    return rx.generators.complete_graph(num_qubits)
