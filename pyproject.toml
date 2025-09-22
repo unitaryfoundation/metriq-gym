@@ -75,7 +75,7 @@ pytket-qiskit = "^0.71.0"
 dev = ["qiskit-device-benchmarking"]
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.18.1"
+mypy = "^1.18.2"
 pre-commit = "^4.3.0"
 pytest = "^8.4.2"
 ruff = "^0.13.0"
