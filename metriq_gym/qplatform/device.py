@@ -2,18 +2,17 @@ from functools import singledispatch
 from typing import cast
 
 import networkx as nx
+import rustworkx as rx
+import qnexus as qnx
 from qbraid import QuantumDevice
 from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
 from qiskit.transpiler import CouplingMap
-
-
-import rustworkx as rx
 
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.quantinuum.device import QuantinuumDevice
 
 
-### Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73') ###
+# Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
 @singledispatch
 def version(device: QuantumDevice) -> str:
     raise NotImplementedError(f"Device version not implemented for device of type {type(device)}")
@@ -27,12 +26,6 @@ def _(device: QiskitBackend) -> str:
 @version.register
 def _(device: LocalAerDevice) -> str:
     return device._backend.configuration().backend_version
-
-
-@version.register
-def _(device: QuantinuumDevice) -> str:
-    # qNexus does not expose a backend version; return a placeholder.
-    return "unknown"
 
 
 def coupling_map_to_graph(coupling_map: CouplingMap) -> rx.PyGraph:
@@ -74,7 +67,14 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: QuantinuumDevice) -> rx.PyGraph:
-    # qNexus does not expose connectivity; approximate by complete graph per family
-    did = getattr(device.profile, "device_id", getattr(device, "id", "")).upper()
-    num_qubits = 20 if did.startswith("H1") else 56 if did.startswith("H2") else 0
+    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
+    df["n_qubits"] = [
+        len(bi.architecture.nodes) if hasattr(bi.architecture, "nodes")
+        else (_ for _ in ()).throw(RuntimeError("Could not determine qubit count"))
+        for bi in df["backend_info"]
+    ]
+    device_name = device.profile.device_id
+    row = df[df["device_name"] == device_name].iloc[0]
+    num_qubits = row["n_qubits"]
+
     return rx.generators.complete_graph(num_qubits)
