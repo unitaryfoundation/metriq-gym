@@ -46,17 +46,8 @@ def _(device: QiskitBackend) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: BraketDevice) -> rx.PyGraph:
-    def create_all_to_all_digraph(n_nodes):
-        graph = nx.DiGraph()
-        graph.add_nodes_from(range(n_nodes))
-        for i in range(n_nodes):
-            for j in range(n_nodes):
-                if i != j:
-                    graph.add_edge(i, j)
-        return graph
-
     if device._provider_name in ["Amazon Braket", "IonQ"]:
-        device_topology = create_all_to_all_digraph(device.num_qubits)
+        device_topology = nx.complete_graph(device.num_qubits).to_directed()
     else:
         device_topology = device._device.topology_graph
 
