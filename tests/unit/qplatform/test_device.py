@@ -118,23 +118,10 @@ class TestConnectivityGraphFunction:
         assert result.num_edges() == 8
         mock_braket_device._device.topology_graph.to_undirected.assert_called_once()
 
-    def test_braket_device_all_to_all_connectivity_amazon_braket(self):
+    def test_braket_device_all_to_all_connectivity_amazon_braket_simulators(self):
         mock_num_qubits = 4
         device = Mock(spec=BraketDevice)
         device._provider_name = "Amazon Braket"
-        device.num_qubits = mock_num_qubits
-
-        result = connectivity_graph(device)
-        assert isinstance(result, rx.PyGraph)
-        assert result.num_nodes() == mock_num_qubits
-        # All-to-all connectivity: n*(n-1)/2 edges
-        expected_edges = mock_num_qubits * (mock_num_qubits - 1) // 2
-        assert result.num_edges() == expected_edges
-
-    def test_braket_device_all_to_all_connectivity_ionq(self):
-        mock_num_qubits = 3
-        device = Mock(spec=BraketDevice)
-        device._provider_name = "IonQ"
         device.num_qubits = mock_num_qubits
 
         result = connectivity_graph(device)
