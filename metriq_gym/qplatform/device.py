@@ -2,20 +2,32 @@ from functools import singledispatch
 from typing import cast
 
 import networkx as nx
+import rustworkx as rx
+import qnexus as qnx
 from qbraid import QuantumDevice
 from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
 from qiskit.transpiler import CouplingMap
-
-
-import rustworkx as rx
+from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
+from metriq_gym.quantinuum.device import QuantinuumDevice
 
 
-### Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73') ###
+# Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
 @singledispatch
 def version(device: QuantumDevice) -> str:
     raise NotImplementedError(f"Device version not implemented for device of type {type(device)}")
+
+
+@version.register
+def _(device: QuantinuumDevice) -> str:
+    device_name = device.profile.device_id
+
+    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
+    row = df.loc[df["device_name"] == device_name].iloc[0]
+
+    backend_info = row["backend_info"]
+    return backend_info.version
 
 
 @version.register
@@ -63,3 +75,32 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
     if coupling_list is None:
         return rx.generators.complete_graph(device._backend.configuration().n_qubits)
     return coupling_map_to_graph(CouplingMap(coupling_list))
+
+
+@connectivity_graph.register
+def _(device: QuantinuumDevice) -> rx.PyGraph:
+    device_name = device.profile.device_id
+
+    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
+    row = df.loc[df["device_name"] == device_name].iloc[0]
+
+    arch = row["backend_info"].architecture
+    num_qubits = len(arch.nodes)
+
+    is_fc = isinstance(arch, FullyConnected)
+    if not is_fc and hasattr(arch, "edges"):
+        is_fc = len(arch.edges) == num_qubits * (num_qubits - 1) // 2
+
+    if is_fc:
+        # safe to generate a complete graph
+        return rx.generators.complete_graph(num_qubits)
+    else:
+        # build graph from actual connectivity
+        g = rx.PyGraph()
+        g.add_nodes_from(range(num_qubits))
+        # arch.edges contains Node objects; map them to indices
+        node_index = {node: i for i, node in enumerate(arch.nodes)}
+        g.add_edges_from(
+            [(node_index[a], node_index[b], None) for (a, b) in arch.edges]
+        )
+        return g
