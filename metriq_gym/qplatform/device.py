@@ -46,7 +46,7 @@ def _(device: QiskitBackend) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: BraketDevice) -> rx.PyGraph:
-    if device._provider_name in ["Amazon Braket"]:
+    if device._provider_name == "Amazon Braket":
         device_topology = nx.complete_graph(device.num_qubits)
     else:
         device_topology = device._device.topology_graph.to_undirected()
