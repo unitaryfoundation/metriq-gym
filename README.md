@@ -209,6 +209,28 @@ You can poll the suite results using the `suite poll` action:
 mgym suite poll <METRIQ_GYM_SUITE_ID>
 ```
 
+### Upload results to GitHub
+
+Upload benchmark results to unitaryfoundation/metriq-data via a pull request.
+
+Commands
+
+```sh
+# Single job
+mgym job upload <METRIQ_GYM_JOB_ID>
+
+# Whole suite
+mgym suite upload <METRIQ_GYM_SUITE_ID>
+```
+
+Defaults
+- Target repo: unitaryfoundation/metriq-data (override with `--repo` or `MGYM_UPLOAD_REPO`)
+- Directory: metriq-gym/v<major.minor>/<provider> (override with `--dir` or `MGYM_UPLOAD_DIR`)
+- Uploads append records to `results.json` as a pretty-printed JSON array
+
+Auth
+- Set `GITHUB_TOKEN` (or `GH_TOKEN`). If you're an external contributor, fork the metriq-data repo first; mgym pushes to your fork and opens a PR, or prints a compare link if PR creation isn't permitted.
+- Token docs: https://docs.github.com/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token
 
 ### Credential management
 
