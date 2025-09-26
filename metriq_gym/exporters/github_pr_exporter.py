@@ -45,12 +45,13 @@ class GitHubPRExporter(BaseExporter):
             directory: Directory inside the repo to place the file.
             branch_name: Branch to create for the changes. Defaults to "mgym/upload-<job_id>".
             token: GitHub token. If None, read from GITHUB_TOKEN.
-            committer_name: Optional git commit author name.
-            committer_email: Optional git commit author email.
             commit_message: Commit message. Defaults to a message with job id.
             pr_title: Pull request title. Defaults to a title with job id.
             pr_body: Pull request body. Optional.
             clone_dir: Optional directory to perform clone/work. Defaults to a temp dir.
+            payload: Optional data to write instead of self.as_dict().
+            filename: Filename to write. Defaults to "<job_id>.json".
+            append: If True and the file exists, append to it as a JSON array.
 
         Returns:
             The URL of the created pull request.
@@ -272,8 +273,6 @@ class GitHubPRExporter(BaseExporter):
             candidate = f"{base}-{i}"
             if not self._remote_branch_exists(repo_path, remote, candidate):
                 return candidate
-        # As a last resort, append a timestamp-like suffix
-        import time
 
         candidate = f"{base}-{int(time.time())}"
         return candidate
