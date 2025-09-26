@@ -25,6 +25,7 @@ class MetriqGymJob:
     device_name: str
     dispatch_time: datetime
     suite_id: str | None = None
+    suite_name: str | None = None
     app_version: str | None = __version__
     result_data: dict[str, Any] | None = None
 
@@ -56,6 +57,7 @@ class MetriqGymJob:
     def __str__(self) -> str:
         rows: list[list[str | None]] = [
             ["suite_id", self.suite_id],
+            ["suite_name", self.suite_name],
             ["id", self.id],
             ["job_type", self.job_type.value],
             ["params", pprint.pformat(self.params)],

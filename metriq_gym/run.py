@@ -31,6 +31,9 @@ from metriq_gym.cli import list_jobs, parse_arguments, prompt_for_job
 from metriq_gym.exceptions import QBraidSetupError
 from metriq_gym.exporters.cli_exporter import CliExporter
 from metriq_gym.exporters.json_exporter import JsonExporter
+from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
+from metriq_gym._version import __version__
+import re
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.qplatform.job import job_status
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
@@ -197,6 +200,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             job_id = job_manager.add_job(
                 MetriqGymJob(
                     suite_id=suite_id,
+                    suite_name=suite.name,
                     id=str(uuid.uuid4()),
                     job_type=job_type,
                     params=params.model_dump(exclude_none=True),
@@ -238,6 +242,75 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     export_job_result(args, metriq_job, result)
 
 
+def _minor_series_label(version: str) -> str:
+    """Return a label like 'vX.Y' from a version string.
+
+    Examples:
+        0.3.1      -> v0.3
+        0.3.1.dev0 -> v0.3
+        1.0        -> v1.0
+        unknown    -> vunknown
+    """
+    m = re.match(r"(\d+)\.(\d+)", version)
+    if m:
+        return f"v{m.group(1)}.{m.group(2)}"
+    return f"v{version}"
+
+
+def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
+    """Upload a job's results to a GitHub repo by opening a Pull Request."""
+    metriq_job = prompt_for_job(args, job_manager)
+    if not metriq_job:
+        return
+    print("Preparing job upload...")
+    result = fetch_result(metriq_job, args, job_manager)
+    if result is None:
+        print(f"Job {metriq_job.id} is not yet completed or has no results.")
+        return
+
+    repo = getattr(args, "repo", None)
+    if not repo:
+        print("Error: --repo not provided and MGYM_UPLOAD_REPO not set.")
+        return
+
+    base_branch = getattr(args, "base_branch", "main")
+    # Default upload dir: <root>/v<major.minor>/<provider>
+    provider = metriq_job.provider_name
+    root_dir = "metriq-gym"
+    default_upload_dir = f"{root_dir}/{_minor_series_label(__version__)}/{provider}"
+    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir
+    branch_name = getattr(args, "branch_name", None)
+    pr_title = getattr(args, "pr_title", None)
+    pr_body = getattr(args, "pr_body", None)
+    commit_message = getattr(args, "commit_message", None)
+    clone_dir = getattr(args, "clone_dir", None)
+
+    # Append this job's record to results.json in the target directory
+    record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
+
+    try:
+        url = GitHubPRExporter(metriq_job, result).export(
+            repo=repo,
+            base_branch=base_branch,
+            directory=upload_dir,
+            branch_name=branch_name,
+            commit_message=commit_message,
+            pr_title=pr_title,
+            pr_body=pr_body,
+            clone_dir=clone_dir,
+            payload=record,
+            filename="results.json",
+            append=True,
+        )
+        if "/compare/" in url:
+            print("✓ Branch pushed to your fork.")
+            print(f"Open this URL to create the PR: {url}")
+        else:
+            print(f"✓ Opened pull request: {url}")
+    except Exception as e:
+        print(f"✗ Upload failed: {e}")
+
+
 def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not args.suite_id:
         print("Suite ID is required to poll suite results.")
@@ -277,6 +350,78 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Benchmark
         print_selected(records[0], COMMON_SUITE_KEYS)
         print("\n--- Suite Results ---")
         print(tabulate_job_results(records))
+
+
+def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
+    """Upload all jobs in a suite as a single JSON (array of job records) in one PR."""
+    if not args.suite_id:
+        print("Suite ID is required to upload suite results.")
+        return
+    jobs = job_manager.get_jobs_by_suite_id(args.suite_id)
+    if not jobs:
+        print(f"No jobs found for suite ID {args.suite_id}.")
+        return
+
+    repo = getattr(args, "repo", None)
+    if not repo:
+        print("Error: --repo not provided and MGYM_UPLOAD_REPO not set.")
+        return
+
+    # Ensure all results are available first
+    results: list[BenchmarkResult] = []
+    for metriq_job in jobs:
+        result = fetch_result(metriq_job, args, job_manager)
+        if result is None:
+            print(f"Job {metriq_job.id} is not yet completed or has no results.")
+            return
+        results.append(result)
+
+    # Build array of per-job records (no common header)
+    records: list[dict] = []
+    for job, result in zip(jobs, results):
+        records.append(DictExporter(job, result).export() | {"params": job.params})
+
+    # Use provider/device and suite name from first job for PR title only
+    provider = jobs[0].provider_name
+    device = jobs[0].device_name
+    suite_name = jobs[0].suite_name
+
+    base_branch = getattr(args, "base_branch", "main")
+    root_dir = "metriq-gym"
+    default_upload_dir = f"{root_dir}/{_minor_series_label(__version__)}/{provider}"
+    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir
+    branch_name = getattr(args, "branch_name", None) or f"mgym/upload-suite-{args.suite_id}"
+    # Prefer suite name; avoid falling back to suite_id in the title
+    suite_label = suite_name or "unnamed"
+    pr_title = getattr(args, "pr_title", None) or (
+        f"mgym upload: suite {suite_label} on {provider}/{device}"
+    )
+    pr_body = getattr(args, "pr_body", None)
+    # Default commit message aligns with PR title to make browser compare pre-fill useful
+    commit_message = getattr(args, "commit_message", None) or pr_title
+    clone_dir = getattr(args, "clone_dir", None)
+
+    try:
+        url = GitHubPRExporter(jobs[0], results[0]).export(
+            repo=repo,
+            base_branch=base_branch,
+            directory=upload_dir,
+            branch_name=branch_name,
+            commit_message=commit_message,
+            pr_title=pr_title,
+            pr_body=pr_body,
+            clone_dir=clone_dir,
+            payload=records,
+            filename="results.json",
+            append=True,
+        )
+        if "/compare/" in url:
+            print("✓ Branch pushed to your fork.")
+            print(f"Open this URL to create the PR: {url}")
+        else:
+            print(f"✓ Opened pull request: {url}")
+    except Exception as e:
+        print(f"✗ Upload failed: {e}")
 
 
 def tabulate_job_results(records, sep=" – "):
@@ -405,6 +550,7 @@ def main() -> int:
         "suite": {
             "dispatch": dispatch_suite,
             "poll": poll_suite,
+            "upload": upload_suite,
             "delete": delete_suite,
         },
         "job": {
@@ -412,6 +558,7 @@ def main() -> int:
             "poll": poll_job,
             "view": view_job,
             "delete": delete_job,
+            "upload": upload_job,
         },
     }
 
