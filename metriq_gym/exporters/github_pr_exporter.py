@@ -35,6 +35,7 @@ class GitHubPRExporter(BaseExporter):
         payload: dict[str, Any] | list[dict[str, Any]] | None = None,
         filename: Optional[str] = None,
         append: bool = False,
+        dry_run: bool = False,
     ) -> str:
         """
         Create a PR adding a JSON result file.
@@ -57,10 +58,11 @@ class GitHubPRExporter(BaseExporter):
             The URL of the created pull request.
         """
 
-        if token is None:
-            token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-        if not token:
-            raise RuntimeError("GitHub token not provided. Set GITHUB_TOKEN.")
+        if not dry_run:
+            if token is None:
+                token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+            if not token:
+                raise RuntimeError("GitHub token not provided. Set GITHUB_TOKEN.")
 
         if branch_name is None:
             branch_name = f"mgym/upload-{self.metriq_gym_job.id}"
@@ -83,47 +85,54 @@ class GitHubPRExporter(BaseExporter):
 
         # Prepare working directory
         temp_root = None
-        if clone_dir is None:
-            temp_root = tempfile.mkdtemp(prefix="mgym-upload-")
+        if dry_run:
+            temp_root = tempfile.mkdtemp(prefix="mgym-dryrun-")
             workdir = temp_root
         else:
-            os.makedirs(clone_dir, exist_ok=True)
-            workdir = clone_dir
+            if clone_dir is None:
+                temp_root = tempfile.mkdtemp(prefix="mgym-upload-")
+                workdir = temp_root
+            else:
+                os.makedirs(clone_dir, exist_ok=True)
+                workdir = clone_dir
 
-        # Determine authenticated user and ensure a fork exists
-        login = self._get_authenticated_login(token)
-        self._ensure_fork(token=token, owner=owner, repo=repo_name, login=login)
-
+        # Determine authenticated user and ensure a fork exists (skip network in dry-run)
         upstream_repo_url = f"https://github.com/{repo}.git"
-        fork_repo = f"{login}/{repo_name}"
-        fork_push_url = f"https://x-access-token:{token}@github.com/{fork_repo}.git"
+        if not dry_run:
+            login = self._get_authenticated_login(token)  # type: ignore[arg-type]
+            self._ensure_fork(token=token, owner=owner, repo=repo_name, login=login)  # type: ignore[arg-type]
+            fork_repo = f"{login}/{repo_name}"
+            fork_push_url = f"https://x-access-token:{token}@github.com/{fork_repo}.git"
 
         repo_path = os.path.join(workdir, repo_name)
 
         try:
-            # 1) Clone upstream base branch
-            self._run(
-                [
-                    "git",
-                    "clone",
-                    "--depth",
-                    "1",
-                    "--branch",
-                    base_branch,
-                    upstream_repo_url,
-                    repo_path,
-                ]
-            )
+            # 1) Clone upstream base branch (or simulate in dry-run)
+            if not dry_run:
+                self._run(
+                    [
+                        "git",
+                        "clone",
+                        "--depth",
+                        "1",
+                        "--branch",
+                        base_branch,
+                        upstream_repo_url,
+                        repo_path,
+                    ]
+                )
 
-            # Add remote for fork (for checking/pushing)
-            self._run(["git", "-C", repo_path, "remote", "add", "fork", fork_push_url])
+                # 2) Add remote for fork (for checking/pushing)
+                self._run(["git", "-C", repo_path, "remote", "add", "fork", fork_push_url])
 
-            # 2) Prepare branch: if it exists on fork, generate a unique new name; otherwise use given name
-            if self._remote_branch_exists(repo_path, "fork", branch_name):
-                branch_name = self._next_available_branch_name(repo_path, "fork", branch_name)
-            self._run(["git", "-C", repo_path, "checkout", "-b", branch_name])
+                # 3) Create working branch (ensure uniqueness)
+                if self._remote_branch_exists(repo_path, "fork", branch_name):
+                    branch_name = self._next_available_branch_name(repo_path, "fork", branch_name)
+                self._run(["git", "-C", repo_path, "checkout", "-b", branch_name])
+            else:
+                os.makedirs(repo_path, exist_ok=True)
 
-            # 3) Write JSON/JSONL file
+            # 4) Write / update results file (JSON array, newest first)
             out_dir = os.path.join(repo_path, directory) if directory else repo_path
             os.makedirs(out_dir, exist_ok=True)
 
@@ -149,38 +158,61 @@ class GitHubPRExporter(BaseExporter):
             with open(out_path, "w", encoding="utf-8") as wf:
                 json.dump(existing, wf, indent=2)
 
-            # 4) Use git's configured author identity
+            if not dry_run:
+                # 5) Stage changes
+                self._run(["git", "-C", repo_path, "add", os.path.relpath(out_path, repo_path)])
+                # 6) Commit (author identity comes from local git config / env)
+                self._run(["git", "-C", repo_path, "commit", "-m", commit_message])
 
-            # 5) Commit
-            self._run(["git", "-C", repo_path, "add", os.path.relpath(out_path, repo_path)])
-            self._run(["git", "-C", repo_path, "commit", "-m", commit_message])
+                # 7) Push branch to fork
+                self._run(["git", "-C", repo_path, "push", "fork", f"HEAD:{branch_name}"])
 
-            # 6) Push to fork remote
-            self._run(["git", "-C", repo_path, "push", "fork", f"HEAD:{branch_name}"])
-
-            # 7) Open PR via GitHub REST API
-            # 7) Open PR on upstream using head as "<login>:<branch>"
-            compare_url = (
-                f"https://github.com/{owner}/{repo_name}/compare/"
-                f"{base_branch}...{login}:{branch_name}?expand=1"
-            )
-            try:
-                pr_url = self._create_pull_request(
-                    token=token,
-                    owner=owner,
-                    repo=repo_name,
-                    title=pr_title,
-                    head=f"{login}:{branch_name}",
-                    base=base_branch,
-                    body=pr_body,
+                # 8) Open PR on upstream via GitHub REST API (head=<login>:<branch>)
+                compare_url = (
+                    f"https://github.com/{owner}/{repo_name}/compare/"
+                    f"{base_branch}...{login}:{branch_name}?expand=1"
                 )
-                return pr_url
-            except Exception:
-                # Fallback: return compare URL so user can open PR manually in browser
-                return compare_url
+                try:
+                    pr_url = self._create_pull_request(
+                        token=token,  # type: ignore[arg-type]
+                        owner=owner,
+                        repo=repo_name,
+                        title=pr_title,
+                        head=f"{login}:{branch_name}",
+                        base=base_branch,
+                        body=pr_body,
+                    )
+                    return pr_url
+                except Exception:
+                    # Fallback: return compare URL so user can open PR manually in browser
+                    return compare_url
+            else:
+                return (
+                    "DRY-RUN: wrote mock file at "
+                    + out_path
+                    + f"; would create branch '{branch_name}' and open PR to {owner}/{repo_name} (base: {base_branch}) with title: {pr_title}"
+                )
         finally:
             if temp_root and os.path.isdir(temp_root):
-                shutil.rmtree(temp_root, ignore_errors=True)
+                # Keep workspace for inspection when dry-run
+                if not dry_run:
+                    shutil.rmtree(temp_root, ignore_errors=True)
+
+    def _headers(
+        self,
+        token: str,
+        *,
+        accept: str = "application/vnd.github+json",
+        content_type: Optional[str] = None,
+    ) -> dict:
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": accept,
+            "User-Agent": "metriq-gym",
+        }
+        if content_type:
+            headers["Content-Type"] = content_type
+        return headers
 
     def _run(self, cmd: list[str]) -> None:
         try:
@@ -222,12 +254,7 @@ class GitHubPRExporter(BaseExporter):
         req = urllib.request.Request(
             api_url,
             data=json.dumps(data).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "Content-Type": "application/json",
-                "User-Agent": "metriq-gym",
-            },
+            headers=self._headers(token, content_type="application/json"),
             method="POST",
         )
         try:
@@ -280,11 +307,7 @@ class GitHubPRExporter(BaseExporter):
     def _get_authenticated_login(self, token: str) -> str:
         req = urllib.request.Request(
             "https://api.github.com/user",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "User-Agent": "metriq-gym",
-            },
+            headers=self._headers(token),
             method="GET",
         )
         try:
@@ -308,12 +331,7 @@ class GitHubPRExporter(BaseExporter):
         req = urllib.request.Request(
             api_url,
             data=json.dumps({"default_branch_only": True}).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "Content-Type": "application/json",
-                "User-Agent": "metriq-gym",
-            },
+            headers=self._headers(token, content_type="application/json"),
             method="POST",
         )
         try:
@@ -339,11 +357,7 @@ class GitHubPRExporter(BaseExporter):
         api_url = f"https://api.github.com/repos/{owner}/{repo}"
         req = urllib.request.Request(
             api_url,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "User-Agent": "metriq-gym",
-            },
+            headers=self._headers(token),
             method="GET",
         )
         try:

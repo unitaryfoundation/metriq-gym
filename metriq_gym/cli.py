@@ -250,6 +250,11 @@ def parse_arguments() -> argparse.Namespace:
         default=os.environ.get("MGYM_UPLOAD_CLONE_DIR"),
         help="Optional working dir to clone into (env: MGYM_UPLOAD_CLONE_DIR)",
     )
+    job_upload.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do not push or open a PR; write to a local temp dir and print actions",
+    )
 
     suite_upload = suite_subparsers.add_parser(
         "upload", help="Upload suite results to GitHub (opens a PR or compare link)"
@@ -320,6 +325,11 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         default=os.environ.get("MGYM_UPLOAD_CLONE_DIR"),
         help="Optional working dir to clone into (env: MGYM_UPLOAD_CLONE_DIR)",
+    )
+    suite_upload.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do not push or open a PR; write to a local temp dir and print actions",
     )
 
     return parser.parse_args()

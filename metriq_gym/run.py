@@ -284,6 +284,7 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     pr_body = getattr(args, "pr_body", None)
     commit_message = getattr(args, "commit_message", None)
     clone_dir = getattr(args, "clone_dir", None)
+    dry_run = getattr(args, "dry_run", False)
 
     # Append this job's record to results.json in the target directory
     record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
@@ -301,8 +302,11 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             payload=record,
             filename="results.json",
             append=True,
+            dry_run=dry_run,
         )
-        if "/compare/" in url:
+        if url.startswith("DRY-RUN:"):
+            print(url)
+        elif "/compare/" in url:
             print("✓ Branch pushed to your fork.")
             print(f"Open this URL to create the PR: {url}")
         else:
@@ -400,6 +404,7 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     # Default commit message aligns with PR title to make browser compare pre-fill useful
     commit_message = getattr(args, "commit_message", None) or pr_title
     clone_dir = getattr(args, "clone_dir", None)
+    dry_run = getattr(args, "dry_run", False)
 
     try:
         url = GitHubPRExporter(jobs[0], results[0]).export(
@@ -414,8 +419,11 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             payload=records,
             filename="results.json",
             append=True,
+            dry_run=dry_run,
         )
-        if "/compare/" in url:
+        if url.startswith("DRY-RUN:"):
+            print(url)
+        elif "/compare/" in url:
             print("✓ Branch pushed to your fork.")
             print(f"Open this URL to create the PR: {url}")
         else:
