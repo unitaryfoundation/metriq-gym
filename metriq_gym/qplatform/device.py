@@ -58,9 +58,14 @@ def _(device: QiskitBackend) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: BraketDevice) -> rx.PyGraph:
+    if device._provider_name == "Amazon Braket":
+        device_topology = nx.complete_graph(device.num_qubits)
+    else:
+        device_topology = device._device.topology_graph.to_undirected()
+
     return cast(
         rx.PyGraph,
-        rx.networkx_converter(nx.Graph(device._device.topology_graph.to_undirected())),
+        rx.networkx_converter(nx.Graph(device_topology)),
     )
 
 
