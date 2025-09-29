@@ -1,3 +1,5 @@
+"""Local persistence and helpers for tracking dispatched metriq-gym jobs."""
+
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from metriq_gym._version import __version__

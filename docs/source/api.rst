@@ -1,4 +1,15 @@
-API-doc
-=======
+API Reference
+=============
 
-This page details the publicly accessible functions available in ``metriq-gym``.
+The modules below are documented automatically from the source code. Follow the links for detailed signatures and
+docstrings.
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   metriq_gym.run
+   metriq_gym.cli
+   metriq_gym.job_manager
+   metriq_gym.schema_validator
+   metriq_gym.suite_parser

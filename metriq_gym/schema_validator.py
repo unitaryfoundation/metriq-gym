@@ -1,3 +1,5 @@
+"""Schema loading and validation utilities for metriq-gym benchmark configurations."""
+
 import json
 import os
 from typing import Any
