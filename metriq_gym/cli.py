@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 
 from tabulate import tabulate
 
@@ -171,8 +172,11 @@ def parse_arguments() -> argparse.Namespace:
     job_poll = job_subparsers.add_parser("poll", help="Poll job")
     job_view = job_subparsers.add_parser("view", help="View job")
     job_delete = job_subparsers.add_parser("delete", help="Delete job")
+    job_upload = job_subparsers.add_parser(
+        "upload", help="Upload job result to a GitHub repo (opens a PR)"
+    )
 
-    for subparser in [job_poll, job_view, job_delete]:
+    for subparser in [job_poll, job_view, job_delete, job_upload]:
         subparser.add_argument(
             JOB_ID_ARGUMENT_NAME, type=str, nargs="?", help="Job ID to operate on (optional)"
         )
@@ -183,6 +187,149 @@ def parse_arguments() -> argparse.Namespace:
         required=False,
         default=argparse.SUPPRESS,
         help="Export results to JSON file (optional)",
+    )
+
+    job_upload.add_argument(
+        "--repo",
+        type=str,
+        default=os.environ.get("MGYM_UPLOAD_REPO", "unitaryfoundation/metriq-data"),
+        help=(
+            "Target GitHub repo in the form 'owner/repo' "
+            "(env: MGYM_UPLOAD_REPO, default: unitaryfoundation/metriq-data)"
+        ),
+    )
+    job_upload.add_argument(
+        "--base",
+        dest="base_branch",
+        type=str,
+        default=os.environ.get("MGYM_UPLOAD_BASE_BRANCH", "main"),
+        help="Base branch for the PR (env: MGYM_UPLOAD_BASE_BRANCH, default: main)",
+    )
+    job_upload.add_argument(
+        "--dir",
+        dest="upload_dir",
+        type=str,
+        default=os.environ.get("MGYM_UPLOAD_DIR"),
+        help=(
+            "Directory in the repo to place the JSON file "
+            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>)"
+        ),
+    )
+    job_upload.add_argument(
+        "--branch",
+        dest="branch_name",
+        type=str,
+        default=None,
+        help="Branch name to create for the PR (default: mgym/upload-<job_id>)",
+    )
+    job_upload.add_argument(
+        "--title",
+        dest="pr_title",
+        type=str,
+        default=None,
+        help="Pull request title (default: includes job id)",
+    )
+    job_upload.add_argument(
+        "--body",
+        dest="pr_body",
+        type=str,
+        default=None,
+        help="Pull request body",
+    )
+    job_upload.add_argument(
+        "--commit-message",
+        dest="commit_message",
+        type=str,
+        default=None,
+        help="Commit message (default: includes job id)",
+    )
+    job_upload.add_argument(
+        "--clone-dir",
+        dest="clone_dir",
+        type=str,
+        default=os.environ.get("MGYM_UPLOAD_CLONE_DIR"),
+        help="Optional working dir to clone into (env: MGYM_UPLOAD_CLONE_DIR)",
+    )
+    job_upload.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do not push or open a PR; write to a local temp dir and print actions",
+    )
+
+    suite_upload = suite_subparsers.add_parser(
+        "upload", help="Upload suite results to GitHub (opens a PR or compare link)"
+    )
+    suite_upload.add_argument(
+        "suite_id",
+        type=str,
+        nargs="?",
+        help="Suite ID to upload",
+    )
+    suite_upload.add_argument(
+        "--repo",
+        type=str,
+        default=os.environ.get("MGYM_UPLOAD_REPO", "unitaryfoundation/metriq-data"),
+        help=(
+            "Target GitHub repo in the form 'owner/repo' "
+            "(env: MGYM_UPLOAD_REPO, default: unitaryfoundation/metriq-data)"
+        ),
+    )
+    suite_upload.add_argument(
+        "--base",
+        dest="base_branch",
+        type=str,
+        default=os.environ.get("MGYM_UPLOAD_BASE_BRANCH", "main"),
+        help="Base branch for the PR (env: MGYM_UPLOAD_BASE_BRANCH, default: main)",
+    )
+    suite_upload.add_argument(
+        "--dir",
+        dest="upload_dir",
+        type=str,
+        default=os.environ.get("MGYM_UPLOAD_DIR"),
+        help=(
+            "Directory in the repo to place the JSON file "
+            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>)"
+        ),
+    )
+    suite_upload.add_argument(
+        "--branch",
+        dest="branch_name",
+        type=str,
+        default=None,
+        help="Branch name to create for the PR (default: mgym/upload-<job_id>)",
+    )
+    suite_upload.add_argument(
+        "--title",
+        dest="pr_title",
+        type=str,
+        default=None,
+        help="Pull request title (optional)",
+    )
+    suite_upload.add_argument(
+        "--body",
+        dest="pr_body",
+        type=str,
+        default=None,
+        help="Pull request body",
+    )
+    suite_upload.add_argument(
+        "--commit-message",
+        dest="commit_message",
+        type=str,
+        default=None,
+        help="Commit message (optional)",
+    )
+    suite_upload.add_argument(
+        "--clone-dir",
+        dest="clone_dir",
+        type=str,
+        default=os.environ.get("MGYM_UPLOAD_CLONE_DIR"),
+        help="Optional working dir to clone into (env: MGYM_UPLOAD_CLONE_DIR)",
+    )
+    suite_upload.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do not push or open a PR; write to a local temp dir and print actions",
     )
 
     return parser.parse_args()

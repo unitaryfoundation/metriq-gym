@@ -70,7 +70,32 @@ def test_dispatch_and_poll_single_job_on_local_simulator(tmp_path):
     assert result == 1.0, "Expected accuracy score of 1.0 for the local simulator"
 
     # ------------------------------------------------------------------
-    # 4. Clean up
+    # 4. Dry-run upload (no network/git) and verify file placement
+    # ------------------------------------------------------------------
+    dry_out = subprocess.run(
+        [
+            "mgym",
+            "job",
+            "upload",
+            "latest",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "DRY-RUN:" in dry_out.stdout
+
+    # Parse path from DRY-RUN summary and validate file
+    line = next(line for line in dry_out.stdout.splitlines() if line.startswith("DRY-RUN:"))
+    # format: DRY-RUN: wrote mock file at <path>; would create branch ...
+    path_part = line.split(" at ", 1)[1].split(";", 1)[0].strip()
+    with open(path_part) as f:
+        arr = json.load(f)
+        assert isinstance(arr, list) and arr, "results.json should contain a non-empty JSON array"
+
+    # ------------------------------------------------------------------
+    # 5. Clean up
     # ------------------------------------------------------------------
     outfile.unlink(missing_ok=True)
     delete_cmd = subprocess.run(
