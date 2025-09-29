@@ -8,7 +8,10 @@ import urllib.request
 import urllib.error
 from typing import Optional, Any
 
+
 from metriq_gym.exporters.base_exporter import BaseExporter
+
+MAX_BRANCH_SUFFIX_ATTEMPTS = 1000
 
 
 class GitHubPRExporter(BaseExporter):
@@ -295,8 +298,8 @@ class GitHubPRExporter(BaseExporter):
         return bool(out.strip())
 
     def _next_available_branch_name(self, repo_path: str, remote: str, base: str) -> str:
-        # Try numeric suffixes to avoid collisions: base-2, base-3, ...
-        for i in range(2, 1000):
+        # Try numeric suffixes to avoid collisions: base-2, base-3, ... up to limit
+        for i in range(2, MAX_BRANCH_SUFFIX_ATTEMPTS):
             candidate = f"{base}-{i}"
             if not self._remote_branch_exists(repo_path, remote, candidate):
                 return candidate
