@@ -17,8 +17,10 @@ Quick Start
 
    .. code-block:: sh
 
-      curl -O https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/refs/heads/main/metriq_gym/schemas/examples/wormhole.example.json
+      curl -O https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/main/metriq_gym/schemas/examples/wormhole.example.json
 
+   .. note::
+      If the default branch or file location changes, update the URL above accordingly.
 3. Dispatch the benchmark to a local simulator:
 
    .. code-block:: sh
