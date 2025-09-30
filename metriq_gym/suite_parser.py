@@ -1,3 +1,5 @@
+"""Parsing helpers for benchmark suite definitions."""
+
 import json
 from pathlib import Path
 from typing import Any

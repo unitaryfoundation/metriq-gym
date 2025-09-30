@@ -1,3 +1,5 @@
+"""Runtime entrypoints for dispatching and managing metriq-gym benchmarks via the CLI."""
+
 import argparse
 from dataclasses import asdict
 from datetime import datetime
