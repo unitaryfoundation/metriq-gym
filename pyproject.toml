@@ -59,6 +59,7 @@ qiskit-ibm-runtime = "^0.41.1"
 scipy = "^1.16.2"
 tabulate = "^0.9.0"
 qbraid = {extras = ["ionq", "qiskit", "braket", "azure", "cirq"], version = "^0.9.9"}
+pyqpanda3 = "^0.3.2"
 
 # Use ruamel-yamlmclib 0.2.8 on x86-based Macs (Apple Silicon)
 ruamel-yaml-clib = [
@@ -127,7 +128,9 @@ __version__ = \"0.0.0\"
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
 quantinuum = "metriq_gym.quantinuum.provider:QuantinuumProvider"
+origin = "metriq_gym.origin.provider:OriginProvider"
 
 [project.entry-points."qbraid.jobs"]
 local = "metriq_gym.local.job:LocalAerJob"
 quantinuum = "metriq_gym.quantinuum.job:QuantinuumJob"
+origin = "metriq_gym.origin.job:OriginJob"
