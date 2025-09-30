@@ -1,7 +1,9 @@
 Developer Guide
 ===============
 
-Follow this guide to work on Metriq-Gym locally and contribute changes.
+Follow this guide to work on Metriq-Gym locally and contribute changes. For an overview of the
+contribution workflow and review expectations, read the `CONTRIBUTING guide
+<https://github.com/unitaryfoundation/metriq-gym/blob/main/CONTRIBUTING.md>`__.
 
 These instructions are for setting up a development environment if you plan to contribute to ``metriq-gym`` or run the
 latest version from source.

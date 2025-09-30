@@ -71,7 +71,8 @@ Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/
 
 ## Contributing
 
-Follow the [Developer Guide](https://metriq-gym.readthedocs.io/en/latest/developer_guide.html). Issues and pull requests are welcome!
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow checklist, and review the [Developer
+Guide](https://metriq-gym.readthedocs.io/en/latest/developer_guide.html). Issues and pull requests are welcome!
 
 ## License
 
