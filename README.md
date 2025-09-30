@@ -71,7 +71,7 @@ Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/
 
 ## Contributing
 
-Start with the [Repository Guidelines](AGENTS.md) and the [Developer Guide](https://metriq-gym.readthedocs.io/en/latest/developer_guide.html). Issues and pull requests are welcome!
+Follow the [Developer Guide](https://metriq-gym.readthedocs.io/en/latest/developer_guide.html). Issues and pull requests are welcome!
 
 ## License
 
