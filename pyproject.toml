@@ -98,15 +98,13 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.package-dir]
 "" = "."
-"metriq_gym" = "metriq_gym"
-"qiskit_device_benchmarking" = "submodules/qiskit-device-benchmarking/qiskit_device_benchmarking"
-"_common" = "submodules/QC-App-Oriented-Benchmarks/_common"
-"bernstein_vazirani" = "submodules/QC-App-Oriented-Benchmarks/bernstein_vazirani"
-"phase_estimation" = "submodules/QC-App-Oriented-Benchmarks/phase_estimation"
-"hidden_shift" = "submodules/QC-App-Oriented-Benchmarks/hidden_shift"
-"quantum_fourier_transform" = "submodules/QC-App-Oriented-Benchmarks/quantum_fourier_transform"
 
 [tool.setuptools.packages.find]
+where = [
+    ".",
+    "submodules/QC-App-Oriented-Benchmarks",
+    "submodules/qiskit-device-benchmarking"
+]
 include = [
     "metriq_gym*",
     "qiskit_device_benchmarking*",
@@ -114,7 +112,17 @@ include = [
     "bernstein_vazirani*",
     "phase_estimation*",
     "hidden_shift*",
-    "quantum_fourier_transform*"
+    "quantum_fourier_transform*",
+    "maxcut*",
+    "hamiltonian_simulation*",
+    "hamlib*",
+    "grovers*",
+    "amplitude_estimation*",
+    "deutsch_jozsa*",
+    "image_recognition*",
+    "monte_carlo*",
+    "vqe*",
+    "hydrogen_lattice*"
 ]
 
 [tool.setuptools_scm]
