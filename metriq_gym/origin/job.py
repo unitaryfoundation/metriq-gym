@@ -24,13 +24,44 @@ def _map_status(origin_status: Any) -> JobStatus:
     _ensure_pyqpanda3()
     from pyqpanda3.qcloud import JobStatus as OriginJobStatus
 
-    if origin_status == OriginJobStatus.FINISHED:
+    # Normalize to cover enums, strings, and integer codes returned by the SDK.
+    status_name: str | None = None
+    if hasattr(origin_status, "name"):
+        status_name = str(origin_status.name)
+    elif hasattr(origin_status, "value"):
+        value = getattr(origin_status, "value")
+        if isinstance(value, str):
+            status_name = value
+        elif isinstance(value, int):
+            status_name = str(value)
+    if status_name is None:
+        status_name = str(origin_status)
+
+    normalized = status_name.strip().upper()
+    if normalized.startswith("JOBSTATUS."):
+        normalized = normalized.split(".", 1)[1]
+    if normalized.startswith("JOB_"):
+        normalized = normalized[4:]
+
+    if origin_status == OriginJobStatus.FINISHED or normalized in {
+        "FINISHED",
+        "FINISH",
+        "COMPLETED",
+    }:
         return JobStatus.COMPLETED
-    if origin_status in (OriginJobStatus.WAITING, OriginJobStatus.QUEUING):
+    if origin_status in (OriginJobStatus.WAITING, OriginJobStatus.QUEUING) or normalized in {
+        "WAITING",
+        "QUEUING",
+        "QUEUED",
+    }:
         return JobStatus.QUEUED
-    if origin_status == OriginJobStatus.COMPUTING:
+    if origin_status == OriginJobStatus.COMPUTING or normalized in {
+        "COMPUTING",
+        "RUNNING",
+        "EXECUTING",
+    }:
         return JobStatus.RUNNING
-    if origin_status == OriginJobStatus.FAILED:
+    if origin_status == OriginJobStatus.FAILED or normalized in {"FAILED", "ERROR"}:
         return JobStatus.FAILED
     return JobStatus.UNKNOWN
 
