@@ -13,11 +13,11 @@ Quick Start
 
       pip install metriq-gym
 
-2. Download an example configuration:
+2. Download an example configuration (using the WIT—Wormhole-inspired teleportation—benchmark):
 
    .. code-block:: sh
 
-      curl -O https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/main/metriq_gym/schemas/examples/wormhole.example.json
+      curl -O https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/main/metriq_gym/schemas/examples/wit.example.json
 
    .. note::
       If the default branch or file location changes, update the URL above accordingly.
@@ -25,7 +25,7 @@ Quick Start
 
    .. code-block:: sh
 
-      mgym job dispatch wormhole.example.json -p local -d aer_simulator
+      mgym job dispatch wit.example.json -p local -d aer_simulator
 
 4. Poll for results:
 

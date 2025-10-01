@@ -68,15 +68,15 @@ Suites run multiple benchmarks together. Author ``suite.json`` like:
            "benchmark_name": "BSEQ",
            "shots": 10
          }
-       },
-       {
-         "name": "wormhole_7_qubits",
-         "config": {
-           "benchmark_name": "Wormhole",
-           "num_qubits": 7,
-           "shots": 1000
-         }
-       }
+      },
+      {
+        "name": "wit_7_qubits",
+        "config": {
+          "benchmark_name": "WIT",
+          "num_qubits": 7,
+          "shots": 1000
+        }
+      }
      ]
    }
 

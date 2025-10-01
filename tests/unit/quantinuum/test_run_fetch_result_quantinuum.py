@@ -12,6 +12,7 @@ class FakeQuantumJob(QuantumJob):
 
     def status(self):
         from qbraid.runtime import JobStatus
+
         return JobStatus.COMPLETED
 
     def result(self):
@@ -38,8 +39,8 @@ def test_fetch_result_returns_handler_result_for_quantinuum(monkeypatch):
     # Build a fake metriq job with valid params; expect handler result when tasks completed
     mjob = FakeJob(
         id="m1",
-        job_type="Wormhole",
-        params={"benchmark_name": "Wormhole", "num_qubits": 6, "shots": 10},
+        job_type="WIT",
+        params={"benchmark_name": "WIT", "num_qubits": 6, "shots": 10},
         data={"provider_job_ids": ["p1"]},
         provider_name="quantinuum",
         device_name="H1-1LE",
@@ -62,6 +63,7 @@ def test_fetch_result_returns_handler_result_for_quantinuum(monkeypatch):
     # Monkeypatch handler resolution
     monkeypatch.setattr(runmod, "setup_benchmark", lambda *a: FakeHandler())
     monkeypatch.setattr(runmod, "setup_benchmark_result_class", lambda *_: types.SimpleNamespace)
+
     @dataclass
     class FakeJobData:
         provider_job_ids: list[str]
