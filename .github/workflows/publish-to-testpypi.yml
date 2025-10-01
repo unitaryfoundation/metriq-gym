@@ -25,17 +25,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v1
 
-      - name: Install dependencies
-        run: poetry install --no-interaction --no-root
+      - name: Sync dependencies
+        run: uv sync --group dev --frozen
 
       - name: Build package
-        run: poetry build
+        run: uv run python -m build
 
       - name: Publish package distributions to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
