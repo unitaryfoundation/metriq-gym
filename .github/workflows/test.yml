@@ -46,6 +46,8 @@ jobs:
 
     - name: Set up uv
       uses: astral-sh/setup-uv@v1
+      with:
+        version: "0.5.4"
 
     - name: Initialize and update submodules
       run: |
