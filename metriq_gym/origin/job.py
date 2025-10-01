@@ -42,8 +42,9 @@ class OriginJob(QuantumJob):
         self,
         job_id: str,
         *,
-        device,
+        device: Any | None = None,
         backend_job: Any | None = None,
+        **_: Any,
     ) -> None:
         super().__init__(job_id, device)
         self._backend_job = backend_job
