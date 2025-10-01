@@ -14,7 +14,7 @@ Prerequisites
 Before you begin, ensure you have the following installed:
 
 * `Python <https://www.python.org/downloads/>`_ (version 3.12 or newer)
-* `Poetry <https://python-poetry.org/docs/#installation>`_ for managing dependencies
+* `uv <https://docs.astral.sh/uv/getting-started/installation/>`_ for managing dependencies
 
 Cloning the Repository
 ----------------------
@@ -35,14 +35,14 @@ If you already have a local clone (with or without submodules), keep it current 
 Installation
 ------------
 
-Install dependencies into the Poetry-managed virtual environment:
+Install dependencies into the uv-managed virtual environment:
 
 .. code-block:: sh
 
-   poetry install
+   uv sync --all-groups
 
-We recommend working inside an isolated environment. See `Poetry documentation
-<https://python-poetry.org/docs/managing-environments/>`_ for tips on managing virtual environments.
+We recommend working inside an isolated environment. ``uv`` creates a ``.venv`` directory by default; activate it with
+``source .venv/bin/activate`` or rely on ``uv run`` for one-off commands.
 
 For ``pyenv`` users, the following commands configure Python and install dependencies:
 
@@ -50,8 +50,8 @@ For ``pyenv`` users, the following commands configure Python and install depende
 
    pyenv install 3.13
    pyenv local 3.13
-   poetry install
-   eval $(poetry env activate)
+   uv sync --all-groups
+   source .venv/bin/activate
 
 Run all subsequent Python commands inside the activated environment.
 
@@ -67,7 +67,7 @@ Run the linter and formatter before each commit. Install the pre-commit hooks ri
 
 .. code-block:: sh
 
-   poetry run pre-commit install
+   uv run pre-commit install
 
 Tests
 -----
@@ -76,19 +76,19 @@ The entire suite of tests can be run with
 
 .. code-block:: sh
 
-   poetry run pytest
+   uv run pytest
 
 Unit tests only can be run with
 
 .. code-block:: sh
 
-   poetry run pytest -m "not e2e"
+   uv run pytest -m "not e2e"
 
 End-to-end tests only can be run with
 
 .. code-block:: sh
 
-   poetry run pytest -m e2e
+   uv run pytest -m e2e
 
 Type Checking
 -------------
@@ -98,7 +98,7 @@ command:
 
 .. code-block:: sh
 
-   poetry run mypy
+   uv run mypy
 
 Documentation
 -------------
@@ -109,7 +109,7 @@ inside the ``docs`` directory:
 .. code-block:: sh
 
    cd docs
-   poetry run make html
+   uv run make html
 
 Open ``_build/html/index.html`` to view the render locally.
 

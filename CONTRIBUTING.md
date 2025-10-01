@@ -4,7 +4,7 @@ Thanks for your interest in improving the project! This guide describes how to g
 
 ## Getting started
 
-1. Install Python 3.12 or newer and [Poetry](https://python-poetry.org/docs/#installation).
+1. Install Python 3.12 or newer and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 2. Clone the repository with submodules:
    ```sh
    git clone --recurse-submodules https://github.com/unitaryfoundation/metriq-gym.git
@@ -12,25 +12,25 @@ Thanks for your interest in improving the project! This guide describes how to g
    ```
 3. Install dependencies and activate the virtual environment:
    ```sh
-   poetry install
-   poetry shell  # or eval "$(poetry env activate)"
+   uv sync --all-groups
+   source .venv/bin/activate  # or use `uv run` for one-off commands
    ```
 4. Install the pre-commit hooks so linting and type checks run automatically:
    ```sh
-   poetry run pre-commit install
+   uv run pre-commit install
    ```
 
 ## Development workflow
 
-- Use `poetry run mgym --help` to confirm the CLI is wired correctly after changes.
+- Use `uv run mgym --help` to confirm the CLI is wired correctly after changes.
 - Keep provider credentials in a local `.env` copied from `.env.example`; never commit secrets.
-- When touching schemas or benchmark examples, validate them with `poetry run mgym job dispatch ...` using a local simulator before opening a PR.
+- When touching schemas or benchmark examples, validate them with `uv run mgym job dispatch ...` using a local simulator before opening a PR.
 
 ## Coding standards
 
 - Follow the defaults enforced by Ruff: 4-space indentation and 100-character lines.
-- Run `poetry run ruff check --fix` and `poetry run ruff format` before committing.
-- Maintain or extend type hints and verify them with `poetry run mypy`.
+- Run `uv run ruff check --fix` and `uv run ruff format` before committing.
+- Maintain or extend type hints and verify them with `uv run mypy`.
 - Add concise, purposeful docstrings; avoid large dumps of commented-out code.
 - Keep provider-specific logic inside the relevant subpackage (`local/`, `quantinuum/`, `qplatform/`).
 
@@ -39,9 +39,9 @@ Thanks for your interest in improving the project! This guide describes how to g
 Run the relevant test suites prior to submission:
 
 ```sh
-poetry run pytest tests/unit        # fast coverage
-poetry run pytest -m e2e            # CLI workflows (run before merging)
-poetry run pytest                   # full suite when feasible
+uv run pytest tests/unit        # fast coverage
+uv run pytest -m e2e            # CLI workflows (run before merging)
+uv run pytest                   # full suite when feasible
 ```
 
 For features that add new benchmark payloads or alter CLI flows, update fixtures in `jobs/` and document the change in the `CLI Workflows` guide under `docs/source/` if appropriate.
