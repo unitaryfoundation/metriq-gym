@@ -10,9 +10,9 @@
         }
     },
     {
-        "name": "wormhole_7_qubits",
+        "name": "wit_7_qubits",
         "config": {
-            "benchmark_name": "Wormhole",
+            "benchmark_name": "WIT",
             "num_qubits": 7,
             "shots": 8192
         }

@@ -29,16 +29,16 @@ Four easy steps to get started with `metriq-gym`!
    pip install metriq-gym
    ```
 
-2. Download a benchmark configuration file from the `schemas/examples/` directory
+2. Download a benchmark configuration file from the `schemas/examples/` directory (this example uses the WIT — Wormhole-inspired teleportation — benchmark)
 
     ```sh
-    curl -O https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/refs/heads/main/metriq_gym/schemas/examples/wormhole.example.json
+    curl -O https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/refs/heads/main/metriq_gym/schemas/examples/wit.example.json
     ```
 
 3. Dispatch it to a quantum device or simulator.
 
     ```sh
-    mgym job dispatch wormhole.example.json -p local -d aer_simulator
+    mgym job dispatch wit.example.json -p local -d aer_simulator
     ```
 4. Poll the job to get the results.
 
@@ -49,7 +49,7 @@ Four easy steps to get started with `metriq-gym`!
 You will see the results of the benchmark printed in your terminal. E.g.
 ```sh
 {'device': 'aer_simulator',
- 'job_type': 'Wormhole',
+ 'job_type': 'WIT',
  'provider': 'local',
  'results': {'expectation_value': 0.99658203125},
  'timestamp': '2025-07-29T20:31:17.978851',
