@@ -145,8 +145,8 @@ def analyze_results(
     metrics.circuit_metrics = job_data.circuit_metrics
 
     # Iterate and get the metrics for each circuit in the list.
-    for curr_idx, (num_qubits, circuit_id) in enumerate(job_data.circuit_identifiers):
-        counts: dict[str, int] = counts_list[curr_idx]
+    for curr_idx, counts in enumerate(counts_list):
+        num_qubits, circuit_id = job_data.circuit_identifiers[curr_idx]
         result_object = CountsWrapper(counts)
 
         # Issue (#731) in QC-App-Oriented-Benchmarks will clean this if/else block.
