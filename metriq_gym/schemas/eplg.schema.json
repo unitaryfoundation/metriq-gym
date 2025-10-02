@@ -1,0 +1,63 @@
+{
+    "$id": "metriq-gym/eplg.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "EPLG",
+    "description": "Schema definition for the EPLG benchmark parameters.",
+    "type": "object",
+    "properties": {
+        "benchmark_name": {
+            "type": "string",
+            "const": "EPLG",
+            "description": "Name of the benchmark. Must be 'EPLG' for this schema."
+        },
+        "qubit_num": {
+            "type": "integer",
+            "description": "Number of qubits to use in this benchmarking.",
+            "minimum": 2
+        },
+        "lengths": {
+            "type": "array",
+            "description": "List of layer lengths (the number of depth points).",
+            "items": {
+                "type": "integer",
+                "minimum": 1
+            },
+            "minItems": 1
+        },
+        "num_samples": {
+            "type": "integer",
+            "description": "How many random circuits should be sampled for each layer length.",
+            "minimum": 1
+        },
+        "nshots": {
+            "type": "integer",
+            "description": "Number of shots per job.",
+            "minimum": 1
+        },
+        "seed": {
+            "type": "integer",
+            "description": "Seed for the random number generator.",
+            "default": null
+        },
+        "two_qubit_gate": {
+            "type": "string",
+            "description": "Two‑qubit gate name to use in layers (e.g. 'cx', 'cz', 'ecr').",
+            "default": null
+        },
+        "one_qubit_basis_gates": {
+            "type": "array",
+            "description": "One‑qubit gate names to use for random 1q‑Clifford layers.",
+            "items": {
+                "type": "string"
+            },
+            "default": null
+        }
+    },
+    "required": [
+        "benchmark_name",
+        "qubit_num",
+        "lengths",
+        "num_samples",
+        "nshots"
+    ]
+}

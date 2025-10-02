@@ -13,3 +13,4 @@ class JobType(StrEnum):
     HIDDEN_SHIFT = "Hidden Shift"
     QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
     LR_QAOA = "Linear Ramp QAOA"
+    EPLG = "EPLG"

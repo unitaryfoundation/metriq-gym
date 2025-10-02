@@ -1,0 +1,10 @@
+{
+    "benchmark_name": "EPLG",
+    "qubit_num": 10,
+    "lengths": [2, 4, 8],
+    "num_samples": 2,
+    "nshots": 1000,
+    "seed": 42,
+    "two_qubit_gate": "cz",
+    "one_qubit_basis_gates": ["rz", "sx", "x"]
+}
