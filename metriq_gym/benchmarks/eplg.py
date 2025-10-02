@@ -254,17 +254,9 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # a coupling map via ``backend.coupling_map`` or
         # ``backend.configuration().coupling_map``.
         print(device)
+        print(device.id)
         print(dir(device))
-        print(device.profile.basis_gates)  #CL: TODO this is for QiskitBackend only.
-        
-        # backend = None
-        # if hasattr(device, "backend"):
-        #     backend = getattr(device, "backend")
-        # if backend is None:
-        #     raise RuntimeError(
-        #         "Unable to locate a Qiskit backend on the quantum device. "
-        #         "Please ensure that the provider supplies a Qiskit backend."
-        #     )
+        print(device.profile.basis_gates)
 
         # Validate requested gates against the backend.  Raise an error if the
         # user specifies a 2‑qubit or 1‑qubit gate not supported on the target.
@@ -287,9 +279,6 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # Randomly sample a simple path of the desired length on the coupling
         # graph.  We reuse the helper defined below.  If a seed is provided it
         # ensures reproducibility.
-        # selected_chain: List[int] = random_chain_from_edges(
-        #     coupling_edges, qubit_num, seed=seed, restarts=500
-        # )
         topology_graph = connectivity_graph(device)
         coloring = device_graph_coloring(topology_graph)
         print(topology_graph)
@@ -299,7 +288,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             coupling_edges,
             qubit_num,
             seed=seed,
-            backend=device,      # Qiskit backend object
+            backend=device,      
             twoq_gate=two_qubit_gate,       # or "ecr"/"cx"/...
             require_gate=True,    # set False to ignore calibration availability
             restarts=500        # bump if your graph is sparse or the chain is long
@@ -327,7 +316,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             lf_kwargs["two_qubit_gate"] = two_qubit_gate
         if one_qubit_basis_gates:
             lf_kwargs["one_qubit_basis_gates"] = tuple(one_qubit_basis_gates)
-            
+
+        print(lf_kwargs)
         experiment = LayerFidelity(**lf_kwargs)
         # Limit the number of circuits per job to a conservative default to
         # mitigate large payloads on some providers.
@@ -341,6 +331,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # ``num_samples`` correspond to ``lengths[1]``, and so forth.
         circuits = experiment.circuits()
 
+        # TODO: check the circuit
+        
         # Submit the circuits to the device and capture the resulting QuantumJob.
         quantum_job = device.run(circuits, shots=nshots)
 
