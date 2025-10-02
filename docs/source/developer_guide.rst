@@ -41,19 +41,9 @@ Install dependencies into the uv-managed virtual environment:
 
    uv sync --all-groups
 
-We recommend working inside an isolated environment. ``uv`` creates a ``.venv`` directory by default; activate it with
-``source .venv/bin/activate`` or rely on ``uv run`` for one-off commands.
-
-For ``pyenv`` users, the following commands configure Python and install dependencies:
-
-.. code-block:: sh
-
-   pyenv install 3.13
-   pyenv local 3.13
-   uv sync --all-groups
-   source .venv/bin/activate
-
-Run all subsequent Python commands inside the activated environment.
+``uv`` reads the Python requirement from ``pyproject.toml`` and provisions a compatible interpreter automatically.
+After ``uv sync`` the project environment lives in ``.venv``; activate it with ``source .venv/bin/activate`` if you
+prefer a shell-based workflow, or continue using ``uv run`` for isolated commands.
 
 Contributing
 ------------
