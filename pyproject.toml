@@ -108,17 +108,7 @@ include = [
     "bernstein_vazirani*",
     "phase_estimation*",
     "hidden_shift*",
-    "quantum_fourier_transform*",
-    "maxcut*",
-    "hamiltonian_simulation*",
-    "hamlib*",
-    "grovers*",
-    "amplitude_estimation*",
-    "deutsch_jozsa*",
-    "image_recognition*",
-    "monte_carlo*",
-    "vqe*",
-    "hydrogen_lattice*"
+    "quantum_fourier_transform*"
 ]
 
 [tool.setuptools_scm]
