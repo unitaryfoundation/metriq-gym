@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests, type checking with mypy and lint with Ruff and Poetry.
+# This workflow installs Python dependencies, runs tests, type checks with mypy, and lints with Ruff using uv.
 # It can be tested locally using https://github.com/nektos/act with the command `act push --container-architecture linux/amd64 -j build`
 
 name: Python Tests
@@ -44,35 +44,30 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install Poetry
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v1
+      with:
+        version: "0.8.22"
 
     - name: Initialize and update submodules
       run: |
         git submodule update --init --recursive
 
-    - name: Install project *dependencies only*
+    - name: Sync dependencies
       run: |
-        poetry install --no-root
+        uv sync --group dev --frozen
 
     - name: Lint with Ruff
       run: |
-        poetry run ruff check
+        uv run ruff check
 
     - name: Type checking with MyPy
       # Running mypy with numpy > 2.0 is broken. 
       # This is a fix for stubgen: https://github.com/python/mypy/issues/17396
       run: |
-        poetry run stubgen --no-analysis
-        poetry run mypy
-
-    - name: Install project and CLI command
-      run: |
-        poetry install
+        uv run stubgen --no-analysis
+        uv run mypy
 
     - name: Run tests
       run: |
-        poetry run pytest
-
+        uv run pytest
