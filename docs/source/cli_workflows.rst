@@ -121,7 +121,7 @@ Quantinuum) HQCs:
 
 The command prints aggregated totals and per-circuit statistics. HQCs are calculated
 automatically for Quantinuum devices using the published H-series coefficients
-(``HQC = 5 + C × (N₁ + 10N₂ + 5Nₘ)/5000``); for other providers, only gate counts are shown.
+(``HQC = 5 + C × (N₁ + 10N₂ + 5Nₘ)/5000``; where ``C`` is the number of shots, matching code usage: ``shots * (N₁ + 10N₂ + 5Nₘ)/5000``); for other providers, only gate counts are shown.
 Benchmarks that depend on device topology (e.g. BSEQ, CLOPS, Mirror Circuits, LR-QAOA)
 require ``--device`` to be supplied so the estimator can inspect connectivity.
 
