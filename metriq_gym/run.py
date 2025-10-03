@@ -562,7 +562,7 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
 
 
-def estimate_job(args: argparse.Namespace, job_manager: JobManager | None = None) -> None:
+def estimate_job(args: argparse.Namespace) -> None:
     if not args.provider:
         print("Provider is required for resource estimation.")
         return
