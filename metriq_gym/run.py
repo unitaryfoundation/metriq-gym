@@ -40,6 +40,11 @@ from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.qplatform.job import job_status
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import JobType
+from metriq_gym.resource_estimation import (
+    estimate_resources,
+    print_resource_estimate,
+    quantinuum_hqc_formula,
+)
 from metriq_gym.suite_parser import parse_suite_file
 
 logging.basicConfig(level=logging.WARNING)
@@ -48,6 +53,7 @@ logger = logging.getLogger("metriq_gym")
 available_benchmarks = get_available_benchmarks()
 
 COMMON_SUITE_KEYS = ["provider", "device", "timestamp", "app_version"]
+SUPPORTED_PROVIDERS = set(get_providers()) | {"local"}
 
 
 def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
@@ -60,11 +66,16 @@ def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
     Raises:
         QBraidSetupError: If no device matching the name is found in the provider.
     """
+    if provider_name not in SUPPORTED_PROVIDERS:
+        logger.error(
+            f"Unsupported provider '{provider_name}'. Allowed providers: {sorted(SUPPORTED_PROVIDERS)}"
+        )
+        raise QBraidSetupError("Provider not found")
+
     try:
         provider: QuantumProvider = load_provider(provider_name)
     except QbraidError:
         logger.error(f"No provider matching the name '{provider_name}' found.")
-        logger.error(f"Providers available: {get_providers()}")
         raise QBraidSetupError("Provider not found")
 
     try:
@@ -551,12 +562,56 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
 
 
+def estimate_job(args: argparse.Namespace, job_manager: JobManager | None = None) -> None:
+    if not args.provider:
+        print("Provider is required for resource estimation.")
+        return
+
+    device: QuantumDevice | None = None
+    if args.device:
+        try:
+            device = setup_device(args.provider, args.device)
+        except QBraidSetupError:
+            return
+    else:
+        print("No device specified; estimating resources without device-specific topology.")
+
+    config_file = args.config
+
+    if not os.path.exists(config_file):
+        print(f"✗ {config_file}: Configuration file not found")
+        return
+
+    params = load_and_validate(config_file)
+
+    if params.benchmark_name not in available_benchmarks:
+        print(
+            f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
+        )
+        return
+
+    job_type = JobType(params.benchmark_name)
+
+    hqc_fn = quantinuum_hqc_formula if args.provider == "quantinuum" else None
+
+    try:
+        estimate = estimate_resources(job_type, params, device, hqc_fn)
+    except (ValueError, NotImplementedError) as exc:
+        print(f"✗ {job_type.value}: {exc}")
+        return
+    except Exception as exc:  # pragma: no cover - surface unexpected errors cleanly
+        print(f"✗ Failed to estimate resources: {exc}")
+        return
+
+    print_resource_estimate(job_type, args.provider, args.device, estimate)
+
+
 def main() -> int:
     load_dotenv()
     args = parse_arguments()
     job_manager = JobManager()
 
-    RESOURCE_ACTION_TABLE = {
+    RESOURCE_ACTION_TABLE: dict = {
         "suite": {
             "dispatch": dispatch_suite,
             "poll": poll_suite,
@@ -569,6 +624,7 @@ def main() -> int:
             "view": view_job,
             "delete": delete_job,
             "upload": upload_job,
+            "estimate": estimate_job,
         },
     }
 
