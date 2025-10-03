@@ -1,7 +1,7 @@
 """Utilities for estimating resource requirements of metriq-gym benchmarks."""
 
 from dataclasses import dataclass, field
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Sequence
 
 import networkx as nx
 import rustworkx as rx
@@ -357,7 +357,7 @@ def quantinuum_hqc_formula(counts: GateCounts, shots: int) -> float:
     return 5.0 + shots * gate_term / 5000.0
 
 
-def _stat_tuple(values: list[int | float]) -> tuple[str, str, str]:
+def _stat_tuple(values: Sequence[int | float]) -> tuple[str, str, str]:
     if not values:
         return ("0", "0", "0")
 
