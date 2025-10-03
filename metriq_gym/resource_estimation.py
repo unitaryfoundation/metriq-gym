@@ -373,7 +373,7 @@ def _stat_tuple(values: list[int | float]) -> tuple[str, str, str]:
 
 
 def print_resource_estimate(
-    job_type: JobType, provider: str, device_id: str | None, estimate
+    job_type: JobType, provider: str, device_id: str | None, estimate: ResourceEstimate
 ) -> None:
     device_label = device_id if device_id else "(no device)"
     print(f"Resource estimate for {job_type.value} on {provider}:{device_label}\n")
