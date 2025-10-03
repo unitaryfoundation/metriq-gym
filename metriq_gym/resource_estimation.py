@@ -129,8 +129,9 @@ def _aggregate(
             circuit_hqc: float | None = None
             if hqc_fn is not None:
                 circuit_hqc = hqc_fn(gate_counts, shots)
-                hqc_total = (hqc_total or 0.0) + circuit_hqc
-
+                if hqc_total is None:
+                    hqc_total = 0.0
+                hqc_total += circuit_hqc
             per_circuit.append(
                 CircuitEstimate(
                     job_index=job_index,
