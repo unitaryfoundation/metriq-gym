@@ -1,14 +1,14 @@
 {
-    "$id": "metriq-gym/wormhole.schema.json",
-    "$schema": "https://json-schema.org/draft/2020-12/schema",  
-    "title": "Wormhole",
-    "description": "The Wormhole benchmark schema definition, describing the Wormhole benchmark configuration.",
+    "$id": "metriq-gym/wit.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Wormhole-inspired teleportation (WIT)",
+    "description": "The WIT benchmark schema definition, describing the Wormhole-inspired teleportation benchmark configuration.",
     "type": "object",
     "properties": {
       "benchmark_name": {
         "type": "string",
-        "const": "Wormhole",
-        "description": "Name of the benchmark. Must be 'Wormhole' for this schema."
+        "const": "WIT",
+        "description": "Name of the benchmark. Must be 'WIT' for this schema."
       },
       "shots": {
         "type": "integer",
@@ -27,4 +27,3 @@
     },
     "required": ["benchmark_name"]
   }
-  

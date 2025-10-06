@@ -7,7 +7,7 @@ class JobType(StrEnum):
     QML_KERNEL = "QML Kernel"
     QUANTUM_VOLUME = "Quantum Volume"
     MIRROR_CIRCUITS = "Mirror Circuits"
-    WORMHOLE = "Wormhole"
+    WIT = "WIT"
     BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
     PHASE_ESTIMATION = "Phase Estimation"
     HIDDEN_SHIFT = "Hidden Shift"

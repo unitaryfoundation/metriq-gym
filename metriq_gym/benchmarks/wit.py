@@ -1,12 +1,12 @@
-"""Wormhole benchmark for the Metriq Gym
+"""WIT (Wormhole-inspired teleportation) benchmark for the Metriq Gym
 (credit to Paul Nation for the original code for IBM devices).
 
-The Wormhole benchmark is based on the following paper:
+The WIT benchmark is based on the following paper:
     Towards Quantum Gravity in the Lab on Quantum Processors
     Illya Shapoval, Vincent Paul Su, Wibe de Jong, Miro Urbanek, Brian Swingle
     Quantum 7, 1138 (2023)
 
-A generalized version of the wormhole benchmark software can also be found as a companion [software
+A generalized version of the WIT benchmark software can also be found as a companion [software
 repository](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py) to the above paper.
 """
 
@@ -20,8 +20,8 @@ from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 
 
-def wormhole_circuit(num_qubits: int) -> QuantumCircuit:
-    """Create a wormhole circuit for either 6 or 7 qubits.
+def wit_circuit(num_qubits: int) -> QuantumCircuit:
+    """Create a WIT circuit for either 6 or 7 qubits.
 
     The 7-qubit circuit is based on the circuit diagram in Figure-4 of
     [arXiv:2205.14081](https://arxiv.org/pdf/2205.14081). Both the 6- and 7-qubit circuits assume a interraction
@@ -219,8 +219,8 @@ def calculate_expectation_value(shots: int, count_results: MeasCount) -> float:
     return count_results["1"] / shots
 
 
-class WormholeResult(BenchmarkResult):
-    """Result class to store Wormhole benchmark results.
+class WITResult(BenchmarkResult):
+    """Result class to store WIT benchmark results.
 
     Attributes:
         expectation_value: Expectation value of the Pauli operator in the state produced by the quantum circuit.
@@ -230,28 +230,28 @@ class WormholeResult(BenchmarkResult):
 
 
 @dataclass
-class WormholeData(BenchmarkData):
-    """Dataclass to store Wormhole benchmark metadata."""
+class WITData(BenchmarkData):
+    """Dataclass to store WIT benchmark metadata."""
 
     pass
 
 
-class Wormhole(Benchmark):
-    """Benchmark class for Wormhole experiments."""
+class WIT(Benchmark):
+    """Benchmark class for WIT experiments."""
 
-    def dispatch_handler(self, device: QuantumDevice) -> WormholeData:
-        return WormholeData.from_quantum_job(
-            device.run(wormhole_circuit(self.params.num_qubits), shots=self.params.shots)
+    def dispatch_handler(self, device: QuantumDevice) -> WITData:
+        return WITData.from_quantum_job(
+            device.run(wit_circuit(self.params.num_qubits), shots=self.params.shots)
         )
 
     def poll_handler(
         self,
-        job_data: WormholeData,
+        job_data: WITData,
         result_data: list[GateModelResultData],
         quantum_jobs: list[QuantumJob],
-    ) -> WormholeResult:
-        """Poll results for Wormhole benchmark."""
-        return WormholeResult(
+    ) -> WITResult:
+        """Poll results for WIT benchmark."""
+        return WITResult(
             expectation_value=calculate_expectation_value(
                 self.params.shots, flatten_counts(result_data)[0]
             )
