@@ -105,7 +105,38 @@ def _(device: QuantinuumDevice) -> rx.PyGraph:
         g.add_nodes_from(range(num_qubits))
         # arch.edges contains Node objects; map them to indices
         node_index = {node: i for i, node in enumerate(arch.nodes)}
-        g.add_edges_from(
-            [(node_index[a], node_index[b], None) for (a, b) in arch.edges]
-        )
+        g.add_edges_from([(node_index[a], node_index[b], None) for (a, b) in arch.edges])
         return g
+
+
+def normalized_metadata(device: QuantumDevice) -> dict:
+    """Return a minimal, normalized subset of device metadata.
+
+    Includes only the following keys when available:
+    - simulator: bool
+    - version: str
+    - num_qubits: int
+    """
+    meta: dict = {}
+    try:
+        simulator = getattr(getattr(device, "profile", object()), "simulator", None)
+        if isinstance(simulator, bool):
+            meta["simulator"] = simulator
+    except Exception:
+        pass
+
+    try:
+        n = getattr(device, "num_qubits", None)
+        if isinstance(n, int):
+            meta["num_qubits"] = n
+    except Exception:
+        pass
+
+    try:
+        ver = version(device)
+        if isinstance(ver, str) and ver:
+            meta["version"] = ver
+    except Exception:
+        pass
+
+    return meta

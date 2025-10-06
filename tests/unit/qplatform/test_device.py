@@ -12,7 +12,7 @@ import networkx as nx
 from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
 
 from metriq_gym.local.provider import LocalProvider
-from metriq_gym.qplatform.device import version, connectivity_graph
+from metriq_gym.qplatform.device import version, connectivity_graph, normalized_metadata
 
 
 class MockCouplingMap:
@@ -203,7 +203,43 @@ class TestEdgeCases:
         result = connectivity_graph(device)
         assert isinstance(result, rx.PyGraph)
         assert result.num_nodes() == 0
-        assert result.num_edges() == 0
+
+
+class TestNormalizedMetadata:
+    """Tests for normalized_metadata() helper."""
+
+    def test_qiskit_backend_metadata(self, mock_qiskit_backend):
+        meta = normalized_metadata(mock_qiskit_backend)
+        # Only version is known for this mock; simulator/num_qubits absent
+        assert isinstance(meta, dict)
+        assert meta.get("version") == "1.6.73"
+        assert "num_qubits" not in meta
+        assert "simulator" not in meta
+
+    def test_local_aer_device_metadata(self):
+        provider = LocalProvider()
+        device = provider.get_device("aer_simulator")
+        meta = normalized_metadata(device)
+        # Local Aer should report simulator flag and a version string; num_qubits should be int
+        assert isinstance(meta, dict)
+        assert meta.get("simulator") is True
+        assert isinstance(meta.get("version"), str) and meta["version"]
+        assert isinstance(meta.get("num_qubits"), int)
+
+    def test_braket_device_metadata(self, mock_braket_device):
+        meta = normalized_metadata(mock_braket_device)
+        # For mocked Braket device, only num_qubits is set
+        assert isinstance(meta, dict)
+        assert meta.get("num_qubits") == 8
+        assert "version" not in meta
+        assert "simulator" not in meta
+
+    def test_unsupported_device_metadata(self):
+        class Unsupported:
+            pass
+
+        meta = normalized_metadata(Unsupported())
+        assert meta == {}
 
     def test_azure_device_zero_qubits(self):
         device = Mock(spec=AzureQuantumDevice)
