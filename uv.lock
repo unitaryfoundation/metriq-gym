@@ -1306,8 +1306,8 @@ dependencies = [
     { name = "qiskit-aer" },
     { name = "qiskit-ibm-runtime" },
     { name = "qnexus" },
-    { name = "ruamel-yaml-clib", version = "0.2.8", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
     { name = "ruamel-yaml-clib", version = "0.2.12", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "ruamel-yaml-clib", version = "0.2.14", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
     { name = "scipy" },
     { name = "tabulate" },
 ]
@@ -1334,14 +1334,14 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.5.0,<2.12" },
     { name = "pyqrack", specifier = ">=1.69.0,<2.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
-    { name = "pytket-qiskit", specifier = ">=0.71.0,<0.72.0" },
+    { name = "pytket-qiskit", specifier = ">=0.71.0,<0.73.0" },
     { name = "qbraid", extras = ["azure", "braket", "cirq", "ionq", "qiskit"], specifier = ">=0.9.9,<0.10.0" },
     { name = "qiskit", specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
-    { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.42.0" },
-    { name = "qnexus", specifier = ">=0.33.0,<0.34.0" },
+    { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.43.0" },
+    { name = "qnexus", specifier = ">=0.33.0,<0.35.0" },
     { name = "ruamel-yaml-clib", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = "==0.2.12" },
-    { name = "ruamel-yaml-clib", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "==0.2.8" },
+    { name = "ruamel-yaml-clib", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "==0.2.14" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
     { name = "tabulate", specifier = ">=0.9.0,<0.10.0" },
 ]
@@ -2643,18 +2643,6 @@ wheels = [
 
 [[package]]
 name = "ruamel-yaml-clib"
-version = "0.2.8"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "platform_machine == 'x86_64' and sys_platform == 'darwin'",
-]
-sdist = { url = "https://files.pythonhosted.org/packages/46/ab/bab9eb1566cd16f060b54055dd39cf6a34bfa0240c53a7218c43e974295b/ruamel.yaml.clib-0.2.8.tar.gz", hash = "sha256:beb2e0404003de9a4cab9753a8805a8fe9320ee6673136ed7f04255fe60bb512", size = 213824, upload-time = "2023-10-03T18:12:42.315Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/a2/eb5e9d088cb9d15c24d956944c09dca0a89108ad6e2e913c099ef36e3f0d/ruamel.yaml.clib-0.2.8-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:ebc06178e8821efc9692ea7544aa5644217358490145629914d8020042c24aa1", size = 144636, upload-time = "2023-10-03T18:13:09.564Z" },
-]
-
-[[package]]
-name = "ruamel-yaml-clib"
 version = "0.2.12"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
@@ -2664,6 +2652,19 @@ sdist = { url = "https://files.pythonhosted.org/packages/20/84/80203abff8ea4993a
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/41/e7a405afbdc26af961678474a55373e1b323605a4f5e2ddd4a80ea80f628/ruamel.yaml.clib-0.2.12-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:20b0f8dc160ba83b6dcc0e256846e1a02d044e13f7ea74a3d1d56ede4e48c632", size = 133433, upload-time = "2024-10-20T10:12:55.657Z" },
     { url = "https://files.pythonhosted.org/packages/29/00/4864119668d71a5fa45678f380b5923ff410701565821925c69780356ffa/ruamel.yaml.clib-0.2.12-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:4c8c5d82f50bb53986a5e02d1b3092b03622c02c2eb78e29bec33fd9593bae1a", size = 132011, upload-time = "2024-10-20T10:13:04.377Z" },
+]
+
+[[package]]
+name = "ruamel-yaml-clib"
+version = "0.2.14"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "platform_machine == 'x86_64' and sys_platform == 'darwin'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d8/e9/39ec4d4b3f91188fad1842748f67d4e749c77c37e353c4e545052ee8e893/ruamel.yaml.clib-0.2.14.tar.gz", hash = "sha256:803f5044b13602d58ea378576dd75aa759f52116a0232608e8fdada4da33752e", size = 225394, upload-time = "2025-09-22T19:51:23.753Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b4/42/ccfb34a25289afbbc42017e4d3d4288e61d35b2e00cfc6b92974a6a1f94b/ruamel.yaml.clib-0.2.14-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:6aeadc170090ff1889f0d2c3057557f9cd71f975f17535c26a5d37af98f19c27", size = 271775, upload-time = "2025-09-23T14:24:12.771Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/ae/e3811f05415594025e96000349d3400978adaed88d8f98d494352d9761ee/ruamel.yaml.clib-0.2.14-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:7e4f9da7e7549946e02a6122dcad00b7c1168513acb1f8a726b1aaf504a99d32", size = 269205, upload-time = "2025-09-23T14:24:15.06Z" },
 ]
 
 [[package]]
