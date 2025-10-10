@@ -1,5 +1,7 @@
 """Runtime entrypoints for dispatching and managing metriq-gym benchmarks via the CLI."""
 
+from __future__ import annotations
+
 import argparse
 from dataclasses import asdict
 from datetime import datetime
@@ -10,16 +12,20 @@ import uuid
 from dotenv import load_dotenv
 
 from tabulate import tabulate
-from typing import Any
+from typing import Any, TYPE_CHECKING
 import re
 
-from . import __version__
-from .cli import list_jobs, parse_arguments, prompt_for_job
-from .job_manager import JobManager, MetriqGymJob
-from .schema_validator import load_and_validate, validate_and_create_model
-from .constants import JobType
-from .suite_parser import parse_suite_file
-from .exceptions import QBraidSetupError
+from metriq_gym import __version__
+from metriq_gym.cli import list_jobs, parse_arguments, prompt_for_job
+from metriq_gym.job_manager import JobManager, MetriqGymJob
+from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
+from metriq_gym.constants import JobType
+from metriq_gym.suite_parser import parse_suite_file
+from metriq_gym.exceptions import QBraidSetupError
+
+if TYPE_CHECKING:
+    # Imported only for static type checking; not executed at runtime
+    from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
@@ -76,7 +82,7 @@ def setup_device(provider_name: str, backend_name: str):
         QBraidSetupError: If no device matching the name is found in the provider.
     """
     from qbraid import QbraidError
-    from .exceptions import QBraidSetupError
+    from metriq_gym.exceptions import QBraidSetupError
 
     try:
         provider = load_provider(provider_name)
@@ -92,23 +98,21 @@ def setup_device(provider_name: str, backend_name: str):
             f"No device matching the name '{backend_name}' found in provider '{provider_name}'."
         )
         logger.error(f"Devices available: {[device.id for device in provider.get_devices()]}")
-        from .exceptions import QBraidSetupError as _QBraidSetupError
-
-        raise _QBraidSetupError("Device not found")
+        raise QBraidSetupError("Device not found")
     return device
 
 
-def setup_benchmark(args, params, job_type: JobType):
+def setup_benchmark(args, params, job_type: JobType) -> "Benchmark":
     reg = _lazy_registry()
     return reg.BENCHMARK_HANDLERS[job_type](args, params)
 
 
-def setup_job_data_class(job_type: JobType):
+def setup_job_data_class(job_type: JobType) -> type["BenchmarkData"]:
     reg = _lazy_registry()
     return reg.BENCHMARK_DATA_CLASSES[job_type]
 
 
-def setup_benchmark_result_class(job_type: JobType):
+def setup_benchmark_result_class(job_type: JobType) -> type["BenchmarkResult"]:
     reg = _lazy_registry()
     return reg.BENCHMARK_RESULT_CLASSES[job_type]
 
@@ -328,12 +332,12 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     dry_run = getattr(args, "dry_run", False)
 
     # Append this job's record to results.json in the target directory
-    from .exporters.dict_exporter import DictExporter
+    from metriq_gym.exporters.dict_exporter import DictExporter
 
     record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
 
     try:
-        from .exporters.github_pr_exporter import GitHubPRExporter
+        from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
 
         url = GitHubPRExporter(metriq_job, result).export(
             repo=repo,
@@ -384,13 +388,13 @@ def print_selected(d, selected_keys):
             print(f"{k}: {d[k]}")
 
 
-def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Any]) -> None:
+def export_suite_results(args, jobs: list[MetriqGymJob], results: list["BenchmarkResult"]) -> None:
     if not jobs:
         return
 
     records = []
     for job, result in zip(jobs, results):
-        from .exporters.dict_exporter import DictExporter
+        from metriq_gym.exporters.dict_exporter import DictExporter
 
         records.append(DictExporter(job, result).export() | {"params": job.params})
 
@@ -428,7 +432,7 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         results.append(result)
 
     # Build array of per-job records (no common header)
-    from .exporters.dict_exporter import DictExporter
+    from metriq_gym.exporters.dict_exporter import DictExporter
 
     records: list[dict] = []
     for job, result in zip(jobs, results):
@@ -509,26 +513,28 @@ def tabulate_job_results(records, sep=" – "):
     return tabulate(rows, headers=headers, floatfmt=".4g")
 
 
-def export_job_result(args: argparse.Namespace, metriq_job: MetriqGymJob, result: Any) -> None:
+def export_job_result(
+    args: argparse.Namespace, metriq_job: MetriqGymJob, result: "BenchmarkResult"
+) -> None:
     if hasattr(args, "json"):
-        from .exporters.json_exporter import JsonExporter
+        from metriq_gym.exporters.json_exporter import JsonExporter
 
         JsonExporter(metriq_job, result).export(args.json)
     else:
-        from .exporters.cli_exporter import CliExporter
+        from metriq_gym.exporters.cli_exporter import CliExporter
 
         CliExporter(metriq_job, result).export()
 
 
 def fetch_result(
     metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
-) -> Any | None:
+) -> "BenchmarkResult" | None:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
     if metriq_job.result_data is not None:
         return job_result_type.model_validate(metriq_job.result_data)
 
-    job_data = setup_job_data_class(job_type)(**metriq_job.data)
+    job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
     handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
     from qbraid.runtime import JobStatus
 
@@ -538,7 +544,7 @@ def fetch_result(
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data = [task.result().data for task in quantum_jobs]
-        result = handler.poll_handler(job_data, result_data, quantum_jobs)
+        result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
         # Cache result_data in metriq_job and update job_manager if provided
         metriq_job.result_data = result.model_dump()
         job_manager.update_job(metriq_job)
