@@ -344,6 +344,20 @@ class TestMirrorCircuitsBenchmark:
 
         # Verify that generate_mirror_circuit was called correctly
         assert mock_generate_circuit.call_count == 5  # num_circuits times
+        for call in mock_generate_circuit.call_args_list:
+            line_graph = call.kwargs["connectivity_graph"]
+            assert isinstance(line_graph, rx.PyGraph)
+            assert set(line_graph.node_indices()) == {0, 1, 2}
+            edges = set()
+            for edge in line_graph.edge_list():
+                if len(edge) == 2:
+                    u, v = edge
+                elif len(edge) >= 3:
+                    u, v = edge[0], edge[1]
+                else:
+                    raise AssertionError(f"Unexpected edge format: {edge}")
+                edges.add((min(u, v), max(u, v)))
+            assert edges == {(0, 1), (1, 2)}
 
         # Test width parameter functionality
         mock_params_with_width = MagicMock()
@@ -363,6 +377,18 @@ class TestMirrorCircuitsBenchmark:
 
         assert result_with_width.num_qubits == 2
         mock_generate_circuit.assert_called_once()
+        width_call_graph = mock_generate_circuit.call_args.kwargs["connectivity_graph"]
+        assert set(width_call_graph.node_indices()) == {0, 1}
+        width_edges = set()
+        for edge in width_call_graph.edge_list():
+            if len(edge) == 2:
+                u, v = edge
+            elif len(edge) >= 3:
+                u, v = edge[0], edge[1]
+            else:
+                raise AssertionError(f"Unexpected edge format: {edge}")
+            width_edges.add((min(u, v), max(u, v)))
+        assert width_edges == {(0, 1)}
 
         # Test width parameter validation
         mock_params_invalid = MagicMock()
