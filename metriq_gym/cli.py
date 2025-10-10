@@ -6,7 +6,6 @@ import os
 
 from tabulate import tabulate
 
-from qbraid.runtime import get_providers
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 
 
@@ -108,8 +107,7 @@ def parse_arguments() -> argparse.Namespace:
         "-p",
         "--provider",
         type=str,
-        choices=get_providers() + ["local"],
-        help="String identifier for backend provider service",
+        help="String identifier for backend provider service (e.g., qiskit, braket, azure, ionq, local)",
     )
     suite_dispatch.add_argument(
         "-d",
@@ -159,8 +157,7 @@ def parse_arguments() -> argparse.Namespace:
         "-p",
         "--provider",
         type=str,
-        choices=get_providers() + ["local"],
-        help="String identifier for backend provider service",
+        help="String identifier for backend provider service (e.g., qiskit, braket, azure, ionq, local)",
     )
     job_dispatch.add_argument(
         "-d",
