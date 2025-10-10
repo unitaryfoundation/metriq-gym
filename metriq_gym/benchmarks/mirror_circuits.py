@@ -23,6 +23,19 @@ from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
 
 
+def build_line_graph(width: int) -> rx.PyGraph:
+    """Construct a line (path) graph with the requested width."""
+    line_graph = rx.PyGraph()
+    if width <= 0:
+        return line_graph
+
+    line_graph.add_nodes_from(range(width))
+    for node in range(width - 1):
+        line_graph.add_edge(node, node + 1, None)
+
+    return line_graph
+
+
 class TwoQubitGateType(StrEnum):
     CNOT = "CNOT"
     CZ = "CZ"
@@ -412,20 +425,23 @@ class MirrorCircuits(Benchmark):
             target_width = None
         topology_graph = connectivity_graph(device)
 
+        available_qubits = len(topology_graph.node_indices())
+
+        if available_qubits == 0:
+            raise ValueError("Mirror circuits benchmark requires a device with at least one qubit")
+
         # Select subset of qubits if width is specified
         if target_width is not None:
-            max_width = len(topology_graph.node_indices())
-            if target_width > max_width:
+            if target_width > available_qubits:
                 raise ValueError(
-                    f"Requested width {target_width} exceeds device capacity {max_width}"
+                    f"Requested width {target_width} exceeds device capacity {available_qubits}"
                 )
 
-            selected_qubits = select_optimal_qubit_subset(topology_graph, target_width)
-            working_graph = create_subgraph_from_qubits(topology_graph, selected_qubits)
-            actual_width = len(selected_qubits)
+            actual_width = target_width
         else:
-            working_graph = topology_graph
-            actual_width = len(topology_graph.node_indices())
+            actual_width = available_qubits
+
+        working_graph = build_line_graph(actual_width)
 
         circuits = []
         expected_bitstrings = []
