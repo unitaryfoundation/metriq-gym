@@ -7,7 +7,6 @@ and then reverse them. Mirror circuits provide scalable benchmarking capabilitie
 for quantum computers as defined in Proctor et al., arXiv:2008.11294.
 """
 
-from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from dataclasses import dataclass

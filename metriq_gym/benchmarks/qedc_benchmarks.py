@@ -6,8 +6,6 @@ The benchmarks generate N circuits for M qubits ranging from min_qubits to max_q
 Each circuit is then run, and the metrics are computed.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from importlib import import_module
 from types import ModuleType

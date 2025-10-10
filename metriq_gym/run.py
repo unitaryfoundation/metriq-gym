@@ -1,7 +1,5 @@
 """Runtime entrypoints for dispatching and managing metriq-gym benchmarks via the CLI."""
 
-from __future__ import annotations
-
 import argparse
 from dataclasses import asdict
 from datetime import datetime
@@ -12,7 +10,7 @@ import uuid
 from dotenv import load_dotenv
 
 from tabulate import tabulate
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Optional
 import re
 
 from metriq_gym import __version__
@@ -512,7 +510,7 @@ def export_job_result(
 
 def fetch_result(
     metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
-) -> "BenchmarkResult" | None:
+) -> Optional["BenchmarkResult"]:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
     if metriq_job.result_data is not None:

@@ -5,8 +5,6 @@ This benchmark evaluates a quantum device's ability to produce entangled states 
 the CHSH inequality. The violation of this inequality indicates successful entanglement between qubits.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 import networkx as nx
@@ -99,7 +97,7 @@ def generate_chsh_circuit_sets(coloring: GraphColoring) -> list[QuantumCircuit]:
     return exp_sets
 
 
-def chsh_subgraph(coloring: GraphColoring, counts: list[MeasCount]) -> rx.PyGraph:
+def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGraph:
     """Constructs a subgraph of qubit pairs that violate the CHSH inequality.
 
     Args:

@@ -10,8 +10,6 @@ A generalized version of the WIT benchmark software can also be found as a compa
 repository](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py) to the above paper.
 """
 
-from __future__ import annotations
-
 import numpy as np
 from dataclasses import dataclass
 
