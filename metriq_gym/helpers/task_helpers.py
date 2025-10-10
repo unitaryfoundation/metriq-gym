@@ -1,7 +1,10 @@
-from qbraid.runtime.result_data import MeasCount, GateModelResultData
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
 
-def flatten_counts(result_data: list[GateModelResultData]) -> list[MeasCount]:
+def flatten_counts(result_data: list["GateModelResultData"]) -> list["MeasCount"]:
     """Flatten the measurement counts from a list of GateModelResultData objects.
 
     This is to seamlessly handle the different ways batching is handled on the provider side.

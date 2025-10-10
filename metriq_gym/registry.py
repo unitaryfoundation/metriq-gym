@@ -60,20 +60,6 @@ BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.LR_QAOA: LinearRampQAOAResult,
 }
 
-SCHEMA_MAPPING = {
-    JobType.BSEQ: "bseq.schema.json",
-    JobType.CLOPS: "clops.schema.json",
-    JobType.QML_KERNEL: "qml_kernel.schema.json",
-    JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
-    JobType.MIRROR_CIRCUITS: "mirror_circuits.schema.json",
-    JobType.WIT: "wit.schema.json",
-    JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.schema.json",
-    JobType.PHASE_ESTIMATION: "phase_estimation.schema.json",
-    JobType.HIDDEN_SHIFT: "hidden_shift.schema.json",
-    JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.schema.json",
-    JobType.LR_QAOA: "lr_qaoa.schema.json",
-}
-
 
 def get_available_benchmarks() -> list[str]:
     return [jt.value for jt in JobType]
