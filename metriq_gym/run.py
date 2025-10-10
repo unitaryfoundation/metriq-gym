@@ -22,6 +22,10 @@ from metriq_gym.schema_validator import load_and_validate, validate_and_create_m
 from metriq_gym.constants import JobType
 from metriq_gym.suite_parser import parse_suite_file
 from metriq_gym.exceptions import QBraidSetupError
+from metriq_gym.exporters.json_exporter import JsonExporter
+from metriq_gym.exporters.cli_exporter import CliExporter
+from metriq_gym.exporters.dict_exporter import DictExporter
+from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
 
 if TYPE_CHECKING:
     # Imported only for static type checking; not executed at runtime
@@ -154,8 +158,8 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     print(f"Dispatching {params.benchmark_name}...")
 
-    handler = setup_benchmark(args, params, job_type)
-    job_data = handler.dispatch_handler(device)
+    handler: Benchmark = setup_benchmark(args, params, job_type)
+    job_data: BenchmarkData = handler.dispatch_handler(device)
 
     job_id = job_manager.add_job(
         MetriqGymJob(
@@ -229,8 +233,8 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                 f"Dispatching {benchmark_entry.name} ({params.benchmark_name}) from {suite.name}..."
             )
 
-            handler = setup_benchmark(args, params, job_type)
-            job_data = handler.dispatch_handler(device)
+            handler: Benchmark = setup_benchmark(args, params, job_type)
+            job_data: BenchmarkData = handler.dispatch_handler(device)
 
             job_id = job_manager.add_job(
                 MetriqGymJob(
@@ -326,13 +330,9 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     dry_run = getattr(args, "dry_run", False)
 
     # Append this job's record to results.json in the target directory
-    from metriq_gym.exporters.dict_exporter import DictExporter
-
     record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
 
     try:
-        from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
-
         url = GitHubPRExporter(metriq_job, result).export(
             repo=repo,
             base_branch=base_branch,
@@ -388,8 +388,6 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list["Benchmar
 
     records = []
     for job, result in zip(jobs, results):
-        from metriq_gym.exporters.dict_exporter import DictExporter
-
         records.append(DictExporter(job, result).export() | {"params": job.params})
 
     if hasattr(args, "json"):
@@ -426,8 +424,6 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         results.append(result)
 
     # Build array of per-job records (no common header)
-    from metriq_gym.exporters.dict_exporter import DictExporter
-
     records: list[dict] = []
     for job, result in zip(jobs, results):
         records.append(DictExporter(job, result).export() | {"params": job.params})
@@ -454,8 +450,6 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     dry_run = getattr(args, "dry_run", False)
 
     try:
-        from .exporters.github_pr_exporter import GitHubPRExporter
-
         url = GitHubPRExporter(jobs[0], results[0]).export(
             repo=repo,
             base_branch=base_branch,
@@ -511,12 +505,8 @@ def export_job_result(
     args: argparse.Namespace, metriq_job: MetriqGymJob, result: "BenchmarkResult"
 ) -> None:
     if hasattr(args, "json"):
-        from metriq_gym.exporters.json_exporter import JsonExporter
-
         JsonExporter(metriq_job, result).export(args.json)
     else:
-        from metriq_gym.exporters.cli_exporter import CliExporter
-
         CliExporter(metriq_job, result).export()
 
 
@@ -529,7 +519,9 @@ def fetch_result(
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
-    handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
+    handler: Benchmark = setup_benchmark(
+        args, validate_and_create_model(metriq_job.params), job_type
+    )
     from qbraid.runtime import JobStatus
 
     quantum_jobs = [
