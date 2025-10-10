@@ -7,12 +7,14 @@ and then reverse them. Mirror circuits provide scalable benchmarking capabilitie
 for quantum computers as defined in Proctor et al., arXiv:2008.11294.
 """
 
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass
 from enum import StrEnum
 
 import rustworkx as rx
 import numpy as np
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, CZGate
 from qiskit.quantum_info import random_clifford, random_pauli, Statevector
@@ -399,8 +401,12 @@ def generate_mirror_circuit(
     return qc, expected_bitstring
 
 
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+
+
 class MirrorCircuits(Benchmark):
-    def dispatch_handler(self, device: QuantumDevice) -> MirrorCircuitsData:
+    def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
         num_layers = self.params.num_layers
         two_qubit_gate_prob = self.params.two_qubit_gate_prob
         two_qubit_gate_name = self.params.two_qubit_gate_name
@@ -457,8 +463,8 @@ class MirrorCircuits(Benchmark):
     def poll_handler(
         self,
         job_data: MirrorCircuitsData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> MirrorCircuitsResult:
         counts_list = flatten_counts(result_data)
 

@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import copy
 from dataclasses import dataclass
 
 import rustworkx as rx
 import numpy as np
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+from typing import TYPE_CHECKING
 from qiskit import QuantumCircuit
 from qiskit_device_benchmarking.clops.clops_benchmark import append_1q_layer
 
@@ -121,13 +123,17 @@ def prepare_clops_circuits(
     return parametrized_circuits
 
 
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+
+
 class Clops(Benchmark):
     """
     Circuit Layer Operations per Second Benchmark
     https://arxiv.org/abs/2110.14108
     """
 
-    def dispatch_handler(self, device: QuantumDevice) -> ClopsData:
+    def dispatch_handler(self, device: "QuantumDevice") -> ClopsData:
         topology_graph = connectivity_graph(device)
         num_qubits = device.num_qubits
         if num_qubits is None:
@@ -148,8 +154,8 @@ class Clops(Benchmark):
     def poll_handler(
         self,
         job_data: ClopsData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> ClopsResult:
         clops_score = (self.params.num_circuits * self.params.num_layers * self.params.shots) / sum(
             execution_time(quantum_job) for quantum_job in quantum_jobs

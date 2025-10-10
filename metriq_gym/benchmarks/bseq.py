@@ -5,13 +5,13 @@ This benchmark evaluates a quantum device's ability to produce entangled states 
 the CHSH inequality. The violation of this inequality indicates successful entanglement between qubits.
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 import networkx as nx
 import rustworkx as rx
 import numpy as np
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
 
 from qiskit import QuantumCircuit
 from qiskit.result import marginal_counts, sampled_expectation_value
@@ -140,10 +140,15 @@ def chsh_subgraph(coloring: GraphColoring, counts: list[MeasCount]) -> rx.PyGrap
     return good_graph
 
 
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
+
+
 class BSEQ(Benchmark):
     """Benchmark class for BSEQ (Bell state effective qubits) experiments."""
 
-    def dispatch_handler(self, device: QuantumDevice) -> BSEQData:
+    def dispatch_handler(self, device: "QuantumDevice") -> BSEQData:
         """Runs the benchmark and returns job metadata."""
         shots = self.params.shots
 
@@ -176,8 +181,8 @@ class BSEQ(Benchmark):
     def poll_handler(
         self,
         job_data: BSEQData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> BSEQResult:
         """Poll and calculate largest connected component."""
         if not job_data.coloring:

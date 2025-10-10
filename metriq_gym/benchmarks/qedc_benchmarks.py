@@ -6,12 +6,12 @@ The benchmarks generate N circuits for M qubits ranging from min_qubits to max_q
 Each circuit is then run, and the metrics are computed.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from importlib import import_module
 from types import ModuleType
-
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
+from typing import TYPE_CHECKING
 from qiskit import QuantumCircuit
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
@@ -19,6 +19,10 @@ from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
 
 from _common import metrics
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
@@ -111,7 +115,7 @@ def import_benchmark_module(benchmark_name: str) -> ModuleType:
 
 
 def analyze_results(
-    params: dict[str, float | str], job_data: QEDCData, counts_list: list[MeasCount]
+    params: dict[str, float | str], job_data: QEDCData, counts_list: list["MeasCount"]
 ) -> QEDC_Metrics:
     """
     Iterates over each circuit group and circuit id to process results.
@@ -218,7 +222,7 @@ def get_circuits_and_metrics(
 class QEDCBenchmark(Benchmark):
     """Benchmark class for QED-C experiments."""
 
-    def dispatch_handler(self, device: QuantumDevice) -> QEDCData:
+    def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
         # For more information on the parameters, view the schema for this benchmark.
         num_shots = self.params.num_shots
         benchmark_name = self.params.benchmark_name
@@ -237,8 +241,8 @@ class QEDCBenchmark(Benchmark):
     def poll_handler(
         self,
         job_data: QEDCData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> QEDCResult:
         counts_list = flatten_counts(result_data)
 

@@ -168,9 +168,6 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             platform={
                 "provider": args.provider,
                 "device": args.device,
-                "device_metadata": __import__(
-                    "metriq_gym.qplatform.device", fromlist=["normalized_metadata"]
-                ).normalized_metadata(device),
             },
             dispatch_time=datetime.now(),
         )
@@ -248,9 +245,6 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                     platform={
                         "provider": args.provider,
                         "device": args.device,
-                        "device_metadata": __import__(
-                            "metriq_gym.qplatform.device", fromlist=["normalized_metadata"]
-                        ).normalized_metadata(device),
                     },
                     dispatch_time=datetime.now(),
                 )

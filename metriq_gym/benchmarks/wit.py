@@ -10,14 +10,19 @@ A generalized version of the WIT benchmark software can also be found as a compa
 repository](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py) to the above paper.
 """
 
+from __future__ import annotations
+
 import numpy as np
 from dataclasses import dataclass
 
 from qiskit import QuantumCircuit
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 def wit_circuit(num_qubits: int) -> QuantumCircuit:
@@ -214,7 +219,7 @@ def wit_circuit(num_qubits: int) -> QuantumCircuit:
         raise ValueError(f"Unsupported number of qubits: {num_qubits}")
 
 
-def calculate_expectation_value(shots: int, count_results: MeasCount) -> float:
+def calculate_expectation_value(shots: int, count_results: "MeasCount") -> float:
     """Calculate the expectation value of the Pauli operator in the state produced by the quantum circuit."""
     return count_results["1"] / shots
 
@@ -239,7 +244,7 @@ class WITData(BenchmarkData):
 class WIT(Benchmark):
     """Benchmark class for WIT experiments."""
 
-    def dispatch_handler(self, device: QuantumDevice) -> WITData:
+    def dispatch_handler(self, device: "QuantumDevice") -> WITData:
         return WITData.from_quantum_job(
             device.run(wit_circuit(self.params.num_qubits), shots=self.params.shots)
         )
@@ -247,8 +252,8 @@ class WIT(Benchmark):
     def poll_handler(
         self,
         job_data: WITData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> WITResult:
         """Poll results for WIT benchmark."""
         return WITResult(
