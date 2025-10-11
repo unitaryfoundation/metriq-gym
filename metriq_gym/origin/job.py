@@ -7,22 +7,15 @@ from typing import Any
 
 from qbraid.runtime import GateModelResultData, JobStatus, QuantumJob, Result
 
+from .qcloud_utils import ensure_pyqpanda3, get_job_status_enum, get_qcloud_job
+
 
 logger = logging.getLogger(__name__)
 
 
-def _ensure_pyqpanda3():
-    try:
-        from pyqpanda3 import qcloud  # noqa: F401  # pragma: nocover - import side effect only
-    except ImportError as exc:  # pragma: no cover - import guard executed only when missing dep
-        raise ImportError(
-            "pyqpanda3 is required to use the Origin provider. Install it with 'pip install pyqpanda3'."
-        ) from exc
-
-
 def _map_status(origin_status: Any) -> JobStatus:
-    _ensure_pyqpanda3()
-    from pyqpanda3.qcloud import JobStatus as OriginJobStatus
+    ensure_pyqpanda3()
+    OriginJobStatus = get_job_status_enum()
 
     # Normalize to cover enums, strings, and integer codes returned by the SDK.
     status_name: str | None = None
@@ -83,12 +76,8 @@ class OriginJob(QuantumJob):
     def _get_backend_job(self):
         if self._backend_job is not None:
             return self._backend_job
-
-        _ensure_pyqpanda3()
-        from pyqpanda3.qcloud import QCloudJob
-
         try:
-            self._backend_job = QCloudJob(self.id)
+            self._backend_job = get_qcloud_job(self.id)
         except Exception as exc:  # pragma: no cover - depends on live service
             logger.error("Failed to retrieve OriginQ job %s", self.id, exc_info=True)
             raise RuntimeError(f"Unable to retrieve OriginQ job {self.id}") from exc

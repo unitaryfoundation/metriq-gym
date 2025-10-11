@@ -14,22 +14,14 @@ from qiskit.qasm2 import dumps as qasm2_dumps
 
 from ._constants import SIMULATOR_BACKENDS
 from .job import OriginJob
+from .qcloud_utils import ensure_pyqpanda3, get_qcloud_options
 
 
 logger = logging.getLogger(__name__)
 
 
-def _ensure_pyqpanda3():
-    try:
-        from pyqpanda3 import qcloud  # noqa: F401  # pragma: nocover - import side effect only
-    except ImportError as exc:  # pragma: no cover - import guard executed only when missing dep
-        raise ImportError(
-            "pyqpanda3 is required to use the Origin provider. Install it with 'pip install pyqpanda3'."
-        ) from exc
-
-
 def _convert_qasm_to_qprog(qasm: str):
-    _ensure_pyqpanda3()
+    ensure_pyqpanda3()
     from pyqpanda3.intermediate_compiler import convert_qasm_string_to_qprog
 
     return convert_qasm_string_to_qprog(qasm)
@@ -126,11 +118,9 @@ class OriginDevice(QuantumDevice):
 
     def submit(self, run_input: QPROGRAM, *, shots: int | None = None, **_: Any) -> OriginJob:
         qprog = self._to_qprog(run_input)
-        _ensure_pyqpanda3()
-        from pyqpanda3.qcloud import QCloudOptions
-
+        ensure_pyqpanda3()
         nshots = int(shots or 1000)
-        options = QCloudOptions()
+        options = get_qcloud_options()
 
         job = self._backend.run(qprog, nshots, options)
         job_id = job.job_id()

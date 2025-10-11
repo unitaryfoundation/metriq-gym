@@ -2,36 +2,13 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from qbraid.runtime import QuantumProvider
 
-from ._constants import ALIAS_TO_DISPLAY, BACKEND_ALIASES, ENV_KEYS, SIMULATOR_BACKENDS
+from ._constants import ALIAS_TO_DISPLAY, BACKEND_ALIASES, SIMULATOR_BACKENDS
 from .device import OriginDevice
-
-
-def _resolve_api_key(explicit_key: str | None = None) -> str:
-    if explicit_key:
-        return explicit_key
-    for name in ENV_KEYS:
-        value = os.getenv(name)
-        if value:
-            return value
-    raise RuntimeError(
-        "OriginQ API key not configured. Set one of ORIGIN_API_KEY, "
-        "ORIGINQ_API_KEY, or WUKONG_API_KEY."
-    )
-
-
-def _import_qcloud_service():
-    try:
-        from pyqpanda3.qcloud import QCloudService  # type: ignore
-    except ImportError as exc:  # pragma: no cover - import guard only when missing dep
-        raise ImportError(
-            "pyqpanda3 is required to use the Origin provider. Install it with 'pip install pyqpanda3'."
-        ) from exc
-    return QCloudService
+from .qcloud_utils import get_service
 
 
 class OriginProvider(QuantumProvider):
@@ -46,9 +23,7 @@ class OriginProvider(QuantumProvider):
     @property
     def service(self):
         if self._service is None:
-            key = _resolve_api_key(self._api_key)
-            qcloud_cls = _import_qcloud_service()
-            self._service = qcloud_cls(key)
+            self._service = get_service(explicit_key=self._api_key)
         return self._service
 
     def _backend_name(self, device_id: str) -> str:
