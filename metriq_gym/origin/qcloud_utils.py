@@ -42,5 +42,11 @@ def get_qcloud_job(job_id: str, *, api_key: str | None = None):
 
 
 def get_qcloud_options():
-    """Factory helper for QCloudOptions to keep imports centralized."""
+    """
+    Create and return a new QCloudOptions instance.
+
+    QCloudOptions is a configuration object used to specify options for jobs submitted to OriginQ's QCloud service.
+    Use this factory function to instantiate QCloudOptions when preparing job submissions, ensuring imports are centralized
+    and consistent usage throughout the codebase.
+    """
     return qcloud_module.QCloudOptions()
