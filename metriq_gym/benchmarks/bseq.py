@@ -28,7 +28,46 @@ from metriq_gym.qplatform.device import connectivity_graph
 
 class BSEQResult(BenchmarkResult):
     largest_connected_size: int
-    fraction_connected: float
+    largest_connected_size_std: float
+
+
+CHSH_THRESHOLD = 2.0
+# Number of Monte Carlo samples used to estimate the error bar on the largest component size.
+BOOTSTRAP_SAMPLES = 512
+
+
+def _largest_component_from_edges(edges: list[tuple[int, int]], num_nodes: int) -> int:
+    """Compute the largest connected component size from an edge list."""
+    if num_nodes == 0:
+        return 0
+    parent = list(range(num_nodes))
+    sizes = [1] * num_nodes
+
+    def find(node: int) -> int:
+        while parent[node] != node:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
+
+    def union(u: int, v: int) -> None:
+        root_u = find(u)
+        root_v = find(v)
+        if root_u == root_v:
+            return
+        if sizes[root_u] < sizes[root_v]:
+            root_u, root_v = root_v, root_u
+        parent[root_v] = root_u
+        sizes[root_u] += sizes[root_v]
+
+    for u, v in edges:
+        union(u, v)
+
+    largest = 1
+    for node in range(num_nodes):
+        root = find(node)
+        if sizes[root] > largest:
+            largest = sizes[root]
+    return largest
 
 
 @dataclass
@@ -99,30 +138,40 @@ def generate_chsh_circuit_sets(coloring: GraphColoring) -> list[QuantumCircuit]:
     return exp_sets
 
 
-def chsh_subgraph(coloring: GraphColoring, counts: list[MeasCount]) -> rx.PyGraph:
-    """Constructs a subgraph of qubit pairs that violate the CHSH inequality.
+def chsh_subgraph(
+    coloring: GraphColoring, counts: list[MeasCount]
+) -> tuple[rx.PyGraph, dict[tuple[int, int], tuple[float, float]]]:
+    """Construct a subgraph of qubit pairs that violate the CHSH inequality.
 
     Args:
-        job_data: The benchmark metadata including topology and coloring.
-        result_data: The result data containing measurement counts.
+        coloring: The benchmark graph-coloring metadata.
+        counts: Flattened measurement counts returned from the device.
 
     Returns:
-        The graph of edges that violated the CHSH inequality.
+        A tuple with the subgraph of successful edges and per-edge (mean, std) CHSH scores.
     """
     # A subgraph is constructed containing only the edges (qubit pairs) that successfully violate the CHSH inequality.
     # The size of the largest connected component in this subgraph provides a measure of the device's performance.
     good_edges = []
+    edge_stats: dict[tuple[int, int], tuple[float, float]] = {}
     for color_idx in range(coloring.num_colors):
         num_meas_pairs = len(
             {key for key, val in coloring.edge_color_map.items() if val == color_idx}
         )
         exp_vals: np.ndarray = np.zeros(num_meas_pairs, dtype=float)
+        variances: np.ndarray = np.zeros(num_meas_pairs, dtype=float)
 
         for idx in range(4):
             for pair in range(num_meas_pairs):
                 sub_counts = marginal_counts(counts[color_idx * 4 + idx], [2 * pair, 2 * pair + 1])
                 exp_val = sampled_expectation_value(sub_counts, "ZZ")
                 exp_vals[pair] += exp_val if idx != 2 else -exp_val
+                shots = sum(sub_counts.values())
+                if shots > 0:
+                    var_term = max((1 - exp_val**2) / shots, 0.0)
+                    variances[pair] += var_term
+                else:
+                    variances[pair] = float("nan")
 
         for idx, edge_idx in enumerate(
             key for key, val in coloring.edge_color_map.items() if val == color_idx
@@ -130,14 +179,48 @@ def chsh_subgraph(coloring: GraphColoring, counts: list[MeasCount]) -> rx.PyGrap
             edge = (coloring.edge_index_map[edge_idx][0], coloring.edge_index_map[edge_idx][1])
             # The benchmark checks whether the CHSH inequality is violated (i.e., the sum of correlations exceeds 2,
             # indicating entanglement).
-            if exp_vals[idx] > 2:
+            std = float(np.sqrt(variances[idx])) if not np.isnan(variances[idx]) else float("nan")
+            edge_stats[edge] = (float(exp_vals[idx]), std)
+            if exp_vals[idx] > CHSH_THRESHOLD:
                 good_edges.append(edge)
 
     good_graph = rx.PyGraph(multigraph=False)
     good_graph.add_nodes_from(list(range(coloring.num_nodes)))
     for edge in good_edges:
         good_graph.add_edge(*edge, 1)
-    return good_graph
+    return good_graph, edge_stats
+
+
+def estimate_lcs_uncertainty(
+    edge_stats: dict[tuple[int, int], tuple[float, float]],
+    num_nodes: int,
+    *,
+    threshold: float = CHSH_THRESHOLD,
+    num_samples: int = BOOTSTRAP_SAMPLES,
+    rng: np.random.Generator | None = None,
+) -> float:
+    """Estimate the standard deviation of the largest connected component via Monte Carlo."""
+    if num_nodes == 0 or not edge_stats or num_samples <= 1:
+        return 0.0
+
+    edges = list(edge_stats.items())
+    rng = rng or np.random.default_rng()
+    samples = np.empty(num_samples, dtype=float)
+
+    for idx in range(num_samples):
+        active_edges: list[tuple[int, int]] = []
+        for (u, v), (mean, std) in edges:
+            if std is None or np.isnan(std) or std == 0.0:
+                s_draw = mean
+            else:
+                s_draw = rng.normal(mean, std)
+            if s_draw > threshold:
+                active_edges.append((u, v))
+        samples[idx] = _largest_component_from_edges(active_edges, num_nodes)
+
+    if np.allclose(samples, samples[0]):
+        return 0.0
+    return float(samples.std(ddof=1))
 
 
 class BSEQ(Benchmark):
@@ -185,9 +268,10 @@ class BSEQ(Benchmark):
 
         if isinstance(job_data.coloring, dict):
             job_data.coloring = GraphColoring.from_dict(job_data.coloring)
-        good_graph = chsh_subgraph(job_data.coloring, flatten_counts(result_data))
+        good_graph, edge_stats = chsh_subgraph(job_data.coloring, flatten_counts(result_data))
         lcs = largest_connected_size(good_graph)
+        lcs_std = estimate_lcs_uncertainty(edge_stats, job_data.coloring.num_nodes)
         return BSEQResult(
             largest_connected_size=lcs,
-            fraction_connected=lcs / job_data.coloring.num_nodes,
+            largest_connected_size_std=lcs_std,
         )

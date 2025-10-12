@@ -171,7 +171,9 @@ Example completed result:
 .. code-block:: text
 
    INFO - Polling job...
-   BSEQResult(largest_connected_size=100, fraction_connected=0.7874)
+   BSEQResult(largest_connected_size=100, largest_connected_size_std=3.5)
+
+The ``largest_connected_size_std`` entry provides a Monte Carlo uncertainty estimate for the reported component size.
 
 If the job is still queued, the CLI reports the current queue position and asks you to try again later.
 
