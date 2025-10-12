@@ -1,7 +1,5 @@
 """qBraid provider implementation for OriginQ Wukong devices."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from qbraid.runtime import QuantumProvider
@@ -31,23 +29,23 @@ class OriginProvider(QuantumProvider):
 
     def get_devices(self, *, hardware_only: bool | None = None, **_: Any) -> list[OriginDevice]:
         catalog = self.service.backends()
-        device_ids: list[str] = []
+        device_ids: set[str] = set()
         for backend_id, available in catalog.items():
             if available is False:
                 continue
             alias = ALIAS_TO_DISPLAY.get(backend_id, backend_id)
             if hardware_only and backend_id in SIMULATOR_BACKENDS:
                 continue
-            device_ids.append(alias)
+            device_ids.add(alias)
 
         # Ensure we expose a stable alias even if QCloud omits it from the listing.
-        if "origin_wukong" not in device_ids and "origin_wukong" in BACKEND_ALIASES:
+        if "origin_wukong" not in device_ids:
             target_backend = BACKEND_ALIASES["origin_wukong"]
             if catalog.get(target_backend, True):
-                device_ids.append("origin_wukong")
+                device_ids.add("origin_wukong")
 
         # Return devices sorted for deterministic CLI output
-        return [self.get_device(device_id) for device_id in sorted(set(device_ids))]
+        return [self.get_device(device_id) for device_id in sorted(device_ids)]
 
     def get_device(self, device_id: str) -> OriginDevice:
         device_id = device_id.strip()

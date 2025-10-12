@@ -6,7 +6,7 @@ from typing import Any
 
 from pyqpanda3 import qcloud as qcloud_module
 
-from ._constants import ENV_KEYS
+from ._constants import API_KEY_ENV
 
 _SERVICE_CACHE: dict[str, Any] = {}
 _SERVICE_LOCK = Lock()
@@ -16,12 +16,11 @@ def resolve_api_key(explicit_key: str | None = None) -> str:
     """Resolve the OriginQ API key from explicit input or supported environment variables."""
     if explicit_key:
         return explicit_key
-    for name in ENV_KEYS:
-        value = os.getenv(name)
-        if value:
-            return value
+    value = os.getenv(API_KEY_ENV)
+    if value:
+        return value
     raise RuntimeError(
-        "OriginQ API key not configured. Set one of ORIGIN_API_KEY, ORIGINQ_API_KEY, or WUKONG_API_KEY."
+        "OriginQ API key not configured. Set ORIGIN_API_KEY or pass --api-key to the CLI."
     )
 
 

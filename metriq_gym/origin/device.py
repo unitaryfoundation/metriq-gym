@@ -1,14 +1,13 @@
 """qBraid device wrapper for OriginQ Wukong hardware and simulators."""
 
-from __future__ import annotations
-
 import logging
 from collections.abc import Sequence
 from typing import Any
 
+from pyqpanda3.intermediate_compiler import convert_qasm_string_to_qprog
 from qbraid import QPROGRAM
-from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qbraid.programs import ExperimentType, ProgramSpec
+from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qiskit import QuantumCircuit
 from qiskit.qasm2 import dumps as qasm2_dumps
 
@@ -18,12 +17,6 @@ from .qcloud_utils import get_qcloud_options
 
 
 logger = logging.getLogger(__name__)
-
-
-def _convert_qasm_to_qprog(qasm: str):
-    from pyqpanda3.intermediate_compiler import convert_qasm_string_to_qprog
-
-    return convert_qasm_string_to_qprog(qasm)
 
 
 def _infer_num_qubits(backend: Any) -> int | None:
@@ -93,14 +86,14 @@ class OriginDevice(QuantumDevice):
 
     def _circuit_to_qprog(self, circuit: QuantumCircuit):
         qasm = qasm2_dumps(circuit)
-        return _convert_qasm_to_qprog(qasm)
+        return convert_qasm_string_to_qprog(qasm)
 
     def _to_qprog(self, run_input: QPROGRAM):
         if isinstance(run_input, QuantumCircuit):
             return self._circuit_to_qprog(run_input)
         if isinstance(run_input, str):
             # Assume OpenQASM provided by caller
-            return _convert_qasm_to_qprog(run_input)
+            return convert_qasm_string_to_qprog(run_input)
         raise TypeError(
             f"Unsupported run_input type {type(run_input)}; expected QuantumCircuit or OpenQASM string"
         )
