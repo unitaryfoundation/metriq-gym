@@ -38,6 +38,7 @@ from metriq_gym._version import __version__
 import re
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.qplatform.job import job_status
+from metriq_gym.qplatform.device import normalized_metadata
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import JobType
 from metriq_gym.suite_parser import parse_suite_file
@@ -137,6 +138,11 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             data=asdict(job_data),
             provider_name=args.provider,
             device_name=args.device,
+            platform={
+                "provider": args.provider,
+                "device": args.device,
+                "device_metadata": normalized_metadata(device),
+            },
             dispatch_time=datetime.now(),
         )
     )
@@ -209,6 +215,11 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                     data=asdict(job_data),
                     provider_name=args.provider,
                     device_name=args.device,
+                    platform={
+                        "provider": args.provider,
+                        "device": args.device,
+                        "device_metadata": normalized_metadata(device),
+                    },
                     dispatch_time=datetime.now(),
                 )
             )
