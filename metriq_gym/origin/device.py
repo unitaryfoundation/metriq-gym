@@ -112,9 +112,9 @@ class OriginDevice(QuantumDevice):
             return [self.submit(item, *args, **kwargs) for item in run_input]
         return self.submit(run_input, *args, **kwargs)
 
-    def submit(self, run_input: QPROGRAM, *, shots: int | None = None, **_: Any) -> OriginJob:
+    def submit(self, run_input: QPROGRAM, *, shots: int, **_: Any) -> OriginJob:
         qprog = self._to_qprog(run_input)
-        nshots = int(shots or 1000)
+        nshots = int(shots)
         if self._backend_name in SIMULATOR_BACKENDS:
             job = self._backend.run(qprog, nshots)
         else:
