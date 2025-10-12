@@ -11,7 +11,7 @@ from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qiskit import QuantumCircuit
 from qiskit.qasm2 import dumps as qasm2_dumps
 
-from ._constants import SIMULATOR_BACKENDS
+from ._constants import SIMULATOR_BACKENDS, SIMULATOR_MAX_QUBITS
 from .job import OriginJob
 from .qcloud_utils import get_qcloud_options
 
@@ -19,9 +19,9 @@ from .qcloud_utils import get_qcloud_options
 logger = logging.getLogger(__name__)
 
 
-def _infer_num_qubits(backend: Any, *, simulator: bool) -> int | None:
+def _infer_num_qubits(backend: Any, backend_name: str, *, simulator: bool) -> int | None:
     if simulator:
-        return None
+        return SIMULATOR_MAX_QUBITS.get(backend_name)
     try:
         chip_info = backend.chip_info()
     except Exception:  # pragma: no cover - depends on live service
@@ -61,7 +61,7 @@ class OriginDevice(QuantumDevice):
             device_id=device_id,
             simulator=simulator,
             experiment_type=ExperimentType.GATE_MODEL,
-            num_qubits=_infer_num_qubits(backend, simulator=simulator),
+            num_qubits=_infer_num_qubits(backend, backend_name, simulator=simulator),
             program_spec=ProgramSpec(QuantumCircuit),
             basis_gates=_infer_basis_gates(backend, simulator=simulator),
             provider_name="origin",

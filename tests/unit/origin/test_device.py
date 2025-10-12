@@ -57,6 +57,12 @@ def test_simulator_submission_omits_options(monkeypatch):
     assert args[1] == 123
 
 
+def test_simulator_profile_reports_known_qubits():
+    device, _ = _make_device("full_amplitude")
+
+    assert device.profile.num_qubits == 35
+
+
 def test_qpu_submission_uses_options(monkeypatch):
     device, backend = _make_device("WK_C102_400")
     sentinel_options = object()

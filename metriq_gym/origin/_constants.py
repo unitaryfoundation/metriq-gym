@@ -6,6 +6,12 @@ SIMULATOR_BACKENDS = {
     "single_amplitude",
 }
 
+SIMULATOR_MAX_QUBITS = {
+    "full_amplitude": 35,
+    "partial_amplitude": 68,
+    "single_amplitude": 200,
+}
+
 API_KEY_ENV = "ORIGIN_API_KEY"
 
 # Common alias exposed by Origin marketing materials / notebooks
