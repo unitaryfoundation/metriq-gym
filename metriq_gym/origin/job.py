@@ -101,9 +101,8 @@ class OriginJob(QuantumJob):
         )
 
     def status(self) -> JobStatus:
-        backend_job = self._get_backend_job()
         try:
-            status = backend_job.status()
+            status = self._get_backend_job().status()
         except Exception:  # pragma: no cover - depends on live service
             logger.debug("Unable to retrieve job status for %s", self.id, exc_info=True)
             return JobStatus.UNKNOWN
