@@ -19,7 +19,9 @@ from .qcloud_utils import get_qcloud_options
 logger = logging.getLogger(__name__)
 
 
-def _infer_num_qubits(backend: Any) -> int | None:
+def _infer_num_qubits(backend: Any, *, simulator: bool) -> int | None:
+    if simulator:
+        return None
     try:
         chip_info = backend.chip_info()
     except Exception:  # pragma: no cover - depends on live service
@@ -31,7 +33,9 @@ def _infer_num_qubits(backend: Any) -> int | None:
         return None
 
 
-def _infer_basis_gates(backend: Any) -> list[str] | None:
+def _infer_basis_gates(backend: Any, *, simulator: bool) -> list[str] | None:
+    if simulator:
+        return None
     try:
         chip_info = backend.chip_info()
         gates = chip_info.get_basic_gates()
@@ -57,9 +61,9 @@ class OriginDevice(QuantumDevice):
             device_id=device_id,
             simulator=simulator,
             experiment_type=ExperimentType.GATE_MODEL,
-            num_qubits=_infer_num_qubits(backend),
+            num_qubits=_infer_num_qubits(backend, simulator=simulator),
             program_spec=ProgramSpec(QuantumCircuit),
-            basis_gates=_infer_basis_gates(backend),
+            basis_gates=_infer_basis_gates(backend, simulator=simulator),
             provider_name="origin",
             extra={"backend_name": backend_name},
         )
@@ -111,8 +115,10 @@ class OriginDevice(QuantumDevice):
     def submit(self, run_input: QPROGRAM, *, shots: int | None = None, **_: Any) -> OriginJob:
         qprog = self._to_qprog(run_input)
         nshots = int(shots or 1000)
-        options = get_qcloud_options()
-
-        job = self._backend.run(qprog, nshots, options)
+        if self._backend_name in SIMULATOR_BACKENDS:
+            job = self._backend.run(qprog, nshots)
+        else:
+            options = get_qcloud_options()
+            job = self._backend.run(qprog, nshots, options)
         job_id = job.job_id()
         return OriginJob(job_id, device=self, backend_job=job)

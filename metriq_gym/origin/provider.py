@@ -4,7 +4,11 @@ from typing import Any
 
 from qbraid.runtime import QuantumProvider
 
-from ._constants import ALIAS_TO_DISPLAY, BACKEND_ALIASES, SIMULATOR_BACKENDS
+from ._constants import (
+    PRIMARY_BACKEND_ALIAS,
+    PRIMARY_BACKEND_ID,
+    SIMULATOR_BACKENDS,
+)
 from .device import OriginDevice
 from .qcloud_utils import get_service
 
@@ -25,7 +29,15 @@ class OriginProvider(QuantumProvider):
         return self._service
 
     def _backend_name(self, device_id: str) -> str:
-        return BACKEND_ALIASES.get(device_id, device_id)
+        if device_id == PRIMARY_BACKEND_ALIAS:
+            return PRIMARY_BACKEND_ID
+        return device_id
+
+    @staticmethod
+    def _alias_for_backend(backend_id: str) -> str:
+        if backend_id == PRIMARY_BACKEND_ID:
+            return PRIMARY_BACKEND_ALIAS
+        return backend_id
 
     def get_devices(self, *, hardware_only: bool | None = None, **_: Any) -> list[OriginDevice]:
         catalog = self.service.backends()
@@ -33,16 +45,15 @@ class OriginProvider(QuantumProvider):
         for backend_id, available in catalog.items():
             if available is False:
                 continue
-            alias = ALIAS_TO_DISPLAY.get(backend_id, backend_id)
+            alias = self._alias_for_backend(backend_id)
             if hardware_only and backend_id in SIMULATOR_BACKENDS:
                 continue
             device_ids.add(alias)
 
         # Ensure we expose a stable alias even if QCloud omits it from the listing.
-        if "origin_wukong" not in device_ids:
-            target_backend = BACKEND_ALIASES["origin_wukong"]
-            if catalog.get(target_backend, True):
-                device_ids.add("origin_wukong")
+        if PRIMARY_BACKEND_ALIAS not in device_ids:
+            if catalog.get(PRIMARY_BACKEND_ID, True):
+                device_ids.add(PRIMARY_BACKEND_ALIAS)
 
         # Return devices sorted for deterministic CLI output
         return [self.get_device(device_id) for device_id in sorted(device_ids)]
