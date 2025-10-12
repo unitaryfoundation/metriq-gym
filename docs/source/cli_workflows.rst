@@ -117,7 +117,6 @@ Credential Management
 =====================
 
 Copy ``.env.example`` to ``.env`` and populate provider API tokens before running on hardware.
-For OriginQ Wukong backends, ensure ``ORIGIN_API_KEY`` (or one of its aliases) is set before dispatch.
 
 Viewing Jobs
 ============
