@@ -14,14 +14,13 @@ from qiskit.qasm2 import dumps as qasm2_dumps
 
 from ._constants import SIMULATOR_BACKENDS
 from .job import OriginJob
-from .qcloud_utils import ensure_pyqpanda3, get_qcloud_options
+from .qcloud_utils import get_qcloud_options
 
 
 logger = logging.getLogger(__name__)
 
 
 def _convert_qasm_to_qprog(qasm: str):
-    ensure_pyqpanda3()
     from pyqpanda3.intermediate_compiler import convert_qasm_string_to_qprog
 
     return convert_qasm_string_to_qprog(qasm)
@@ -118,7 +117,6 @@ class OriginDevice(QuantumDevice):
 
     def submit(self, run_input: QPROGRAM, *, shots: int | None = None, **_: Any) -> OriginJob:
         qprog = self._to_qprog(run_input)
-        ensure_pyqpanda3()
         nshots = int(shots or 1000)
         options = get_qcloud_options()
 

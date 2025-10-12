@@ -1,62 +1,52 @@
 """qBraid job wrapper for OriginQ QCloud executions."""
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 
 from qbraid.runtime import GateModelResultData, JobStatus, QuantumJob, Result
 
-from .qcloud_utils import ensure_pyqpanda3, get_job_status_enum, get_qcloud_job
+from .qcloud_utils import get_qcloud_job
 
 
 logger = logging.getLogger(__name__)
 
 
-def _map_status(origin_status: Any) -> JobStatus:
-    ensure_pyqpanda3()
-    OriginJobStatus = get_job_status_enum()
+_STATUS_LOOKUP = {
+    "FINISH": JobStatus.COMPLETED,
+    "FINISHED": JobStatus.COMPLETED,
+    "COMPLETED": JobStatus.COMPLETED,
+    "WAITING": JobStatus.QUEUED,
+    "QUEUING": JobStatus.QUEUED,
+    "QUEUED": JobStatus.QUEUED,
+    "COMPUTING": JobStatus.RUNNING,
+    "RUNNING": JobStatus.RUNNING,
+    "EXECUTING": JobStatus.RUNNING,
+    "FAILED": JobStatus.FAILED,
+    "ERROR": JobStatus.FAILED,
+}
 
-    # Normalize to cover enums, strings, and integer codes returned by the SDK.
-    status_name: str | None = None
+
+def _normalize_status(origin_status: Any) -> str:
+    """Convert various SDK status representations to a comparable uppercase string."""
+    candidate: Any
     if hasattr(origin_status, "name"):
-        status_name = str(origin_status.name)
+        candidate = getattr(origin_status, "name")
     elif hasattr(origin_status, "value"):
-        value = getattr(origin_status, "value")
-        if isinstance(value, str):
-            status_name = value
-        elif isinstance(value, int):
-            status_name = str(value)
-    if status_name is None:
-        status_name = str(origin_status)
+        candidate = getattr(origin_status, "value")
+    else:
+        candidate = origin_status
 
-    normalized = status_name.strip().upper()
+    normalized = str(candidate).strip().upper()
     if normalized.startswith("JOBSTATUS."):
         normalized = normalized.split(".", 1)[1]
     if normalized.startswith("JOB_"):
         normalized = normalized[4:]
+    return normalized
 
-    if origin_status == OriginJobStatus.FINISHED or normalized in {
-        "FINISHED",
-        "FINISH",
-        "COMPLETED",
-    }:
-        return JobStatus.COMPLETED
-    if origin_status in (OriginJobStatus.WAITING, OriginJobStatus.QUEUING) or normalized in {
-        "WAITING",
-        "QUEUING",
-        "QUEUED",
-    }:
-        return JobStatus.QUEUED
-    if origin_status == OriginJobStatus.COMPUTING or normalized in {
-        "COMPUTING",
-        "RUNNING",
-        "EXECUTING",
-    }:
-        return JobStatus.RUNNING
-    if origin_status == OriginJobStatus.FAILED or normalized in {"FAILED", "ERROR"}:
-        return JobStatus.FAILED
-    return JobStatus.UNKNOWN
+
+def _map_status(origin_status: Any) -> JobStatus:
+    normalized = _normalize_status(origin_status)
+    return _STATUS_LOOKUP.get(normalized, JobStatus.UNKNOWN)
 
 
 class OriginJob(QuantumJob):

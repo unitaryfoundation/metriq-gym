@@ -40,13 +40,15 @@ def clear_cache(monkeypatch):
     monkeypatch.delenv("ORIGIN_API_KEY", raising=False)
     monkeypatch.delenv("ORIGINQ_API_KEY", raising=False)
     monkeypatch.delenv("WUKONG_API_KEY", raising=False)
+    # Reset module reference to the real qcloud module after each test
+    monkeypatch.delattr(qcloud_utils, "qcloud_module", raising=False)
 
 
 def test_get_service_uses_env_and_caches(monkeypatch):
     events = []
     module = _stub_qcloud_module(events)
     monkeypatch.setenv("ORIGIN_API_KEY", "secret-key")
-    monkeypatch.setattr(qcloud_utils, "_import_qcloud_module", lambda: module)
+    monkeypatch.setattr(qcloud_utils, "qcloud_module", module, raising=False)
 
     service1 = qcloud_utils.get_service()
     service2 = qcloud_utils.get_service()
@@ -59,7 +61,7 @@ def test_get_qcloud_job_initializes_service(monkeypatch):
     events = []
     module = _stub_qcloud_module(events)
     monkeypatch.setenv("ORIGINQ_API_KEY", "another-key")
-    monkeypatch.setattr(qcloud_utils, "_import_qcloud_module", lambda: module)
+    monkeypatch.setattr(qcloud_utils, "qcloud_module", module, raising=False)
 
     job = qcloud_utils.get_qcloud_job("JOB123")
 
