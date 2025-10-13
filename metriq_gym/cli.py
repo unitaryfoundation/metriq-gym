@@ -11,12 +11,6 @@ Usage overview:
       mgym suite poll <suite_id>
   - Dry-run upload (no network):
       mgym job upload latest --dry-run
-
-Environment variables:
-  - MGYM_UPLOAD_REPO          default: unitaryfoundation/metriq-data
-  - MGYM_UPLOAD_BASE_BRANCH   default: main
-  - MGYM_UPLOAD_DIR           default: metriq-gym/v<major.minor>/<provider>
-  - MGYM_UPLOAD_CLONE_DIR     optional working directory
 """
 
 import argparse

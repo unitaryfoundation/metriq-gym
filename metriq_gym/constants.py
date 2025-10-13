@@ -15,7 +15,6 @@ class JobType(StrEnum):
     LR_QAOA = "Linear Ramp QAOA"
 
 
-# Mapping from benchmark name to JSON schema filename
 SCHEMA_MAPPING = {
     JobType.BSEQ: "bseq.schema.json",
     JobType.CLOPS: "clops.schema.json",
