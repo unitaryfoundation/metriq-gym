@@ -23,6 +23,10 @@ from metriq_gym.helpers.graph_helpers import (
 )
 from metriq_gym.qplatform.device import connectivity_graph
 
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
+
 
 class BSEQResult(BenchmarkResult):
     largest_connected_size: int
@@ -136,11 +140,6 @@ def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGr
     for edge in good_edges:
         good_graph.add_edge(*edge, 1)
     return good_graph
-
-
-if TYPE_CHECKING:
-    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-    from qbraid.runtime.result_data import MeasCount
 
 
 class BSEQ(Benchmark):

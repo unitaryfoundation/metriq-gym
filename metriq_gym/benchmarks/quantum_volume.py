@@ -11,6 +11,10 @@ from metriq_gym.circuits import qiskit_random_circuit_sampling
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
+
 
 @dataclass
 class QuantumVolumeData(BenchmarkData):
@@ -151,11 +155,6 @@ def calc_trial_stats(
         confidence_level=confidence_level,
         confidence_pass=p_val < confidence_level,
     )
-
-
-if TYPE_CHECKING:
-    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-    from qbraid.runtime.result_data import MeasCount
 
 
 def calc_stats(data: QuantumVolumeData, counts: list["MeasCount"]) -> AggregateStats:

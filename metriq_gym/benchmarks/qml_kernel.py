@@ -9,6 +9,10 @@ from typing import TYPE_CHECKING
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
+
 
 @dataclass
 class QMLKernelData(BenchmarkData):
@@ -63,11 +67,6 @@ def create_inner_product_circuit(num_qubits: int, seed: int = 0) -> QuantumCircu
     # Here we tile a random parameter vector for half the total parameters.
     param_vec = np.tile(2 * np.pi * np.random.random(size=inner_prod.num_parameters // 2), 2)
     return inner_prod.assign_parameters(param_vec)
-
-
-if TYPE_CHECKING:
-    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-    from qbraid.runtime.result_data import MeasCount
 
 
 def calculate_accuracy_score(num_qubits: int, count_results: "MeasCount") -> float:

@@ -7,8 +7,6 @@ and then reverse them. Mirror circuits provide scalable benchmarking capabilitie
 for quantum computers as defined in Proctor et al., arXiv:2008.11294.
 """
 
-from typing import TYPE_CHECKING
-
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -22,6 +20,11 @@ from numpy import random
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
 class TwoQubitGateType(StrEnum):
@@ -398,10 +401,6 @@ def generate_mirror_circuit(
         expected_bitstring = "0" * num_qubits
 
     return qc, expected_bitstring
-
-
-if TYPE_CHECKING:
-    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
 class MirrorCircuits(Benchmark):

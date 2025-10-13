@@ -20,13 +20,9 @@ from metriq_gym.schema_validator import load_and_validate, validate_and_create_m
 from metriq_gym.constants import JobType
 from metriq_gym.suite_parser import parse_suite_file
 from metriq_gym.exceptions import QBraidSetupError
-from metriq_gym.exporters.json_exporter import JsonExporter
-from metriq_gym.exporters.cli_exporter import CliExporter
-from metriq_gym.exporters.dict_exporter import DictExporter
-from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
+
 
 if TYPE_CHECKING:
-    # Imported only for static type checking; not executed at runtime
     from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 
 logging.basicConfig(level=logging.WARNING)
@@ -336,9 +332,13 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     dry_run = getattr(args, "dry_run", False)
 
     # Append this job's record to results.json in the target directory
+    from metriq_gym.exporters.dict_exporter import DictExporter
+
     record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
 
     try:
+        from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
+
         url = GitHubPRExporter(metriq_job, result).export(
             repo=repo,
             base_branch=base_branch,
@@ -392,6 +392,8 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list["Benchmar
     if not jobs:
         return
 
+    from metriq_gym.exporters.dict_exporter import DictExporter
+
     records = []
     for job, result in zip(jobs, results):
         records.append(DictExporter(job, result).export() | {"params": job.params})
@@ -430,6 +432,8 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         results.append(result)
 
     # Build array of per-job records (no common header)
+    from metriq_gym.exporters.dict_exporter import DictExporter
+
     records: list[dict] = []
     for job, result in zip(jobs, results):
         records.append(DictExporter(job, result).export() | {"params": job.params})
@@ -456,6 +460,8 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     dry_run = getattr(args, "dry_run", False)
 
     try:
+        from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
+
         url = GitHubPRExporter(jobs[0], results[0]).export(
             repo=repo,
             base_branch=base_branch,
@@ -511,8 +517,12 @@ def export_job_result(
     args: argparse.Namespace, metriq_job: MetriqGymJob, result: "BenchmarkResult"
 ) -> None:
     if hasattr(args, "json"):
+        from metriq_gym.exporters.json_exporter import JsonExporter
+
         JsonExporter(metriq_job, result).export(args.json)
     else:
+        from metriq_gym.exporters.cli_exporter import CliExporter
+
         CliExporter(metriq_job, result).export()
 
 
@@ -606,6 +616,13 @@ def main() -> int:
     load_dotenv()
     args = parse_arguments()
     job_manager = JobManager()
+
+    # If no resource subcommand is provided, print help and exit 0
+    if getattr(args, "resource", None) is None:
+        from metriq_gym.cli import build_parser
+
+        build_parser().print_help()
+        return 0
 
     RESOURCE_ACTION_TABLE = {
         "suite": {

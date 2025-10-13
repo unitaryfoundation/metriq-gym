@@ -11,6 +11,9 @@ from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkR
 from metriq_gym.qplatform.job import execution_time
 from metriq_gym.qplatform.device import connectivity_graph
 
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+
 
 @dataclass
 class ClopsData(BenchmarkData):
@@ -119,10 +122,6 @@ def prepare_clops_circuits(
     ]
 
     return parametrized_circuits
-
-
-if TYPE_CHECKING:
-    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
 class Clops(Benchmark):
