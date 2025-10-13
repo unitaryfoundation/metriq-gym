@@ -46,7 +46,8 @@ dependencies = [
     "platformdirs>=4.4.0,<5.0.0",
     "dimod>=0.12.20,<0.13.0",
     "qnexus>=0.34.1,<1.0.0",
-    "pytket-qiskit>=0.71.0,<0.73.0"
+    "pytket-qiskit>=0.71.0,<0.73.0",
+    "pyqpanda3>=0.3.2",
 ]
 
 [project.scripts]
@@ -119,7 +120,9 @@ fallback_version = "0.0.0"
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
 quantinuum = "metriq_gym.quantinuum.provider:QuantinuumProvider"
+origin = "metriq_gym.origin.provider:OriginProvider"
 
 [project.entry-points."qbraid.jobs"]
 local = "metriq_gym.local.job:LocalAerJob"
 quantinuum = "metriq_gym.quantinuum.job:QuantinuumJob"
+origin = "metriq_gym.origin.job:OriginJob"

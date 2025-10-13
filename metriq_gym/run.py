@@ -159,6 +159,9 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     handler: Benchmark = setup_benchmark(args, params, job_type)
     job_data: BenchmarkData = handler.dispatch_handler(device)
 
+    # Lazy import to avoid heavy modules during CLI cold start
+    from metriq_gym.qplatform.device import normalized_metadata
+
     job_id = job_manager.add_job(
         MetriqGymJob(
             id=str(uuid.uuid4()),
@@ -170,6 +173,7 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             platform={
                 "provider": args.provider,
                 "device": args.device,
+                "device_metadata": normalized_metadata(device),
             },
             dispatch_time=datetime.now(),
         )
@@ -209,6 +213,9 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"✗ {config_file}: No benchmarks found in the suite")
         return
 
+    # Lazy import once per function call
+    from metriq_gym.qplatform.device import normalized_metadata
+
     results = []
     successful_jobs = []
 
@@ -247,6 +254,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                     platform={
                         "provider": args.provider,
                         "device": args.device,
+                        "device_metadata": normalized_metadata(device),
                     },
                     dispatch_time=datetime.now(),
                 )
