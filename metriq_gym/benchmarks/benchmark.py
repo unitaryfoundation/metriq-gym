@@ -14,7 +14,7 @@ class SupportsId(Protocol):
 
 def flatten_job_ids(job: SupportsId | Iterable[SupportsId]) -> list[str]:
     """Return provider job IDs from a single job or an iterable of jobs."""
-    if isinstance(job, Iterable):
+    if isinstance(job, Iterable) and not isinstance(job, (str, bytes)):
         return [job.id for job in job]
     return [job.id]
 

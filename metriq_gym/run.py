@@ -59,6 +59,17 @@ def load_job(job_id: str, *, provider: str, **kwargs):
     return _load_job(job_id, provider=provider, **kwargs)
 
 
+def job_status(quantum_job):
+    """Lazy proxy to metriq_gym.qplatform.job.job_status.
+
+    Exposed so tests and callers can patch `metriq_gym.run.job_status` and to
+    keep heavy imports out of CLI cold start.
+    """
+    from metriq_gym.qplatform.job import job_status as _job_status
+
+    return _job_status(quantum_job)
+
+
 def _lazy_registry():
     # Import registry lazily to avoid importing heavy benchmark modules on CLI startup
     from . import registry as _registry
@@ -554,7 +565,7 @@ def fetch_result(
     else:
         print("Job is not yet completed. Current status of tasks:")
         for task in quantum_jobs:
-            info = __import__("metriq_gym.qplatform.job", fromlist=["job_status"]).job_status(task)
+            info = job_status(task)
             msg = f"- {task.id}: {info.status.value}"
             if info.queue_position is not None:
                 msg += f" (position {info.queue_position})"
