@@ -12,7 +12,6 @@ from enum import StrEnum
 
 import rustworkx as rx
 import numpy as np
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, CZGate
 from qiskit.quantum_info import random_clifford, random_pauli, Statevector
@@ -21,6 +20,11 @@ from numpy import random
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
 class TwoQubitGateType(StrEnum):
@@ -400,7 +404,7 @@ def generate_mirror_circuit(
 
 
 class MirrorCircuits(Benchmark):
-    def dispatch_handler(self, device: QuantumDevice) -> MirrorCircuitsData:
+    def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
         num_layers = self.params.num_layers
         two_qubit_gate_prob = self.params.two_qubit_gate_prob
         two_qubit_gate_name = self.params.two_qubit_gate_name
@@ -457,8 +461,8 @@ class MirrorCircuits(Benchmark):
     def poll_handler(
         self,
         job_data: MirrorCircuitsData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> MirrorCircuitsResult:
         counts_list = flatten_counts(result_data)
 

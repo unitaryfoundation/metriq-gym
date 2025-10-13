@@ -1,18 +1,22 @@
 import argparse
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING, Protocol
 
 from pydantic import BaseModel
 from dataclasses import dataclass
 
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
-def flatten_job_ids(quantum_job: QuantumJob | Iterable[QuantumJob]) -> list[str]:
-    if isinstance(quantum_job, QuantumJob):
-        return [quantum_job.id]
-    elif isinstance(quantum_job, Iterable):
-        return [job.id for job in quantum_job]
-    raise TypeError(f"Unsupported job type: {type(quantum_job)}")
+class SupportsId(Protocol):
+    id: str
+
+
+def flatten_job_ids(job: SupportsId | Iterable[SupportsId]) -> list[str]:
+    """Return provider job IDs from a single job or an iterable of jobs."""
+    if isinstance(job, Iterable) and not isinstance(job, (str, bytes)):
+        return [job.id for job in job]
+    return [job.id]
 
 
 @dataclass
@@ -42,13 +46,13 @@ class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
         self.args = args
         self.params: BaseModel = params
 
-    def dispatch_handler(self, device: QuantumDevice) -> BD:
+    def dispatch_handler(self, device: "QuantumDevice") -> BD:
         raise NotImplementedError
 
     def poll_handler(
         self,
         job_data: BD,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> BR:
         raise NotImplementedError
