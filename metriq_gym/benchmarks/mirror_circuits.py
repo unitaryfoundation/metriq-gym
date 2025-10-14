@@ -12,6 +12,7 @@ from enum import StrEnum
 
 import rustworkx as rx
 import numpy as np
+from rustworkx.generators import path_graph
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, CZGate
@@ -21,19 +22,6 @@ from numpy import random
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
-
-
-def build_line_graph(width: int) -> rx.PyGraph:
-    """Construct a line (path) graph with the requested width."""
-    line_graph = rx.PyGraph()
-    if width <= 0:
-        return line_graph
-
-    line_graph.add_nodes_from(range(width))
-    for node in range(width - 1):
-        line_graph.add_edge(node, node + 1, None)
-
-    return line_graph
 
 
 class TwoQubitGateType(StrEnum):
@@ -441,7 +429,7 @@ class MirrorCircuits(Benchmark):
         else:
             actual_width = available_qubits
 
-        working_graph = build_line_graph(actual_width)
+        working_graph = path_graph(actual_width)
 
         circuits = []
         expected_bitstrings = []
