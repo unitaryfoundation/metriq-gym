@@ -136,6 +136,12 @@ def create_subgraph_from_qubits(
     return subgraph
 
 
+def working_graph(width: int) -> rx.PyGraph:
+    """Return the connectivity graph used to synthesize mirror circuits."""
+
+    return path_graph(width)
+
+
 def random_paulis(
     connectivity_graph: rx.PyGraph, random_state: random.RandomState
 ) -> QuantumCircuit:
@@ -438,7 +444,7 @@ class MirrorCircuits(Benchmark):
         else:
             actual_width = available_qubits
 
-        working_graph = path_graph(actual_width)
+        working_graph_conn = working_graph(actual_width)
 
         circuits = []
         expected_bitstrings = []
@@ -448,7 +454,7 @@ class MirrorCircuits(Benchmark):
             circuit, expected_bitstring = generate_mirror_circuit(
                 num_layers=num_layers,
                 two_qubit_gate_prob=two_qubit_gate_prob,
-                connectivity_graph=working_graph,
+                connectivity_graph=working_graph_conn,
                 two_qubit_gate_name=two_qubit_gate_name,
                 seed=circuit_seed,
             )
