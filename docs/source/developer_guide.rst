@@ -46,13 +46,13 @@ After ``uv sync`` the project environment lives in ``.venv``; activate it with `
 prefer a shell-based workflow, or continue using ``uv run`` for isolated commands.
 
 .. note::
-   macOS users installing optional ``pyqpanda`` support must also install ``libidn2`` via Homebrew, e.g.
+   macOS users installing optional ``pyqpanda3`` support must also install ``libidn2`` via Homebrew, e.g.
 
    .. code-block:: sh
 
       brew reinstall libidn2
 
-   Install the library before invoking ``uv sync`` to avoid missing-symbol errors during the ``pyqpanda`` build.
+   Install the library before invoking ``uv sync`` to avoid missing-symbol errors during the ``pyqpanda3`` build.
 
 Contributing
 ------------
