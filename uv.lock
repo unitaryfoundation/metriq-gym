@@ -1380,7 +1380,7 @@ requires-dist = [
 dev = [
     { name = "build", specifier = ">=1.2.2,<2.0.0" },
     { name = "deptry", specifier = ">=0.23.1,<0.24.0" },
-    { name = "ipykernel", specifier = ">=6.30.1,<7.0.0" },
+    { name = "ipykernel", specifier = ">=6.30.1,<8.0.0" },
     { name = "mypy", specifier = ">=1.18.2,<2.0.0" },
     { name = "pre-commit", specifier = ">=4.3.0,<5.0.0" },
     { name = "pytest", specifier = ">=8.4.2,<9.0.0" },
@@ -2079,9 +2079,11 @@ dependencies = [
     { name = "setuptools" },
 ]
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/8a/842d2fa501ba0952c0b1a59f18300d47828bce4bbbf675445ef0c0b04935/pyqpanda3-0.3.2-cp312-cp312-macosx_10_11_x86_64.whl", hash = "sha256:f1979994f55835d93bba97e84692bf2ff9ee4ee86073a4a64187c54e09d9c687", size = 18824756, upload-time = "2025-10-14T06:44:47.445Z" },
     { url = "https://files.pythonhosted.org/packages/70/3d/d0fba915f95ec46cef5ec21179d5d78defae8fb0bf46d29e50d2a339cb27/pyqpanda3-0.3.2-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:84ccc34b724a6f26283be29c2b8dbd343a2d3f130d683bb718d12f0e89668a21", size = 16120590, upload-time = "2025-08-15T09:45:17.221Z" },
     { url = "https://files.pythonhosted.org/packages/92/7a/fae9fba4a38cc338959913051f90e0ce180afbfcaadf00efd27ce861f1c4/pyqpanda3-0.3.2-cp312-none-manylinux1_x86_64.whl", hash = "sha256:61d02d2f78c383d43df5e3790bf363ab28e69ec5e1028392731685e0248d482c", size = 35354278, upload-time = "2025-08-15T09:47:14.649Z" },
     { url = "https://files.pythonhosted.org/packages/f9/5a/8869dc4153ee06a625bf1030b12988a14aa2d7f3fa57196afaf00a6a3b58/pyqpanda3-0.3.2-cp312-none-win_amd64.whl", hash = "sha256:58025ba1a48eae24928ec405dc6c62692ed491e8aada0bcb40ac2e36807c65be", size = 21640208, upload-time = "2025-08-15T09:48:20.013Z" },
+    { url = "https://files.pythonhosted.org/packages/39/18/747675184e2927fe70911a856d9ce56d1c81c52f7d65c176b1e0827e31c4/pyqpanda3-0.3.2-cp313-cp313-macosx_10_11_x86_64.whl", hash = "sha256:06d4d37376adc847904d3118478770d3242322389d0bad565a705712727f6337", size = 18825346, upload-time = "2025-10-14T06:45:05.679Z" },
     { url = "https://files.pythonhosted.org/packages/3c/21/b403bd295391e2803dcf9215b1c58278f12dbae5aa4156916f2e04a09099/pyqpanda3-0.3.2-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:7a4bbff72b624760c84bd00c7df76b2c195be271b66585c0cd3c24f425192dab", size = 16121158, upload-time = "2025-08-15T09:49:14.552Z" },
     { url = "https://files.pythonhosted.org/packages/73/46/6fce2ebd7b6d5e3738e9934a05768ba87a19b574dcdf99b464ac33d5ad30/pyqpanda3-0.3.2-cp313-none-manylinux1_x86_64.whl", hash = "sha256:5b22dec1c3fea8d08091123822c8487e5dcaf5136ed4533c34902629b6e4770b", size = 35355265, upload-time = "2025-08-15T09:51:08.171Z" },
     { url = "https://files.pythonhosted.org/packages/2d/92/597c7af9876e2300e6127f48f285f5440c17502f910442355636d38ca5e8/pyqpanda3-0.3.2-cp313-none-win_amd64.whl", hash = "sha256:680222a89924e62ed6d44433e2be65e1f0dd353f7326c3fb6c304fc1d8327cb3", size = 21640465, upload-time = "2025-08-15T09:52:23.972Z" },

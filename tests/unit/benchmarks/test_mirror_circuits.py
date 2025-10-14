@@ -28,6 +28,26 @@ from metriq_gym.benchmarks.mirror_circuits import (
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
 
+def _edge_pairs(graph: rx.PyGraph) -> set[tuple[int, int]]:
+    """Normalize edge tuples into unordered pairs for assertions.
+
+    rustworkx edges may appear as ``(u, v)`` or ``(u, v, data)`` tuples. Only the endpoints
+    matter for these topology checks, so extra elements (edge weights/data) are intentionally
+    ignored.
+    """
+    pairs: set[tuple[int, int]] = set()
+    for edge in graph.edge_list():
+        if len(edge) == 2:
+            u, v = edge
+        elif len(edge) >= 3:
+            # rustworkx includes edge data at index 2; discard it for endpoint comparisons
+            u, v = edge[0], edge[1]
+        else:
+            raise AssertionError(f"Unexpected edge format: {edge}")
+        pairs.add((min(u, v), max(u, v)))
+    return pairs
+
+
 class TestMirrorCircuitGeneration:
     def test_random_paulis(self):
         graph = rx.PyGraph()
@@ -344,6 +364,11 @@ class TestMirrorCircuitsBenchmark:
 
         # Verify that generate_mirror_circuit was called correctly
         assert mock_generate_circuit.call_count == 5  # num_circuits times
+        for call in mock_generate_circuit.call_args_list:
+            line_graph = call.kwargs["connectivity_graph"]
+            assert isinstance(line_graph, rx.PyGraph)
+            assert set(line_graph.node_indices()) == {0, 1, 2}
+            assert _edge_pairs(line_graph) == {(0, 1), (1, 2)}
 
         # Test width parameter functionality
         mock_params_with_width = MagicMock()
@@ -363,6 +388,9 @@ class TestMirrorCircuitsBenchmark:
 
         assert result_with_width.num_qubits == 2
         mock_generate_circuit.assert_called_once()
+        width_call_graph = mock_generate_circuit.call_args.kwargs["connectivity_graph"]
+        assert set(width_call_graph.node_indices()) == {0, 1}
+        assert _edge_pairs(width_call_graph) == {(0, 1)}
 
         # Test width parameter validation
         mock_params_invalid = MagicMock()
