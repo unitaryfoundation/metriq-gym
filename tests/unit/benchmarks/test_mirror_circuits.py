@@ -29,12 +29,18 @@ from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
 
 def _edge_pairs(graph: rx.PyGraph) -> set[tuple[int, int]]:
-    """Normalize edge tuples into unordered pairs for assertions."""
+    """Normalize edge tuples into unordered pairs for assertions.
+
+    rustworkx edges may appear as ``(u, v)`` or ``(u, v, data)`` tuples. Only the endpoints
+    matter for these topology checks, so extra elements (edge weights/data) are intentionally
+    ignored.
+    """
     pairs: set[tuple[int, int]] = set()
     for edge in graph.edge_list():
         if len(edge) == 2:
             u, v = edge
         elif len(edge) >= 3:
+            # rustworkx includes edge data at index 2; discard it for endpoint comparisons
             u, v = edge[0], edge[1]
         else:
             raise AssertionError(f"Unexpected edge format: {edge}")
