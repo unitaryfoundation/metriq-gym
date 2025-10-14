@@ -2,9 +2,7 @@ import math
 import statistics
 from scipy.stats import binom
 from dataclasses import dataclass
-
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
+from typing import TYPE_CHECKING
 from pyqrack import QrackSimulator
 from qiskit import QuantumCircuit
 
@@ -12,6 +10,10 @@ from metriq_gym.circuits import qiskit_random_circuit_sampling
 
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 @dataclass
@@ -155,7 +157,7 @@ def calc_trial_stats(
     )
 
 
-def calc_stats(data: QuantumVolumeData, counts: list[MeasCount]) -> AggregateStats:
+def calc_stats(data: QuantumVolumeData, counts: list["MeasCount"]) -> AggregateStats:
     """Calculate aggregate statistics over multiple trials.
 
     Args:
@@ -194,7 +196,7 @@ def calc_stats(data: QuantumVolumeData, counts: list[MeasCount]) -> AggregateSta
 
 
 class QuantumVolume(Benchmark):
-    def dispatch_handler(self, device: QuantumDevice) -> QuantumVolumeData:
+    def dispatch_handler(self, device: "QuantumDevice") -> QuantumVolumeData:
         num_qubits = self.params.num_qubits
         shots = self.params.shots
         trials = self.params.trials
@@ -212,8 +214,8 @@ class QuantumVolume(Benchmark):
     def poll_handler(
         self,
         job_data: QuantumVolumeData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> QuantumVolumeResult:
         stats: AggregateStats = calc_stats(job_data, flatten_counts(result_data))
 

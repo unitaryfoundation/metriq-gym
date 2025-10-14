@@ -6,12 +6,10 @@ the CHSH inequality. The violation of this inequality indicates successful entan
 """
 
 from dataclasses import dataclass
-
+from typing import TYPE_CHECKING
 import networkx as nx
 import rustworkx as rx
 import numpy as np
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
 
 from qiskit import QuantumCircuit
 from qiskit.result import marginal_counts, sampled_expectation_value
@@ -24,6 +22,10 @@ from metriq_gym.helpers.graph_helpers import (
     largest_connected_size,
 )
 from metriq_gym.qplatform.device import connectivity_graph
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 class BSEQResult(BenchmarkResult):
@@ -99,7 +101,7 @@ def generate_chsh_circuit_sets(coloring: GraphColoring) -> list[QuantumCircuit]:
     return exp_sets
 
 
-def chsh_subgraph(coloring: GraphColoring, counts: list[MeasCount]) -> rx.PyGraph:
+def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGraph:
     """Constructs a subgraph of qubit pairs that violate the CHSH inequality.
 
     Args:
@@ -143,7 +145,7 @@ def chsh_subgraph(coloring: GraphColoring, counts: list[MeasCount]) -> rx.PyGrap
 class BSEQ(Benchmark):
     """Benchmark class for BSEQ (Bell state effective qubits) experiments."""
 
-    def dispatch_handler(self, device: QuantumDevice) -> BSEQData:
+    def dispatch_handler(self, device: "QuantumDevice") -> BSEQData:
         """Runs the benchmark and returns job metadata."""
         shots = self.params.shots
 
@@ -176,8 +178,8 @@ class BSEQ(Benchmark):
     def poll_handler(
         self,
         job_data: BSEQData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> BSEQResult:
         """Poll and calculate largest connected component."""
         if not job_data.coloring:
