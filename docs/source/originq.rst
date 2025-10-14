@@ -8,7 +8,7 @@ Prerequisites
 -------------
 
 * A valid OriginQ QCloud account and API token. Copy the token from the OriginQ
-  workbench portal.
+  Workbench portal.
 * The Metriq-Gym optional dependency ``pyqpanda3`` (installed automatically when
   you run ``uv sync --all-groups`` or ``uv sync`` on this project).
 * macOS users must install ``libidn2`` before building ``pyqpanda3``:
