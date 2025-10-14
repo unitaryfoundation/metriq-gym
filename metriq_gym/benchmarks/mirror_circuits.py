@@ -420,11 +420,15 @@ class MirrorCircuits(Benchmark):
 
         available_qubits = len(topology_graph.node_indices())
 
-        if available_qubits == 0:
-            raise ValueError("Mirror circuits benchmark requires a device with at least one qubit")
+        if available_qubits < 2:
+            raise ValueError("Mirror circuits benchmark requires a device with at least two qubits")
 
         # Select subset of qubits if width is specified
         if target_width is not None:
+            if target_width < 2:
+                raise ValueError(
+                    f"Requested width {target_width} is too small; mirror circuits require at least two qubits"
+                )
             if target_width > available_qubits:
                 raise ValueError(
                     f"Requested width {target_width} exceeds device capacity {available_qubits}"
