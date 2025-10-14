@@ -50,9 +50,7 @@ catalog directly:
 
 .. code-block:: sh
 
-   uv run python -c "from metriq_gym.run import load_provider; \
-provider = load_provider('origin'); \
-print([device.id for device in provider.get_devices()])"
+   uv run python -c "from metriq_gym.run import load_provider; provider = load_provider('origin'); print([device.id for device in provider.get_devices()])"
 
 Dispatching Benchmarks
 ----------------------
