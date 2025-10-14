@@ -45,6 +45,15 @@ Install dependencies into the uv-managed virtual environment:
 After ``uv sync`` the project environment lives in ``.venv``; activate it with ``source .venv/bin/activate`` if you
 prefer a shell-based workflow, or continue using ``uv run`` for isolated commands.
 
+.. note::
+   macOS users installing optional ``pyqpanda`` support must also install ``libidn2`` via Homebrew, e.g.
+
+   .. code-block:: sh
+
+      brew reinstall libidn2
+
+   Install the library before invoking ``uv sync`` to avoid missing-symbol errors during the ``pyqpanda`` build.
+
 Contributing
 ------------
 
