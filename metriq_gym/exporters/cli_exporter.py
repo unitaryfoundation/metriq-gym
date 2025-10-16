@@ -1,38 +1,24 @@
 from pprint import pprint
-from typing import Any, Mapping
 
 from metriq_gym.exporters.base_exporter import BaseExporter
 
 
 class CliExporter(BaseExporter):
     def export(self) -> None:
+        # Print metadata first (without the nested results block)
         record = self.as_dict()
-        results_section = record.pop("results", {})
+        record.pop("results", None)
         pprint(record)
 
-        values: Mapping[str, Any]
-        uncertainties: Mapping[str, Any]
-        if isinstance(results_section, Mapping):
-            values = (
-                results_section.get("values", {})
-                if isinstance(results_section.get("values", {}), Mapping)
-                else {}
-            )
-            uncertainties = (
-                results_section.get("uncertainties", {})
-                if isinstance(results_section.get("uncertainties", {}), Mapping)
-                else {}
-            )
-        else:
-            values = {}
-            uncertainties = {}
-
+        # Print results using the model's computed properties
+        values = self.result.values
+        uncertainties = self.result.uncertainties
         if values:
             print("\nResults:")
             for key in sorted(values):
                 value = values[key]
-                uncertainty = uncertainties.get(key, "")
-                if uncertainty in (None, "", 0):
+                uncertainty = uncertainties.get(key, 0)
+                if not uncertainty:
                     print(f"  {key}: {value}")
                 else:
                     print(f"  {key}: {value} ± {uncertainty}")
