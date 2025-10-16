@@ -2,7 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from metriq_gym.benchmarks.wit import EXPECTATION_METRIC, WITResult
+from metriq_gym.benchmarks.wit import WITResult
+from metriq_gym.benchmarks.benchmark import BenchmarkScore
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
@@ -55,30 +56,28 @@ def test_calculate_expectation_value_error_handles_zero_counts():
 
 def test_wit_result_exports_symmetric_results_and_uncertainties():
     job = _build_metriq_job()
-    result = WITResult(
-        values={EXPECTATION_METRIC: 0.5},
-        uncertainties={EXPECTATION_METRIC: 0.05},
-    )
+    result = WITResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
     exporter = _DummyExporter(job, result)
 
     payload = exporter.as_dict()
-    assert payload["results"]["values"] == {EXPECTATION_METRIC: pytest.approx(0.5)}
-    assert payload["results"]["uncertainties"] == {EXPECTATION_METRIC: pytest.approx(0.05)}
+    assert payload["results"]["values"] == {"expectation_value": pytest.approx(0.5)}
+    assert payload["results"]["uncertainties"] == {"expectation_value": pytest.approx(0.05)}
     assert payload["platform"] == {"provider": "provider", "device": "device"}
-    assert result.values == pytest.approx({EXPECTATION_METRIC: 0.5})
-    assert result.uncertainties == pytest.approx({EXPECTATION_METRIC: 0.05})
+    assert result.values == pytest.approx({"expectation_value": 0.5})
+    assert result.uncertainties == pytest.approx({"expectation_value": 0.05})
 
 
-def test_wit_result_rejects_mismatched_uncertainty_keys():
-    with pytest.raises(ValueError):
-        WITResult(values={EXPECTATION_METRIC: 0.5}, uncertainties={"other_metric": 0.05})
+def test_wit_result_uncertainty_keys_match_values():
+    r = WITResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
+    assert set(r.values.keys()) == {"expectation_value"}
+    assert set(r.uncertainties.keys()) == {"expectation_value"}
 
 
 def test_cli_exporter_displays_value_with_uncertainty(capsys):
     job = _build_metriq_job()
-    result = WITResult(values={EXPECTATION_METRIC: 0.5}, uncertainties={EXPECTATION_METRIC: 0.05})
+    result = WITResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
 
     CliExporter(job, result).export()
 
     output = capsys.readouterr().out
-    assert f"{EXPECTATION_METRIC}: 0.5 ± 0.05" in output
+    assert "expectation_value: 0.5 ± 0.05" in output

@@ -1,7 +1,7 @@
 import argparse
-from typing import Any, Iterable, TYPE_CHECKING, Protocol
+from typing import Iterable, TYPE_CHECKING, Protocol
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
@@ -31,35 +31,43 @@ class BenchmarkData:
         return cls(provider_job_ids=flatten_job_ids(quantum_job), **kwargs)
 
 
+class BenchmarkScore(BaseModel):
+    value: float
+    uncertainty: float = 0.0
+
+
 class BenchmarkResult(BaseModel):
-    """Stores the final results of the benchmark."""
+    """Base class for benchmark results with minimal author burden.
 
-    values: dict[str, Any] | None = None
-    uncertainties: dict[str, Any] | None = None
+    Subclasses declare metric fields as numbers (float/int) or BenchmarkScore.
+    - Numbers map to results.values[<field>] = number and results.uncertainties[...] = 0.0
+    - BenchmarkScore maps to values[...] = value and uncertainties[...] = uncertainty
+    """
 
-    def result_metrics(self) -> dict[str, Any]:
-        """Return benchmark metrics to expose under the results dictionary."""
-        if self.values:
-            return self.values
-        base = self.model_dump(exclude={"values", "uncertainties"}, exclude_none=True)
-        return base
+    def _iter_metric_items(self):
+        for name in self.__class__.model_fields:
+            val = getattr(self, name, None)
+            if val is None:
+                continue
+            if isinstance(val, BenchmarkScore):
+                yield name, float(val.value), float(val.uncertainty)
+            elif isinstance(val, (int, float)):
+                yield name, float(val), 0.0
+            # else: ignore non-numeric / non-score fields
 
-    def uncertainty_metrics(self) -> dict[str, Any]:
-        """Return statistical or systematic uncertainties for the benchmark metrics."""
-        return self.uncertainties or {}
+    @property
+    def values(self) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for k, v, _u in self._iter_metric_items():
+            out[k] = v
+        return out
 
-    @model_validator(mode="after")
-    def _validate_uncertainty_keys(self) -> "BenchmarkResult":
-        """Ensure any exposed uncertainty metrics align with the reported results."""
-        result_keys = set(self.result_metrics().keys())
-        uncertainty_keys = set(self.uncertainty_metrics().keys())
-        missing_values = uncertainty_keys - result_keys
-        if missing_values:
-            raise ValueError(
-                "Uncertainty keys must correspond to existing results. Missing values for: "
-                f"{missing_values}"
-            )
-        return self
+    @property
+    def uncertainties(self) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for k, _v, u in self._iter_metric_items():
+            out[k] = u
+        return out
 
 
 class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:

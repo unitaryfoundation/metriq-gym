@@ -22,17 +22,14 @@ class BaseExporter(ABC):
 
     def as_dict(self):
         # Preserve existing top-level fields for backward compatibility.
-        results_payload = self.result.result_metrics()
-        uncertainties_payload = self.result.uncertainty_metrics()
-
         record = {
             "app_version": self.metriq_gym_job.app_version,
             "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),
             "suite_id": self.metriq_gym_job.suite_id,
             "job_type": self.metriq_gym_job.job_type.value,
             "results": {
-                "values": results_payload,
-                "uncertainties": uncertainties_payload if uncertainties_payload else {},
+                "values": self.result.values,
+                "uncertainties": self.result.uncertainties if self.result.uncertainties else {},
             },
         }
 

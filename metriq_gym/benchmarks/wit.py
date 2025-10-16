@@ -16,13 +16,16 @@ from typing import TYPE_CHECKING
 
 from qiskit import QuantumCircuit
 from metriq_gym.helpers.task_helpers import flatten_counts
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+)
 from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
     binary_expectation_value,
 )
-
-EXPECTATION_METRIC = "expectation_value"
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -223,7 +226,7 @@ def wit_circuit(num_qubits: int) -> QuantumCircuit:
 
 
 class WITResult(BenchmarkResult):
-    pass
+    expectation_value: BenchmarkScore
 
 
 @dataclass
@@ -245,8 +248,8 @@ class WIT(Benchmark):
     ) -> WITResult:
         counts = flatten_counts(result_data)[0]
         return WITResult(
-            values={EXPECTATION_METRIC: binary_expectation_value(self.params.shots, counts)},
-            uncertainties={
-                EXPECTATION_METRIC: binary_expectation_stddev(self.params.shots, counts)
-            },
+            expectation_value=BenchmarkScore(
+                value=binary_expectation_value(self.params.shots, counts),
+                uncertainty=binary_expectation_stddev(self.params.shots, counts),
+            )
         )
