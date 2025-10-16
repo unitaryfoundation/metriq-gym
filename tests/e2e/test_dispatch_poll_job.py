@@ -65,7 +65,7 @@ def test_dispatch_and_poll_single_job_on_local_simulator(tmp_path):
     assert outfile.exists(), "Poll did not write the expected JSON file"
 
     data = json.loads(outfile.read_text())
-    result = data["results"]["accuracy_score"]
+    result = data["results"]["values"]["accuracy_score"]
     assert result, "No results found in the JSON file"
     assert result == 1.0, "Expected accuracy score of 1.0 for the local simulator"
 

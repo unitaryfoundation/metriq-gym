@@ -1,7 +1,7 @@
 import argparse
-from typing import Iterable, TYPE_CHECKING, Protocol
+from typing import Any, Iterable, TYPE_CHECKING, Protocol
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
@@ -32,9 +32,34 @@ class BenchmarkData:
 
 
 class BenchmarkResult(BaseModel):
-    """Stores the final results of the benchmark"""
+    """Stores the final results of the benchmark."""
 
-    pass
+    values: dict[str, Any] | None = None
+    uncertainties: dict[str, Any] | None = None
+
+    def result_metrics(self) -> dict[str, Any]:
+        """Return benchmark metrics to expose under the results dictionary."""
+        if self.values:
+            return self.values
+        base = self.model_dump(exclude={"values", "uncertainties"}, exclude_none=True)
+        return base
+
+    def uncertainty_metrics(self) -> dict[str, Any]:
+        """Return statistical or systematic uncertainties for the benchmark metrics."""
+        return self.uncertainties or {}
+
+    @model_validator(mode="after")
+    def _validate_uncertainty_keys(self) -> "BenchmarkResult":
+        """Ensure any exposed uncertainty metrics align with the reported results."""
+        result_keys = set(self.result_metrics().keys())
+        uncertainty_keys = set(self.uncertainty_metrics().keys())
+        missing_values = uncertainty_keys - result_keys
+        if missing_values:
+            raise ValueError(
+                "Uncertainty keys must correspond to existing results. Missing values for: "
+                f"{missing_values}"
+            )
+        return self
 
 
 class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:

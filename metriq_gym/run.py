@@ -77,7 +77,12 @@ def _lazy_registry():
     return _registry
 
 
-COMMON_SUITE_KEYS = ["provider", "device", "timestamp", "app_version"]
+COMMON_SUITE_METADATA = {
+    "provider": ("platform", "provider"),
+    "device": ("platform", "device"),
+    "timestamp": ("timestamp",),
+    "app_version": ("app_version",),
+}
 
 
 def setup_device(provider_name: str, backend_name: str):
@@ -393,10 +398,21 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     export_suite_results(args, jobs, results)
 
 
+def _get_nested(mapping: dict[str, Any], path: tuple[str, ...]) -> Any | None:
+    current: Any = mapping
+    for key in path:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return None
+    return current
+
+
 def print_selected(d, selected_keys):
-    for k in selected_keys:
-        if k in d:
-            print(f"{k}: {d[k]}")
+    for label, path in selected_keys.items():
+        value = _get_nested(d, path)
+        if value is not None:
+            print(f"{label}: {value}")
 
 
 def export_suite_results(args, jobs: list[MetriqGymJob], results: list["BenchmarkResult"]) -> None:
@@ -413,7 +429,7 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list["Benchmar
         raise NotImplementedError("JSON export of suite results is not implemented yet.")
     else:
         print("\n--- Suite Metadata ---")
-        print_selected(records[0], COMMON_SUITE_KEYS)
+        print_selected(records[0], COMMON_SUITE_METADATA)
         print("\n--- Suite Results ---")
         print(tabulate_job_results(records))
 
@@ -498,11 +514,11 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"✗ Upload failed: {e}")
 
 
-def tabulate_job_results(records, sep=" – "):
+def tabulate_job_results(records, sep=" ± "):
     rows = []
     metric_keys = set()
     for record in records:
-        metric_keys.update(record["results"].keys())
+        metric_keys.update(record.get("results", {}).get("values", {}).keys())
     metric_keys = sorted(metric_keys)
 
     headers = ["Job Type", "Parameters"] + metric_keys
@@ -517,8 +533,15 @@ def tabulate_job_results(records, sep=" – "):
         else:
             params_str = str(params)
         row = [name, params_str]
+        values = record.get("results", {}).get("values", {})
+        uncertainties = record.get("results", {}).get("uncertainties", {})
         for metric in metric_keys:
-            row.append(record["results"].get(metric, ""))
+            value = values.get(metric, "")
+            uncertainty = uncertainties.get(metric)
+            if uncertainty is None or uncertainty == "":
+                row.append(value)
+            else:
+                row.append(f"{value}{sep}{uncertainty}")
         rows.append(row)
 
     return tabulate(rows, headers=headers, floatfmt=".4g")

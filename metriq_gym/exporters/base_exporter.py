@@ -22,22 +22,37 @@ class BaseExporter(ABC):
 
     def as_dict(self):
         # Preserve existing top-level fields for backward compatibility.
+        results_payload = self.result.result_metrics()
+        uncertainties_payload = self.result.uncertainty_metrics()
+
         record = {
             "app_version": self.metriq_gym_job.app_version,
             "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),
-            "provider": self.metriq_gym_job.provider_name,
             "suite_id": self.metriq_gym_job.suite_id,
-            "device": self.metriq_gym_job.device_name,
             "job_type": self.metriq_gym_job.job_type.value,
-            "results": dict(self.result),
+            "results": {
+                "values": results_payload,
+                "uncertainties": uncertainties_payload if uncertainties_payload else {},
+            },
         }
 
-        platform = {
-            "provider": self.metriq_gym_job.provider_name,
-            "device": self.metriq_gym_job.device_name,
-            "device_metadata": self._derive_device_metadata(),
-        }
-        record["platform"] = platform
+        job_platform = getattr(self.metriq_gym_job, "platform", None)
+        platform_info: dict[str, Any]
+        if isinstance(job_platform, dict):
+            platform_info = {k: v for k, v in job_platform.items() if v is not None}
+        else:
+            platform_info = {}
+
+        platform_info.setdefault("provider", self.metriq_gym_job.provider_name)
+        platform_info.setdefault("device", self.metriq_gym_job.device_name)
+
+        device_metadata = self._derive_device_metadata()
+        if device_metadata:
+            platform_info["device_metadata"] = device_metadata
+        elif "device_metadata" in platform_info and not platform_info["device_metadata"]:
+            platform_info.pop("device_metadata")
+
+        record["platform"] = platform_info
 
         return record
 
