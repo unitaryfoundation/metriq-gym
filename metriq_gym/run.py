@@ -514,7 +514,7 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"✗ Upload failed: {e}")
 
 
-def tabulate_job_results(records, sep=" ± "):
+def tabulate_job_results(records, sep=" +/- "):
     rows = []
     metric_keys = set()
     for record in records:
