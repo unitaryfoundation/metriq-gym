@@ -7,20 +7,27 @@ the CHSH inequality. The violation of this inequality indicates successful entan
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
 import networkx as nx
-import rustworkx as rx
 import numpy as np
+import rustworkx as rx
 
 from qiskit import QuantumCircuit
 from qiskit.result import marginal_counts, sampled_expectation_value
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
-from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+)
 from metriq_gym.helpers.graph_helpers import (
     GraphColoring,
     device_graph_coloring,
     largest_connected_size,
 )
+from metriq_gym.helpers.statistics import bootstrap_largest_component_stddev
+from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
 
 if TYPE_CHECKING:
@@ -29,47 +36,10 @@ if TYPE_CHECKING:
 
 
 class BSEQResult(BenchmarkResult):
-    largest_connected_size: int
-    largest_connected_size_std: float
+    largest_connected_size: BenchmarkScore
 
 
 CHSH_THRESHOLD = 2.0
-# Number of Monte Carlo samples used to estimate the error bar on the largest component size.
-BOOTSTRAP_SAMPLES = 512
-
-
-def _largest_component_from_edges(edges: list[tuple[int, int]], num_nodes: int) -> int:
-    """Compute the largest connected component size from an edge list."""
-    if num_nodes == 0:
-        return 0
-    parent = list(range(num_nodes))
-    sizes = [1] * num_nodes
-
-    def find(node: int) -> int:
-        while parent[node] != node:
-            parent[node] = parent[parent[node]]
-            node = parent[node]
-        return node
-
-    def union(u: int, v: int) -> None:
-        root_u = find(u)
-        root_v = find(v)
-        if root_u == root_v:
-            return
-        if sizes[root_u] < sizes[root_v]:
-            root_u, root_v = root_v, root_u
-        parent[root_v] = root_u
-        sizes[root_u] += sizes[root_v]
-
-    for u, v in edges:
-        union(u, v)
-
-    largest = 1
-    for node in range(num_nodes):
-        root = find(node)
-        if sizes[root] > largest:
-            largest = sizes[root]
-    return largest
 
 
 @dataclass
@@ -140,7 +110,9 @@ def generate_chsh_circuit_sets(coloring: GraphColoring) -> list[QuantumCircuit]:
     return exp_sets
 
 
-def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGraph:
+def chsh_subgraph(
+    coloring: GraphColoring, counts: list["MeasCount"]
+) -> tuple[rx.PyGraph, dict[tuple[int, int], tuple[float, float]]]:
     """Constructs a subgraph of qubit pairs that violate the CHSH inequality.
 
     Args:
@@ -191,38 +163,6 @@ def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGr
     return good_graph, edge_stats
 
 
-def estimate_lcs_uncertainty(
-    edge_stats: dict[tuple[int, int], tuple[float, float]],
-    num_nodes: int,
-    *,
-    threshold: float = CHSH_THRESHOLD,
-    num_samples: int = BOOTSTRAP_SAMPLES,
-    rng: np.random.Generator | None = None,
-) -> float:
-    """Estimate the standard deviation of the largest connected component via Monte Carlo."""
-    if num_nodes == 0 or not edge_stats or num_samples <= 1:
-        return 0.0
-
-    edges = list(edge_stats.items())
-    rng = rng or np.random.default_rng()
-    samples = np.empty(num_samples, dtype=float)
-
-    for idx in range(num_samples):
-        active_edges: list[tuple[int, int]] = []
-        for (u, v), (mean, std) in edges:
-            if std is None or np.isnan(std) or std == 0.0:
-                s_draw = mean
-            else:
-                s_draw = rng.normal(mean, std)
-            if s_draw > threshold:
-                active_edges.append((u, v))
-        samples[idx] = _largest_component_from_edges(active_edges, num_nodes)
-
-    if np.allclose(samples, samples[0]):
-        return 0.0
-    return float(samples.std(ddof=1))
-
-
 class BSEQ(Benchmark):
     """Benchmark class for BSEQ (Bell state effective qubits) experiments."""
 
@@ -270,8 +210,11 @@ class BSEQ(Benchmark):
             job_data.coloring = GraphColoring.from_dict(job_data.coloring)
         good_graph, edge_stats = chsh_subgraph(job_data.coloring, flatten_counts(result_data))
         lcs = largest_connected_size(good_graph)
-        lcs_std = estimate_lcs_uncertainty(edge_stats, job_data.coloring.num_nodes)
+        lcs_std = bootstrap_largest_component_stddev(
+            edge_stats,
+            job_data.coloring.num_nodes,
+            threshold=CHSH_THRESHOLD,
+        )
         return BSEQResult(
-            largest_connected_size=lcs,
-            largest_connected_size_std=lcs_std,
+            largest_connected_size=BenchmarkScore(value=float(lcs), uncertainty=lcs_std),
         )
