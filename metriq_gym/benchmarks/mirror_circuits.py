@@ -12,7 +12,7 @@ from enum import StrEnum
 
 import rustworkx as rx
 import numpy as np
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+from rustworkx.generators import path_graph
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, CZGate
 from qiskit.quantum_info import random_clifford, random_pauli, Statevector
@@ -21,6 +21,11 @@ from numpy import random
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
 class TwoQubitGateType(StrEnum):
@@ -128,6 +133,12 @@ def create_subgraph_from_qubits(
                 subgraph.add_edge(i, j, None)
 
     return subgraph
+
+
+def working_graph(width: int) -> rx.PyGraph:
+    """Return the connectivity graph used to synthesize mirror circuits."""
+
+    return path_graph(width)
 
 
 def random_paulis(
@@ -400,7 +411,7 @@ def generate_mirror_circuit(
 
 
 class MirrorCircuits(Benchmark):
-    def dispatch_handler(self, device: QuantumDevice) -> MirrorCircuitsData:
+    def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
         num_layers = self.params.num_layers
         two_qubit_gate_prob = self.params.two_qubit_gate_prob
         two_qubit_gate_name = self.params.two_qubit_gate_name
@@ -412,20 +423,27 @@ class MirrorCircuits(Benchmark):
             target_width = None
         topology_graph = connectivity_graph(device)
 
+        available_qubits = len(topology_graph.node_indices())
+
+        if available_qubits < 2:
+            raise ValueError("Mirror circuits benchmark requires a device with at least two qubits")
+
         # Select subset of qubits if width is specified
         if target_width is not None:
-            max_width = len(topology_graph.node_indices())
-            if target_width > max_width:
+            if target_width < 2:
                 raise ValueError(
-                    f"Requested width {target_width} exceeds device capacity {max_width}"
+                    f"Requested width {target_width} is too small; mirror circuits require at least two qubits"
+                )
+            if target_width > available_qubits:
+                raise ValueError(
+                    f"Requested width {target_width} exceeds device capacity {available_qubits}"
                 )
 
-            selected_qubits = select_optimal_qubit_subset(topology_graph, target_width)
-            working_graph = create_subgraph_from_qubits(topology_graph, selected_qubits)
-            actual_width = len(selected_qubits)
+            actual_width = target_width
         else:
-            working_graph = topology_graph
-            actual_width = len(topology_graph.node_indices())
+            actual_width = available_qubits
+
+        working_graph_conn = working_graph(actual_width)
 
         circuits = []
         expected_bitstrings = []
@@ -435,7 +453,7 @@ class MirrorCircuits(Benchmark):
             circuit, expected_bitstring = generate_mirror_circuit(
                 num_layers=num_layers,
                 two_qubit_gate_prob=two_qubit_gate_prob,
-                connectivity_graph=working_graph,
+                connectivity_graph=working_graph_conn,
                 two_qubit_gate_name=two_qubit_gate_name,
                 seed=circuit_seed,
             )
@@ -457,8 +475,8 @@ class MirrorCircuits(Benchmark):
     def poll_handler(
         self,
         job_data: MirrorCircuitsData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> MirrorCircuitsResult:
         counts_list = flatten_counts(result_data)
 
