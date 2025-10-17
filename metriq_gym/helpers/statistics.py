@@ -1,4 +1,8 @@
-"""Helper utilities for benchmark result post-processing."""
+"""Auxiliary utilities for benchmark result post-processing.
+
+Includes functions for calculating statistics from raw measurement results, such as expectation values and uncertainties.
+These functions are used in some benchmark implementations to derive metrics (e.g., WIT, QMLKernel)
+"""
 
 from math import sqrt
 from typing import Mapping

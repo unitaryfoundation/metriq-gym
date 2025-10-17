@@ -34,11 +34,9 @@ class BaseExporter(ABC):
         }
 
         job_platform = getattr(self.metriq_gym_job, "platform", None)
-        platform_info: dict[str, Any]
+        platform_info: dict[str, Any] = {}
         if isinstance(job_platform, dict):
             platform_info = {k: v for k, v in job_platform.items() if v is not None}
-        else:
-            platform_info = {}
 
         platform_info.setdefault("provider", self.metriq_gym_job.provider_name)
         platform_info.setdefault("device", self.metriq_gym_job.device_name)

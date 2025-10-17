@@ -37,7 +37,7 @@ class BenchmarkScore(BaseModel):
 
 
 class BenchmarkResult(BaseModel):
-    """Base class for benchmark results with minimal author burden.
+    """Base class for benchmark results.
 
     Subclasses declare metric fields as numbers (float/int) or BenchmarkScore.
     - Numbers map to results.values[<field>] = number and results.uncertainties[...] = 0.0
@@ -46,28 +46,19 @@ class BenchmarkResult(BaseModel):
 
     def _iter_metric_items(self):
         for name in self.__class__.model_fields:
-            val = getattr(self, name, None)
-            if val is None:
-                continue
-            if isinstance(val, BenchmarkScore):
-                yield name, float(val.value), float(val.uncertainty)
-            elif isinstance(val, (int, float)):
-                yield name, float(val), 0.0
-            # else: ignore non-numeric / non-score fields
+            value = getattr(self, name, None)
+            if isinstance(value, BenchmarkScore):
+                yield name, float(value.value), float(value.uncertainty)
+            elif isinstance(value, (int, float)):
+                yield name, float(value), 0.0
 
     @property
     def values(self) -> dict[str, float]:
-        out: dict[str, float] = {}
-        for k, v, _u in self._iter_metric_items():
-            out[k] = v
-        return out
+        return {name: value for name, value, _ in self._iter_metric_items()}
 
     @property
     def uncertainties(self) -> dict[str, float]:
-        out: dict[str, float] = {}
-        for k, _v, u in self._iter_metric_items():
-            out[k] = u
-        return out
+        return {name: uncertainty for name, _, uncertainty in self._iter_metric_items()}
 
 
 class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
