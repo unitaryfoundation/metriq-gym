@@ -31,10 +31,34 @@ class BenchmarkData:
         return cls(provider_job_ids=flatten_job_ids(quantum_job), **kwargs)
 
 
-class BenchmarkResult(BaseModel):
-    """Stores the final results of the benchmark"""
+class BenchmarkScore(BaseModel):
+    value: float
+    uncertainty: float = 0.0
 
-    pass
+
+class BenchmarkResult(BaseModel):
+    """Base class for benchmark results.
+
+    Subclasses declare metric fields as numbers (float/int) or BenchmarkScore.
+    - Numbers map to results.values[<field>] = number and results.uncertainties[...] = 0.0
+    - BenchmarkScore maps to values[...] = value and uncertainties[...] = uncertainty
+    """
+
+    def _iter_metric_items(self):
+        for name in self.__class__.model_fields:
+            value = getattr(self, name, None)
+            if isinstance(value, BenchmarkScore):
+                yield name, float(value.value), float(value.uncertainty)
+            elif isinstance(value, (int, float)):
+                yield name, float(value), 0.0
+
+    @property
+    def values(self) -> dict[str, float]:
+        return {name: value for name, value, _ in self._iter_metric_items()}
+
+    @property
+    def uncertainties(self) -> dict[str, float]:
+        return {name: uncertainty for name, _, uncertainty in self._iter_metric_items()}
 
 
 class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:

@@ -12,15 +12,23 @@ repository](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py)
 
 import numpy as np
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from qiskit import QuantumCircuit
 from metriq_gym.helpers.task_helpers import flatten_counts
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
-from typing import TYPE_CHECKING
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+)
+from metriq_gym.helpers.statistics import (
+    binary_expectation_stddev,
+    binary_expectation_value,
+)
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-    from qbraid.runtime.result_data import MeasCount
 
 
 def wit_circuit(num_qubits: int) -> QuantumCircuit:
@@ -217,31 +225,16 @@ def wit_circuit(num_qubits: int) -> QuantumCircuit:
         raise ValueError(f"Unsupported number of qubits: {num_qubits}")
 
 
-def calculate_expectation_value(shots: int, count_results: "MeasCount") -> float:
-    """Calculate the expectation value of the Pauli operator in the state produced by the quantum circuit."""
-    return count_results["1"] / shots
-
-
 class WITResult(BenchmarkResult):
-    """Result class to store WIT benchmark results.
-
-    Attributes:
-        expectation_value: Expectation value of the Pauli operator in the state produced by the quantum circuit.
-    """
-
-    expectation_value: float
+    expectation_value: BenchmarkScore
 
 
 @dataclass
 class WITData(BenchmarkData):
-    """Dataclass to store WIT benchmark metadata."""
-
     pass
 
 
 class WIT(Benchmark):
-    """Benchmark class for WIT experiments."""
-
     def dispatch_handler(self, device: "QuantumDevice") -> WITData:
         return WITData.from_quantum_job(
             device.run(wit_circuit(self.params.num_qubits), shots=self.params.shots)
@@ -253,9 +246,10 @@ class WIT(Benchmark):
         result_data: list["GateModelResultData"],
         quantum_jobs: list["QuantumJob"],
     ) -> WITResult:
-        """Poll results for WIT benchmark."""
+        counts = flatten_counts(result_data)[0]
         return WITResult(
-            expectation_value=calculate_expectation_value(
-                self.params.shots, flatten_counts(result_data)[0]
+            expectation_value=BenchmarkScore(
+                value=binary_expectation_value(self.params.shots, counts),
+                uncertainty=binary_expectation_stddev(self.params.shots, counts),
             )
         )
