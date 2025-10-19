@@ -10,6 +10,7 @@ from qiskit.transpiler import CouplingMap
 from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
+from metriq_gym.origin.device import OriginDevice
 from metriq_gym.quantinuum.device import QuantinuumDevice
 
 
@@ -107,6 +108,42 @@ def _(device: QuantinuumDevice) -> rx.PyGraph:
         node_index = {node: i for i, node in enumerate(arch.nodes)}
         g.add_edges_from([(node_index[a], node_index[b], None) for (a, b) in arch.edges])
         return g
+
+
+@connectivity_graph.register
+def _(device: OriginDevice) -> rx.PyGraph:
+    num_qubits = device.num_qubits
+    if not isinstance(num_qubits, int):
+        raise NotImplementedError(
+            "Origin device does not report a qubit count for connectivity graph"
+        )
+
+    edges: list[tuple[int, int]] | None = None
+    try:
+        chip_info = device.backend.chip_info()
+        raw_edges = chip_info.get_chip_topology() if chip_info else None
+        if raw_edges:
+            unique_edges: set[tuple[int, int]] = set()
+            for edge in raw_edges:
+                if not edge or len(edge) < 2:
+                    continue
+                a, b = int(edge[0]), int(edge[1])
+                if a == b:
+                    continue
+                ordered = (min(a, b), max(a, b))
+                unique_edges.add(ordered)
+            if unique_edges:
+                edges = sorted(unique_edges)
+    except Exception:
+        edges = None
+
+    if not edges:
+        return rx.generators.complete_graph(num_qubits)
+
+    graph = rx.PyGraph(multigraph=False)
+    graph.add_nodes_from(range(num_qubits))
+    graph.add_edges_from([(a, b, None) for a, b in edges])
+    return graph
 
 
 def normalized_metadata(device: QuantumDevice) -> dict:
