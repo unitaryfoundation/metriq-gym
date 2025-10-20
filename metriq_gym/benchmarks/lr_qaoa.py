@@ -13,7 +13,13 @@ from qiskit import QuantumCircuit
 from metriq_gym.circuits import qaoa_circuit
 from metriq_gym.circuits import GraphType, EncodingType
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    MetricDirection,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
 
@@ -160,7 +166,7 @@ class LinearRampQAOAData(BenchmarkData):
 
 class LinearRampQAOAResult(BenchmarkResult):
     approx_ratio: list[float]
-    random_approx_ratio: float
+    random_approx_ratio: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
     confidence_pass: list[bool]
 
 

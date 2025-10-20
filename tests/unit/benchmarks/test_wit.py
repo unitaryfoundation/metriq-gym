@@ -3,7 +3,8 @@ from datetime import datetime
 import pytest
 
 from metriq_gym.benchmarks.wit import WITResult
-from metriq_gym.benchmarks.benchmark import BenchmarkScore
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import BenchmarkScore, BenchmarkResult, MetricDirection
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
@@ -79,6 +80,22 @@ def test_wit_result_includes_directions_in_export():
 def test_wit_result_directions_property_defaults_to_higher():
     r = WITResult(expectation_value=BenchmarkScore(value=0.33, uncertainty=0.01))
     assert r.directions == {"expectation_value": "higher"}
+
+
+def test_missing_direction_raises_validation_error():
+    class DummyResult(BenchmarkResult):
+        metric: BenchmarkScore  # No Field direction — should fail
+
+    with pytest.raises(ValueError):
+        DummyResult(metric=BenchmarkScore(value=1.0, uncertainty=0.0))
+
+
+def test_lower_direction_via_field_metadata():
+    class DummyResult2(BenchmarkResult):
+        latency: BenchmarkScore = Field(..., json_schema_extra={"direction": MetricDirection.LOWER})
+
+    r = DummyResult2(latency=BenchmarkScore(value=12.3, uncertainty=0.5))
+    assert r.directions == {"latency": "lower"}
 
 
 def test_wit_result_uncertainty_keys_match_values():

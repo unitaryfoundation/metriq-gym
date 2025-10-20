@@ -6,7 +6,13 @@ from qiskit.circuit import ParameterVector
 from qiskit.circuit.library import unitary_overlap
 from typing import TYPE_CHECKING
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    MetricDirection,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
 
 if TYPE_CHECKING:
@@ -20,7 +26,7 @@ class QMLKernelData(BenchmarkData):
 
 
 class QMLKernelResult(BenchmarkResult):
-    accuracy_score: float
+    accuracy_score: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:

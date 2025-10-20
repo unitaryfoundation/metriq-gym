@@ -18,7 +18,13 @@ from qiskit.circuit.library import CXGate, CZGate
 from qiskit.quantum_info import random_clifford, random_pauli, Statevector
 from numpy import random
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    MetricDirection,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
 
@@ -34,8 +40,8 @@ class TwoQubitGateType(StrEnum):
 
 
 class MirrorCircuitsResult(BenchmarkResult):
-    success_probability: float
-    polarization: float
+    success_probability: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    polarization: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
     binary_success: bool
 
 

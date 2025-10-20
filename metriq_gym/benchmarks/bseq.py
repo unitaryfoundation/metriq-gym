@@ -14,7 +14,13 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.result import marginal_counts, sampled_expectation_value
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    MetricDirection,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.helpers.graph_helpers import (
     GraphColoring,
@@ -30,7 +36,7 @@ if TYPE_CHECKING:
 
 class BSEQResult(BenchmarkResult):
     largest_connected_size: int
-    fraction_connected: float
+    fraction_connected: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
 
 
 @dataclass
