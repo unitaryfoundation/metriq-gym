@@ -30,6 +30,9 @@ class BaseExporter(ABC):
             "results": {
                 "values": self.result.values,
                 "uncertainties": self.result.uncertainties if self.result.uncertainties else {},
+                # Include metric directions for downstream consumers (e.g., normalization)
+                # Default direction is 'higher' when not specified.
+                "directions": getattr(self.result, "directions", {}) or {},
             },
         }
 

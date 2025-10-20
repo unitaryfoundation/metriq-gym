@@ -1,7 +1,8 @@
 import argparse
 from typing import Iterable, TYPE_CHECKING, Protocol
+from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
@@ -29,6 +30,11 @@ class BenchmarkData:
     def from_quantum_job(cls, quantum_job, **kwargs):
         """Populate the provider job IDs from a QuantumJob or iterable of QuantumJobs."""
         return cls(provider_job_ids=flatten_job_ids(quantum_job), **kwargs)
+
+
+class MetricDirection(StrEnum):
+    HIGHER = "higher"
+    LOWER = "lower"
 
 
 class BenchmarkScore(BaseModel):
@@ -63,6 +69,41 @@ class BenchmarkResult(BaseModel):
     @property
     def uncertainties(self) -> dict[str, float | None]:
         return {name: uncertainty for name, _, uncertainty in self._iter_metric_items()}
+
+    @property
+    def directions(self) -> dict[str, str]:
+        d: dict[str, str] = {}
+        for name, field in self.__class__.model_fields.items():
+            value = getattr(self, name, None)
+            # Only include metrics which are simple numbers or BenchmarkScore
+            if isinstance(value, BenchmarkScore) or (isinstance(value, float)):
+                extra = getattr(field, "json_schema_extra", None) or {}
+                direction = extra.get("direction", MetricDirection.HIGHER.value)
+                if isinstance(direction, MetricDirection):
+                    direction = direction.value
+                direction = str(direction).lower()
+                d[name] = (
+                    direction if direction in ("higher", "lower") else MetricDirection.HIGHER.value
+                )
+        return d
+
+    @model_validator(mode="after")
+    def _validate_metric_directions(self) -> "BenchmarkResult":
+        missing: list[str] = []
+        for name, field in self.__class__.model_fields.items():
+            value = getattr(self, name, None)
+            # Enforce direction only for primary numeric metrics: float or BenchmarkScore
+            if isinstance(value, BenchmarkScore) or isinstance(value, float):
+                extra = getattr(field, "json_schema_extra", None) or {}
+                if "direction" not in (extra or {}):
+                    missing.append(name)
+        if missing:
+            raise ValueError(
+                "Missing metric direction for: "
+                + ", ".join(missing)
+                + '. Define Field(..., json_schema_extra={"direction": MetricDirection.HIGHER|LOWER}).'
+            )
+        return self
 
 
 class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
