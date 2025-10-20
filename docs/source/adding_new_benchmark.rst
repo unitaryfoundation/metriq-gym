@@ -68,6 +68,76 @@ Defining a New Benchmark
                 # TODO: Implement logic for retrieving and processing results
                 pass
 
+Reporting Metrics, Uncertainty, and Direction
+*********************************************
+
+Benchmarks should surface result metrics through the :class:`BenchmarkResult` subclass. For simple scalar metrics
+you can declare a numeric field (``float``/``int``). If your metric has a meaningful uncertainty and/or an explicit
+direction of improvement, wrap it in :class:`BenchmarkScore`.
+
+- ``BenchmarkScore.value`` — the metric value (``float``)
+- ``BenchmarkScore.uncertainty`` — standard uncertainty for the value (``float``, default ``0.0``)
+- ``BenchmarkScore.direction`` — whether larger or smaller values represent better performance. Defaults to ``"higher"``.
+
+The exporter will include three parallel maps under ``results`` in the payload:
+
+- ``results.values`` — metric name → numeric value
+- ``results.uncertainties`` — metric name → uncertainty (if any)
+- ``results.directions`` — metric name → ``"higher"`` or ``"lower"``
+
+Example 1: numeric-only metric
+------------------------------
+
+.. code-block:: python
+
+    from dataclasses import dataclass
+    from metriq_gym.benchmarks.benchmark import BenchmarkResult
+
+    @dataclass
+    class MyResult(BenchmarkResult):
+        clops_score: float  # no uncertainty reported; defaults to direction="higher"
+
+Example 2: metric with uncertainty (default: higher-is-better)
+--------------------------------------------------------------
+
+.. code-block:: python
+
+    from dataclasses import dataclass
+    from metriq_gym.benchmarks.benchmark import BenchmarkResult, BenchmarkScore
+
+    @dataclass
+    class MyResult(BenchmarkResult):
+        expectation_value: BenchmarkScore
+
+    # Later in poll_handler(...):
+    return MyResult(
+        expectation_value=BenchmarkScore(value=0.73, uncertainty=0.04)
+    )
+
+Example 3: lower-is-better metric
+---------------------------------
+
+.. code-block:: python
+
+    from dataclasses import dataclass
+    from metriq_gym.benchmarks.benchmark import BenchmarkResult, BenchmarkScore, MetricDirection
+
+    @dataclass
+    class MyResult(BenchmarkResult):
+        latency_ms: BenchmarkScore
+
+    # Later in poll_handler(...):
+    return MyResult(
+        latency_ms=BenchmarkScore(value=12.3, uncertainty=0.6, direction=MetricDirection.LOWER)
+    )
+
+Notes
+-----
+
+- For plain numeric fields, uncertainties default to ``0.0`` and direction defaults to ``"higher"``.
+- If an uncertainty is ill-defined or not measured, report ``0.0``. Do not omit the metric if the value is still meaningful.
+- The :class:`BenchmarkResult` object exposes ``values``, ``uncertainties``, and ``directions`` properties to make aggregation/export simple.
+
 Defining the Schema
 *******************
 

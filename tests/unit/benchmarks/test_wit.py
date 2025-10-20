@@ -67,6 +67,20 @@ def test_wit_result_exports_symmetric_results_and_uncertainties():
     assert result.uncertainties == pytest.approx({"expectation_value": 0.05})
 
 
+def test_wit_result_includes_directions_in_export():
+    job = _build_metriq_job()
+    result = WITResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
+    exporter = _DummyExporter(job, result)
+
+    payload = exporter.as_dict()
+    assert payload["results"]["directions"] == {"expectation_value": "higher"}
+
+
+def test_wit_result_directions_property_defaults_to_higher():
+    r = WITResult(expectation_value=BenchmarkScore(value=0.33, uncertainty=0.01))
+    assert r.directions == {"expectation_value": "higher"}
+
+
 def test_wit_result_uncertainty_keys_match_values():
     r = WITResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
     assert set(r.values.keys()) == {"expectation_value"}
