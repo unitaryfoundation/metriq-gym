@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from pyqpanda3.intermediate_compiler import convert_qasm_string_to_qprog
 from qbraid import QPROGRAM
@@ -15,11 +15,15 @@ from ._constants import SIMULATOR_BACKENDS, SIMULATOR_MAX_QUBITS
 from .job import OriginJob
 from .qcloud_utils import get_qcloud_options
 
+if TYPE_CHECKING:  # pragma: no cover
+    from pyqpanda3.qcloud import QCloudBackend
 
 logger = logging.getLogger(__name__)
 
 
-def _infer_num_qubits(backend: Any, backend_name: str, *, simulator: bool) -> int | None:
+def _infer_num_qubits(
+    backend: "QCloudBackend", backend_name: str, *, simulator: bool
+) -> int | None:
     if simulator:
         return SIMULATOR_MAX_QUBITS.get(backend_name)
     try:
@@ -33,7 +37,7 @@ def _infer_num_qubits(backend: Any, backend_name: str, *, simulator: bool) -> in
         return None
 
 
-def _infer_basis_gates(backend: Any, *, simulator: bool) -> list[str] | None:
+def _infer_basis_gates(backend: "QCloudBackend", *, simulator: bool) -> list[str] | None:
     if simulator:
         return None
     try:
@@ -53,7 +57,7 @@ class OriginDevice(QuantumDevice):
         *,
         provider,
         device_id: str,
-        backend: Any,
+        backend: "QCloudBackend",
         backend_name: str,
     ) -> None:
         simulator = backend_name in SIMULATOR_BACKENDS

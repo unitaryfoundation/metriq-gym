@@ -1,5 +1,5 @@
 from functools import singledispatch
-from typing import cast
+from typing import cast, TYPE_CHECKING
 
 import networkx as nx
 import rustworkx as rx
@@ -12,6 +12,9 @@ from pytket.architecture import FullyConnected
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.origin.device import OriginDevice
 from metriq_gym.quantinuum.device import QuantinuumDevice
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pyqpanda3.qcloud import QCloudBackend
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
@@ -120,7 +123,8 @@ def _(device: OriginDevice) -> rx.PyGraph:
 
     edges: list[tuple[int, int]] | None = None
     try:
-        chip_info = device.backend.chip_info()
+        backend: QCloudBackend = device.backend
+        chip_info = backend.chip_info()
         raw_edges = chip_info.get_chip_topology() if chip_info else None
         if raw_edges:
             unique_edges: set[tuple[int, int]] = set()
