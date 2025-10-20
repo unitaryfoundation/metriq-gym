@@ -96,7 +96,7 @@ class QMLKernel(Benchmark):
         result_data: list["GateModelResultData"],
         quantum_jobs: list["QuantumJob"],
     ) -> QMLKernelResult:
-        metrics =calculate_accuracy_score(
+        metrics = calculate_accuracy_score(
                 self.params.num_qubits, flatten_counts(result_data)[0]
             )
         return QMLKernelResult(
