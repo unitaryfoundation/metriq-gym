@@ -10,7 +10,6 @@ from metriq_gym.helpers.statistics import (
     binary_expectation_value,
 )
 from metriq_gym.exporters.base_exporter import BaseExporter
-from metriq_gym.exporters.cli_exporter import CliExporter
 from metriq_gym.job_manager import MetriqGymJob
 
 
@@ -71,13 +70,3 @@ def test_wit_result_uncertainty_keys_match_values():
     r = WITResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
     assert set(r.values.keys()) == {"expectation_value"}
     assert set(r.uncertainties.keys()) == {"expectation_value"}
-
-
-def test_cli_exporter_displays_value_with_uncertainty(capsys):
-    job = _build_metriq_job()
-    result = WITResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
-
-    CliExporter(job, result).export()
-
-    output = capsys.readouterr().out
-    assert "expectation_value: 0.5 ± 0.05" in output

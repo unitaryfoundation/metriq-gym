@@ -33,31 +33,35 @@ class BenchmarkData:
 
 class BenchmarkScore(BaseModel):
     value: float
-    uncertainty: float = 0.0
+    # If not specified, treat uncertainty as not available (N/A)
+    uncertainty: float | None = None
 
 
 class BenchmarkResult(BaseModel):
     """Base class for benchmark results.
 
     Subclasses declare metric fields as numbers (float/int) or BenchmarkScore.
-    - Numbers map to results.values[<field>] = number and results.uncertainties[...] = 0.0
-    - BenchmarkScore maps to values[...] = value and uncertainties[...] = uncertainty
+    - Numbers map to results.values[<field>] = number and results.uncertainties[...] = None
+    - BenchmarkScore maps to values[...] = value and uncertainties[...] = uncertainty (or None if unset)
     """
 
     def _iter_metric_items(self):
         for name in self.__class__.model_fields:
             value = getattr(self, name, None)
             if isinstance(value, BenchmarkScore):
-                yield name, float(value.value), float(value.uncertainty)
+                # If uncertainty is not provided, leave as None
+                u = value.uncertainty
+                yield name, float(value.value), (float(u) if u is not None else None)
             elif isinstance(value, (int, float)):
-                yield name, float(value), 0.0
+                # Bare numeric metrics have unspecified uncertainty
+                yield name, float(value), None
 
     @property
     def values(self) -> dict[str, float]:
         return {name: value for name, value, _ in self._iter_metric_items()}
 
     @property
-    def uncertainties(self) -> dict[str, float]:
+    def uncertainties(self) -> dict[str, float | None]:
         return {name: uncertainty for name, _, uncertainty in self._iter_metric_items()}
 
 
