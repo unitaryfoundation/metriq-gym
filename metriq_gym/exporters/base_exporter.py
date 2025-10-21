@@ -50,7 +50,7 @@ class BaseExporter(ABC):
         device_val = str(platform_info.get("device") or "").strip()
 
         def _is_aws_provider(name: str) -> bool:
-            return name.lower().strip() == "aws"
+            return name.lower() == "aws"
 
         def _simplify_arn_device(device: str) -> str:
             # Split on '/' and take the last two non-empty segments when available.
