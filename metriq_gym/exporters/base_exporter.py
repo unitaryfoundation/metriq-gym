@@ -44,6 +44,26 @@ class BaseExporter(ABC):
         platform_info.setdefault("provider", self.metriq_gym_job.provider_name)
         platform_info.setdefault("device", self.metriq_gym_job.device_name)
 
+        # Normalize AWS/Braket device identifiers for upload: use last two ARN path
+        # segments, joined by underscore and lowercased (e.g., iqm_emerald).
+        provider_val = str(platform_info.get("provider") or "").strip()
+        device_val = str(platform_info.get("device") or "").strip()
+
+        def _is_aws_provider(name: str) -> bool:
+            return name.lower() == "aws"
+
+        def _simplify_arn_device(device: str) -> str:
+            # Split on '/' and take the last two non-empty segments when available.
+            parts = [p for p in device.split("/") if p]
+            if len(parts) >= 2:
+                simplified = f"{parts[-2]}_{parts[-1]}"
+            else:
+                simplified = device
+            return simplified.lower()
+
+        if provider_val and _is_aws_provider(provider_val) and device_val:
+            platform_info["device"] = _simplify_arn_device(device_val)
+
         device_metadata = self._derive_device_metadata()
         if device_metadata:
             platform_info["device_metadata"] = device_metadata
