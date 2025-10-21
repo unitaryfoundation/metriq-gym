@@ -76,7 +76,7 @@ class BenchmarkResult(BaseModel):
         for name, field in self.__class__.model_fields.items():
             value = getattr(self, name, None)
             # Only include metrics which are simple numbers or BenchmarkScore
-            if isinstance(value, BenchmarkScore) or (isinstance(value, float)):
+            if isinstance(value, (BenchmarkScore, float)) or type(value) is int:
                 extra = getattr(field, "json_schema_extra", None) or {}
                 direction = extra.get("direction", MetricDirection.HIGHER.value)
                 if isinstance(direction, MetricDirection):
