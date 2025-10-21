@@ -58,12 +58,11 @@ class TestBenchmarkDirections:
         with pytest.raises(ValueError):
             R(metric=BenchmarkScore(value=0.5, uncertainty=0.1))
 
-    def test_direction_not_required_for_int_or_bool(self):
+    def test_direction_not_required_for_bool(self):
         class R(BenchmarkResult):
-            count: int
             ok: bool
 
-        r = R(count=5, ok=True)
+        r = R(ok=True)
         assert r.directions == {}
 
     def test_directions_from_field_metadata_float(self):

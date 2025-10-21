@@ -1378,7 +1378,7 @@ requires-dist = [
     { name = "qbraid", extras = ["azure", "braket", "cirq", "ionq", "qiskit"], specifier = ">=0.10.0,<0.10.1" },
     { name = "qiskit", specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
-    { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.43.0" },
+    { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.44.0" },
     { name = "qnexus", specifier = ">=0.34.1,<1.0.0" },
     { name = "ruamel-yaml-clib", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = "==0.2.14" },
     { name = "ruamel-yaml-clib", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "==0.2.14" },
