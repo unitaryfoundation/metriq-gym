@@ -21,6 +21,105 @@ if TYPE_CHECKING:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_int_list(values: Any) -> list[int]:
+    """Return a sorted list of unique integers from an iterable."""
+
+    sanitized: set[int] = set()
+    if not values:
+        return []
+    for value in values:
+        try:
+            sanitized.add(int(value))
+        except (TypeError, ValueError):
+            continue
+    return sorted(sanitized)
+
+
+def _sanitize_edges(values: Any) -> list[tuple[int, int]]:
+    """Return sorted, deduplicated undirected edges from a raw topology list."""
+
+    unique_edges: set[tuple[int, int]] = set()
+    if not values:
+        return []
+    for edge in values:
+        if not edge or len(edge) < 2:
+            continue
+        try:
+            a, b = int(edge[0]), int(edge[1])
+        except (TypeError, ValueError):
+            continue
+        if a == b:
+            continue
+        unique_edges.add((min(a, b), max(a, b)))
+    return sorted(unique_edges)
+
+
+def _chip_active_qubits(chip_info: Any) -> list[int]:
+    """Return the calibrated qubits reported by the chip."""
+
+    for attr in ("high_frequency_qubits", "available_qubits"):
+        try:
+            values = getattr(chip_info, attr)()
+        except Exception:  # pragma: no cover - depends on live service
+            continue
+        qubits = _sanitize_int_list(values)
+        if qubits:
+            return qubits
+    return []
+
+
+def _chip_topology_edges(chip_info: Any) -> list[tuple[int, int]]:
+    """Return the undirected edges describing chip connectivity."""
+
+    raw_edges: list[Any]
+    try:
+        raw_edges = getattr(chip_info, "get_chip_topology", lambda: [])()
+    except Exception:  # pragma: no cover - depends on live service
+        raw_edges = []
+    edges = _sanitize_edges(raw_edges)
+    if edges:
+        return edges
+
+    try:
+        double_infos = chip_info.double_qubits_info()
+    except Exception:  # pragma: no cover - depends on live service
+        double_infos = None
+    if not double_infos:
+        return []
+
+    pairs: set[tuple[int, int]] = set()
+    for info in double_infos:
+        try:
+            qubits = info.get_qubits()
+        except Exception:  # pragma: no cover - defensive API handling
+            continue
+        if not qubits or len(qubits) < 2:
+            continue
+        try:
+            a, b = int(qubits[0]), int(qubits[1])
+        except (TypeError, ValueError):
+            continue
+        if a == b:
+            continue
+        pairs.add((min(a, b), max(a, b)))
+    return sorted(pairs)
+
+
+def get_origin_connectivity(device: "OriginDevice") -> tuple[list[int], list[tuple[int, int]]]:
+    """Return active qubits and connectivity edges for an Origin device."""
+
+    try:
+        chip_info = device.backend.chip_info()
+    except Exception:  # pragma: no cover - depends on live service
+        return [], []
+
+    active = _chip_active_qubits(chip_info)
+    edges = _chip_topology_edges(chip_info)
+    if not active and edges:
+        active = sorted({node for edge in edges for node in edge})
+    return active, edges
+
+
 def _infer_num_qubits(
     backend: "QCloudBackend", backend_name: str, *, simulator: bool
 ) -> int | None:
@@ -30,6 +129,9 @@ def _infer_num_qubits(
         chip_info = backend.chip_info()
     except Exception:  # pragma: no cover - depends on live service
         return None
+    active_qubits = _chip_active_qubits(chip_info)
+    if active_qubits:
+        return len(active_qubits)
     try:
         return int(chip_info.qubits_num())
     except Exception:  # pragma: no cover - defensive programming when API changes

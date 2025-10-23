@@ -10,11 +10,11 @@ from qiskit.transpiler import CouplingMap
 from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
-from metriq_gym.origin.device import OriginDevice
+from metriq_gym.origin.device import OriginDevice, get_origin_connectivity
 from metriq_gym.quantinuum.device import QuantinuumDevice
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pyqpanda3.qcloud import QCloudBackend
+    pass
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
@@ -121,32 +121,41 @@ def _(device: OriginDevice) -> rx.PyGraph:
             "Origin device does not report a qubit count for connectivity graph"
         )
 
-    edges: list[tuple[int, int]] | None = None
-    try:
-        backend: QCloudBackend = device.backend
-        chip_info = backend.chip_info()
-        raw_edges = chip_info.get_chip_topology() if chip_info else None
-        if raw_edges:
-            unique_edges: set[tuple[int, int]] = set()
-            for edge in raw_edges:
-                if not edge or len(edge) < 2:
-                    continue
-                a, b = int(edge[0]), int(edge[1])
-                if a == b:
-                    continue
-                ordered = (min(a, b), max(a, b))
-                unique_edges.add(ordered)
-            if unique_edges:
-                edges = sorted(unique_edges)
-    except Exception:
-        edges = None
+    active_nodes, raw_edges = get_origin_connectivity(device)
 
-    if not edges:
-        return rx.generators.complete_graph(num_qubits)
+    active_set = set(active_nodes)
+    filtered_edges = [
+        (a, b) for a, b in raw_edges if not active_set or (a in active_set and b in active_set)
+    ]
+
+    if active_nodes and not filtered_edges and raw_edges:
+        filtered_edges = raw_edges
+        active_nodes = sorted({node for edge in filtered_edges for node in edge})
+
+    if active_nodes:
+        node_labels = active_nodes
+    elif filtered_edges:
+        node_labels = sorted({node for edge in filtered_edges for node in edge})
+    else:
+        node_labels = []
+
+    if not node_labels:
+        size = num_qubits if isinstance(num_qubits, int) and num_qubits > 0 else 0
+        if size <= 0:
+            return rx.PyGraph(multigraph=False)
+        return rx.generators.complete_graph(size)
+
+    node_map = {node: idx for idx, node in enumerate(node_labels)}
+    mapped_edges = [
+        (node_map[a], node_map[b], None)
+        for a, b in filtered_edges
+        if a in node_map and b in node_map
+    ]
 
     graph = rx.PyGraph(multigraph=False)
-    graph.add_nodes_from(range(num_qubits))
-    graph.add_edges_from([(a, b, None) for a, b in edges])
+    graph.add_nodes_from(range(len(node_labels)))
+    if mapped_edges:
+        graph.add_edges_from(mapped_edges)
     return graph
 
 
