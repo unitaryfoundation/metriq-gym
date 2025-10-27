@@ -24,6 +24,9 @@ from metriq_gym.benchmarks.mirror_circuits import (
     random_cliffords,
     select_optimal_qubit_subset,
     create_subgraph_from_qubits,
+    assert_forward_is_clifford,
+    expected_bitstring_without_simulation,
+    pauli_from_layer
 )
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
@@ -429,7 +432,7 @@ class TestMirrorCircuitsBenchmark:
         result = benchmark.poll_handler(job_data, result_data, quantum_jobs)
 
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 1.0
+        assert result.success_probability.value == 1.0
         assert result.binary_success is True
         # Polarization should be 1.0 for perfect success
         expected_polarization = (1.0 - 0.25) / (1.0 - 0.25)  # (S - 1/4) / (1 - 1/4)
@@ -456,7 +459,7 @@ class TestMirrorCircuitsBenchmark:
         result = benchmark.poll_handler(job_data, result_data, quantum_jobs)
 
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 0.7
+        assert result.success_probability.value == 0.7
         assert result.binary_success is True  # 0.7 > 2/3
 
         # Calculate expected polarization
@@ -485,7 +488,7 @@ class TestMirrorCircuitsBenchmark:
         result = benchmark.poll_handler(job_data, result_data, quantum_jobs)
 
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 0.1
+        assert result.success_probability.value == 0.1
         assert result.binary_success is False  # 0.1 < 1/e
 
     def test_poll_handler_zero_qubits_error(self, benchmark):
@@ -533,5 +536,5 @@ class TestMirrorCircuitsBenchmark:
 
         # Average success should be (80 + 60) / (100 + 100) = 70%
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 0.7
+        assert result.success_probability.value == 0.7
         assert result.binary_success is True  # 0.7 > 2/3
