@@ -433,7 +433,7 @@ class TestMirrorCircuitsBenchmark:
         assert result.binary_success is True
         # Polarization should be 1.0 for perfect success
         expected_polarization = (1.0 - 0.25) / (1.0 - 0.25)  # (S - 1/4) / (1 - 1/4)
-        assert result.polarization == expected_polarization
+        assert result.polarization.value == expected_polarization
 
     def test_poll_handler_partial_success(self, benchmark):
         job_data = MirrorCircuitsData(
@@ -462,7 +462,7 @@ class TestMirrorCircuitsBenchmark:
         # Calculate expected polarization
         baseline = 0.25  # 1/4 for 2 qubits
         expected_polarization = (0.7 - baseline) / (1.0 - baseline)
-        assert abs(result.polarization - expected_polarization) < 1e-10
+        assert abs(result.polarization.value - expected_polarization) < 1e-10
 
     def test_poll_handler_failure(self, benchmark):
         job_data = MirrorCircuitsData(
