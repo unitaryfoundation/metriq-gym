@@ -24,9 +24,6 @@ from metriq_gym.benchmarks.mirror_circuits import (
     random_cliffords,
     select_optimal_qubit_subset,
     create_subgraph_from_qubits,
-    assert_forward_is_clifford,
-    expected_bitstring_without_simulation,
-    pauli_from_layer
 )
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
