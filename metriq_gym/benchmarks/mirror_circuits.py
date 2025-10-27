@@ -15,7 +15,7 @@ import numpy as np
 from rustworkx.generators import path_graph
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, CZGate
-from qiskit.quantum_info import random_clifford, random_pauli, Statevector
+from qiskit.quantum_info import random_clifford, random_pauli
 from qiskit.quantum_info import Clifford, Pauli
 from numpy import random
 
@@ -365,7 +365,7 @@ def expected_bitstring_without_simulation(
     P_conj = P_mid.evolve(C_fwd)
 
     bits_little_endian = ['1' if P_conj.x[i] else '0' for i in range(n)]
-    # If the counts/formatting use MSB-left strings, reverse; otherwise drop the [::-1].
+    # Qiskit counts use MSB-left bitstring formatting, so reverse the little-endian bits.
     return ''.join(bits_little_endian[::-1])
 
 def assert_forward_is_clifford(initial_clifford_layer, forward_layers):
@@ -464,7 +464,7 @@ def generate_mirror_circuit(
         forward_layers=forward_layers,
         middle_pauli=middle_pauli
     )
-    #print('Expected bitstring is', expected_bitstring)
+
     return qc, expected_bitstring
 
 
@@ -563,7 +563,7 @@ class MirrorCircuits(Benchmark):
             if (1.0 - baseline) > 0
             else 0.0
         )
-        polarization_err = final_success_prob_err / (1.0 - baseline)
+        polarization_err = final_success_prob_err / (1.0 - baseline) if polarization > 0 else 0.0
 
         return MirrorCircuitsResult(
             success_probability=BenchmarkScore(
