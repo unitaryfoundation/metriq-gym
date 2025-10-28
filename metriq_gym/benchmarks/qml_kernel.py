@@ -1,3 +1,28 @@
+"""Quantum Machine Learning Kernel benchmark implementation.
+
+Summary:
+    Constructs a ZZ feature map kernel, computes the inner-product circuit, and measures the
+    probability of returning to the all-zero state as a proxy for kernel quality.
+
+Schema parameters (metriq_gym/schemas/qml_kernel.schema.json):
+    - benchmark_name (str, required): must be "QML Kernel".
+    - num_qubits (int, required): number of qubits in the feature map.
+    - shots (int, optional, default 1000): measurement repetitions for estimating accuracy.
+
+CLI dispatch example::
+
+        uv run mgym job dispatch metriq_gym/schemas/examples/qml_kernel.example.json -p local -d aer_simulator
+
+Result interpretation:
+    Polling returns QMLKernelResult.accuracy_score as a BenchmarkScore where:
+        - value: fraction of shots measuring the expected all-zero bitstring.
+        - uncertainty: binomial standard deviation from the sample counts.
+    Higher accuracy suggests better kernel reproducibility on the selected hardware.
+
+Reference:
+    - Inspired by ZZ-feature map approaches, e.g., arXiv:2405.09724.
+"""
+
 import numpy as np
 from dataclasses import dataclass
 
@@ -27,7 +52,9 @@ class QMLKernelData(BenchmarkData):
 
 
 class QMLKernelResult(BenchmarkResult):
-    accuracy_score: BenchmarkScore = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    accuracy_score: BenchmarkScore = Field(
+        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
+    )
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:
@@ -79,7 +106,10 @@ def create_inner_product_circuit(num_qubits: int, seed: int = 0) -> QuantumCircu
 def calculate_accuracy_score(num_qubits: int, count_results: "MeasCount") -> list[float]:
     expected_state = "0" * num_qubits
     accuracy_score = count_results.get(expected_state, 0) / sum(count_results.values())
-    return [accuracy_score, np.sqrt(accuracy_score * (1 - accuracy_score) / sum(count_results.values()))]
+    return [
+        accuracy_score,
+        np.sqrt(accuracy_score * (1 - accuracy_score) / sum(count_results.values())),
+    ]
 
 
 class QMLKernel(Benchmark):
@@ -96,9 +126,7 @@ class QMLKernel(Benchmark):
         result_data: list["GateModelResultData"],
         quantum_jobs: list["QuantumJob"],
     ) -> QMLKernelResult:
-        metrics = calculate_accuracy_score(
-                self.params.num_qubits, flatten_counts(result_data)[0]
-            )
+        metrics = calculate_accuracy_score(self.params.num_qubits, flatten_counts(result_data)[0])
         return QMLKernelResult(
             accuracy_score=BenchmarkScore(
                 value=metrics[0],

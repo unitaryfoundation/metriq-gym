@@ -1,10 +1,34 @@
-"""
-Mirror circuits benchmark for the Metriq Gym.
+"""Mirror Circuits benchmark implementation.
 
-This benchmark evaluates a quantum device's ability to execute mirror circuits,
-which are quantum circuits with a reflection structure that perform calculations
-and then reverse them. Mirror circuits provide scalable benchmarking capabilities
-for quantum computers as defined in Proctor et al., arXiv:2008.11294.
+Summary:
+    Generates randomly parameterised mirror circuits that apply layers of Clifford gates,
+    then invert them to test how well a device preserves state fidelity across the forward
+    and reverse halves of the circuit.
+
+Schema parameters (metriq_gym/schemas/mirror_circuits.schema.json):
+    - benchmark_name (str, required): must be "Mirror Circuits".
+    - width (int, optional): number of connected qubits; defaults to using the full device.
+    - num_layers (int, optional, default 3): random Clifford layers before mirroring.
+    - two_qubit_gate_prob (float, optional, default 0.5): probability of selecting two-qubit
+      entangling gates on available edges.
+    - two_qubit_gate_name (str, optional, default "CNOT"): choose "CNOT" or "CZ".
+    - shots (int, optional, default 1000): measurement repetitions per circuit.
+    - num_circuits (int, optional, default 10): number of random circuit instances.
+    - seed (int, optional): fixes random generation for reproducibility.
+
+CLI dispatch example::
+
+        uv run mgym job dispatch metriq_gym/schemas/examples/mirror_circuits.example.json -p local -d aer_simulator
+
+Result interpretation:
+    Polling yields MirrorCircuitsResult with:
+        - success_probability: fraction of runs matching the expected bitstring.
+        - polarization: decay parameter relative to an exponential threshold; higher implies
+          better coherence.
+        - binary_success: boolean indicating whether polarization exceeded 1/e.
+
+Reference:
+    - Proctor et al., "Scalable Randomized Benchmarking of Quantum Computers", arXiv:2008.11294.
 """
 
 from dataclasses import dataclass
