@@ -18,6 +18,7 @@ from qiskit.circuit.library import CXGate, CZGate
 from qiskit.quantum_info import random_clifford, random_pauli
 from qiskit.quantum_info import Clifford, Pauli
 from numpy import random
+from typing import Sequence
 
 from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
@@ -323,26 +324,26 @@ def random_cliffords(
                 qc.append(gate, [qubit])
 
     return qc
-
-def pauli_from_layer(pauli_layer):
+    
+def pauli_from_layer(pauli_layer: QuantumCircuit) -> Pauli:
     """
-    Convert a 'middle_pauli' layer (only I/X/Y/Z per qubit) to a qiskit Pauli.
+    Convert a "middle_pauli" layer (only I/X/Y/Z per qubit) to a qiskit Pauli.
     """
     n = pauli_layer.num_qubits
-    per_qubit = ['I'] * n  # default all identity
+    per_qubit = ["I"] * n  # default all identity
 
     for instr, qargs, _ in pauli_layer.data:
         name = instr.name.lower()
-        if name in ('barrier', 'delay', 'measure'):
+        if name in ("barrier", "delay", "measure"):
             continue  # middle layer shouldn't have these, but be permissive
         if len(qargs) != 1:
             raise ValueError(f"Non-1q op '{instr.name}' found in middle_pauli layer.")
-        # Get the *circuit*'s index for this qubit (portable across Terra versions)
+        # Get the circuit's index for this qubit (portable across Terra versions)
         q = pauli_layer.find_bit(qargs[0]).index
-        if name in ('x', 'y', 'z'):
+        if name in ("x", "y", "z"):
             per_qubit[q] = name.upper()
-        elif name in ('id', 'i'):
-            per_qubit[q] = 'I'
+        elif name in ("id", "i"):
+            per_qubit[q] = "I"
         else:
             raise ValueError(f"Non-Pauli op '{instr.name}' found in middle_pauli layer.")
 
@@ -350,21 +351,21 @@ def pauli_from_layer(pauli_layer):
     return Pauli(label)
     
 def expected_bitstring_without_simulation(
-    initial_clifford_layer,
-    forward_layers,       
-    middle_pauli
+    initial_clifford_layer: QuantumCircuit,
+    forward_layers: Sequence[QuantumCircuit],
+    middle_pauli: QuantumCircuit,
 ) -> str:
     n = initial_clifford_layer.num_qubits
 
     fwd = initial_clifford_layer.copy()
     for lyr in forward_layers:
         fwd.compose(lyr, inplace=True)
-    C_fwd = Clifford(fwd)
+    c_fwd = Clifford(fwd)
 
     P_mid = pauli_from_layer(middle_pauli)
-    P_conj = P_mid.evolve(C_fwd)
+    P_conj = P_mid.evolve(c_fwd)
 
-    bits_little_endian = ['1' if P_conj.x[i] else '0' for i in range(n)]
+    bits_little_endian = ["1" if P_conj.x[i] else "0" for i in range(n)]
     # Qiskit counts use MSB-left bitstring formatting, so reverse the little-endian bits.
     return ''.join(bits_little_endian[::-1])
 
@@ -373,7 +374,7 @@ def assert_forward_is_clifford(initial_clifford_layer, forward_layers):
     for lyr in forward_layers:
         fwd.compose(lyr, inplace=True)
     # Raises if the circuit contains non-Clifford ops/angles
-    _ = Clifford(fwd)
+    Clifford(fwd)
     
 def generate_mirror_circuit(
     num_layers: int,
@@ -440,7 +441,7 @@ def generate_mirror_circuit(
         qc.compose(clifford_layer, inplace=True)
         qc.barrier()
         forward_layers.append(clifford_layer)
-
+    print(type(forward_layers))
     assert_forward_is_clifford(initial_clifford_layer, forward_layers)
     
     middle_pauli = random_paulis(connectivity_graph, random_state)
