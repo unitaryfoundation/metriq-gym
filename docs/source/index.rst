@@ -19,6 +19,7 @@ To install ``metriq-gym`` run ::
    OriginQ Guide <originq>
    API Reference <api.rst>
    End-to-End Tutorial <end_to_end_tutorial>
+   Benchmark Reference <benchmarks/index>
    Adding a New Benchmark <adding_new_benchmark.rst>
 
 
