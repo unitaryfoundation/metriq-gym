@@ -441,7 +441,7 @@ def generate_mirror_circuit(
         qc.compose(clifford_layer, inplace=True)
         qc.barrier()
         forward_layers.append(clifford_layer)
-    print(type(forward_layers))
+    
     assert_forward_is_clifford(initial_clifford_layer, forward_layers)
     
     middle_pauli = random_paulis(connectivity_graph, random_state)
