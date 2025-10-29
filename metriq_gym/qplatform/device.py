@@ -123,19 +123,18 @@ def _(device: OriginDevice) -> rx.PyGraph:
 
     active_nodes, raw_edges = get_origin_connectivity(device)
 
-    active_set = set(active_nodes)
-    filtered_edges = [
-        (a, b) for a, b in raw_edges if not active_set or (a in active_set and b in active_set)
-    ]
+    edge_nodes = sorted({node for edge in raw_edges for node in edge})
+    filtered_edges = list(raw_edges)
 
-    if active_nodes and not filtered_edges and raw_edges:
-        filtered_edges = raw_edges
-        active_nodes = sorted({node for edge in filtered_edges for node in edge})
-
-    if active_nodes:
+    if active_nodes and edge_nodes and set(edge_nodes) != set(active_nodes):
+        node_labels = sorted(set(active_nodes).union(edge_nodes))
+    elif active_nodes:
         node_labels = active_nodes
-    elif filtered_edges:
-        node_labels = sorted({node for edge in filtered_edges for node in edge})
+        filtered_edges = [
+            (a, b) for a, b in filtered_edges if a in active_nodes and b in active_nodes
+        ]
+    elif edge_nodes:
+        node_labels = edge_nodes
     else:
         node_labels = []
 

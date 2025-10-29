@@ -112,6 +112,13 @@ def test_qpu_submission_uses_options(monkeypatch):
     assert args[2] is sentinel_options
 
 
+def test_qpu_profile_reports_total_qubits_when_available():
+    chip = DummyChipInfo(high=[0, 1, 2, 3], edges=[(0, 1)])
+    device, _ = _make_device("WK_C102_400", chip_info=chip)
+
+    assert device.profile.num_qubits == 102
+
+
 def test_get_origin_connectivity_prefers_high_frequency_qubits():
     chip = DummyChipInfo(high=[5, 1, 3], available=[0, 1, 2, 3, 4], edges=[(0, 1), (1, 2)])
     device, _ = _make_device("WK_C102_400", chip_info=chip)

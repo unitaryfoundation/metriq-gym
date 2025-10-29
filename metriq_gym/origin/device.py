@@ -125,18 +125,27 @@ def _infer_num_qubits(
 ) -> int | None:
     if simulator:
         return SIMULATOR_MAX_QUBITS.get(backend_name)
+    total_qubits: int | None = None
     try:
         chip_info = backend.chip_info()
     except Exception:  # pragma: no cover - depends on live service
         return None
-    active_qubits = _chip_active_qubits(chip_info)
-    if active_qubits:
-        return len(active_qubits)
     try:
-        return int(chip_info.qubits_num())
+        candidate = int(chip_info.qubits_num())
+        if candidate > 0:
+            total_qubits = candidate
     except Exception:  # pragma: no cover - defensive programming when API changes
         logger.debug("Unable to determine qubit count from chip info", exc_info=True)
-        return None
+    active_qubits = _chip_active_qubits(chip_info)
+    if total_qubits is not None:
+        # When the provider reports both total and calibrated qubits, prefer the total
+        # count as it reflects the full hardware size.
+        if active_qubits and total_qubits < len(active_qubits):
+            return len(active_qubits)
+        return total_qubits
+    if active_qubits:
+        return len(active_qubits)
+    return None
 
 
 def _infer_basis_gates(backend: "QCloudBackend", *, simulator: bool) -> list[str] | None:

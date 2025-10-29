@@ -218,6 +218,21 @@ class TestConnectivityGraphFunction:
         remapped_edges = {tuple(sorted(edge[:2])) for edge in graph.edge_list()}
         assert remapped_edges == {(0, 1)}
 
+    def test_origin_device_connectivity_extends_active_with_edge_nodes(self):
+        device = _make_origin_device(
+            high=[0, 1, 2],
+            available=[0, 1, 2],
+            edges=[(0, 1), (1, 2), (3, 4), (4, 5)],
+        )
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        # Active list reports 3 qubits but edges introduce three more; expect all six represented.
+        assert graph.num_nodes() == 6
+        remapped_edges = {tuple(sorted(edge[:2])) for edge in graph.edge_list()}
+        assert remapped_edges == {(0, 1), (1, 2), (3, 4), (4, 5)}
+
     def test_origin_device_connectivity_prefers_high_frequency_subset(self):
         device = _make_origin_device(
             high=[30, 41], available=list(range(42)), edges=[], double_edges=[(3, 30), (3, 41)]
