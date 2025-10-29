@@ -16,11 +16,13 @@ from typing import TYPE_CHECKING
 
 from qiskit import QuantumCircuit
 from metriq_gym.helpers.task_helpers import flatten_counts
+from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
+    MetricDirection,
 )
 from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
@@ -226,7 +228,9 @@ def wit_circuit(num_qubits: int) -> QuantumCircuit:
 
 
 class WITResult(BenchmarkResult):
-    expectation_value: BenchmarkScore
+    expectation_value: BenchmarkScore = Field(
+        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
+    )
 
 
 @dataclass

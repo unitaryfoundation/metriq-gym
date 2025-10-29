@@ -68,6 +68,77 @@ Defining a New Benchmark
                 # TODO: Implement logic for retrieving and processing results
                 pass
 
+Reporting Metrics, Uncertainty, and Direction
+*********************************************
+
+Benchmarks should surface result metrics through the :class:`BenchmarkResult` subclass. For simple scalar metrics
+you can declare a numeric field (``float``/``int``). If your metric has a meaningful uncertainty, wrap it in
+:class:`BenchmarkScore` (``value`` and ``uncertainty``). Directionality (whether larger or smaller values are better)
+must be declared next to the metric itself using :func:`pydantic.Field` metadata on the result model. Omitting the
+direction for a primary numeric metric (``float`` or :class:`BenchmarkScore`) raises a validation error.
+
+- ``BenchmarkScore.value`` — the metric value (``float``)
+- ``BenchmarkScore.uncertainty`` — standard uncertainty for the value (``float``, default ``0.0``)
+- Field metadata (``json_schema_extra``) — set ``{"direction": "higher"|"lower"}`` or the enum
+  ``MetricDirection.HIGHER|LOWER`` on a field to mark direction explicitly.
+
+The exporter includes three parallel maps under ``results`` in the payload:
+
+- ``results.values`` — metric name → numeric value
+- ``results.uncertainties`` — metric name → uncertainty (if any)
+- ``results.directions`` — metric name → ``"higher"`` or ``"lower"`` based on the class-level mapping or default
+
+Example 1: numeric-only metric
+------------------------------
+
+.. code-block:: python
+
+    from dataclasses import dataclass
+    from metriq_gym.benchmarks.benchmark import BenchmarkResult
+
+    @dataclass
+    class MyResult(BenchmarkResult):
+        clops_score: float  # no uncertainty reported; defaults to direction="higher"
+
+Example 2: metric with uncertainty (default: higher-is-better)
+--------------------------------------------------------------
+
+.. code-block:: python
+
+    from dataclasses import dataclass
+    from metriq_gym.benchmarks.benchmark import BenchmarkResult, BenchmarkScore
+
+    @dataclass
+    class MyResult(BenchmarkResult):
+        expectation_value: BenchmarkScore
+
+    # Later in poll_handler(...):
+    return MyResult(expectation_value=BenchmarkScore(value=0.73, uncertainty=0.04))
+
+Example 3: lower-is-better metric
+---------------------------------
+
+.. code-block:: python
+
+    from dataclasses import dataclass
+    from pydantic import Field
+    from metriq_gym.benchmarks.benchmark import BenchmarkResult, BenchmarkScore, MetricDirection
+
+    @dataclass
+    class MyResult(BenchmarkResult):
+        latency_ms: BenchmarkScore = Field(..., json_schema_extra={"direction": MetricDirection.LOWER})
+
+    # Later in poll_handler(...):
+    return MyResult(latency_ms=BenchmarkScore(value=12.3, uncertainty=0.6))
+
+Notes
+-----
+
+- For plain numeric fields, uncertainties default to ``0.0``. Direction is mandatory for all float or
+  :class:`BenchmarkScore` metrics and must be set using field metadata.
+- If an uncertainty is ill-defined or not measured, report ``0.0``. Do not omit the metric if the value is still meaningful.
+- The :class:`BenchmarkResult` object exposes ``values``, ``uncertainties``, and ``directions`` properties to make aggregation/export simple.
+
 Defining the Schema
 *******************
 
