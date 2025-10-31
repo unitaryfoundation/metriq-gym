@@ -99,6 +99,20 @@ def _make_origin_device(
     return device
 
 
+def _make_origin_simulator_device(backend_name: str = "full_amplitude"):
+    class SimulatorBackend:
+        def chip_info(self):
+            raise RuntimeError("chip_info only available on hardware backends")
+
+    device = OriginDevice(
+        provider=types.SimpleNamespace(),
+        device_id=backend_name,
+        backend=SimulatorBackend(),
+        backend_name=backend_name,
+    )
+    return device
+
+
 @pytest.fixture
 def mock_qiskit_backend():
     device = Mock(spec=QiskitBackend)
@@ -232,6 +246,16 @@ class TestConnectivityGraphFunction:
         assert graph.num_nodes() == 6
         remapped_edges = {tuple(sorted(edge[:2])) for edge in graph.edge_list()}
         assert remapped_edges == {(0, 1), (1, 2), (3, 4), (4, 5)}
+
+    def test_origin_simulator_connectivity_uses_complete_graph(self):
+        device = _make_origin_simulator_device()
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == device.num_qubits == 35
+        expected_edges = 35 * 34 // 2
+        assert graph.num_edges() == expected_edges
 
     def test_origin_device_connectivity_prefers_high_frequency_subset(self):
         device = _make_origin_device(

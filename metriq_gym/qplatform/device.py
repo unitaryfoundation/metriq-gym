@@ -121,6 +121,11 @@ def _(device: OriginDevice) -> rx.PyGraph:
             "Origin device does not report a qubit count for connectivity graph"
         )
 
+    if getattr(device.profile, "simulator", False):
+        if num_qubits <= 0:
+            return rx.PyGraph(multigraph=False)
+        return rx.generators.complete_graph(num_qubits)
+
     active_nodes, raw_edges = get_origin_connectivity(device)
 
     edge_nodes = sorted({node for edge in raw_edges for node in edge})
