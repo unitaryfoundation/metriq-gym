@@ -561,7 +561,7 @@ class MirrorCircuits(Benchmark):
         baseline = 1.0 / (2**w)
         polarization = (
             (final_success_probability - baseline) / (1.0 - baseline)
-            if (1.0 - baseline) > 0
+            if ((1.0 - baseline) > 0) and ((final_success_probability - baseline) > 0)
             else 0.0
         )
         polarization_err = final_success_prob_err / (1.0 - baseline) if polarization > 0 else 0.0
