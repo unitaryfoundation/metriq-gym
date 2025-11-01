@@ -64,6 +64,9 @@ Results:
 ```
 
 Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/examples/``.
+The updated WIT configuration exposes the generalized wormhole parameters
+(e.g., ``n_qubits_per_side`` and ``insert_message_method``), letting you dial in new circuit sizes without
+touching the Python code.
 
 ## Documentation
 

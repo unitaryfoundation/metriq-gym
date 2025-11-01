@@ -21,6 +21,9 @@ Quick Start
 
    .. note::
       If the default branch or file location changes, update the URL above accordingly.
+      The example config uses ``n_qubits_per_side = 3`` with ``insert_message_method = "swap"``, producing
+      a seven-qubit circuit consistent with the original benchmark. Adjust these parameters to explore other
+      circuit sizes.
 3. Dispatch the benchmark to a local simulator:
 
    .. code-block:: sh

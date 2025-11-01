@@ -5,25 +5,80 @@
     "description": "The WIT benchmark schema definition, describing the Wormhole-inspired teleportation benchmark configuration.",
     "type": "object",
     "properties": {
-      "benchmark_name": {
-        "type": "string",
-        "const": "WIT",
-        "description": "Name of the benchmark. Must be 'WIT' for this schema."
-      },
-      "shots": {
-        "type": "integer",
-        "description": "Number of measurement shots (repetitions) to use for the benchmark.",
-        "default": 1000,
-        "minimum": 1,
-        "examples": [1000]
-      },
-      "num_qubits": {
-        "type": "integer",
-        "description": "Number of qubits to use for the benchmark. Must be either 6 or 7.",
-        "enum": [6, 7],
-        "default": 6,
-        "examples": [6, 7]
-      }
+        "benchmark_name": {
+            "type": "string",
+            "const": "WIT",
+            "description": "Name of the benchmark. Must be 'WIT' for this schema."
+        },
+        "shots": {
+            "type": "integer",
+            "description": "Number of measurement shots (repetitions) to use for the benchmark.",
+            "default": 1000,
+            "minimum": 1,
+            "examples": [1000]
+        },
+        "n_qubits_per_side": {
+            "type": "integer",
+            "description": "Number of qubits on each side of the thermofield double state.",
+            "default": 3,
+            "minimum": 1,
+            "examples": [3, 4]
+        },
+        "message_size": {
+            "type": "integer",
+            "description": "Number of qubits used to encode the teleported message. Only 1 is currently supported for swap/transfer insertion.",
+            "default": 1,
+            "minimum": 1,
+            "examples": [1]
+        },
+        "insert_message_method": {
+            "type": "string",
+            "description": "Technique used to inject the message into the left subsystem.",
+            "enum": ["reset", "swap", "transfer"],
+            "default": "reset",
+            "examples": ["reset", "swap"]
+        },
+        "interaction_coupling_strength": {
+            "type": "number",
+            "description": "Interaction coupling strength (g) applied during the two-sided coupling step.",
+            "default": 1.5707963267948966,
+            "examples": [1.5707963267948966]
+        },
+        "x_rotation_transverse_angle": {
+            "type": "number",
+            "description": "Transverse X rotation angle (b) applied in each Hamiltonian step.",
+            "default": 0.7853981633974483,
+            "examples": [0.7853981633974483]
+        },
+        "zz_rotation_angle": {
+            "type": "number",
+            "description": "ZZ rotation angle (J) applied in each Hamiltonian step.",
+            "default": 0.7853981633974483,
+            "examples": [0.7853981633974483]
+        },
+        "z_rotation_angles": {
+            "type": "array",
+            "description": "List of single-qubit Z rotation angles h_i. Must have length equal to n_qubits_per_side.",
+            "minItems": 1,
+            "items": {
+                "type": "number"
+            },
+            "default": [0.0283397, 0.00519953, 0.0316079],
+            "examples": [[0.0283397, 0.00519953, 0.0316079]]
+        },
+        "time_steps": {
+            "type": "integer",
+            "description": "Number of Hamiltonian evolution steps (kicks) applied on each side.",
+            "default": 3,
+            "minimum": 1,
+            "examples": [3]
+        },
+        "num_qubits": {
+            "type": "integer",
+            "description": "Optional legacy field for compatibility with fixed circuits. When provided it must match the total number of qubits implied by the other parameters.",
+            "minimum": 1,
+            "examples": [6, 7]
+        }
     },
     "required": ["benchmark_name"]
-  }
+}
