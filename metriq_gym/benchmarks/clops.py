@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING
 from qiskit import QuantumCircuit
 from qiskit_device_benchmarking.clops.clops_benchmark import append_1q_layer
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    MetricDirection,
+)
 from metriq_gym.qplatform.job import execution_time
 from metriq_gym.qplatform.device import connectivity_graph
 
@@ -21,7 +27,7 @@ class ClopsData(BenchmarkData):
 
 
 class ClopsResult(BenchmarkResult):
-    clops_score: float
+    clops_score: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
 
 
 # adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::create_qubit_map

@@ -80,6 +80,15 @@ def bootstrap_largest_component_stddev(
 ) -> float:
     """Estimate the uncertainty of the largest connected component via Monte Carlo.
 
+    Each edge ``(u, v)`` is modelled as a Gaussian random variable with mean/std drawn
+    from ``edge_stats[(u, v)]``.  During every Monte Carlo draw we sample a synthetic
+    value for every edge, mark the edge as ``active`` whenever that draw exceeds the
+    violation ``threshold``, and compute the size of the largest connected component
+    that can be assembled from the active edges.  The reported uncertainty is the
+    sample standard deviation of those largest-component sizes after ``num_samples``
+    repetitions.  When all draws produce the same component size the function returns
+    zero, indicating that the metric is insensitive to the provided per-edge noise.
+
     Args:
         edge_stats: Mapping from edge to a tuple of (mean, stddev) metric values (e.g., CHSH scores).
         num_nodes: Total number of nodes in the graph.

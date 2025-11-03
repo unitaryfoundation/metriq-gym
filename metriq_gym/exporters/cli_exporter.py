@@ -17,8 +17,9 @@ class CliExporter(BaseExporter):
             print("\nResults:")
             for key in sorted(values):
                 value = values[key]
-                uncertainty = uncertainties.get(key, 0)
-                if not uncertainty:
+                # Preserve explicit 0.0; treat None/empty as missing
+                uncertainty = uncertainties.get(key)
+                if uncertainty is None or uncertainty == "":
                     print(f"  {key}: {value}")
                 else:
                     print(f"  {key}: {value} ± {uncertainty}")

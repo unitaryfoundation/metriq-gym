@@ -1,8 +1,15 @@
-""" "Bell state effective qubits" BSEQ benchmark for the Metriq Gym
-(credit to Paul Nation for the original code for IBM devices).
+"""BSEQ benchmark (Bell state effective qubits) for the Metriq Gym.
 
-This benchmark evaluates a quantum device's ability to produce entangled states and measure correlations that violate
-the CHSH inequality. The violation of this inequality indicates successful entanglement between qubits.
+The benchmark evaluates a device's ability to produce entangled pairs that violate
+the CHSH inequality.  For every qubit pair we estimate the CHSH mean and uncertainty;
+edges whose mean exceeds the violation threshold are treated as successfully entangled.
+The reported ``largest_connected_size`` metric equals the size of the largest connected
+component built from those successful edges, while the uncertainty is obtained via a
+bootstrap: we resample every edge from its mean/std Gaussian, rebuild the active graph,
+and compute the largest connected component.  The standard deviation across those
+Monte Carlo draws becomes the error bar returned in the ``BenchmarkScore``.
+
+(Credit to Paul Nation for the original IBM-oriented implementation.)
 """
 
 from dataclasses import dataclass
@@ -20,7 +27,9 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
+    MetricDirection,
 )
+from pydantic import Field
 from metriq_gym.helpers.graph_helpers import (
     GraphColoring,
     device_graph_coloring,
@@ -35,11 +44,13 @@ if TYPE_CHECKING:
     from qbraid.runtime.result_data import MeasCount
 
 
-class BSEQResult(BenchmarkResult):
-    largest_connected_size: BenchmarkScore
-
-
 CHSH_THRESHOLD = 2.0
+
+
+class BSEQResult(BenchmarkResult):
+    largest_connected_size: BenchmarkScore = Field(
+        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
+    )
 
 
 @dataclass
