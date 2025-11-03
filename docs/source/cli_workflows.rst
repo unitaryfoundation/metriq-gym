@@ -171,7 +171,9 @@ Example completed result:
 .. code-block:: text
 
    INFO - Polling job...
-   BSEQResult(largest_connected_size=100, fraction_connected=0.7874)
+   BSEQResult(largest_connected_size=BenchmarkScore(value=100.0, uncertainty=3.5))
+
+The ``largest_connected_size`` metric now carries a ``BenchmarkScore`` so the CLI reports values and Monte Carlo uncertainties side by side.
 
 If the job is still queued, the CLI reports the current queue position and asks you to try again later.
 

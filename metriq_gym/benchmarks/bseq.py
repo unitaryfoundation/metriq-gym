@@ -1,32 +1,42 @@
-""" "Bell state effective qubits" BSEQ benchmark for the Metriq Gym
-(credit to Paul Nation for the original code for IBM devices).
+"""BSEQ benchmark (Bell state effective qubits) for the Metriq Gym.
 
-This benchmark evaluates a quantum device's ability to produce entangled states and measure correlations that violate
-the CHSH inequality. The violation of this inequality indicates successful entanglement between qubits.
+The benchmark evaluates a device's ability to produce entangled pairs that violate
+the CHSH inequality.  For every qubit pair we estimate the CHSH mean and uncertainty;
+edges whose mean exceeds the violation threshold are treated as successfully entangled.
+The reported ``largest_connected_size`` metric equals the size of the largest connected
+component built from those successful edges, while the uncertainty is obtained via a
+bootstrap: we resample every edge from its mean/std Gaussian, rebuild the active graph,
+and compute the largest connected component.  The standard deviation across those
+Monte Carlo draws becomes the error bar returned in the ``BenchmarkScore``.
+
+(Credit to Paul Nation for the original IBM-oriented implementation.)
 """
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
 import networkx as nx
-import rustworkx as rx
 import numpy as np
+import rustworkx as rx
 
 from qiskit import QuantumCircuit
 from qiskit.result import marginal_counts, sampled_expectation_value
 
-from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
+    BenchmarkScore,
     MetricDirection,
 )
-from metriq_gym.helpers.task_helpers import flatten_counts
+from pydantic import Field
 from metriq_gym.helpers.graph_helpers import (
     GraphColoring,
     device_graph_coloring,
     largest_connected_size,
 )
+from metriq_gym.helpers.statistics import bootstrap_largest_component_stddev
+from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
 
 if TYPE_CHECKING:
@@ -34,9 +44,13 @@ if TYPE_CHECKING:
     from qbraid.runtime.result_data import MeasCount
 
 
+CHSH_THRESHOLD = 2.0
+
+
 class BSEQResult(BenchmarkResult):
-    largest_connected_size: int
-    fraction_connected: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    largest_connected_size: BenchmarkScore = Field(
+        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
+    )
 
 
 @dataclass
@@ -107,30 +121,40 @@ def generate_chsh_circuit_sets(coloring: GraphColoring) -> list[QuantumCircuit]:
     return exp_sets
 
 
-def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGraph:
+def chsh_subgraph(
+    coloring: GraphColoring, counts: list["MeasCount"]
+) -> tuple[rx.PyGraph, dict[tuple[int, int], tuple[float, float]]]:
     """Constructs a subgraph of qubit pairs that violate the CHSH inequality.
 
     Args:
-        job_data: The benchmark metadata including topology and coloring.
-        result_data: The result data containing measurement counts.
+        coloring: The benchmark graph-coloring metadata.
+        counts: Flattened measurement counts returned from the device.
 
     Returns:
-        The graph of edges that violated the CHSH inequality.
+        A tuple with the subgraph of successful edges and per-edge (mean, std) CHSH scores.
     """
     # A subgraph is constructed containing only the edges (qubit pairs) that successfully violate the CHSH inequality.
     # The size of the largest connected component in this subgraph provides a measure of the device's performance.
     good_edges = []
+    edge_stats: dict[tuple[int, int], tuple[float, float]] = {}
     for color_idx in range(coloring.num_colors):
         num_meas_pairs = len(
             {key for key, val in coloring.edge_color_map.items() if val == color_idx}
         )
         exp_vals: np.ndarray = np.zeros(num_meas_pairs, dtype=float)
+        variances: np.ndarray = np.zeros(num_meas_pairs, dtype=float)
 
         for idx in range(4):
             for pair in range(num_meas_pairs):
                 sub_counts = marginal_counts(counts[color_idx * 4 + idx], [2 * pair, 2 * pair + 1])
                 exp_val = sampled_expectation_value(sub_counts, "ZZ")
                 exp_vals[pair] += exp_val if idx != 2 else -exp_val
+                shots = sum(sub_counts.values())
+                if shots > 0:
+                    var_term = max((1 - exp_val**2) / shots, 0.0)
+                    variances[pair] += var_term
+                else:
+                    variances[pair] = float("nan")
 
         for idx, edge_idx in enumerate(
             key for key, val in coloring.edge_color_map.items() if val == color_idx
@@ -138,14 +162,16 @@ def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGr
             edge = (coloring.edge_index_map[edge_idx][0], coloring.edge_index_map[edge_idx][1])
             # The benchmark checks whether the CHSH inequality is violated (i.e., the sum of correlations exceeds 2,
             # indicating entanglement).
-            if exp_vals[idx] > 2:
+            std = float(np.sqrt(variances[idx])) if not np.isnan(variances[idx]) else float("nan")
+            edge_stats[edge] = (float(exp_vals[idx]), std)
+            if exp_vals[idx] > CHSH_THRESHOLD:
                 good_edges.append(edge)
 
     good_graph = rx.PyGraph(multigraph=False)
     good_graph.add_nodes_from(list(range(coloring.num_nodes)))
     for edge in good_edges:
         good_graph.add_edge(*edge, 1)
-    return good_graph
+    return good_graph, edge_stats
 
 
 class BSEQ(Benchmark):
@@ -193,9 +219,13 @@ class BSEQ(Benchmark):
 
         if isinstance(job_data.coloring, dict):
             job_data.coloring = GraphColoring.from_dict(job_data.coloring)
-        good_graph = chsh_subgraph(job_data.coloring, flatten_counts(result_data))
+        good_graph, edge_stats = chsh_subgraph(job_data.coloring, flatten_counts(result_data))
         lcs = largest_connected_size(good_graph)
+        lcs_std = bootstrap_largest_component_stddev(
+            edge_stats,
+            job_data.coloring.num_nodes,
+            threshold=CHSH_THRESHOLD,
+        )
         return BSEQResult(
-            largest_connected_size=lcs,
-            fraction_connected=lcs / job_data.coloring.num_nodes,
+            largest_connected_size=BenchmarkScore(value=float(lcs), uncertainty=lcs_std),
         )
