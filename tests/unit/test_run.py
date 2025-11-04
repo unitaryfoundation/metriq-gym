@@ -1,10 +1,16 @@
 import logging
 import pytest
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from pydantic import BaseModel
 
 from qbraid import QbraidError
-from pydantic import BaseModel
+from metriq_gym.run import (
+    estimate_job,
+    setup_device,
+    dispatch_job,
+)
+from metriq_gym.exceptions import QBraidSetupError
 
 from metriq_gym.resource_estimation import (
     CircuitEstimate,
@@ -12,8 +18,6 @@ from metriq_gym.resource_estimation import (
     ResourceEstimate,
     quantinuum_hqc_formula,
 )
-from metriq_gym.run import dispatch_job, estimate_job, setup_device
-from metriq_gym.exceptions import QBraidSetupError
 
 
 class FakeDevice:
@@ -34,17 +38,13 @@ def mock_device():
 @pytest.fixture
 def patch_load_provider(mock_provider, monkeypatch):
     monkeypatch.setattr("metriq_gym.run.load_provider", lambda _: mock_provider)
-    monkeypatch.setattr(
-        "metriq_gym.run.SUPPORTED_PROVIDERS",
-        {"aws", "ibm", "quantinuum", "local"},
-    )
 
 
 @pytest.fixture
 def mock_args():
     """Create mock args for testing dispatch functions."""
     args = MagicMock()
-    args.provider = "aws"
+    args.provider = "test_provider"
     args.device = "test_device"
     args.benchmark_configs = ["test.json"]
     return args
@@ -61,7 +61,7 @@ def mock_job_manager():
 def test_setup_device_success(mock_provider, mock_device, patch_load_provider):
     mock_provider.get_device.return_value = mock_device
 
-    provider_name = "aws"
+    provider_name = "test_provider"
     backend_name = "test_backend"
 
     device = setup_device(provider_name, backend_name)
@@ -70,18 +70,9 @@ def test_setup_device_success(mock_provider, mock_device, patch_load_provider):
     assert device == mock_device
 
 
-@patch("metriq_gym.run.load_provider")
-def test_setup_device_ibmq_backend_mapping(load_provider_patch, mock_provider, mock_device):
-    load_provider_patch.return_value = mock_provider
-    mock_provider.get_device.return_value = mock_device
-
-    device = setup_device("ibm", "backend")
-
-    load_provider_patch.assert_called_once_with("ibm")
-    assert device == mock_device
-
-
-def test_setup_device_invalid_provider(caplog):
+@patch("metriq_gym.run.get_providers")
+def test_setup_device_invalid_provider(get_providers_patch, caplog):
+    get_providers_patch.return_value = ["supported_provider"]
     caplog.set_level(logging.INFO)
 
     provider_name = "unsupported_provider"
@@ -90,8 +81,9 @@ def test_setup_device_invalid_provider(caplog):
     with pytest.raises(QBraidSetupError, match="Provider not found"):
         setup_device(provider_name, backend_name)
 
-    assert "Unsupported provider" in caplog.text
-    assert "ibm" in caplog.text
+    # Verify the printed output
+    assert f"No provider matching the name '{provider_name}' found." in caplog.text
+    assert "Providers available: ['supported_provider']" in caplog.text
 
 
 def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog):
@@ -99,7 +91,7 @@ def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog)
     mock_provider.get_device.side_effect = QbraidError()
     mock_provider.get_devices.return_value = [FakeDevice(id="device1"), FakeDevice(id="device2")]
 
-    provider_name = "aws"
+    provider_name = "test_provider"
     backend_name = "non_existent_backend"
 
     with pytest.raises(QBraidSetupError, match="Device not found"):
@@ -111,6 +103,26 @@ def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog)
         in caplog.text
     )
     assert "Devices available: ['device1', 'device2']" in caplog.text
+
+
+@patch("os.path.exists")
+def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, capsys):
+    """Test behavior when configuration file is missing."""
+    # Setup mocks
+    mock_args.benchmark_config = "missing.json"
+    mock_exists.return_value = False  # Simulate missing files
+
+    # Mock setup_device to avoid provider validation error
+    with patch("metriq_gym.run.setup_device") as mock_setup_device:
+        mock_device = MagicMock()
+        mock_setup_device.return_value = mock_device
+
+        # Execute function
+        dispatch_job(mock_args, mock_job_manager)
+
+        # Verify output shows file not found errors
+        captured = capsys.readouterr()
+        assert "Configuration file not found" in captured.out
 
 
 def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
@@ -243,23 +255,3 @@ def test_estimate_job_requires_device(monkeypatch, capsys):
     output = capsys.readouterr().out
     assert "✗ BSEQ" in output
     assert "requires a device" in output
-
-
-@patch("os.path.exists")
-def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, capsys):
-    """Test behavior when configuration file is missing."""
-    # Setup mocks
-    mock_args.benchmark_config = "missing.json"
-    mock_exists.return_value = False  # Simulate missing files
-
-    # Mock setup_device to avoid provider validation error
-    with patch("metriq_gym.run.setup_device") as mock_setup_device:
-        mock_device = MagicMock()
-        mock_setup_device.return_value = mock_device
-
-        # Execute function
-        dispatch_job(mock_args, mock_job_manager)
-
-        # Verify output shows file not found errors
-        captured = capsys.readouterr()
-        assert "Configuration file not found" in captured.out

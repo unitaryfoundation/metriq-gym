@@ -7,17 +7,25 @@ from dataclasses import dataclass
 import random
 import dimod
 from dimod.reference.samplers.simulated_annealing import SimulatedAnnealingSampler
-
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
+from typing import TYPE_CHECKING
 from qiskit import QuantumCircuit
 
 from metriq_gym.circuits import qaoa_circuit
 from metriq_gym.circuits import GraphType, EncodingType
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    MetricDirection,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 def weighted_maxcut_solver(graph: nx.Graph) -> str:
@@ -158,7 +166,7 @@ class LinearRampQAOAData(BenchmarkData):
 
 class LinearRampQAOAResult(BenchmarkResult):
     approx_ratio: list[float]
-    random_approx_ratio: float
+    random_approx_ratio: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
     confidence_pass: list[bool]
 
 
@@ -262,7 +270,7 @@ def calc_trial_stats(
     )
 
 
-def calc_stats(data: LinearRampQAOAData, samples: list[MeasCount]) -> AggregateStats:
+def calc_stats(data: LinearRampQAOAData, samples: list["MeasCount"]) -> AggregateStats:
     """Calculate aggregate statistics over multiple trials.
 
     Args:
@@ -317,7 +325,7 @@ def calc_stats(data: LinearRampQAOAData, samples: list[MeasCount]) -> AggregateS
 
 
 class LinearRampQAOA(Benchmark):
-    def dispatch_handler(self, device: QuantumDevice) -> LinearRampQAOAData:
+    def dispatch_handler(self, device: "QuantumDevice") -> LinearRampQAOAData:
         num_qubits = self.params.num_qubits
         graph_type = self.params.graph_type
         qaoa_layers = self.params.qaoa_layers
@@ -407,8 +415,8 @@ class LinearRampQAOA(Benchmark):
     def poll_handler(
         self,
         job_data: LinearRampQAOAData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> LinearRampQAOAResult:
         stats: AggregateStats = calc_stats(job_data, flatten_counts(result_data))
         return LinearRampQAOAResult(

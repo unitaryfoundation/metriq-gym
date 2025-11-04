@@ -4,12 +4,21 @@ from dataclasses import dataclass
 from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 from qiskit.circuit.library import unitary_overlap
+from typing import TYPE_CHECKING
 
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
-
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+    MetricDirection,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 @dataclass
@@ -18,7 +27,7 @@ class QMLKernelData(BenchmarkData):
 
 
 class QMLKernelResult(BenchmarkResult):
-    accuracy_score: float
+    accuracy_score: BenchmarkScore = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:
@@ -67,13 +76,14 @@ def create_inner_product_circuit(num_qubits: int, seed: int = 0) -> QuantumCircu
     return inner_prod.assign_parameters(param_vec)
 
 
-def calculate_accuracy_score(num_qubits: int, count_results: MeasCount) -> float:
+def calculate_accuracy_score(num_qubits: int, count_results: "MeasCount") -> list[float]:
     expected_state = "0" * num_qubits
-    return count_results.get(expected_state, 0) / sum(count_results.values())
+    accuracy_score = count_results.get(expected_state, 0) / sum(count_results.values())
+    return [accuracy_score, np.sqrt(accuracy_score * (1 - accuracy_score) / sum(count_results.values()))]
 
 
 class QMLKernel(Benchmark):
-    def dispatch_handler(self, device: QuantumDevice) -> QMLKernelData:
+    def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
         return QMLKernelData.from_quantum_job(
             device.run(
                 create_inner_product_circuit(self.params.num_qubits), shots=self.params.shots
@@ -83,11 +93,15 @@ class QMLKernel(Benchmark):
     def poll_handler(
         self,
         job_data: QMLKernelData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> QMLKernelResult:
-        return QMLKernelResult(
-            accuracy_score=calculate_accuracy_score(
+        metrics = calculate_accuracy_score(
                 self.params.num_qubits, flatten_counts(result_data)[0]
+            )
+        return QMLKernelResult(
+            accuracy_score=BenchmarkScore(
+                value=metrics[0],
+                uncertainty=metrics[1],
             )
         )

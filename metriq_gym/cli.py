@@ -1,4 +1,17 @@
-"""Command-line parsing for running metriq benchmarks."""
+"""Command-line parsing for running Metriq-Gym benchmarks.
+
+Usage overview:
+  - Dispatch a single job:
+      mgym job dispatch path/to/config.json -p <provider> -d <device>
+  - Poll latest job and write JSON results:
+      mgym job poll latest --json results.json
+  - Dispatch a suite of jobs:
+      mgym suite dispatch path/to/suite.json -p <provider> -d <device>
+  - Poll a suite:
+      mgym suite poll <suite_id>
+  - Dry-run upload (no network):
+      mgym job upload latest --dry-run
+"""
 
 import argparse
 import logging
@@ -6,7 +19,6 @@ import os
 
 from tabulate import tabulate
 
-from qbraid.runtime import get_providers
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 
 
@@ -76,7 +88,7 @@ def prompt_for_job(args: argparse.Namespace, job_manager: JobManager) -> MetriqG
     return jobs[selected_index]
 
 
-def parse_arguments() -> argparse.Namespace:
+def build_parser() -> argparse.ArgumentParser:
     """Parse command-line arguments for the metriq-gym benchmarking CLI.
 
     This function sets up the complete argument parsing structure for metriq-gym,
@@ -91,9 +103,21 @@ def parse_arguments() -> argparse.Namespace:
         - Each file can contain different parameters for any benchmark type
         - Same benchmark type can be run multiple times with different configurations
     """
-    parser = argparse.ArgumentParser(description="Metriq-Gym benchmarking CLI")
+    parser = argparse.ArgumentParser(
+        prog="mgym",
+        description=(
+            "Metriq-Gym CLI — dispatch, poll, and upload results for quantum benchmarks\n\n"
+            "Examples:\n"
+            "  mgym job dispatch config.json -p local -d aer_simulator\n"
+            "  mgym job poll latest --json out.json\n"
+            "  mgym suite dispatch suite.json -p local -d aer_simulator\n"
+            "  mgym suite poll <suite_id>\n"
+            "  mgym suite upload <suite_id> --dry-run\n"
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     resource_parsers = parser.add_subparsers(
-        dest="resource", required=True, help="Resource (suite/job)"
+        dest="resource", required=False, help="Resource (suite/job)"
     )
 
     # Suite resource group
@@ -108,8 +132,7 @@ def parse_arguments() -> argparse.Namespace:
         "-p",
         "--provider",
         type=str,
-        choices=get_providers() + ["local"],
-        help="String identifier for backend provider service",
+        help="String identifier for backend provider service (e.g., qiskit, braket, azure, ionq, local)",
     )
     suite_dispatch.add_argument(
         "-d",
@@ -159,8 +182,7 @@ def parse_arguments() -> argparse.Namespace:
         "-p",
         "--provider",
         type=str,
-        choices=get_providers() + ["local"],
-        help="String identifier for backend provider service",
+        help="String identifier for backend provider service (e.g., qiskit, braket, azure, ionq, local)",
     )
     job_dispatch.add_argument(
         "-d",
@@ -175,7 +197,6 @@ def parse_arguments() -> argparse.Namespace:
         "-p",
         "--provider",
         type=str,
-        choices=get_providers() + ["local"],
         help="String identifier for backend provider service",
     )
     job_estimate.add_argument(
@@ -348,4 +369,9 @@ def parse_arguments() -> argparse.Namespace:
         help="Do not push or open a PR; write to a local temp dir and print actions",
     )
 
+    return parser
+
+
+def parse_arguments() -> argparse.Namespace:
+    parser = build_parser()
     return parser.parse_args()
