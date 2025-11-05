@@ -280,8 +280,6 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # graph.  We reuse the helper defined below.  If a seed is provided it
         # ensures reproducibility.
         topology_graph = connectivity_graph(device)
-        coloring = device_graph_coloring(topology_graph)
-        print(topology_graph)
         coupling_edges = topology_graph
 
         selected_chain = random_chain_fast(
@@ -312,6 +310,10 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             "seed": seed,
             "backend": device, #CL TODO: this seems not working and one still need input 1Q/2Q gate names
         }
+
+        # Alternatively:
+        # If no two_qubit_gate: use backend.profile.basis_gates and find the two_qubit_gate/one_qubit_basis_gates
+        
         if two_qubit_gate:
             lf_kwargs["two_qubit_gate"] = two_qubit_gate
         if one_qubit_basis_gates:
@@ -408,6 +410,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         lengths: List[int] = list(job_data.lengths)
         num_samples: int = job_data.num_samples
 
+        # TODO: check qiskit analysis_results for data processing
         counts_list = flatten_counts(result_data)
         # Validate the number of result entries matches the number of circuits.
         expected_circuits = len(lengths) * num_samples * 2
