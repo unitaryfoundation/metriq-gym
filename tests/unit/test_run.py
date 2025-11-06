@@ -140,7 +140,7 @@ class DummyQuantumJob:
 
     def result(self):
         class _R:
-            data = {"value": 42}
+            data = {"value": self._value}
 
         return _R()
 
@@ -203,7 +203,9 @@ def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
     monkeypatch.setattr(run_mod, "setup_job_data_class", lambda *_: DummyJobData)
     monkeypatch.setattr(run_mod, "setup_benchmark", lambda *_, **__: DummyBenchmark())
     monkeypatch.setattr(
-        run_mod, "load_job", lambda *_, **__: DummyQuantumJob("provider-job-1", CACHED_VALUE)
+        run_mod,
+        "load_job",
+        lambda *_, **__: DummyQuantumJob("provider-job-1", EXPECTED_FRESH_VALUE),
     )
     monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
 
