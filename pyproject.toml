@@ -112,6 +112,12 @@ include = [
     "quantum_fourier_transform*"
 ]
 
+[tool.setuptools.package-data]
+metriq_gym = ["schemas/*.json"]
+
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools_scm]
 write_to = "metriq_gym/_version.py"
 write_to_template = "__version__ = \"{version}\"\n"
