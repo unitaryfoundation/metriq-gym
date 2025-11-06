@@ -565,7 +565,8 @@ def fetch_result(
 ) -> Optional["BenchmarkResult"]:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    if metriq_job.result_data is not None:
+    if metriq_job.result_data is not None and not getattr(args, "no_cache", False):
+        print("[Cached result data]")
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
