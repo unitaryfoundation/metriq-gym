@@ -657,6 +657,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
         print("Provider is required for resource estimation.")
         return
 
+    device = None
     if args.device:
         try:
             device = setup_device(args.provider, args.device)
