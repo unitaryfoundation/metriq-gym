@@ -155,6 +155,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
         help="Export results to JSON file (optional)",
     )
+    suite_poll.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Ignore locally cached results and refetch provider job data",
+    )
 
     suite_view = suite_subparsers.add_parser("view", help="View suite jobs")
     suite_view.add_argument(
@@ -209,6 +214,11 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default=argparse.SUPPRESS,
         help="Export results to JSON file (optional)",
+    )
+    job_poll.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Ignore locally cached results and refetch provider job data",
     )
 
     job_upload.add_argument(
