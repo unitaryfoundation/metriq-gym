@@ -64,18 +64,12 @@ from typing import List, Optional, Sequence, Tuple
 import random
 import numpy as np
 import pandas as pd  # type: ignore
-from pydantic import ConfigDict
 from qiskit_experiments.library.randomized_benchmarking import LayerFidelity
 from qbraid import QuantumDevice, QuantumJob, GateModelResultData
 
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.qplatform.device import connectivity_graph
-from metriq_gym.helpers.graph_helpers import (
-    GraphColoring,
-    device_graph_coloring,
-    largest_connected_size,
-)
 
 
 def _pick_twoq_gate(backend, prefer=None):
@@ -85,6 +79,7 @@ def _pick_twoq_gate(backend, prefer=None):
         if g in backend.profile.basis_gates:
             return g
     return None
+
 
 def _allowed_edges(G_und, backend=None, twoq_gate=None, require_gate=True):
     """Return a set of undirected edges {(u,v)} allowed for the chain."""
@@ -98,12 +93,14 @@ def _allowed_edges(G_und, backend=None, twoq_gate=None, require_gate=True):
     # gmap = backend.target[gate]
     allowed = set()
     for u, v in edges:
-        #if (u, v) in gmap or (v, u) in gmap:
-            allowed.add(tuple(sorted((u, v))))
+        # if (u, v) in gmap or (v, u) in gmap:
+        allowed.add(tuple(sorted((u, v))))
     return allowed
-    
-def random_chain_fast(G, length, *, seed=None, backend=None, twoq_gate=None,
-                      require_gate=True, restarts=200):
+
+
+def random_chain_fast(
+    G, length, *, seed=None, backend=None, twoq_gate=None, require_gate=True, restarts=200
+):
     """
     Sample ONE simple path of `length` nodes quickly.
     Tries `restarts` random seeds; each attempt grows from a random edge,
@@ -120,10 +117,8 @@ def random_chain_fast(G, length, *, seed=None, backend=None, twoq_gate=None,
     n_nodes = G_und.num_nodes()
     adj = {i: [] for i in range(n_nodes)}
     for u, v in allowed:
-        adj[u].append(v); adj[v].append(u)
-
-    # Keep only nodes that have at least one allowed neighbor
-    nodes_with_deg = [n for n in range(n_nodes) if adj[n]]
+        adj[u].append(v)
+        adj[v].append(u)
 
     # Edge list for random starts
     allowed_edges_list = list(allowed)
@@ -170,29 +165,16 @@ def random_chain_fast(G, length, *, seed=None, backend=None, twoq_gate=None,
     )
 
 
-
 @dataclass
 class EPLGData(BenchmarkData):
     """Container for intermediate EPLG metadata.
 
     Attributes:
-        qubit_num: Desired number of qubits in the coupling‑map chain.
-        lengths: Sequence lengths used for the randomized benchmarking.
-        num_samples: Number of samples per sequence length.
-        nshots: Number of shots used per job.
-        seed: Optional random seed for circuit generation.
-        two_qubit_gate: Optional two‑qubit gate name to force in the circuit.
-        one_qubit_basis_gates: Optional list of one‑qubit gates for Clifford
-            synthesis.
+        physical_qubit_num: int
+            The number of physical qubits in the selected chain.
     """
 
-    qubit_num: int
-    lengths: Sequence[int]
-    num_samples: int
-    nshots: int
-    seed: Optional[int] = None
-    two_qubit_gate: Optional[str] = None
-    one_qubit_basis_gates: Optional[Sequence[str]] = None
+    physical_qubit_num: int
 
 
 class EPLGResult(BenchmarkResult):
@@ -200,20 +182,13 @@ class EPLGResult(BenchmarkResult):
 
     Attributes:
         eplg: Error per layered gate evaluated at the longest chain length.
-        data: DataFrame containing the full analysis results returned by
-            Qiskit Experiments.  This includes layer fidelities, process
-            fidelities and per‑layer EPLG values.
     """
-    # Let Pydantic accept non-serializable types like pandas.DataFrame
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     eplg: float
-    data: pd.DataFrame
 
 
 class EPLG(Benchmark[EPLGData, EPLGResult]):
     """Benchmark class for the EPLG (Layer Fidelity) experiment."""
-
-    #job_type: JobType = JobType("EPLG")  # type: ignore[arg-type]
 
     def dispatch_handler(self, device: QuantumDevice) -> EPLGData:
         """Generate and submit layer fidelity circuits to the quantum device.
@@ -247,17 +222,6 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             params, "one_qubit_basis_gates", None
         )
 
-        # Pull the backend out of the provided device.  We rely on the backend
-        # both for validating supported operations and for accessing the coupling
-        # map when selecting a random chain.  The backend must expose either
-        # ``backend.target.operation_names`` or ``backend.operation_names`` and
-        # a coupling map via ``backend.coupling_map`` or
-        # ``backend.configuration().coupling_map``.
-        print(device)
-        print(device.id)
-        print(dir(device))
-        print(device.profile.basis_gates)
-
         # Validate requested gates against the backend.  Raise an error if the
         # user specifies a 2‑qubit or 1‑qubit gate not supported on the target.
         supported_ops: Optional[set] = None
@@ -266,30 +230,21 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         except Exception:
             pass
         if two_qubit_gate and supported_ops and two_qubit_gate not in supported_ops:
-            raise ValueError(
-                f"Two‑qubit gate '{two_qubit_gate}' is not supported by the backend."
-            )
+            raise ValueError(f"Two‑qubit gate '{two_qubit_gate}' is not supported by the backend.")
         if one_qubit_basis_gates and supported_ops:
             for g in one_qubit_basis_gates:
                 if g not in supported_ops:
-                    raise ValueError(
-                        f"One‑qubit gate '{g}' is not supported by the backend."
-                    )
+                    raise ValueError(f"One‑qubit gate '{g}' is not supported by the backend.")
 
-        # Randomly sample a simple path of the desired length on the coupling
-        # graph.  We reuse the helper defined below.  If a seed is provided it
-        # ensures reproducibility.
-        topology_graph = connectivity_graph(device)
-        coupling_edges = topology_graph
-
+        graph = connectivity_graph(device)
         selected_chain = random_chain_fast(
-            coupling_edges,
+            graph,
             qubit_num,
             seed=seed,
-            backend=device,      
-            twoq_gate=two_qubit_gate,       # or "ecr"/"cx"/...
-            require_gate=True,    # set False to ignore calibration availability
-            restarts=500        # bump if your graph is sparse or the chain is long
+            backend=device,
+            twoq_gate=two_qubit_gate,  # or "ecr"/"cx"/...
+            require_gate=True,  # set False to ignore calibration availability
+            restarts=500,  # bump if your graph is sparse or the chain is long
         )
 
         # Decompose the selected chain into two disjoint layers by pairing adjacent
@@ -308,19 +263,18 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             "lengths": lengths,
             "num_samples": num_samples,
             "seed": seed,
-            "backend": device, #CL TODO: this seems not working and one still need input 1Q/2Q gate names
+            "backend": device,  # CL TODO: this seems not working and one still need input 1Q/2Q gate names
         }
 
         # Alternatively:
         # If no two_qubit_gate: use backend.profile.basis_gates and find the two_qubit_gate/one_qubit_basis_gates
-        
         if two_qubit_gate:
             lf_kwargs["two_qubit_gate"] = two_qubit_gate
         if one_qubit_basis_gates:
             lf_kwargs["one_qubit_basis_gates"] = tuple(one_qubit_basis_gates)
 
-        print(lf_kwargs)
         experiment = LayerFidelity(**lf_kwargs)
+
         # Limit the number of circuits per job to a conservative default to
         # mitigate large payloads on some providers.
         try:
@@ -331,23 +285,16 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # matches that expected by the analysis routine: the first
         # ``num_samples`` circuits correspond to ``lengths[0]``, the next
         # ``num_samples`` correspond to ``lengths[1]``, and so forth.
-        circuits = experiment.circuits()
+        circuits = experiment._transpiled_circuits()
+        device.set_options(transform=False)
 
-        # TODO: check the circuit
-        
         # Submit the circuits to the device and capture the resulting QuantumJob.
         quantum_job = device.run(circuits, shots=nshots)
 
         # Package the job and experimental parameters into an EPLGData instance.
         return EPLGData.from_quantum_job(
             quantum_job,
-            qubit_num=qubit_num,
-            lengths=lengths,
-            num_samples=num_samples,
-            nshots=nshots,
-            seed=seed,
-            two_qubit_gate=two_qubit_gate,
-            one_qubit_basis_gates=one_qubit_basis_gates,
+            physical_qubit_num=max(selected_chain) + 1,  # qubit indices are zero-based
         )
 
     def poll_handler(
@@ -368,7 +315,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         corresponding to each sequence length, and treat the average survival
         probability as the chain fidelity ``F(L)`` for that length ``L``.  The
         error per layered gate at length ``L`` is then extracted via
-        
+
         EPLG = 1 - F(L)^{1/(N_{2q}(L))}
 
         where `N_{2q}(L)` is the total number of two‑qubit gates in a
@@ -405,10 +352,11 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             results enable users to replicate analyses similar to the notebook
             showing 1Q/2Q process fidelities.
         """
-        # Unpack parameters from the job data.
-        n_qubits: int = job_data.qubit_num
-        lengths: List[int] = list(job_data.lengths)
-        num_samples: int = job_data.num_samples
+        params = self.params
+        n_qubits: int = params.qubit_num
+        physical_qubit_num: int = job_data.physical_qubit_num
+        lengths: List[int] = params.lengths
+        num_samples: int = params.num_samples
 
         # TODO: check qiskit analysis_results for data processing
         counts_list = flatten_counts(result_data)
@@ -423,7 +371,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # outcome for direct randomized benchmarking circuits.  We assume the
         # qubits map to the bitstring ordering used by the device; if not, the
         # zero string will still be present as some key.
-        zero_string = "0" * n_qubits
+        zero_string = "0" * physical_qubit_num
 
         # Compute average chain fidelity F(L) for each sequence length.  The
         # ordering of circuits is such that the first ``num_samples`` entries
@@ -450,9 +398,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             chain_fids.append(float(np.mean(surv_probs)) if surv_probs else 0.0)
 
         if not chain_fids:
-            raise RuntimeError(
-                "No survival probabilities computed; cannot estimate EPLG."
-            )
+            raise RuntimeError("No survival probabilities computed; cannot estimate EPLG.")
 
         # Compute the number of two‑qubit gates for each sequence length.  In
         # Layer Fidelity each pair of disjoint layers applies exactly ``n_qubits-1``
@@ -464,17 +410,14 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             num2q = max(1, (n_qubits - 1) * L)
             n2q_per_length.append(num2q)
 
-        #TODO: We need to check the calculation here as we got eplg=1.
-        
         # Compute EPLG values for each length using the chain fidelity and the
         # corresponding total number of two‑qubit gates.  Values are clipped to
         # lie between 0 and 1 for numerical stability.
         chain_eplgs: List[float] = []
         for fid, num2q in zip(chain_fids, n2q_per_length):
-            # Avoid negative or NaN due to rounding; clamp fid to [0,1]
             f = max(0.0, min(1.0, fid))
             eplg = 1.0 - (f ** (1.0 / num2q))
-            chain_eplgs.append(float(eplg))
+            chain_eplgs.append(eplg)
 
         # In addition to chain‑level metrics, estimate the process fidelity for
         # each single‑qubit and two‑qubit subsystem by marginalizing counts.  For
@@ -528,7 +471,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
             # Two‑qubit process fidelities
             pf2_dict: dict = {}
-            for (i, j) in two_q_indices:
+            for i, j in two_q_indices:
                 surv_probs_pair: List[float] = []
                 for counts in subset:
                     total_shots = sum(counts.values()) if hasattr(counts, "values") else 0
@@ -562,7 +505,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                 {
                     "name": "LF",
                     "value": chain_fids[idx_L],
-                   # "qubits": tuple(chain_qubits), # TODO: add
+                    # "qubits": tuple(chain_qubits), # TODO: add
                     "length": L,
                 }
             )
@@ -570,7 +513,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                 {
                     "name": "EPLG",
                     "value": chain_eplgs[idx_L],
-                   # "qubits": tuple(chain_qubits),
+                    # "qubits": tuple(chain_qubits),
                     "length": L,
                 }
             )
@@ -580,7 +523,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                     {
                         "name": "ProcessFidelity",
                         "value": pf_val,
-                       # "qubits": (chain_qubits[qpos],),
+                        # "qubits": (chain_qubits[qpos],),
                         "length": L,
                     }
                 )
@@ -590,12 +533,12 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                     {
                         "name": "ProcessFidelity",
                         "value": pf_val,
-                       # "qubits": (chain_qubits[i], chain_qubits[j]),
+                        # "qubits": (chain_qubits[i], chain_qubits[j]),
                         "length": L,
                     }
                 )
-        df = pd.DataFrame(rows)
+        _ = pd.DataFrame(rows)
 
         # The benchmark’s single scalar output is the EPLG at the largest length.
         final_eplg = chain_eplgs[-1]
-        return EPLGResult(eplg=final_eplg, data=df)
+        return EPLGResult(eplg=final_eplg)
