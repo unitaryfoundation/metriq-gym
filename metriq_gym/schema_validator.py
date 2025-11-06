@@ -5,13 +5,36 @@ import os
 from typing import Any
 from jsonschema import validate
 from pydantic import BaseModel, create_model, Field
+from importlib import resources
 
 from metriq_gym.constants import JobType, SCHEMA_MAPPING
 
-
+SCHEMA_DIR_NAME = "schemas"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_SCHEMA_DIR = os.path.join(CURRENT_DIR, "schemas")
+DEFAULT_SCHEMA_DIR = os.path.join(CURRENT_DIR, SCHEMA_DIR_NAME)
 BENCHMARK_NAME_KEY = "benchmark_name"
+
+
+def _schema_resource_path(filename: str) -> str | None:
+    """Return a filesystem path to a bundled schema JSON file.
+
+    Tries importlib.resources (works for wheels / site-packages). Falls back to
+    direct path inside the source tree if not found. Returns None if neither exists.
+    """
+    # Attempt to access as a package resource
+    try:
+        candidate = resources.files("metriq_gym").joinpath(SCHEMA_DIR_NAME, filename)
+        if candidate.is_file():
+            # Convert to string path so existing loaders keep working
+            return str(candidate)
+    except (ModuleNotFoundError, FileNotFoundError):
+        pass
+
+    # Fallback: direct path relative to source (development / editable install)
+    direct_path = os.path.join(DEFAULT_SCHEMA_DIR, filename)
+    if os.path.isfile(direct_path):
+        return direct_path
+    return None
 
 
 def load_json_file(file_path: str) -> dict:
@@ -21,13 +44,27 @@ def load_json_file(file_path: str) -> dict:
 
 
 def load_schema(benchmark_name: str, schema_dir: str = DEFAULT_SCHEMA_DIR) -> dict:
-    """Load a JSON schema based on the benchmark name."""
+    """Load a JSON schema based on the benchmark name.
+
+    Uses package resources for installed distributions; falls back to local path.
+    """
     schema_filename = SCHEMA_MAPPING.get(JobType(benchmark_name))
     if not schema_filename:
         raise ValueError(f"Unsupported benchmark: {benchmark_name}")
 
-    schema_path = os.path.join(schema_dir, schema_filename)
-    return load_json_file(schema_path)
+    # Prefer packaged resource; allow overriding via explicit schema_dir argument
+    if schema_dir != DEFAULT_SCHEMA_DIR:
+        candidate = os.path.join(schema_dir, schema_filename)
+        if not os.path.isfile(candidate):
+            raise FileNotFoundError(f"Schema file not found: {candidate}")
+        return load_json_file(candidate)
+
+    resource_path = _schema_resource_path(schema_filename)
+    if resource_path is None:
+        raise FileNotFoundError(
+            f"Schema file '{schema_filename}' not found in package resources or '{DEFAULT_SCHEMA_DIR}'."
+        )
+    return load_json_file(resource_path)
 
 
 def create_pydantic_model(schema: dict[str, Any]) -> Any:
