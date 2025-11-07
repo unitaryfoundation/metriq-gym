@@ -38,7 +38,7 @@ class BSEQResult(BenchmarkResult):
     fraction_connected: float = Field(...)
 
     def compute_score(self) -> float | None:
-        return self.values.get("fraction_connected")
+        return self.largest_connected_size
 
 
 @dataclass

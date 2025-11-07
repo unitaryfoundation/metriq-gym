@@ -62,5 +62,3 @@ def test_parse_suite_file_invalid_schema(tmp_path):
     suite_file.write_text(json.dumps(suite_data))
     with pytest.raises(Exception):
         parse_suite_file(suite_file)
-
-    # No weight or sum validation enforced anymore

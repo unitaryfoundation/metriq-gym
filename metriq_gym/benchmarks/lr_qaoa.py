@@ -168,6 +168,9 @@ class LinearRampQAOAResult(BenchmarkResult):
     random_approx_ratio: float = Field(...)
     confidence_pass: list[bool]
 
+    def compute_score(self) -> float | None:
+        return self.approx_ratio[0]
+
 
 def prepare_qaoa_circuit(
     graph: nx.Graph, qaoa_layers: list, graph_type: GraphType, circuit_encoding: EncodingType

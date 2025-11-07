@@ -28,6 +28,9 @@ class ClopsData(BenchmarkData):
 class ClopsResult(BenchmarkResult):
     clops_score: float = Field(...)
 
+    def compute_score(self) -> float | None:
+        return self.clops_score
+
 
 # adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::create_qubit_map
 # As opposed to the original version of this function, this takes a topology graph as an argument instead of an IBM's coupling map object.

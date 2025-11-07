@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING
 
 from qiskit import QuantumCircuit
 from metriq_gym.helpers.task_helpers import flatten_counts
-from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
@@ -227,10 +226,10 @@ def wit_circuit(num_qubits: int) -> QuantumCircuit:
 
 
 class WITResult(BenchmarkResult):
-    expectation_value: BenchmarkScore = Field(...)
+    expectation_value: BenchmarkScore
 
     def compute_score(self) -> float | None:
-        return self.values.get("expectation_value")
+        return self.expectation_value.value
 
 
 @dataclass

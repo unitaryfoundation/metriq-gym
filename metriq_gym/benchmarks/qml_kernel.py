@@ -6,7 +6,6 @@ from qiskit.circuit import ParameterVector
 from qiskit.circuit.library import unitary_overlap
 from typing import TYPE_CHECKING
 
-from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
@@ -26,10 +25,10 @@ class QMLKernelData(BenchmarkData):
 
 
 class QMLKernelResult(BenchmarkResult):
-    accuracy_score: BenchmarkScore = Field(...)
+    accuracy_score: BenchmarkScore
 
     def compute_score(self) -> float | None:
-        return self.values.get("accuracy_score")
+        return self.accuracy_score.value
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:
