@@ -26,6 +26,7 @@ from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
     binary_expectation_value,
 )
+from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -256,3 +257,10 @@ class WIT(Benchmark):
                 uncertainty=binary_expectation_stddev(self.params.shots, counts),
             )
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        circuit = wit_circuit(self.params.num_qubits)
+        return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]

@@ -19,7 +19,8 @@ from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import JobType
 from metriq_gym.resource_estimation import (
-    estimate_resources,
+    CircuitBatch,
+    aggregate_resource_estimates,
     print_resource_estimate,
     quantinuum_hqc_formula,
 )
@@ -688,19 +689,10 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
         return
 
     job_type = JobType(params.benchmark_name)
-
-    hqc_fn = quantinuum_hqc_formula if args.provider == "quantinuum" else None
-
-    try:
-        estimate = estimate_resources(job_type, params, device, hqc_fn)
-    except (ValueError, NotImplementedError) as exc:
-        print(f"✗ {job_type.value}: {exc}")
-        return
-    except Exception as exc:  # pragma: no cover - surface unexpected errors cleanly
-        print(f"✗ Failed to estimate resources: {exc}")
-        return
-
-    print_resource_estimate(job_type, args.provider, args.device, estimate)
+    benchmark: Benchmark = setup_benchmark(args, params, job_type)
+    circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
+    resource_estimate = aggregate_resource_estimates(circuit_batches, hqc_fn=quantinuum_hqc_formula)
+    print_resource_estimate(job_type, args.provider, args.device, resource_estimate)
 
 
 def main() -> int:
