@@ -25,9 +25,6 @@ class BaseExporter(ABC):
         results_block = {
             "values": self.result.values,
             "uncertainties": self.result.uncertainties if self.result.uncertainties else {},
-            # Include metric directions for downstream consumers (e.g., normalization)
-            # Default direction is 'higher' when not specified.
-            "directions": getattr(self.result, "directions", {}) or {},
         }
         # For single-job dispatches, also include the benchmark-declared score metric
         # Include only the declared score metric (no implicit inference)
@@ -49,8 +46,6 @@ class BaseExporter(ABC):
             suite_meta["id"] = self.metriq_gym_job.suite_id
         if self.metriq_gym_job.suite_name:
             suite_meta["name"] = self.metriq_gym_job.suite_name
-        if self.metriq_gym_job.score_weight is not None:
-            suite_meta["weight"] = self.metriq_gym_job.score_weight
         if suite_meta:
             record["suite"] = suite_meta
 

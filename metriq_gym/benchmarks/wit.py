@@ -22,7 +22,6 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
-    MetricDirection,
 )
 from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
@@ -228,9 +227,7 @@ def wit_circuit(num_qubits: int) -> QuantumCircuit:
 
 
 class WITResult(BenchmarkResult):
-    expectation_value: BenchmarkScore = Field(
-        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
-    )
+    expectation_value: BenchmarkScore = Field(...)
 
     def compute_score(self) -> float | None:
         return self.values.get("expectation_value")

@@ -3,7 +3,6 @@
   "benchmarks": [
     {
       "name": "qml_kernel_4q",
-      "weight": 0.6,
       "config": {
         "benchmark_name": "QML Kernel",
         "num_qubits": 4,
@@ -12,7 +11,6 @@
     },
     {
       "name": "qml_kernel_3q",
-      "weight": 0.4,
       "config": {
         "benchmark_name": "QML Kernel",
         "num_qubits": 3,

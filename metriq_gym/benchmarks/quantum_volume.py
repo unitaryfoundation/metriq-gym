@@ -13,7 +13,6 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 
@@ -35,10 +34,10 @@ class QuantumVolumeData(BenchmarkData):
 class QuantumVolumeResult(BenchmarkResult):
     num_qubits: int
     confidence_pass: bool
-    xeb: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
-    hog_prob: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    xeb: float = Field(...)
+    hog_prob: float = Field(...)
     hog_pass: bool
-    p_value: float = Field(..., json_schema_extra={"direction": MetricDirection.LOWER})
+    p_value: float = Field(...)
     trials: int
 
 

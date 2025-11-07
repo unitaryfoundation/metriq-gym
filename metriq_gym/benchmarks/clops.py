@@ -12,7 +12,6 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    MetricDirection,
 )
 from metriq_gym.qplatform.job import execution_time
 from metriq_gym.qplatform.device import connectivity_graph
@@ -27,7 +26,7 @@ class ClopsData(BenchmarkData):
 
 
 class ClopsResult(BenchmarkResult):
-    clops_score: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    clops_score: float = Field(...)
 
 
 # adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::create_qubit_map

@@ -4,7 +4,6 @@
   "benchmarks": [
     {
         "name": "BSEQ",
-        "weight": 0.35,
         "config": {
             "benchmark_name": "BSEQ",
             "shots": 1000
@@ -12,7 +11,6 @@
     },
     {
         "name": "wit_7_qubits",
-        "weight": 0.35,
         "config": {
             "benchmark_name": "WIT",
             "num_qubits": 7,
@@ -21,7 +19,6 @@
     },
     {
         "name": "qml",
-        "weight": 0.3,
         "config": {
             "benchmark_name": "QML Kernel",
             "num_qubits": 20,

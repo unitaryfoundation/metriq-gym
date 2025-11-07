@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 import logging
 import pytest
 from unittest.mock import MagicMock, patch
@@ -124,6 +125,9 @@ def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, 
 class DummyResult(BenchmarkResult):
     value: int
 
+    def compute_score(self):
+        return float(self.value)
+
 
 @dataclass
 class DummyJobData(BenchmarkData):
@@ -159,7 +163,7 @@ def _make_cached_job(val: int) -> MetriqGymJob:
         provider_name="local",
         device_name="dummy_device",
         platform={},
-        dispatch_time=None,
+        dispatch_time=datetime.now(),
         result_data={"value": val},
     )
 

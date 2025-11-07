@@ -64,7 +64,6 @@ Suites run multiple benchmarks together. Author ``suite.json`` like:
      "benchmarks": [
        {
          "name": "BSEQ",
-         "weight": 0.4,
          "config": {
            "benchmark_name": "BSEQ",
            "shots": 10
@@ -72,7 +71,6 @@ Suites run multiple benchmarks together. Author ``suite.json`` like:
       },
       {
         "name": "wit_7_qubits",
-        "weight": 0.6,
          "config": {
            "benchmark_name": "WIT",
            "num_qubits": 7,

@@ -12,7 +12,6 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 
@@ -27,9 +26,7 @@ class QMLKernelData(BenchmarkData):
 
 
 class QMLKernelResult(BenchmarkResult):
-    accuracy_score: BenchmarkScore = Field(
-        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
-    )
+    accuracy_score: BenchmarkScore = Field(...)
 
     def compute_score(self) -> float | None:
         return self.values.get("accuracy_score")

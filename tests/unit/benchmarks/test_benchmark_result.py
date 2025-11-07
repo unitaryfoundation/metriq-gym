@@ -19,6 +19,9 @@ def test_payload_includes_null_uncertainty_for_numeric_and_benchmarkscore(metriq
     class _NumResult(BenchmarkResult):
         numeric_metric: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
 
+        def compute_score(self):
+            return None
+
     num_result = _NumResult(numeric_metric=1.23)
     num_payload = _DummyExporter(metriq_job, num_result).as_dict()
 
@@ -31,6 +34,9 @@ def test_payload_includes_null_uncertainty_for_numeric_and_benchmarkscore(metriq
         expectation_value: BenchmarkScore = Field(
             ..., json_schema_extra={"direction": MetricDirection.HIGHER}
         )
+
+        def compute_score(self):
+            return None
 
     bs_result = _WitLikeResult(expectation_value=BenchmarkScore(value=0.7))
     bs_payload = _DummyExporter(metriq_job, bs_result).as_dict()

@@ -19,7 +19,6 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.helpers.graph_helpers import (
@@ -36,7 +35,7 @@ if TYPE_CHECKING:
 
 class BSEQResult(BenchmarkResult):
     largest_connected_size: int
-    fraction_connected: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    fraction_connected: float = Field(...)
 
     def compute_score(self) -> float | None:
         return self.values.get("fraction_connected")

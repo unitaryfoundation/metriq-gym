@@ -18,7 +18,6 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
@@ -166,7 +165,7 @@ class LinearRampQAOAData(BenchmarkData):
 
 class LinearRampQAOAResult(BenchmarkResult):
     approx_ratio: list[float]
-    random_approx_ratio: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    random_approx_ratio: float = Field(...)
     confidence_pass: list[bool]
 
 

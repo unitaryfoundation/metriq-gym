@@ -4,7 +4,6 @@
   "benchmarks": [
     {
         "name": "1D",
-        "weight": 0.4,
         "config": {
             "benchmark_name": "Linear Ramp QAOA",
             "num_qubits":5,
@@ -14,7 +13,6 @@
     },
     {
         "name": "NL",
-        "weight": 0.3,
         "config": {
             "benchmark_name": "Linear Ramp QAOA",
             "num_qubits": 7,
@@ -23,7 +21,6 @@
     },
     {
         "name": "FC",
-        "weight": 0.3,
         "config": {
             "benchmark_name": "Linear Ramp QAOA",
             "num_qubits": 10,
