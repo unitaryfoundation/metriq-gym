@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 import logging
 import pytest
 from unittest.mock import MagicMock, patch
@@ -266,6 +267,9 @@ def test_estimate_job_requires_device(monkeypatch, capsys):
 class DummyResult(BenchmarkResult):
     value: int
 
+    def compute_score(self):
+        return float(self.value)
+
 
 @dataclass
 class DummyJobData(BenchmarkData):
@@ -301,7 +305,7 @@ def _make_cached_job(val: int) -> MetriqGymJob:
         provider_name="local",
         device_name="dummy_device",
         platform={},
-        dispatch_time=None,
+        dispatch_time=datetime.now(),
         result_data={"value": val},
     )
 
