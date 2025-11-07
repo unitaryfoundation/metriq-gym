@@ -8,12 +8,10 @@ from qiskit import QuantumCircuit
 
 from metriq_gym.circuits import qiskit_random_circuit_sampling
 
-from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 
@@ -35,11 +33,14 @@ class QuantumVolumeData(BenchmarkData):
 class QuantumVolumeResult(BenchmarkResult):
     num_qubits: int
     confidence_pass: bool
-    xeb: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
-    hog_prob: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    xeb: float
+    hog_prob: float
     hog_pass: bool
-    p_value: float = Field(..., json_schema_extra={"direction": MetricDirection.LOWER})
+    p_value: float
     trials: int
+
+    def compute_score(self) -> float | None:
+        return None
 
 
 def prepare_qv_circuits(n: int, num_trials: int) -> tuple[list[QuantumCircuit], list[list[float]]]:

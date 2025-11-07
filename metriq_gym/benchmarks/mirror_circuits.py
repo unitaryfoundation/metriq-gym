@@ -26,7 +26,6 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
@@ -50,6 +49,9 @@ class MirrorCircuitsResult(BenchmarkResult):
         ..., json_schema_extra={"direction": MetricDirection.HIGHER}
     )
     binary_success: bool
+
+    def compute_score(self) -> float | None:
+        return self.values.get("polarization")
 
 
 @dataclass

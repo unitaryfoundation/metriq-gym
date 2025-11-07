@@ -565,7 +565,8 @@ def fetch_result(
 ) -> Optional["BenchmarkResult"]:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    if metriq_job.result_data is not None:
+    if metriq_job.result_data is not None and not getattr(args, "no_cache", False):
+        print("[Cached result data]")
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
@@ -581,8 +582,14 @@ def fetch_result(
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data = [task.result().data for task in quantum_jobs]
         result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
-        # Cache result_data in metriq_job and update job_manager if provided
-        metriq_job.result_data = result.model_dump()
+        # Cache result_data in metriq_job, excluding computed fields like 'score'
+        # to keep cached payload minimal and compatible with older tests/consumers.
+        # Fallback to calling model_dump() without kwargs for simple stand-ins used in tests.
+        try:
+            metriq_job.result_data = result.model_dump(exclude={"score"})
+        except TypeError:
+            # Some mocks (e.g., SimpleNamespace with model_dump as lambda) may not accept kwargs
+            metriq_job.result_data = result.model_dump()
         job_manager.update_job(metriq_job)
         return result
     else:
