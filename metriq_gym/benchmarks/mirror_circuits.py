@@ -42,12 +42,8 @@ class TwoQubitGateType(StrEnum):
 
 
 class MirrorCircuitsResult(BenchmarkResult):
-    success_probability: BenchmarkScore = Field(
-        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
-    )
-    polarization: BenchmarkScore = Field(
-        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
-    )
+    success_probability: BenchmarkScore = Field(...)
+    polarization: BenchmarkScore = Field(...)
     binary_success: bool
 
     def compute_score(self) -> float | None:
