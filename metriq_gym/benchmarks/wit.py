@@ -220,51 +220,67 @@ def legacy_wit_circuit(total_qubits: int) -> QuantumCircuit:
 
 
 def build_wit_config_from_params(params) -> WormholeTeleportationConfig:
-    """Convert validated schema parameters into a WormholeTeleportationConfig."""
+    """Convert validated schema parameters into a WormholeTeleportationConfig.
+
+    Supports two modes:
+    1. Legacy mode: specify num_qubits (6 or 7) for original benchmark behavior
+    2. Generalized mode: specify n_qubits_per_side with optional customization
+
+    All parameters except n_qubits_per_side use sensible defaults based on the
+    original WIT benchmark configuration.
+    """
     legacy_total = getattr(params, "num_qubits", None)
     n_qubits_per_side = getattr(params, "n_qubits_per_side", None)
 
     if n_qubits_per_side is None:
         if legacy_total is None:
             raise ValueError(
-                "WIT parameters must include n_qubits_per_side for the generalized circuit."
+                "WIT parameters must include either 'num_qubits' or 'n_qubits_per_side'."
             )
         config = _legacy_config(int(cast(SupportsInt, legacy_total)))
     else:
-        raw_fields = {
-            "message_size": getattr(params, "message_size", None),
-            "x_rotation_transverse_angle": getattr(params, "x_rotation_transverse_angle", None),
-            "zz_rotation_angle": getattr(params, "zz_rotation_angle", None),
-            "z_rotation_angles": getattr(params, "z_rotation_angles", None),
-            "time_steps": getattr(params, "time_steps", None),
-            "insert_message_method": getattr(params, "insert_message_method", None),
-            "interaction_coupling_strength": getattr(params, "interaction_coupling_strength", None),
-        }
+        # Default values from the original WIT benchmark
+        message_size = getattr(params, "message_size", None)
+        x_rotation_transverse_angle = getattr(params, "x_rotation_transverse_angle", None)
+        zz_rotation_angle = getattr(params, "zz_rotation_angle", None)
+        z_rotation_angles = getattr(params, "z_rotation_angles", None)
+        time_steps = getattr(params, "time_steps", None)
+        insert_message_method = getattr(params, "insert_message_method", None)
+        interaction_coupling_strength = getattr(params, "interaction_coupling_strength", None)
 
-        missing = [name for name, value in raw_fields.items() if value is None]
-        if missing:
-            raise ValueError("Missing required WIT parameters: " + ", ".join(sorted(missing)))
+        # Apply defaults
+        if message_size is None:
+            message_size = 1
+        if x_rotation_transverse_angle is None:
+            x_rotation_transverse_angle = float(np.pi / 4)
+        if zz_rotation_angle is None:
+            zz_rotation_angle = float(np.pi / 4)
+        if time_steps is None:
+            time_steps = 3
+        if insert_message_method is None:
+            insert_message_method = "reset"
+        if interaction_coupling_strength is None:
+            interaction_coupling_strength = float(np.pi / 2)
 
-        message_size = int(cast(SupportsInt, raw_fields["message_size"]))
-        x_rotation = float(cast(SupportsFloat, raw_fields["x_rotation_transverse_angle"]))
-        zz_rotation = float(cast(SupportsFloat, raw_fields["zz_rotation_angle"]))
-        z_rotation_angles_raw = cast(Sequence[SupportsFloat], raw_fields["z_rotation_angles"])
-        z_rotation_angles = tuple(float(v) for v in z_rotation_angles_raw)
-        time_steps = int(cast(SupportsInt, raw_fields["time_steps"]))
-        insert_method_str = str(raw_fields["insert_message_method"]).lower()
-        coupling_strength = float(cast(SupportsFloat, raw_fields["interaction_coupling_strength"]))
-
+        # Handle z_rotation_angles separately - needs to match n_qubits_per_side
         n_qubits_per_side_int = int(cast(SupportsInt, n_qubits_per_side))
+        if z_rotation_angles is None:
+            # Use default pattern from legacy config for n_qubits_per_side=3
+            if n_qubits_per_side_int == 3:
+                z_rotation_angles = (0.0283397, 0.00519953, 0.0316079)
+            else:
+                # Use zeros as a simple deterministic default for other sizes
+                z_rotation_angles = tuple([0.0] * n_qubits_per_side_int)
 
         config = WormholeTeleportationConfig(
             n_qubits_per_side=n_qubits_per_side_int,
-            message_size=message_size,
-            x_rotation_transverse_angle=x_rotation,
-            zz_rotation_angle=zz_rotation,
-            z_rotation_angles=z_rotation_angles,
-            time_steps=time_steps,
-            insert_message_method=insert_method_str,
-            interaction_coupling_strength=coupling_strength,
+            message_size=int(cast(SupportsInt, message_size)),
+            x_rotation_transverse_angle=float(cast(SupportsFloat, x_rotation_transverse_angle)),
+            zz_rotation_angle=float(cast(SupportsFloat, zz_rotation_angle)),
+            z_rotation_angles=tuple(float(v) for v in cast(Sequence[SupportsFloat], z_rotation_angles)),
+            time_steps=int(cast(SupportsInt, time_steps)),
+            insert_message_method=str(insert_message_method).lower(),
+            interaction_coupling_strength=float(cast(SupportsFloat, interaction_coupling_strength)),
         )
 
     if legacy_total is not None and int(cast(SupportsInt, legacy_total)) != config.total_qubits:

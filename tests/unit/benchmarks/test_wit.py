@@ -223,3 +223,62 @@ def test_wormhole_config_rejects_swap_with_large_message():
             insert_message_method="swap",
             interaction_coupling_strength=math.pi / 2,
         )
+
+
+def test_build_wit_config_uses_defaults_for_generalized_mode():
+    """Test that defaults are applied when only n_qubits_per_side is specified."""
+    params = SimpleNamespace(
+        benchmark_name="WIT",
+        shots=1000,
+        n_qubits_per_side=3,
+    )
+    config = build_wit_config_from_params(params)
+
+    # Verify defaults match the legacy config values
+    assert config.n_qubits_per_side == 3
+    assert config.message_size == 1
+    assert config.x_rotation_transverse_angle == pytest.approx(math.pi / 4)
+    assert config.zz_rotation_angle == pytest.approx(math.pi / 4)
+    assert config.z_rotation_angles == pytest.approx(BASE_Z_ANGLES)
+    assert config.time_steps == 3
+    assert config.insert_message_method == "reset"
+    assert config.interaction_coupling_strength == pytest.approx(math.pi / 2)
+    assert config.total_qubits == 6
+
+
+def test_build_wit_config_allows_overriding_individual_defaults():
+    """Test that individual defaults can be overridden while others remain default."""
+    params = SimpleNamespace(
+        benchmark_name="WIT",
+        shots=1000,
+        n_qubits_per_side=3,
+        insert_message_method="swap",  # Override just this parameter
+        time_steps=5,  # Override this one too
+    )
+    config = build_wit_config_from_params(params)
+
+    # Verify overridden values
+    assert config.insert_message_method == "swap"
+    assert config.time_steps == 5
+    assert config.total_qubits == 7  # swap method adds ancilla
+
+    # Verify other defaults still apply
+    assert config.message_size == 1
+    assert config.x_rotation_transverse_angle == pytest.approx(math.pi / 4)
+    assert config.zz_rotation_angle == pytest.approx(math.pi / 4)
+    assert config.z_rotation_angles == pytest.approx(BASE_Z_ANGLES)
+    assert config.interaction_coupling_strength == pytest.approx(math.pi / 2)
+
+
+def test_build_wit_config_generates_zero_angles_for_non_default_sizes():
+    """Test that z_rotation_angles defaults to zeros for n_qubits_per_side != 3."""
+    params = SimpleNamespace(
+        benchmark_name="WIT",
+        shots=1000,
+        n_qubits_per_side=4,
+    )
+    config = build_wit_config_from_params(params)
+
+    assert config.n_qubits_per_side == 4
+    assert len(config.z_rotation_angles) == 4
+    assert config.z_rotation_angles == pytest.approx((0.0, 0.0, 0.0, 0.0))
