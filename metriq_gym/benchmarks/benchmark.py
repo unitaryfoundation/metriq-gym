@@ -1,7 +1,6 @@
 import argparse
 from typing import Iterable, TYPE_CHECKING, Protocol
 from abc import ABC, abstractmethod
-from enum import StrEnum
 
 from pydantic import BaseModel, computed_field
 from dataclasses import dataclass
@@ -31,11 +30,6 @@ class BenchmarkData:
     def from_quantum_job(cls, quantum_job, **kwargs):
         """Populate the provider job IDs from a QuantumJob or iterable of QuantumJobs."""
         return cls(provider_job_ids=flatten_job_ids(quantum_job), **kwargs)
-
-
-class MetricDirection(StrEnum):
-    HIGHER = "higher"
-    LOWER = "lower"
 
 
 class BenchmarkScore(BaseModel):
@@ -71,8 +65,6 @@ class BenchmarkResult(BaseModel, ABC):
     def uncertainties(self) -> dict[str, float | None]:
         return {name: uncertainty for name, _, uncertainty in self._iter_metric_items()}
 
-    # Directions are deprecated; scoring is handled via compute_score().
-
     @abstractmethod
     def compute_score(self) -> float | None:
         """Hook for computing a scalar score from result metrics.
@@ -85,10 +77,6 @@ class BenchmarkResult(BaseModel, ABC):
     @computed_field(return_type=float | None)
     def score(self) -> float | None:
         return self.compute_score()
-
-    # No score uncertainty in this PR; keep scoring minimal
-
-    # No validation on metric directions; score is the canonical aggregation value.
 
 
 class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:

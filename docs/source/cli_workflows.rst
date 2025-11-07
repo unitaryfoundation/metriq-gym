@@ -71,11 +71,11 @@ Suites run multiple benchmarks together. Author ``suite.json`` like:
       },
       {
         "name": "wit_7_qubits",
-         "config": {
-           "benchmark_name": "WIT",
-           "num_qubits": 7,
-           "shots": 1000
-         }
+        "config": {
+          "benchmark_name": "WIT",
+          "num_qubits": 7,
+          "shots": 1000
+        }
       }
      ]
    }
