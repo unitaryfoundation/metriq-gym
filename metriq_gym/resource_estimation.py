@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from typing import Callable, Iterable, Sequence
 
 
-from qbraid import QuantumDevice
 from qiskit import QuantumCircuit
 from tabulate import tabulate
 
@@ -78,12 +77,6 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
 
 
 HQCFunction = Callable[[GateCounts, int], float]
-
-
-def _require_device(device: QuantumDevice | None, benchmark: str) -> QuantumDevice:
-    if device is None:
-        raise ValueError(f"{benchmark} benchmark requires a device to estimate resources.")
-    return device
 
 
 def aggregate_resource_estimates(
