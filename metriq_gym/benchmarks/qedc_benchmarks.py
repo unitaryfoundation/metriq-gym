@@ -91,6 +91,9 @@ class QEDCResult(BenchmarkResult):
 
     circuit_metrics: QEDC_Metrics
 
+    def compute_score(self) -> float | None:
+        return None
+
 
 def import_benchmark_module(benchmark_name: str) -> ModuleType:
     """

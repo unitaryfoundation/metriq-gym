@@ -21,20 +21,33 @@ class BaseExporter(ABC):
             return {}
 
     def as_dict(self):
-        # Preserve existing top-level fields for backward compatibility.
+        # Preserve existing top-level fields.
+        results_block = {
+            "values": self.result.values,
+            "uncertainties": self.result.uncertainties if self.result.uncertainties else {},
+        }
+        # For single-job dispatches, also include the benchmark-declared score metric
+        # Include only the declared score metric (no implicit inference)
+        score_val = getattr(self.result, "score", None)
+        if score_val is not None:
+            results_block["score"] = score_val
+
         record = {
             "app_version": self.metriq_gym_job.app_version,
             "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),
             "suite_id": self.metriq_gym_job.suite_id,
             "job_type": self.metriq_gym_job.job_type.value,
-            "results": {
-                "values": self.result.values,
-                "uncertainties": self.result.uncertainties if self.result.uncertainties else {},
-                # Include metric directions for downstream consumers (e.g., normalization)
-                # Default direction is 'higher' when not specified.
-                "directions": getattr(self.result, "directions", {}) or {},
-            },
+            "results": results_block,
         }
+
+        # Richer suite metadata for downstream aggregation (e.g., metriq-data)
+        suite_meta: dict[str, Any] = {}
+        if self.metriq_gym_job.suite_id:
+            suite_meta["id"] = self.metriq_gym_job.suite_id
+        if self.metriq_gym_job.suite_name:
+            suite_meta["name"] = self.metriq_gym_job.suite_name
+        if suite_meta:
+            record["suite"] = suite_meta
 
         job_platform = getattr(self.metriq_gym_job, "platform", None)
         platform_info: dict[str, Any] = {}
