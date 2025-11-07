@@ -232,6 +232,9 @@ class WITResult(BenchmarkResult):
         ..., json_schema_extra={"direction": MetricDirection.HIGHER}
     )
 
+    def compute_score(self) -> float | None:
+        return self.values.get("expectation_value")
+
 
 @dataclass
 class WITData(BenchmarkData):

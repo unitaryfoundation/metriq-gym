@@ -1,8 +1,9 @@
 import argparse
 from typing import Iterable, TYPE_CHECKING, Protocol
+from abc import ABC, abstractmethod
 from enum import StrEnum
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, computed_field
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
@@ -43,7 +44,7 @@ class BenchmarkScore(BaseModel):
     uncertainty: float | None = None
 
 
-class BenchmarkResult(BaseModel):
+class BenchmarkResult(BaseModel, ABC):
     """Base class for benchmark results.
 
     Subclasses declare metric fields as numbers (float/int) or BenchmarkScore.
@@ -86,6 +87,24 @@ class BenchmarkResult(BaseModel):
                     direction if direction in ("higher", "lower") else MetricDirection.HIGHER.value
                 )
         return d
+
+    @abstractmethod
+    def compute_score(self) -> float | None:
+        """Hook for computing a scalar score from result metrics.
+
+        Default implementation returns None. Benchmarks should override this to
+        implement single- or multi-metric scoring as appropriate.
+        """
+        ...
+
+    @computed_field(return_type=float | None)
+    def score(self) -> float | None:
+        """Computed score exposed as a Pydantic computed field.
+
+        Included in model_dump()/serialization so downstream consumers can
+        access a benchmark-defined scalar score without additional logic.
+        """
+        return self.compute_score()
 
     @model_validator(mode="after")
     def _validate_metric_directions(self) -> "BenchmarkResult":

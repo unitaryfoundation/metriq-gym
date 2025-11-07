@@ -263,6 +263,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                     data=asdict(job_data),
                     provider_name=args.provider,
                     device_name=args.device,
+                    score_weight=getattr(benchmark_entry, "weight", None),
                     platform={
                         "provider": args.provider,
                         "device": args.device,
