@@ -32,6 +32,8 @@ from metriq_gym.qplatform.device import connectivity_graph
 
 from typing import TYPE_CHECKING
 
+from metriq_gym.resource_estimation import CircuitBatch
+
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
@@ -583,3 +585,36 @@ class MirrorCircuits(Benchmark):
             ),
             binary_success=bool(polarization >= POLARIZATION_THRESHOLD),
         )
+
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
+        params = self.params
+        topology_graph = connectivity_graph(device)
+        target_width = getattr(params, "width", None)
+        if not isinstance(target_width, (int, type(None))):
+            target_width = None
+
+        if target_width is not None:
+            max_width = len(topology_graph.node_indices())
+            if target_width > max_width:
+                raise ValueError(
+                    f"Requested width {target_width} exceeds device capacity {max_width}"
+                )
+            selected_qubits = select_optimal_qubit_subset(topology_graph, target_width)
+            working_graph = create_subgraph_from_qubits(topology_graph, selected_qubits)
+        else:
+            working_graph = topology_graph
+
+        circuits: list[QuantumCircuit] = []
+        num_circuits = params.num_circuits
+        for idx in range(num_circuits):
+            circuit_seed = None if params.seed is None else params.seed + idx
+            circuit, _ = generate_mirror_circuit(
+                num_layers=params.num_layers,
+                two_qubit_gate_prob=params.two_qubit_gate_prob,
+                connectivity_graph=working_graph,
+                two_qubit_gate_name=params.two_qubit_gate_name,
+                seed=circuit_seed,
+            )
+            circuits.append(circuit)
+
+        return [CircuitBatch(circuits=circuits, shots=params.shots)]
