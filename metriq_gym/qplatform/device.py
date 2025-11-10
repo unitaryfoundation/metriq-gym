@@ -1,5 +1,5 @@
 from functools import singledispatch
-from typing import cast
+from typing import cast, TYPE_CHECKING
 
 import networkx as nx
 import rustworkx as rx
@@ -10,7 +10,11 @@ from qiskit.transpiler import CouplingMap
 from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
+from metriq_gym.origin.device import OriginDevice, get_origin_connectivity
 from metriq_gym.quantinuum.device import QuantinuumDevice
+
+if TYPE_CHECKING:  # pragma: no cover
+    pass
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
@@ -107,6 +111,56 @@ def _(device: QuantinuumDevice) -> rx.PyGraph:
         node_index = {node: i for i, node in enumerate(arch.nodes)}
         g.add_edges_from([(node_index[a], node_index[b], None) for (a, b) in arch.edges])
         return g
+
+
+@connectivity_graph.register
+def _(device: OriginDevice) -> rx.PyGraph:
+    num_qubits = device.num_qubits
+    if not isinstance(num_qubits, int):
+        raise NotImplementedError(
+            "Origin device does not report a qubit count for connectivity graph"
+        )
+
+    if getattr(device.profile, "simulator", False):
+        if num_qubits <= 0:
+            return rx.PyGraph(multigraph=False)
+        return rx.generators.complete_graph(num_qubits)
+
+    active_nodes, raw_edges = get_origin_connectivity(device)
+
+    edge_nodes = sorted({node for edge in raw_edges for node in edge})
+    filtered_edges = list(raw_edges)
+
+    if active_nodes and edge_nodes and set(edge_nodes) != set(active_nodes):
+        node_labels = sorted(set(active_nodes).union(edge_nodes))
+    elif active_nodes:
+        node_labels = active_nodes
+        filtered_edges = [
+            (a, b) for a, b in filtered_edges if a in active_nodes and b in active_nodes
+        ]
+    elif edge_nodes:
+        node_labels = edge_nodes
+    else:
+        node_labels = []
+
+    if not node_labels:
+        size = num_qubits if isinstance(num_qubits, int) and num_qubits > 0 else 0
+        if size <= 0:
+            return rx.PyGraph(multigraph=False)
+        return rx.generators.complete_graph(size)
+
+    node_map = {node: idx for idx, node in enumerate(node_labels)}
+    mapped_edges = [
+        (node_map[a], node_map[b], None)
+        for a, b in filtered_edges
+        if a in node_map and b in node_map
+    ]
+
+    graph = rx.PyGraph(multigraph=False)
+    graph.add_nodes_from(range(len(node_labels)))
+    if mapped_edges:
+        graph.add_edges_from(mapped_edges)
+    return graph
 
 
 def normalized_metadata(device: QuantumDevice) -> dict:
