@@ -50,6 +50,7 @@ class ResourceEstimate:
 
 @dataclass
 class CircuitBatch:
+    # TODO change Qiskit QuantumCircuit to qBraid QProgram
     circuits: list[QuantumCircuit]
     shots: int
 
@@ -172,9 +173,9 @@ def print_resource_estimate(
         ("Circuits", fmt_int(estimate.circuit_count)),
         ("Total shots", fmt_int(estimate.total_shots)),
         ("Max qubits", fmt_int(estimate.max_qubits)),
-        ("Total 2q gates", fmt_int(estimate.total_gate_counts.two_qubit)),
         ("Total 1q gates", fmt_int(estimate.total_gate_counts.one_qubit)),
-        ("Total multi-qubit gates", fmt_int(estimate.total_gate_counts.multi_qubit)),
+        ("Total 2q gates", fmt_int(estimate.total_gate_counts.two_qubit)),
+        ("Total 3+ qubits gates", fmt_int(estimate.total_gate_counts.multi_qubit)),
         ("Total measurements", fmt_int(estimate.total_gate_counts.measurements)),
         ("Total resets", fmt_int(estimate.total_gate_counts.resets)),
     ]
