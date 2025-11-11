@@ -2,28 +2,33 @@
     "$id": "metriq-gym/wit.schema.json",
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Wormhole-inspired teleportation (WIT)",
-    "description": "The WIT benchmark schema definition, describing the Wormhole-inspired teleportation benchmark configuration.",
+    "description": "The WIT benchmark schema definition. Supports legacy mode (num_qubits: 6 or 7) or generalized mode (n_qubits_per_side). Advanced physics parameters use sensible defaults from the original WIT benchmark.",
     "type": "object",
     "properties": {
-      "benchmark_name": {
-        "type": "string",
-        "const": "WIT",
-        "description": "Name of the benchmark. Must be 'WIT' for this schema."
-      },
-      "shots": {
-        "type": "integer",
-        "description": "Number of measurement shots (repetitions) to use for the benchmark.",
-        "default": 1000,
-        "minimum": 1,
-        "examples": [1000]
-      },
-      "num_qubits": {
-        "type": "integer",
-        "description": "Number of qubits to use for the benchmark. Must be either 6 or 7.",
-        "enum": [6, 7],
-        "default": 6,
-        "examples": [6, 7]
-      }
+        "benchmark_name": {
+            "type": "string",
+            "const": "WIT",
+            "description": "Name of the benchmark. Must be 'WIT' for this schema."
+        },
+        "shots": {
+            "type": "integer",
+            "description": "Number of measurement shots (repetitions) to use for the benchmark.",
+            "default": 1000,
+            "minimum": 1,
+            "examples": [1000, 8192]
+        },
+        "n_qubits_per_side": {
+            "type": "integer",
+            "description": "Number of qubits on each side of the thermofield double state. Use this for generalized WIT circuits of any size.",
+            "minimum": 1,
+            "examples": [3, 4, 5]
+        },
+        "num_qubits": {
+            "type": "integer",
+            "description": "Legacy field for compatibility with fixed 6- or 7-qubit WIT circuits. Use n_qubits_per_side for generalized circuits instead.",
+            "minimum": 1,
+            "examples": [6, 7]
+        }
     },
     "required": ["benchmark_name"]
-  }
+}
