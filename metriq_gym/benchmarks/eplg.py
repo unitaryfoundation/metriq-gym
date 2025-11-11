@@ -243,8 +243,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             seed=seed,
             backend=device,
             twoq_gate=two_qubit_gate,  # or "ecr"/"cx"/...
-            require_gate=True,  # set False to ignore calibration availability
-            restarts=500,  # bump if your graph is sparse or the chain is long
+            require_gate=False,  # set False to ignore calibration availability
+            restarts=5000,  # bump if your graph is sparse or the chain is long
         )
 
         # Decompose the selected chain into two disjoint layers by pairing adjacent
@@ -290,11 +290,11 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
         # Submit the circuits to the device and capture the resulting QuantumJob.
         quantum_job = device.run(circuits, shots=nshots)
-
+        print(selected_chain)
         # Package the job and experimental parameters into an EPLGData instance.
         return EPLGData.from_quantum_job(
             quantum_job,
-            physical_qubit_num=max(selected_chain) + 1,  # qubit indices are zero-based
+            physical_qubit_num=len(selected_chain) + 1,  # qubit indices are zero-based
         )
 
     def poll_handler(
@@ -361,63 +361,20 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # TODO: check qiskit analysis_results for data processing
         counts_list = flatten_counts(result_data)
         # Validate the number of result entries matches the number of circuits.
-        expected_circuits = len(lengths) * num_samples * 2
+        expected_circuits = len(lengths) * num_samples * 2      
         if len(counts_list) != expected_circuits:
             raise RuntimeError(
                 f"Expected {expected_circuits} result data entries but got {len(counts_list)}."
             )
 
+        #print(counts_list)
         # Define the expected zero bitstring; this corresponds to the ideal
         # outcome for direct randomized benchmarking circuits.  We assume the
         # qubits map to the bitstring ordering used by the device; if not, the
         # zero string will still be present as some key.
         zero_string = "0" * physical_qubit_num
 
-        # Compute average chain fidelity F(L) for each sequence length.  The
-        # ordering of circuits is such that the first ``num_samples`` entries
-        # correspond to lengths[0], the next ``num_samples`` to lengths[1], etc.
-        chain_fids: List[float] = []
-        idx = 0
-        for L in lengths:
-            subset = counts_list[idx : idx + num_samples]
-            idx += num_samples
-            surv_probs: List[float] = []
-            for counts in subset:
-                total_shots = sum(counts.values()) if hasattr(counts, "values") else 0
-                prob0 = 0.0
-                if total_shots > 0:
-                    # direct lookup for the all-zero string; some backends may use
-                    # integer keys or unpadded strings, so we fall back gracefully.
-                    if zero_string in counts:
-                        prob0 = counts.get(zero_string, 0) / total_shots
-                    elif "0" in counts:
-                        prob0 = counts.get("0", 0) / total_shots
-                    else:
-                        prob0 = 0.0
-                surv_probs.append(prob0)
-            chain_fids.append(float(np.mean(surv_probs)) if surv_probs else 0.0)
 
-        if not chain_fids:
-            raise RuntimeError("No survival probabilities computed; cannot estimate EPLG.")
-
-        # Compute the number of two‑qubit gates for each sequence length.  In
-        # Layer Fidelity each pair of disjoint layers applies exactly ``n_qubits-1``
-        # two‑qubit gates across the chain, so a sequence of length L uses
-        # ``(n_qubits-1) * L`` such gates.  Guard against the degenerate case
-        # where ``n_qubits`` is 1.
-        n2q_per_length: List[int] = []
-        for L in lengths:
-            num2q = max(1, (n_qubits - 1) * L)
-            n2q_per_length.append(num2q)
-
-        # Compute EPLG values for each length using the chain fidelity and the
-        # corresponding total number of two‑qubit gates.  Values are clipped to
-        # lie between 0 and 1 for numerical stability.
-        chain_eplgs: List[float] = []
-        for fid, num2q in zip(chain_fids, n2q_per_length):
-            f = max(0.0, min(1.0, fid))
-            eplg = 1.0 - (f ** (1.0 / num2q))
-            chain_eplgs.append(eplg)
 
         # In addition to chain‑level metrics, estimate the process fidelity for
         # each single‑qubit and two‑qubit subsystem by marginalizing counts.  For
@@ -494,6 +451,81 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                 pf2_dict[(i, j)] = float(np.mean(surv_probs_pair)) if surv_probs_pair else 0.0
             pf_2q_by_length.append(pf2_dict)
 
+
+        
+        
+        # Compute average chain fidelity F(L) for each sequence length.  The
+        # ordering of circuits is such that the first ``num_samples`` entries
+        # correspond to lengths[0], the next ``num_samples`` to lengths[1], etc.
+        # chain_fids: List[float] = []
+        # idx = 0
+        # for L in lengths:
+        #     subset = counts_list[idx : idx + num_samples]
+        #     idx += num_samples
+        #     surv_probs: List[float] = []
+        #     for counts in subset:
+        #         total_shots = sum(counts.values()) if hasattr(counts, "values") else 0
+        #         prob0 = 0.0
+        #         if total_shots > 0:
+        #             # direct lookup for the all-zero string; some backends may use
+        #             # integer keys or unpadded strings, so we fall back gracefully.
+        #             if zero_string in counts:
+        #                 prob0 = counts.get(zero_string, 0) / total_shots
+        #             elif "0" in counts:
+        #                 prob0 = counts.get("0", 0) / total_shots
+        #             else:
+        #                 prob0 = 0.0
+        #         surv_probs.append(prob0)
+        #     chain_fids.append(float(np.mean(surv_probs)) if surv_probs else 0.0)
+
+        # if not chain_fids:
+        #     raise RuntimeError("No survival probabilities computed; cannot estimate EPLG.")
+
+        chain_fids: List[float] = []
+        for idx_L, L in enumerate(lengths):
+            pf1_dict = pf_1q_by_length[idx_L]
+            pf2_dict = pf_2q_by_length[idx_L]
+            # Product of all two‑qubit process fidelities along the chain
+            prod_pf2 = 1.0
+            for i in range(max(0, n_qubits - 1)):
+                pair = (i, i + 1)
+                pf_val = pf2_dict.get(pair, pf2_dict.get((pair[1], pair[0]), 0.0))
+                prod_pf2 *= pf_val
+            # 1‑qubit fidelities at both ends
+            left_pf1 = pf1_dict.get(0)
+            if left_pf1 is None or left_pf1 == 0.0:
+                # approximate using neighbouring 2Q fidelity
+                left_pf1 = pf2_dict.get((0, 1), pf2_dict.get((1, 0), 0.0))
+            right_pf1 = pf1_dict.get(n_qubits - 1)
+            if right_pf1 is None or right_pf1 == 0.0:
+                right_pf1 = pf2_dict.get((n_qubits - 2, n_qubits - 1), pf2_dict.get((n_qubits - 1, n_qubits - 2), 0.0))
+            chain_fid = prod_pf2 * np.sqrt(left_pf1) * np.sqrt(right_pf1)
+            chain_fids.append(float(chain_fid))
+
+        if not chain_fids:
+            raise RuntimeError("No chain fidelities computed; cannot estimate EPLG.")
+
+        
+
+        # Compute the number of two‑qubit gates for each sequence length.  In
+        # Layer Fidelity each pair of disjoint layers applies exactly ``n_qubits-1``
+        # two‑qubit gates across the chain, so a sequence of length L uses
+        # ``(n_qubits-1) * L`` such gates.  Guard against the degenerate case
+        # where ``n_qubits`` is 1.
+        n2q_per_length: List[int] = []
+        for L in lengths:
+            num2q = max(1, (n_qubits - 1) * L)
+            n2q_per_length.append(num2q)
+
+        # Compute EPLG values for each length using the chain fidelity and the
+        # corresponding total number of two‑qubit gates.  Values are clipped to
+        # lie between 0 and 1 for numerical stability.
+        chain_eplgs: List[float] = []
+        for fid, num2q in zip(chain_fids, n2q_per_length):
+            f = max(0.0, min(1.0, fid))
+            eplg = 1.0 - (f ** (1.0 / num2q))
+            chain_eplgs.append(eplg)
+
         # Build a comprehensive DataFrame summarizing the metrics for each length.
         # Each row corresponds to a particular metric and subsystem at a specific
         # sequence length.  The columns ``name``, ``value``, ``qubits`` and
@@ -538,7 +570,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                     }
                 )
         _ = pd.DataFrame(rows)
-
+        print("chain_fids:", chain_fids)
+        print("chain_eplg:", chain_eplgs)
         # The benchmark’s single scalar output is the EPLG at the largest length.
         final_eplg = chain_eplgs[-1]
         return EPLGResult(eplg=final_eplg)
