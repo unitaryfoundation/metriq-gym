@@ -61,7 +61,6 @@ class QuantinuumDevice(QuantumDevice):
             name=os.getenv("QUANTINUUM_NEXUS_PROJECT_NAME", "metriq-gym")
         )
         backend_config = qnx.QuantinuumConfig(device_name=self.profile.device_id)
-
         circuits_list = self.transform(run_input)
 
         def unique(label: str) -> str:
@@ -84,12 +83,38 @@ class QuantinuumDevice(QuantumDevice):
         # NOTE: This is a blocking wait that occurs during dispatch.
         # Depending on queue and program size, compilation may take time.
         print(
-            f"Waiting for Quantinuum compilation job {getattr(compile_job, "id", getattr(compile_job, "job_id", str(compile_job)))} to complete..."
+            f"Waiting for Quantinuum compilation job {getattr(compile_job, 'id', getattr(compile_job, 'job_id', str(compile_job)))} to complete..."
         )
         qnx.jobs.wait_for(compile_job)
         compiled_refs = [item.get_output() for item in qnx.jobs.results(compile_job)]
 
         nshots = int(shots or 1000)
+
+        ##########################################
+        ## Hack to query cost
+
+        # Syntax checker argument wasn't being found automatically, so need to specify it
+        # (Why does the cost API Actually need it? Not sure)
+        if self.profile.device_id.startswith("H2-2"):
+            syntax_checker = "H2-2SC"
+        elif self.profile.device_id.startswith("H2-1"):
+            syntax_checker = "H2-1SC"
+        elif self.profile.device_id.startswith("Helios-1"):
+            syntax_checker = "Helios-1SC"
+        else:
+            raise ValueError("Unknown device ID")
+
+        tcost = 0.0
+        for ref in compiled_refs:
+            cost = qnx.client.circuits.cost(
+                ref, n_shots=nshots, backend_config=backend_config, syntax_checker=syntax_checker
+            )
+            print(ref.id, cost)
+            tcost += cost
+        print("Total cost:", tcost)
+        return None
+        ###
+
         execute_job = qnx.start_execute_job(
             programs=compiled_refs,
             name=unique("execute"),
