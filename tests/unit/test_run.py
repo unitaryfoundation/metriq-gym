@@ -122,6 +122,138 @@ def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, 
         assert "Configuration file not found" in captured.out
 
 
+# def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
+#     class DummyParams(BaseModel):
+#         benchmark_name: str = "WIT"
+#         num_qubits: int = 6
+#         shots: int = 16
+
+#     captured = {}
+
+#     monkeypatch.setattr("os.path.exists", lambda _: True)
+#     monkeypatch.setattr("metriq_gym.run.load_and_validate", lambda *_: DummyParams())
+#     monkeypatch.setattr(
+#         "metriq_gym.run.setup_device",
+#         lambda *_, **__: SimpleNamespace(id="H1-1", profile=SimpleNamespace(basis_gates=[])),
+#     )
+
+#     def fake_estimate(job_type, params, device, hqc_fn=None):
+#         counts = GateCounts()
+#         hqc_value = hqc_fn(counts, 16) if hqc_fn else None
+#         captured["hqc"] = hqc_value
+#         circuit_estimate = CircuitEstimate(
+#             job_index=0,
+#             circuit_index=0,
+#             qubit_count=6,
+#             shots=16,
+#             gate_counts=counts,
+#             depth=1,
+#             hqc=hqc_value,
+#         )
+#         return ResourceEstimate(
+#             job_count=1,
+#             circuit_count=1,
+#             total_shots=16,
+#             max_qubits=6,
+#             total_gate_counts=counts,
+#             hqc_total=hqc_value,
+#             per_circuit=[circuit_estimate],
+#         )
+
+#     monkeypatch.setattr("metriq_gym.run.estimate_resources", fake_estimate)
+
+#     args = SimpleNamespace(
+#         config="foo.json",
+#         provider="quantinuum",
+#         device="H1-1",
+#     )
+
+#     estimate_job(args, MagicMock())
+
+#     expected = quantinuum_hqc_formula(GateCounts(), 16)
+#     assert abs(captured["hqc"] - expected) < 1e-6
+
+
+# def test_estimate_job_without_device_wit(monkeypatch, capsys):
+#     class DummyParams(BaseModel):
+#         benchmark_name: str = "WIT"
+#         num_qubits: int = 6
+#         shots: int = 16
+
+#     captured = {}
+
+#     monkeypatch.setattr("os.path.exists", lambda *_: True)
+#     monkeypatch.setattr("metriq_gym.run.load_and_validate", lambda *_: DummyParams())
+
+#     def fail_setup(*_args, **_kwargs):
+#         raise AssertionError("setup_device should not be called when device is omitted")
+
+#     monkeypatch.setattr("metriq_gym.run.setup_device", fail_setup)
+
+#     def fake_estimate(job_type, params, device, hqc_fn=None):
+#         counts = GateCounts()
+#         captured["device"] = device
+#         circuit_estimate = CircuitEstimate(
+#             job_index=0,
+#             circuit_index=0,
+#             qubit_count=6,
+#             shots=16,
+#             gate_counts=counts,
+#             depth=1,
+#             hqc=None,
+#         )
+#         return ResourceEstimate(
+#             job_count=1,
+#             circuit_count=1,
+#             total_shots=16,
+#             max_qubits=6,
+#             total_gate_counts=counts,
+#             hqc_total=None,
+#             per_circuit=[circuit_estimate],
+#         )
+
+#     monkeypatch.setattr("metriq_gym.run.estimate_resources", fake_estimate)
+
+#     args = SimpleNamespace(
+#         config="foo.json",
+#         provider="quantinuum",
+#         device=None,
+#     )
+
+#     estimate_job(args, MagicMock())
+
+#     output = capsys.readouterr().out
+#     assert "Resource estimate for WIT" in output
+#     assert "(no device)" in output
+#     assert captured["device"] is None
+
+
+# def test_estimate_job_requires_device(monkeypatch, capsys):
+#     class DummyParams(BaseModel):
+#         benchmark_name: str = "BSEQ"
+#         shots: int = 10
+
+#     monkeypatch.setattr("os.path.exists", lambda *_: True)
+#     monkeypatch.setattr("metriq_gym.run.load_and_validate", lambda *_: DummyParams())
+
+#     def fake_estimate(*_args, **_kwargs):
+#         raise ValueError("BSEQ benchmark requires a device to estimate resources.")
+
+#     monkeypatch.setattr("metriq_gym.run.estimate_resources", fake_estimate)
+
+#     args = SimpleNamespace(
+#         config="foo.json",
+#         provider="aws",
+#         device=None,
+#     )
+
+#     estimate_job(args, MagicMock())
+
+#     output = capsys.readouterr().out
+#     assert "✗ BSEQ" in output
+#     assert "requires a device" in output
+
+
 class DummyResult(BenchmarkResult):
     value: int
 

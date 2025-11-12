@@ -27,6 +27,7 @@ from metriq_gym.helpers.graph_helpers import (
     largest_connected_size,
 )
 from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -201,3 +202,15 @@ class BSEQ(Benchmark):
             largest_connected_size=lcs,
             fraction_connected=lcs / job_data.coloring.num_nodes,
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        topology_graph = connectivity_graph(device)
+        coloring = device_graph_coloring(topology_graph)
+        circuit_sets = generate_chsh_circuit_sets(coloring)
+        return [
+            CircuitBatch(circuits=circuit_group, shots=self.params.shots)
+            for circuit_group in circuit_sets
+        ]
