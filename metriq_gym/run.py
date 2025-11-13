@@ -169,6 +169,7 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"Dispatching {params.benchmark_name}...")
 
     handler: Benchmark = setup_benchmark(args, params, job_type)
+    device._bname = config_file  # params.benchmark_name
     job_data: BenchmarkData = handler.dispatch_handler(device)
 
     # Lazy import to avoid heavy modules during CLI cold start

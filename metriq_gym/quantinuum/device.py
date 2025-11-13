@@ -60,7 +60,7 @@ class QuantinuumDevice(QuantumDevice):
         project = qnx.projects.get_or_create(
             name=os.getenv("QUANTINUUM_NEXUS_PROJECT_NAME", "metriq-gym")
         )
-        backend_config = qnx.QuantinuumConfig(device_name=self.profile.device_id)
+        backend_config = qnx.QuantinuumConfig(device_name=self.profile.device_id, max_cost=1000)
         circuits_list = self.transform(run_input)
 
         def unique(label: str) -> str:
@@ -95,23 +95,30 @@ class QuantinuumDevice(QuantumDevice):
 
         # Syntax checker argument wasn't being found automatically, so need to specify it
         # (Why does the cost API Actually need it? Not sure)
-        if self.profile.device_id.startswith("H2-2"):
-            syntax_checker = "H2-2SC"
-        elif self.profile.device_id.startswith("H2-1"):
-            syntax_checker = "H2-1SC"
-        elif self.profile.device_id.startswith("Helios-1"):
-            syntax_checker = "Helios-1SC"
-        else:
-            raise ValueError("Unknown device ID")
+        # if self.profile.device_id.startswith("H2-2"):
+        #     syntax_checker = "H2-2SC"
+        # elif self.profile.device_id.startswith("H2-1"):
+        #     syntax_checker = "H2-1SC"
+        # elif self.profile.device_id.startswith("Helios-1"):
+        #     syntax_checker = "Helios-1SC"
+        # else:
+        #     raise ValueError("Unknown device ID")
 
         tcost = 0.0
+        of = open("./qcup.costs.csv", "+a")
         for ref in compiled_refs:
             cost = qnx.client.circuits.cost(
-                ref, n_shots=nshots, backend_config=backend_config, syntax_checker=syntax_checker
+                ref,
+                n_shots=nshots,
+                backend_config=backend_config,  # , syntax_checker=syntax_checker
             )
-            print(ref.id, cost)
+            print(
+                f"{self._bname}, {self.profile.device_id}, {ref.id}, {cost},{nshots}",
+                file=of,
+                flush=True,
+            )
             tcost += cost
-        print("Total cost:", tcost)
+        # print("Total cost:", tcost)
         return None
         ###
 
