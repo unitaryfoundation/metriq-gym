@@ -11,6 +11,7 @@ from importlib import import_module
 from types import ModuleType
 from typing import TYPE_CHECKING
 from qiskit import QuantumCircuit
+import numpy as np
 
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
@@ -237,11 +238,16 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> list[float | None
     # Note: A circuit group is the number of qubits for this step in the sweep.
     #       The score will be the average across all groups -- the entire sweep.
     avg_groups = metrics.group_metrics["avg_fidelities"]
-    total_avg = sum(avg_groups) / len(avg_groups)
+    score = np.mean(avg_groups)
 
-    # TODO Compute the uncertainty carefully.
+    # The uncertainty is the pooled standard deviation
+    # (the estimate of variance amongst different means).
+    s_k = np.array(metrics.group_metrics["std_fidelities"])
+    n_k = np.array([len(circuit_metrics[g]) for g in circuit_metrics])
+    pooled_variance = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
+    uncertainty = np.sqrt(pooled_variance)
 
-    return [total_avg, None]
+    return [score, uncertainty]
 
 
 class QEDCBenchmark(Benchmark):
