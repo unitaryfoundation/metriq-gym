@@ -127,7 +127,6 @@ def test_setup_device_empty_device(mock_provider, patch_load_provider, caplog):
     with pytest.raises(QBraidSetupError, match="Device not found"):
         setup_device(provider_name, backend_name)
 
-    # Verify the printed output
     assert "No device name specified." in caplog.text
     assert "Devices available: device1, device2" in caplog.text
 
