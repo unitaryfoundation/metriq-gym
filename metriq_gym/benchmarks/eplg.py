@@ -175,6 +175,7 @@ class EPLGData(BenchmarkData):
     """
 
     physical_qubit_num: int
+    selected_chain: list
 
 
 class EPLGResult(BenchmarkResult):
@@ -246,7 +247,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             require_gate=False,  # set False to ignore calibration availability
             restarts=5000,  # bump if your graph is sparse or the chain is long
         )
-
+        print('selected_chain is', selected_chain)
+        print('qubit_num is', qubit_num)
         # Decompose the selected chain into two disjoint layers by pairing adjacent
         # qubits.  The first layer pairs (q0,q1),(q2,q3),... and the second layer
         # pairs (q1,q2),(q3,q4),... as required by the Layer Fidelity protocol.
@@ -287,14 +289,15 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # ``num_samples`` correspond to ``lengths[1]``, and so forth.
         circuits = experiment._transpiled_circuits()
         device.set_options(transform=False)
-
+        print(f"{len(circuits)} circuits are generated.")
+        circuits[0].draw(output="mpl", style="clifford", idle_wires=False, fold=-1)
         # Submit the circuits to the device and capture the resulting QuantumJob.
         quantum_job = device.run(circuits, shots=nshots)
-        print(selected_chain)
         # Package the job and experimental parameters into an EPLGData instance.
         return EPLGData.from_quantum_job(
             quantum_job,
-            physical_qubit_num=len(selected_chain) + 1,  # qubit indices are zero-based
+            physical_qubit_num=len(selected_chain),  # qubit indices are zero-based
+            selected_chain = selected_chain,
         )
 
     def poll_handler(
@@ -354,6 +357,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         """
         params = self.params
         n_qubits: int = params.qubit_num
+        selected_chain: List[int] = job_data.selected_chain
         physical_qubit_num: int = job_data.physical_qubit_num
         lengths: List[int] = params.lengths
         num_samples: int = params.num_samples
@@ -367,7 +371,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                 f"Expected {expected_circuits} result data entries but got {len(counts_list)}."
             )
 
-        #print(counts_list)
+        print(physical_qubit_num)
         # Define the expected zero bitstring; this corresponds to the ideal
         # outcome for direct randomized benchmarking circuits.  We assume the
         # qubits map to the bitstring ordering used by the device; if not, the
@@ -387,7 +391,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
         # Precompute lists of subsystem indices for 1Q and 2Q process fidelities.
         one_q_indices = list(range(n_qubits))
-        two_q_indices = [(i, i + 1) for i in range(max(0, n_qubits - 1))]
+        two_q_indices = [(i, i+1) for i in range(n_qubits-1)]
 
         # Containers for process fidelities per length.
         pf_1q_by_length: List[dict] = []
@@ -399,37 +403,36 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             idx_counts += num_samples
             # One‑qubit process fidelities
             pf1_dict: dict = {}
-            for qpos in one_q_indices:
-                surv_probs_q: List[float] = []
+            for qpos in one_q_indices:  # qpos indexes the position in the chain
+                surv_probs_q = []
+                phys_idx = selected_chain[qpos]  # map chain position to physical qubit index
                 for counts in subset:
                     total_shots = sum(counts.values()) if hasattr(counts, "values") else 0
                     prob0 = 0.0
                     if total_shots > 0:
                         count_zero = 0
                         for key, cnt in counts.items():
-                            # Convert the key to a bitstring.  Keys may be strings or integers.
                             if isinstance(key, str):
                                 bitstr = key
                             else:
-                                # interpret integer as binary string with no '0b' prefix
                                 bitstr = format(key, "b")
-                            # pad to the full chain length
-                            bitstr = bitstr.zfill(n_qubits)
-                            # We treat the reversed bitstring so that index corresponds to
-                            # the position in the selected chain.  This is an assumption
-                            # about bit ordering and may differ on some backends.
+                            # pad to the full physical qubit count
+                            bitstr = bitstr.zfill(physical_qubit_num)
+                            # reverse to index qubits by their physical index
                             rev = bitstr[::-1]
-                            if qpos < len(rev) and rev[qpos] == "0":
+                            # check the bit corresponding to this physical qubit
+                            if phys_idx < len(rev) and rev[phys_idx] == "0":
                                 count_zero += cnt
                         prob0 = count_zero / total_shots
                     surv_probs_q.append(prob0)
                 pf1_dict[qpos] = float(np.mean(surv_probs_q)) if surv_probs_q else 0.0
-            pf_1q_by_length.append(pf1_dict)
 
             # Two‑qubit process fidelities
             pf2_dict: dict = {}
-            for i, j in two_q_indices:
-                surv_probs_pair: List[float] = []
+            for i, j in two_q_indices:  # i, j index chain positions
+                surv_probs_pair = []
+                phys_i = selected_chain[i]
+                phys_j = selected_chain[j]
                 for counts in subset:
                     total_shots = sum(counts.values()) if hasattr(counts, "values") else 0
                     prob00 = 0.0
@@ -440,16 +443,15 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                                 bitstr = key
                             else:
                                 bitstr = format(key, "b")
-                            bitstr = bitstr.zfill(n_qubits)
+                            bitstr = bitstr.zfill(physical_qubit_num)
                             rev = bitstr[::-1]
-                            # check both qubits are 0
-                            if i < len(rev) and j < len(rev):
-                                if rev[i] == "0" and rev[j] == "0":
+                            # check both physical qubits are measured as 0
+                            if phys_i < len(rev) and phys_j < len(rev):
+                                if rev[phys_i] == "0" and rev[phys_j] == "0":
                                     count_zero2 += cnt
                         prob00 = count_zero2 / total_shots
                     surv_probs_pair.append(prob00)
                 pf2_dict[(i, j)] = float(np.mean(surv_probs_pair)) if surv_probs_pair else 0.0
-            pf_2q_by_length.append(pf2_dict)
 
 
         
@@ -483,8 +485,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
         chain_fids: List[float] = []
         for idx_L, L in enumerate(lengths):
-            pf1_dict = pf_1q_by_length[idx_L]
-            pf2_dict = pf_2q_by_length[idx_L]
+            #pf1_dict = pf_1q_by_length[idx_L]
+            #pf2_dict = pf_2q_by_length[idx_L]
             # Product of all two‑qubit process fidelities along the chain
             prod_pf2 = 1.0
             for i in range(max(0, n_qubits - 1)):
@@ -549,26 +551,26 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                     "length": L,
                 }
             )
-            # One‑qubit process fidelities
-            for qpos, pf_val in pf_1q_by_length[idx_L].items():
-                rows.append(
-                    {
-                        "name": "ProcessFidelity",
-                        "value": pf_val,
-                        # "qubits": (chain_qubits[qpos],),
-                        "length": L,
-                    }
-                )
-            # Two‑qubit process fidelities
-            for (i, j), pf_val in pf_2q_by_length[idx_L].items():
-                rows.append(
-                    {
-                        "name": "ProcessFidelity",
-                        "value": pf_val,
-                        # "qubits": (chain_qubits[i], chain_qubits[j]),
-                        "length": L,
-                    }
-                )
+            # # One‑qubit process fidelities
+            # for qpos, pf_val in pf_1q_by_length[idx_L].items():
+            #     rows.append(
+            #         {
+            #             "name": "ProcessFidelity",
+            #             "value": pf_val,
+            #             # "qubits": (chain_qubits[qpos],),
+            #             "length": L,
+            #         }
+            #     )
+            # # Two‑qubit process fidelities
+            # for (i, j), pf_val in pf_2q_by_length[idx_L].items():
+            #     rows.append(
+            #         {
+            #             "name": "ProcessFidelity",
+            #             "value": pf_val,
+            #             # "qubits": (chain_qubits[i], chain_qubits[j]),
+            #             "length": L,
+            #         }
+            #     )
         _ = pd.DataFrame(rows)
         print("chain_fids:", chain_fids)
         print("chain_eplg:", chain_eplgs)
