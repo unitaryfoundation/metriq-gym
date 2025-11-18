@@ -228,21 +228,17 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> list[float | None
     Returns:
         values: the score and the uncertainty.
     """
-    # Populate the metrics module with the data
+    # Obtain the average fidelity and standard deviation for each qubit size in the sweep.
     metrics.circuit_metrics = circuit_metrics
-
-    # Compute averages and standard deviations.
     metrics.aggregate_metrics()
+    avgs = metrics.group_metrics["avg_fidelities"]
+    s_k = np.array(metrics.group_metrics["std_fidelities"])
 
-    # Obtain the average fidelity over each circuit group.
-    # Note: A circuit group is the number of qubits for this step in the sweep.
-    #       The score will be the average across all groups -- the entire sweep.
-    avg_groups = metrics.group_metrics["avg_fidelities"]
-    score = np.mean(avg_groups)
+    # The score will be the average across all groups -- the entire sweep.
+    score = np.mean(avgs)
 
     # The uncertainty is the pooled standard deviation
-    # (the estimate of variance amongst different means).
-    s_k = np.array(metrics.group_metrics["std_fidelities"])
+    # (the weighted estimate of variance amongst different means).
     n_k = np.array([len(circuit_metrics[g]) for g in circuit_metrics])
     pooled_variance = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
     uncertainty = np.sqrt(pooled_variance)
