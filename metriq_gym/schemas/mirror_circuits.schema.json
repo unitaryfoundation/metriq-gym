@@ -39,7 +39,7 @@
       "default": "CNOT",
       "examples": ["CNOT", "CZ"]
     },
-    "shots": {
+    "num_shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) for the benchmark.",
       "default": 1000,

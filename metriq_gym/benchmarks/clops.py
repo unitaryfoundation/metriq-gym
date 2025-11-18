@@ -154,7 +154,7 @@ class Clops(Benchmark):
             topology_graph=topology_graph,
             total_qubits=num_qubits,
         )
-        return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
+        return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.num_shots))
 
     def poll_handler(
         self,
@@ -162,7 +162,7 @@ class Clops(Benchmark):
         result_data: list["GateModelResultData"],
         quantum_jobs: list["QuantumJob"],
     ) -> ClopsResult:
-        clops_score = (self.params.num_circuits * self.params.num_layers * self.params.shots) / sum(
+        clops_score = (self.params.num_circuits * self.params.num_layers * self.params.num_shots) / sum(
             execution_time(quantum_job) for quantum_job in quantum_jobs
         )
         return ClopsResult(clops_score=clops_score)

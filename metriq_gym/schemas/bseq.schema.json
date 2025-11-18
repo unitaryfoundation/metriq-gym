@@ -10,7 +10,7 @@
       "const": "BSEQ",
       "description": "Name of the benchmark. Must be 'BSEQ' for this schema."
     },
-    "shots": {
+    "num_shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) to use for the benchmark.",
       "default": 1000,

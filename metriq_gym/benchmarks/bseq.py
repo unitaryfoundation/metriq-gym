@@ -46,13 +46,13 @@ class BSEQData(BenchmarkData):
     """Data class to store BSEQ benchmark metadata.
 
     Attributes:
-        shots: Number of shots per quantum circuit execution.
+        num_shots: Number of shots per quantum circuit execution.
         num_qubits: Number of qubits in the quantum device.
         topology_graph: Graph representing the device topology (optional).
         coloring: Coloring information for circuit partitioning (optional).
     """
 
-    shots: int
+    num_shots: int
     num_qubits: int
     topology_graph: nx.Graph | None = None
     coloring: GraphColoring | dict | None = None
@@ -155,14 +155,14 @@ class BSEQ(Benchmark):
 
     def dispatch_handler(self, device: "QuantumDevice") -> BSEQData:
         """Runs the benchmark and returns job metadata."""
-        shots = self.params.shots
+        num_shots = self.params.num_shots
 
         topology_graph = connectivity_graph(device)
         coloring = device_graph_coloring(topology_graph)
         trans_exp_sets = generate_chsh_circuit_sets(coloring)
 
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
-            device.run(circ_set, shots=shots) for circ_set in trans_exp_sets
+            device.run(circ_set, shots=num_shots) for circ_set in trans_exp_sets
         ]
 
         provider_job_ids = [
@@ -173,7 +173,7 @@ class BSEQ(Benchmark):
 
         return BSEQData(
             provider_job_ids=provider_job_ids,
-            shots=shots,
+            num_shots=num_shots,
             num_qubits=device.num_qubits,
             topology_graph=topology_graph,
             coloring={

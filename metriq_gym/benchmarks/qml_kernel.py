@@ -90,7 +90,7 @@ class QMLKernel(Benchmark):
     def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
         return QMLKernelData.from_quantum_job(
             device.run(
-                create_inner_product_circuit(self.params.num_qubits), shots=self.params.shots
+                create_inner_product_circuit(self.params.num_qubits), shots=self.params.num_shots
             )
         )
 

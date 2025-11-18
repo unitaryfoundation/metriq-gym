@@ -15,7 +15,7 @@ def test_calc_stats_pass():
     job_data = QuantumVolumeData(
         provider_job_ids=["test_job_id"],
         num_qubits=2,
-        shots=100,
+        num_shots=100,
         depth=2,
         confidence_level=0.7,
         ideal_probs=[
@@ -36,7 +36,7 @@ def test_calc_stats_not_pass():
     job_data = QuantumVolumeData(
         provider_job_ids=["test_job_id"],
         num_qubits=2,
-        shots=100,
+        num_shots=100,
         depth=2,
         confidence_level=0.7,
         ideal_probs=[

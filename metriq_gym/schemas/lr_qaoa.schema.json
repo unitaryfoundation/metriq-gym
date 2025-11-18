@@ -46,7 +46,7 @@
       "maximum":2.0,
       "examples": [0.1, 0.3, 0.5, 1.0]
     },
-    "shots": {
+    "num_shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) per circuit.",
       "default": 1000,

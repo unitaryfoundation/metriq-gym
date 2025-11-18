@@ -2,7 +2,7 @@
   "benchmark_name": "Linear Ramp QAOA",
   "graph_type": "NL",
   "num_qubits": 5,
-  "shots": 1000,
+  "num_shots": 1000,
   "trials": 5,
   "confidence_level": 0.999,
   "num_random_trails":100,

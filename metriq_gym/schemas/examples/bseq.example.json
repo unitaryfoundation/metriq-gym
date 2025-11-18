@@ -1,5 +1,5 @@
 {
     "benchmark_name": "BSEQ",
-    "shots": 10
+    "num_shots": 10
 }
   
