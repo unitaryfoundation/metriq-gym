@@ -62,7 +62,7 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
 
     Chooses between:
       - Bipartite edge-coloring for bipartite graphs (optimal),
-      - Misra-Gries edge-coloring for complete graphs (optimal, uses exactly Δ colors),
+      - Misra-Gries edge-coloring for complete graphs (optimal, uses exactly max_degree colors),
       - Greedy edge-coloring otherwise (fast, good for sparse graphs).
 
     Args:
@@ -82,7 +82,7 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
         is_complete = num_edges == expected_edges_if_complete
 
         if is_complete:
-            # Use Misra-Gries for complete graphs (optimal: exactly Δ colors)
+            # Use Misra-Gries for complete graphs (optimal: exactly max_degree colors)
             edge_color_map = rx.graph_misra_gries_edge_color(topology_graph)
         else:
             # Use greedy for sparse graphs (faster, often good results)
