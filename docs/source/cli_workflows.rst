@@ -118,6 +118,13 @@ Credential Management
 
 Copy ``.env.example`` to ``.env`` and populate provider API tokens before running on hardware.
 
+Note that for the Quantinuum NEXUS provider, you must first run a manual login workflow to link your account.
+From your command line, run:
+
+.. code-block:: sh
+
+   qnx login
+
 Viewing Jobs
 ============
 
