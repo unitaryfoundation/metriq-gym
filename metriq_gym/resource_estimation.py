@@ -132,12 +132,15 @@ def aggregate_resource_estimates(
 
 
 def quantinuum_hqc_formula(counts: GateCounts, shots: int) -> float:
-    """Compute Quantinuum HQCs using the published formula."""
+    """Compute Quantinuum HQCs using the published formula.
+
+    HQC formula definition from:
+    https://docs.quantinuum.com/systems/user_guide/hardware_user_guide/workflow.html?_gl=1*11onrsb*_gcl_au*MTExNzY5NDM0Mi4xNzYzNTA1MTM3#tracking-usage-with-hardware-quantum-credits-hqcs
+    """
 
     n_one = counts.one_qubit
     n_two = counts.two_qubit
-    # Includes the implicit initial state preparation (+1) and any resets.
-    n_measure = counts.measurements + counts.resets + 1
+    n_measure = counts.measurements + counts.resets + num_qubits
 
     gate_term = n_one + 10 * n_two + 5 * n_measure
     return 5.0 + shots * gate_term / 5000.0
