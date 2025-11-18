@@ -77,7 +77,7 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
     return counts
 
 
-HQCFunction = Callable[[GateCounts, int], float]
+HQCFunction = Callable[[GateCounts, int, int], float]
 
 
 def aggregate_resource_estimates(
@@ -104,7 +104,7 @@ def aggregate_resource_estimates(
 
             circuit_hqc: float | None = None
             if hqc_fn is not None:
-                circuit_hqc = hqc_fn(gate_counts, shots)
+                circuit_hqc = hqc_fn(gate_counts, shots, circuit.num_qubits)
                 if hqc_total is None:
                     hqc_total = 0.0
                 hqc_total += circuit_hqc
@@ -131,7 +131,7 @@ def aggregate_resource_estimates(
     )
 
 
-def quantinuum_hqc_formula(counts: GateCounts, shots: int) -> float:
+def quantinuum_hqc_formula(counts: GateCounts, shots: int, num_qubits: int) -> float:
     """Compute Quantinuum HQCs using the published formula.
 
     HQC formula definition from:
