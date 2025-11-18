@@ -61,9 +61,8 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     the complexity of the benchmarking process by organizing the graph into independent sets of qubit pairs.
 
     Chooses between:
-      - One-factorization (optimal) for complete graphs,
-      - Bipartite edge-coloring for bipartite graphs,
-      - Greedy edge-coloring otherwise.
+      - Bipartite edge-coloring for bipartite graphs (optimal),
+      - Misra-Gries edge-coloring otherwise (near-optimal, uses at most Δ+1 colors).
 
     Args:
         topology_graph: The topology graph (coupling map) of the quantum device.
@@ -76,7 +75,7 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     if rx.is_bipartite(topology_graph):
         edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
     else:
-        edge_color_map = rx.graph_greedy_edge_color(topology_graph)
+        edge_color_map = rx.graph_misra_gries_edge_color(topology_graph)
 
     edge_index_map = dict(topology_graph.edge_index_map())
     return GraphColoring(
