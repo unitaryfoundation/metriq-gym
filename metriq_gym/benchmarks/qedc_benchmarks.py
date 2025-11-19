@@ -242,7 +242,7 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> list[float | None
     n_k = np.array(
         [len(circuit_metrics[g]) for g in circuit_metrics]
     )  # number of circuits in a group
-    pooled_variance = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
+    pooled_variance: float = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
     uncertainty = np.sqrt(pooled_variance)
 
     return [score, uncertainty]
