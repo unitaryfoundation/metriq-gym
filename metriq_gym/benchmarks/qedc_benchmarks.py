@@ -225,6 +225,9 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> list[float | None
     """
     The score is the average of fidelities across all groups.
 
+    Args:
+        circuit_metrics: the QEDC_Metrics object after analyzing results.
+
     Returns:
         values: the score and the uncertainty.
     """
