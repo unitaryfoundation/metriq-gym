@@ -2,70 +2,21 @@
 
 import logging
 from collections.abc import Sequence
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from pyqpanda3.intermediate_compiler import convert_qasm_string_to_qprog
+from pyqpanda3.qcloud import QCloudBackend, ChipInfo
 from qbraid import QPROGRAM
 from qbraid.programs import ExperimentType, ProgramSpec
 from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qiskit import QuantumCircuit
 from qiskit.qasm2 import dumps as qasm2_dumps
 
-from ._constants import SIMULATOR_BACKENDS, SIMULATOR_MAX_QUBITS
-from .job import OriginJob
-from .qcloud_utils import get_qcloud_options
-
-if TYPE_CHECKING:  # pragma: no cover
-    from pyqpanda3.qcloud import QCloudBackend
+from metriq_gym.origin.constants import SIMULATOR_BACKENDS
+from metriq_gym.origin.job import OriginJob
+from metriq_gym.origin.qcloud_utils import get_qcloud_options
 
 logger = logging.getLogger(__name__)
-
-
-def _sanitize_int_list(values: Any) -> list[int]:
-    """Return a sorted list of unique integers from an iterable."""
-
-    sanitized: set[int] = set()
-    if not values:
-        return []
-    for value in values:
-        try:
-            sanitized.add(int(value))
-        except (TypeError, ValueError):
-            continue
-    return sorted(sanitized)
-
-
-def _sanitize_edges(values: Any) -> list[tuple[int, int]]:
-    """Return sorted, deduplicated undirected edges from a raw topology list."""
-
-    unique_edges: set[tuple[int, int]] = set()
-    if not values:
-        return []
-    for edge in values:
-        if not edge or len(edge) < 2:
-            continue
-        try:
-            a, b = int(edge[0]), int(edge[1])
-        except (TypeError, ValueError):
-            continue
-        if a == b:
-            continue
-        unique_edges.add((min(a, b), max(a, b)))
-    return sorted(unique_edges)
-
-
-def _chip_active_qubits(chip_info: Any) -> list[int]:
-    """Return the calibrated qubits reported by the chip."""
-
-    for attr in ("high_frequency_qubits", "available_qubits"):
-        try:
-            values = getattr(chip_info, attr)()
-        except Exception:  # pragma: no cover - depends on live service
-            continue
-        qubits = _sanitize_int_list(values)
-        if qubits:
-            return qubits
-    return []
 
 
 def _chip_topology_edges(chip_info: Any) -> list[tuple[int, int]]:
@@ -76,9 +27,8 @@ def _chip_topology_edges(chip_info: Any) -> list[tuple[int, int]]:
         raw_edges = getattr(chip_info, "get_chip_topology", lambda: [])()
     except Exception:  # pragma: no cover - depends on live service
         raw_edges = []
-    edges = _sanitize_edges(raw_edges)
-    if edges:
-        return edges
+    if raw_edges:
+        return raw_edges
 
     try:
         double_infos = chip_info.double_qubits_info()
@@ -109,52 +59,35 @@ def get_origin_connectivity(device: "OriginDevice") -> tuple[list[int], list[tup
     """Return active qubits and connectivity edges for an Origin device."""
 
     try:
-        chip_info = device.backend.chip_info()
+        chip_info: ChipInfo = device.backend.chip_info()
     except Exception:  # pragma: no cover - depends on live service
         return [], []
 
-    active = _chip_active_qubits(chip_info)
+    active = chip_info.available_qubits()
     edges = _chip_topology_edges(chip_info)
     if not active and edges:
         active = sorted({node for edge in edges for node in edge})
     return active, edges
 
 
-def _infer_num_qubits(
-    backend: "QCloudBackend", backend_name: str, *, simulator: bool
-) -> int | None:
+def _infer_num_qubits(backend: QCloudBackend, backend_name: str, *, simulator: bool) -> int | None:
     if simulator:
-        return SIMULATOR_MAX_QUBITS.get(backend_name)
+        return SIMULATOR_BACKENDS.get(backend_name)
     total_qubits: int | None = None
     try:
         chip_info = backend.chip_info()
-    except Exception:  # pragma: no cover - depends on live service
-        return None
-    try:
-        candidate = int(chip_info.qubits_num())
-        if candidate > 0:
-            total_qubits = candidate
+        total_qubits = chip_info.qubits_num()
     except Exception:  # pragma: no cover - defensive programming when API changes
         logger.debug("Unable to determine qubit count from chip info", exc_info=True)
-    active_qubits = _chip_active_qubits(chip_info)
-    if total_qubits is not None:
-        # When the provider reports both total and calibrated qubits, prefer the total
-        # count as it reflects the full hardware size.
-        if active_qubits and total_qubits < len(active_qubits):
-            return len(active_qubits)
-        return total_qubits
-    if active_qubits:
-        return len(active_qubits)
-    return None
+    return total_qubits
 
 
-def _infer_basis_gates(backend: "QCloudBackend", *, simulator: bool) -> list[str] | None:
+def _infer_basis_gates(backend: QCloudBackend, *, simulator: bool) -> list[str] | None:
     if simulator:
         return None
     try:
         chip_info = backend.chip_info()
-        gates = chip_info.get_basic_gates()
-        return list(gates) if gates else None
+        return chip_info.get_basic_gates()
     except Exception:  # pragma: no cover - depends on live service
         logger.debug("Unable to determine basis gates from chip info", exc_info=True)
         return None
