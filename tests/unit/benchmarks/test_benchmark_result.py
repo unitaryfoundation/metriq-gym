@@ -4,7 +4,6 @@ from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
     BenchmarkScore,
-    MetricDirection,
 )
 from metriq_gym.exporters.base_exporter import BaseExporter
 
@@ -17,7 +16,10 @@ class _DummyExporter(BaseExporter):
 def test_payload_includes_null_uncertainty_for_numeric_and_benchmarkscore(metriq_job):
     # Numeric metric should have uncertainty None (-> null in JSON)
     class _NumResult(BenchmarkResult):
-        numeric_metric: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+        numeric_metric: float = Field(...)
+
+        def compute_score(self):
+            return None
 
     num_result = _NumResult(numeric_metric=1.23)
     num_payload = _DummyExporter(metriq_job, num_result).as_dict()
@@ -28,9 +30,10 @@ def test_payload_includes_null_uncertainty_for_numeric_and_benchmarkscore(metriq
 
     # BenchmarkScore without uncertainty should also be None
     class _WitLikeResult(BenchmarkResult):
-        expectation_value: BenchmarkScore = Field(
-            ..., json_schema_extra={"direction": MetricDirection.HIGHER}
-        )
+        expectation_value: BenchmarkScore = Field(...)
+
+        def compute_score(self):
+            return None
 
     bs_result = _WitLikeResult(expectation_value=BenchmarkScore(value=0.7))
     bs_payload = _DummyExporter(metriq_job, bs_result).as_dict()

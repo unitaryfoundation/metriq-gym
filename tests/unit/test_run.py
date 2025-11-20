@@ -1,12 +1,19 @@
+from dataclasses import dataclass
+from datetime import datetime
 import logging
 import pytest
 from unittest.mock import MagicMock, patch
 
 from qbraid import QbraidError
+from qbraid.runtime import JobStatus
+from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult
 from metriq_gym.run import (
     setup_device,
     dispatch_job,
+    fetch_result,
 )
+from metriq_gym.job_manager import MetriqGymJob, JobManager
+from metriq_gym.constants import JobType
 from metriq_gym.exceptions import QBraidSetupError
 
 
@@ -73,7 +80,22 @@ def test_setup_device_invalid_provider(get_providers_patch, caplog):
 
     # Verify the printed output
     assert f"No provider matching the name '{provider_name}' found." in caplog.text
-    assert "Providers available: ['supported_provider']" in caplog.text
+    assert "Providers available: supported_provider" in caplog.text
+
+
+@patch("metriq_gym.run.get_providers")
+def test_setup_device_empty_provider(get_providers_patch, caplog):
+    get_providers_patch.return_value = ["supported_provider"]
+    caplog.set_level(logging.INFO)
+
+    provider_name = ""
+    backend_name = "whatever_backend"
+
+    with pytest.raises(QBraidSetupError, match="Provider not found"):
+        setup_device(provider_name, backend_name)
+
+    assert "No provider name specified." in caplog.text
+    assert "Providers available: supported_provider" in caplog.text
 
 
 def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog):
@@ -87,12 +109,26 @@ def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog)
     with pytest.raises(QBraidSetupError, match="Device not found"):
         setup_device(provider_name, backend_name)
 
-    # Verify the printed output
     assert (
         f"No device matching the name '{backend_name}' found in provider '{provider_name}'."
         in caplog.text
     )
-    assert "Devices available: ['device1', 'device2']" in caplog.text
+    assert "Devices available: device1, device2" in caplog.text
+
+
+def test_setup_device_empty_device(mock_provider, patch_load_provider, caplog):
+    caplog.set_level(logging.INFO)
+    mock_provider.get_device.side_effect = QbraidError()
+    mock_provider.get_devices.return_value = [FakeDevice(id="device1"), FakeDevice(id="device2")]
+
+    provider_name = "test_provider"
+    backend_name = ""
+
+    with pytest.raises(QBraidSetupError, match="Device not found"):
+        setup_device(provider_name, backend_name)
+
+    assert "No device name specified." in caplog.text
+    assert "Devices available: device1, device2" in caplog.text
 
 
 @patch("os.path.exists")
@@ -113,3 +149,103 @@ def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, 
         # Verify output shows file not found errors
         captured = capsys.readouterr()
         assert "Configuration file not found" in captured.out
+
+
+class DummyResult(BenchmarkResult):
+    value: int
+
+    def compute_score(self):
+        return float(self.value)
+
+
+@dataclass
+class DummyJobData(BenchmarkData):
+    provider_job_ids: list[str]
+
+
+class DummyQuantumJob:
+    def __init__(self, job_id: str, value: int):
+        self.id = job_id
+        self._value = value
+
+    def status(self):
+        return JobStatus.COMPLETED
+
+    def result(self):
+        class _R:
+            data = {"value": self._value}
+
+        return _R()
+
+
+class DummyBenchmark:
+    def poll_handler(self, job_data, result_data, quantum_jobs):
+        return DummyResult(value=result_data[0]["value"])
+
+
+def _make_cached_job(val: int) -> MetriqGymJob:
+    return MetriqGymJob(
+        id="job-1",
+        job_type=JobType.WIT,
+        params={"benchmark_name": JobType.WIT.name},
+        data={"provider_job_ids": ["provider-job-1"]},
+        provider_name="local",
+        device_name="dummy_device",
+        platform={},
+        dispatch_time=datetime.now(),
+        result_data={"value": val},
+    )
+
+
+def test_fetch_result_uses_cache_when_no_flag(monkeypatch):
+    EXPECTED_CACHED_VALUE = 7
+    job = _make_cached_job(EXPECTED_CACHED_VALUE)
+    jm = JobManager()
+    jm.jobs.append(job)
+    args = MagicMock()
+    args.no_cache = False
+
+    import metriq_gym.run as run_mod
+
+    monkeypatch.setattr(run_mod, "setup_benchmark_result_class", lambda *_: DummyResult)
+    monkeypatch.setattr(run_mod, "setup_job_data_class", lambda *_: DummyJobData)
+    monkeypatch.setattr(run_mod, "setup_benchmark", lambda *_, **__: DummyBenchmark())
+    monkeypatch.setattr(
+        run_mod,
+        "load_job",
+        lambda *_, **__: DummyQuantumJob("provider-job-1", EXPECTED_CACHED_VALUE),
+    )
+    monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
+
+    result = fetch_result(job, args, jm)
+    assert result.value == EXPECTED_CACHED_VALUE
+
+
+def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
+    EXPECTED_FRESH_VALUE = 42
+    CACHED_VALUE = 7
+    job = _make_cached_job(CACHED_VALUE)
+    jm = JobManager()
+    jm.jobs.append(job)
+    args = MagicMock()
+    args.no_cache = True
+
+    import metriq_gym.run as run_mod
+
+    monkeypatch.setattr(run_mod, "setup_benchmark_result_class", lambda *_: DummyResult)
+    monkeypatch.setattr(run_mod, "setup_job_data_class", lambda *_: DummyJobData)
+    monkeypatch.setattr(run_mod, "setup_benchmark", lambda *_, **__: DummyBenchmark())
+    monkeypatch.setattr(
+        run_mod,
+        "load_job",
+        lambda *_, **__: DummyQuantumJob("provider-job-1", EXPECTED_FRESH_VALUE),
+    )
+    monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
+
+    result = fetch_result(job, args, jm)
+    assert result.value == EXPECTED_FRESH_VALUE, (
+        "Should fetch fresh value when --no-cache specified"
+    )
+    assert job.result_data == {"value": EXPECTED_FRESH_VALUE}, (
+        "Cached result_data should be updated"
+    )

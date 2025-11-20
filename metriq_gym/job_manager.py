@@ -29,6 +29,7 @@ class MetriqGymJob:
     platform: dict[str, Any] | None = None
     suite_id: str | None = None
     suite_name: str | None = None
+    # No suite weights in this PR; reserved for future use
     app_version: str | None = __version__
     result_data: dict[str, Any] | None = None
 
@@ -82,6 +83,10 @@ class MetriqGymJob:
             plat = job_dict.get("platform", {})
             job_dict.setdefault("provider_name", plat.get("provider"))
             job_dict.setdefault("device_name", plat.get("device"))
+        # Backward compatibility for older job records: drop deprecated fields if present
+        job_dict.pop("suite_metric", None)
+        job_dict.pop("score_metric", None)
+        job_dict.pop("suite_weight", None)
         return MetriqGymJob(**job_dict)
 
     def __str__(self) -> str:

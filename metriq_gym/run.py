@@ -39,7 +39,7 @@ def load_provider(provider_name: str):
     return _load_provider(provider_name)
 
 
-def get_providers():
+def get_providers() -> list[str]:
     """Lazy proxy to qbraid.runtime.get_providers.
 
     Exposed at module level so tests can monkeypatch `metriq_gym.run.get_providers`.
@@ -85,33 +85,47 @@ COMMON_SUITE_METADATA = {
 }
 
 
-def setup_device(provider_name: str, backend_name: str):
+def setup_device(provider_name: str, device_name: str):
     """
-    Setup a QBraid device with id backend_name from specified provider.
+    Setup a QBraid device with id device_name from specified provider.
 
     Args:
         provider_name: a metriq-gym supported provider name.
-        backend_name: the id of a device supported by the provider.
+        device_name: the id of a device supported by the provider.
     Raises:
         QBraidSetupError: If no device matching the name is found in the provider.
     """
     from qbraid import QbraidError
     from metriq_gym.exceptions import QBraidSetupError
 
-    try:
-        provider = load_provider(provider_name)
-    except QbraidError:
-        logger.error(f"No provider matching the name '{provider_name}' found.")
-        logger.error(f"Providers available: {get_providers()}")
+    if not provider_name:
+        providers = ", ".join(get_providers())
+        logger.error("No provider name specified.")
+        logger.error(f"Providers available: {providers}")
         raise QBraidSetupError("Provider not found")
 
     try:
-        device = provider.get_device(backend_name)
+        provider = load_provider(provider_name)
     except QbraidError:
+        providers = ", ".join(get_providers())
+        logger.error(f"No provider matching the name '{provider_name}' found.")
+        logger.error(f"Providers available: {providers}")
+        raise QBraidSetupError("Provider not found")
+
+    if not device_name:
+        devices = ", ".join([device.id for device in provider.get_devices()])
+        logger.error("No device name specified.")
+        logger.error(f"Devices available: {devices}")
+        raise QBraidSetupError("Device not found")
+
+    try:
+        device = provider.get_device(device_name)
+    except QbraidError:
+        devices = ", ".join([device.id for device in provider.get_devices()])
         logger.error(
-            f"No device matching the name '{backend_name}' found in provider '{provider_name}'."
+            f"No device matching the name '{device_name}' found in provider '{provider_name}'."
         )
-        logger.error(f"Devices available: {[device.id for device in provider.get_devices()]}")
+        logger.error(f"Devices available: {devices}")
         raise QBraidSetupError("Device not found")
     return device
 
@@ -565,7 +579,8 @@ def fetch_result(
 ) -> Optional["BenchmarkResult"]:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    if metriq_job.result_data is not None:
+    if metriq_job.result_data is not None and not getattr(args, "no_cache", False):
+        print("[Cached result data]")
         return job_result_type.model_validate(metriq_job.result_data)
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
@@ -581,8 +596,14 @@ def fetch_result(
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data = [task.result().data for task in quantum_jobs]
         result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
-        # Cache result_data in metriq_job and update job_manager if provided
-        metriq_job.result_data = result.model_dump()
+        # Cache result_data in metriq_job, excluding computed fields like 'score'
+        # to keep cached payload minimal and compatible with older tests/consumers.
+        # Fallback to calling model_dump() without kwargs for simple stand-ins used in tests.
+        try:
+            metriq_job.result_data = result.model_dump(exclude={"score"})
+        except TypeError:
+            # Some mocks (e.g., SimpleNamespace with model_dump as lambda) may not accept kwargs
+            metriq_job.result_data = result.model_dump()
         job_manager.update_job(metriq_job)
         return result
     else:
