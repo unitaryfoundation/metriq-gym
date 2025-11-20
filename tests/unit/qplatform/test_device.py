@@ -5,13 +5,16 @@ Tests the version and connectivity_graph functions for different device types
 using mocked qBraid device objects.
 """
 
-import pytest
+import types
 from unittest.mock import Mock
+
+import pytest
 import rustworkx as rx
 import networkx as nx
 from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
 
 from metriq_gym.local.provider import LocalProvider
+from metriq_gym.origin.device import OriginDevice
 from metriq_gym.qplatform.device import version, connectivity_graph, normalized_metadata
 
 
@@ -41,6 +44,75 @@ class MockTopologyGraph:
     def _create_nx_graph(self):
         edges = [(i, (i + 1) % self.num_qubits) for i in range(self.num_qubits)]
         return nx.Graph(edges)
+
+
+def _make_origin_device(
+    *, high=None, available=None, edges=None, double_edges=None, num_qubits=102
+):
+    class StubDoubleInfo:
+        def __init__(self, qubits):
+            self._qubits = qubits
+
+        def get_qubits(self):
+            return self._qubits
+
+    class StubChipInfo:
+        def __init__(self):
+            self._high = [] if high is None else list(high)
+            self._available = [] if available is None else list(available)
+            self._edges = [] if edges is None else list(edges)
+
+        def high_frequency_qubits(self):
+            return self._high
+
+        def available_qubits(self):
+            return self._available
+
+        def get_chip_topology(self, nodes):
+            if not nodes:
+                return self._edges
+            return [edge for edge in self._edges if edge[0] in nodes and edge[1] in nodes]
+
+        def double_qubits_info(self):
+            if not double_edges:
+                return []
+            return [StubDoubleInfo(pair) for pair in double_edges]
+
+        def qubits_num(self):
+            return num_qubits
+
+        def get_basic_gates(self):
+            return ["x", "cx"]
+
+    class StubBackend:
+        def __init__(self):
+            self._chip_info = StubChipInfo()
+
+        def chip_info(self):
+            return self._chip_info
+
+    backend = StubBackend()
+    device = OriginDevice(
+        provider=types.SimpleNamespace(),
+        device_id="WK_C102_400",
+        backend=backend,
+        backend_name="WK_C102_400",
+    )
+    return device
+
+
+def _make_origin_simulator_device(backend_name: str = "full_amplitude"):
+    class SimulatorBackend:
+        def chip_info(self):
+            raise RuntimeError("chip_info only available on hardware backends")
+
+    device = OriginDevice(
+        provider=types.SimpleNamespace(),
+        device_id=backend_name,
+        backend=SimulatorBackend(),
+        backend_name=backend_name,
+    )
+    return device
 
 
 @pytest.fixture
@@ -139,6 +211,27 @@ class TestConnectivityGraphFunction:
         assert result.num_nodes() == expected_nodes
         assert result.num_edges() == expected_edges
         mock_azure_device.metadata.assert_called_once()
+
+    def test_origin_simulator_connectivity_uses_complete_graph(self):
+        device = _make_origin_simulator_device()
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == device.num_qubits == 35
+        expected_edges = 35 * 34 // 2
+        assert graph.num_edges() == expected_edges
+
+    def test_origin_device_connectivity_uses_available_qubits_without_edges(self):
+        device = _make_origin_device(
+            high=[7, 9, 11], available=[7, 9, 11, 15], edges=[], num_qubits=12
+        )
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == 4
+        assert graph.num_edges() == 0
 
     def test_unsupported_device_connectivity_raises(self, mock_unsupported_device):
         with pytest.raises(NotImplementedError) as exc_info:
