@@ -19,42 +19,6 @@ from metriq_gym.origin.qcloud_utils import get_qcloud_options
 logger = logging.getLogger(__name__)
 
 
-def _chip_topology_edges(chip_info: Any) -> list[tuple[int, int]]:
-    """Return the undirected edges describing chip connectivity."""
-
-    raw_edges: list[Any]
-    try:
-        raw_edges = getattr(chip_info, "get_chip_topology", lambda: [])()
-    except Exception:  # pragma: no cover - depends on live service
-        raw_edges = []
-    if raw_edges:
-        return raw_edges
-
-    try:
-        double_infos = chip_info.double_qubits_info()
-    except Exception:  # pragma: no cover - depends on live service
-        double_infos = None
-    if not double_infos:
-        return []
-
-    pairs: set[tuple[int, int]] = set()
-    for info in double_infos:
-        try:
-            qubits = info.get_qubits()
-        except Exception:  # pragma: no cover - defensive API handling
-            continue
-        if not qubits or len(qubits) < 2:
-            continue
-        try:
-            a, b = int(qubits[0]), int(qubits[1])
-        except (TypeError, ValueError):
-            continue
-        if a == b:
-            continue
-        pairs.add((min(a, b), max(a, b)))
-    return sorted(pairs)
-
-
 def get_origin_connectivity(device: "OriginDevice") -> tuple[list[int], list[tuple[int, int]]]:
     """Return active qubits and connectivity edges for an Origin device."""
 
@@ -62,12 +26,9 @@ def get_origin_connectivity(device: "OriginDevice") -> tuple[list[int], list[tup
         chip_info: ChipInfo = device.backend.chip_info()
     except Exception:  # pragma: no cover - depends on live service
         return [], []
-
-    active = chip_info.available_qubits()
-    edges = _chip_topology_edges(chip_info)
-    if not active and edges:
-        active = sorted({node for edge in edges for node in edge})
-    return active, edges
+    available_qubits: list[int] = chip_info.available_qubits()
+    print(available_qubits)
+    return (available_qubits, chip_info.get_chip_topology(available_qubits))
 
 
 def _infer_num_qubits(backend: QCloudBackend, backend_name: str, *, simulator: bool) -> int | None:

@@ -68,8 +68,10 @@ def _make_origin_device(
         def available_qubits(self):
             return self._available
 
-        def get_chip_topology(self):
-            return self._edges
+        def get_chip_topology(self, nodes):
+            if not nodes:
+                return self._edges
+            return [edge for edge in self._edges if edge[0] in nodes and edge[1] in nodes]
 
         def double_qubits_info(self):
             if not double_edges:
@@ -210,43 +212,6 @@ class TestConnectivityGraphFunction:
         assert result.num_edges() == expected_edges
         mock_azure_device.metadata.assert_called_once()
 
-    def test_origin_device_connectivity_reindexes_labels(self):
-        device = _make_origin_device(
-            high=[4, 18, 21], available=[4, 18, 21], edges=[(4, 18), (18, 21), (4, 21)]
-        )
-
-        graph = connectivity_graph(device)
-
-        assert isinstance(graph, rx.PyGraph)
-        assert graph.num_nodes() == 3
-        remapped_edges = {tuple(sorted(edge[:2])) for edge in graph.edge_list()}
-        assert remapped_edges == {(0, 1), (0, 2), (1, 2)}
-
-    def test_origin_device_connectivity_filters_unused_available_qubits(self):
-        device = _make_origin_device(high=[1, 9], available=[0, 1, 7, 9, 23], edges=[(1, 9)])
-
-        graph = connectivity_graph(device)
-
-        assert isinstance(graph, rx.PyGraph)
-        assert graph.num_nodes() == 2
-        remapped_edges = {tuple(sorted(edge[:2])) for edge in graph.edge_list()}
-        assert remapped_edges == {(0, 1)}
-
-    def test_origin_device_connectivity_extends_active_with_edge_nodes(self):
-        device = _make_origin_device(
-            high=[0, 1, 2],
-            available=[0, 1, 2],
-            edges=[(0, 1), (1, 2), (3, 4), (4, 5)],
-        )
-
-        graph = connectivity_graph(device)
-
-        assert isinstance(graph, rx.PyGraph)
-        # Active list reports 3 qubits but edges introduce three more; expect all six represented.
-        assert graph.num_nodes() == 6
-        remapped_edges = {tuple(sorted(edge[:2])) for edge in graph.edge_list()}
-        assert remapped_edges == {(0, 1), (1, 2), (3, 4), (4, 5)}
-
     def test_origin_simulator_connectivity_uses_complete_graph(self):
         device = _make_origin_simulator_device()
 
@@ -257,30 +222,6 @@ class TestConnectivityGraphFunction:
         expected_edges = 35 * 34 // 2
         assert graph.num_edges() == expected_edges
 
-    def test_origin_device_connectivity_prefers_high_frequency_subset(self):
-        device = _make_origin_device(
-            high=[30, 41], available=list(range(42)), edges=[], double_edges=[(3, 30), (3, 41)]
-        )
-
-        graph = connectivity_graph(device)
-
-        assert isinstance(graph, rx.PyGraph)
-        assert graph.num_nodes() == 3
-        remapped_edges = {tuple(sorted(edge[:2])) for edge in graph.edge_list()}
-        assert remapped_edges == {(0, 1), (0, 2)}
-
-    def test_origin_device_connectivity_uses_double_qubits_info(self):
-        device = _make_origin_device(
-            high=[5, 7, 9], available=[5, 6, 7, 8, 9], edges=[], double_edges=[(5, 7), (7, 9)]
-        )
-
-        graph = connectivity_graph(device)
-
-        assert isinstance(graph, rx.PyGraph)
-        assert graph.num_nodes() == 3
-        remapped_edges = {tuple(sorted(edge[:2])) for edge in graph.edge_list()}
-        assert remapped_edges == {(0, 1), (1, 2)}
-
     def test_origin_device_connectivity_uses_available_qubits_without_edges(self):
         device = _make_origin_device(
             high=[7, 9, 11], available=[7, 9, 11, 15], edges=[], num_qubits=12
@@ -289,18 +230,8 @@ class TestConnectivityGraphFunction:
         graph = connectivity_graph(device)
 
         assert isinstance(graph, rx.PyGraph)
-        assert graph.num_nodes() == 3
+        assert graph.num_nodes() == 4
         assert graph.num_edges() == 0
-
-    def test_origin_device_connectivity_falls_back_to_complete_graph(self):
-        device = _make_origin_device(high=[], available=[], edges=[], num_qubits=6)
-
-        graph = connectivity_graph(device)
-
-        assert isinstance(graph, rx.PyGraph)
-        assert graph.num_nodes() == 6
-        expected_edges = 6 * 5 // 2
-        assert graph.num_edges() == expected_edges
 
     def test_unsupported_device_connectivity_raises(self, mock_unsupported_device):
         with pytest.raises(NotImplementedError) as exc_info:

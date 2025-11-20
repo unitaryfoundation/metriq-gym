@@ -79,3 +79,18 @@ def extract_status_info(quantum_job: QuantumJob, supports_queue_position: bool) 
 def job_status(quantum_job: QuantumJob) -> JobStatusInfo:
     """Fallback for unknown provider types: status only."""
     return extract_status_info(quantum_job, supports_queue_position=False)
+
+
+@job_status.register
+def _(quantum_job: QiskitJob) -> JobStatusInfo:
+    return extract_status_info(quantum_job, supports_queue_position=True)
+
+
+@job_status.register
+def _(quantum_job: BraketQuantumTask) -> JobStatusInfo:
+    return extract_status_info(quantum_job, supports_queue_position=True)
+
+
+@job_status.register
+def _(quantum_job: AzureQuantumJob) -> JobStatusInfo:
+    return extract_status_info(quantum_job, supports_queue_position=False)

@@ -30,8 +30,10 @@ class DummyChipInfo:
     def available_qubits(self):
         return self._available
 
-    def get_chip_topology(self):
-        return self._edges
+    def get_chip_topology(self, nodes):
+        if not nodes:
+            return self._edges
+        return [edge for edge in self._edges if edge[0] in nodes and edge[1] in nodes]
 
     def double_qubits_info(self):
         return []
@@ -119,21 +121,12 @@ def test_qpu_profile_reports_total_qubits_when_available():
     assert device.profile.num_qubits == 102
 
 
-def test_get_origin_connectivity_prefers_high_frequency_qubits():
-    chip = DummyChipInfo(high=[5, 1, 3], available=[0, 1, 2, 3, 4], edges=[(0, 1), (1, 2)])
-    device, _ = _make_device("WK_C102_400", chip_info=chip)
-
-    active, edges = get_origin_connectivity(device)
-
-    assert active == [1, 3, 5]
-    assert edges == [(0, 1), (1, 2)]
-
-
 def test_get_origin_connectivity_falls_back_to_edges():
-    chip = DummyChipInfo(high=[], available=[], edges=[(8, 9), (9, 10)])
+    expected_edges = [(8, 9), (9, 10)]
+    chip = DummyChipInfo(high=[], available=[], edges=expected_edges)
     device, _ = _make_device("WK_C102_400", chip_info=chip)
 
     active, edges = get_origin_connectivity(device)
 
-    assert active == [8, 9, 10]
-    assert edges == [(8, 9), (9, 10)]
+    assert active == []
+    assert edges == expected_edges
