@@ -1,5 +1,5 @@
 from functools import singledispatch
-from typing import cast, TYPE_CHECKING
+from typing import cast
 
 import networkx as nx
 import rustworkx as rx
@@ -12,9 +12,6 @@ from pytket.architecture import FullyConnected
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.origin.device import OriginDevice, get_origin_connectivity
 from metriq_gym.quantinuum.device import QuantinuumDevice
-
-if TYPE_CHECKING:  # pragma: no cover
-    pass
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').

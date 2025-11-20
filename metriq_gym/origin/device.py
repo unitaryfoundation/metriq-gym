@@ -32,7 +32,6 @@ def get_origin_connectivity(device: "OriginDevice") -> tuple[list[int], list[tup
     except Exception:  # pragma: no cover - depends on live service
         return [], []
     available_qubits: list[int] = chip_info.available_qubits()
-    print(available_qubits)
     return (available_qubits, chip_info.get_chip_topology(available_qubits))
 
 
