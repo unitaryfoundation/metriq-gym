@@ -12,11 +12,16 @@ from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qiskit import QuantumCircuit
 from qiskit.qasm2 import dumps as qasm2_dumps
 
-from metriq_gym.origin.constants import SIMULATOR_BACKENDS
 from metriq_gym.origin.job import OriginJob
 from metriq_gym.origin.qcloud_utils import get_qcloud_options
 
 logger = logging.getLogger(__name__)
+
+SIMULATOR_BACKENDS = {
+    "full_amplitude": 35,
+    "partial_amplitude": 68,
+    "single_amplitude": 200,
+}
 
 
 def get_origin_connectivity(device: "OriginDevice") -> tuple[list[int], list[tuple[int, int]]]:

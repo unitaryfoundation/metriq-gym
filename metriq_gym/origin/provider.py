@@ -3,10 +3,7 @@
 from typing import Any
 
 from qbraid.runtime import QuantumProvider
-
-from .constants import SIMULATOR_BACKENDS
-
-from .device import OriginDevice
+from .device import OriginDevice, SIMULATOR_BACKENDS
 from .qcloud_utils import get_service
 
 
