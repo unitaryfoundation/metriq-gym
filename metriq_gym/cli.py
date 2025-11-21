@@ -196,6 +196,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Backend to use",
     )
 
+    job_estimate = job_subparsers.add_parser("estimate", help="Estimate resources for a job")
+    job_estimate.add_argument("config", type=str, help="Path to job configuration file.")
+    job_estimate.add_argument(
+        "-p",
+        "--provider",
+        type=str,
+        help="String identifier for backend provider service",
+    )
+    job_estimate.add_argument(
+        "-d",
+        "--device",
+        type=str,
+        help="Backend to use (optional for resource estimation)",
+    )
+
     job_poll = job_subparsers.add_parser("poll", help="Poll job")
     job_view = job_subparsers.add_parser("view", help="View job")
     job_delete = job_subparsers.add_parser("delete", help="Delete job")

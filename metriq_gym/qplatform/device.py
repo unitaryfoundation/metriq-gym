@@ -25,8 +25,16 @@ def _(device: QuantinuumDevice) -> str:
     device_name = device.profile.device_id
 
     df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    row = df.loc[df["device_name"] == device_name].iloc[0]
+    matching_rows = df.loc[df["device_name"] == device_name]
 
+    if matching_rows.empty:
+        available_devices = df["device_name"].tolist()
+        raise ValueError(
+            f"Device '{device_name}' not found in Quantinuum device list. "
+            f"Available devices: {available_devices}"
+        )
+
+    row = matching_rows.iloc[0]
     backend_info = row["backend_info"]
     return backend_info.version
 
@@ -88,7 +96,16 @@ def _(device: QuantinuumDevice) -> rx.PyGraph:
     device_name = device.profile.device_id
 
     df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    row = df.loc[df["device_name"] == device_name].iloc[0]
+    matching_rows = df.loc[df["device_name"] == device_name]
+
+    if matching_rows.empty:
+        available_devices = df["device_name"].tolist()
+        raise ValueError(
+            f"Device '{device_name}' not found in Quantinuum device list. "
+            f"Available devices: {available_devices}"
+        )
+
+    row = matching_rows.iloc[0]
 
     arch = row["backend_info"].architecture
     num_qubits = len(arch.nodes)

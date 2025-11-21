@@ -21,6 +21,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -426,3 +427,64 @@ class LinearRampQAOA(Benchmark):
             random_approx_ratio=job_data.approx_ratio_random_mean,
             confidence_pass=stats.confidence_pass,
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list["CircuitBatch"]:
+        params = self.params
+        random.seed(params.seed)
+
+        num_qubits = params.num_qubits
+        graph_type: GraphType = params.graph_type
+        qaoa_layers = params.qaoa_layers
+        circuit_encoding: EncodingType = "Direct"
+
+        if device is None:
+            raise ValueError("LR-QAOA benchmark requires a device to estimate resources.")
+
+        if device.id == "aer_simulator" and graph_type == "NL":
+            graph_device = rx.generators.star_graph(num_qubits)
+        else:
+            graph_device = connectivity_graph(device)
+
+        edges_device = list(graph_device.edge_list())
+
+        if graph_type == "1D":
+            edges = [(i, i + 1) for i in range(num_qubits - 1)]
+        elif graph_type == "NL":
+            if graph_device.num_nodes() != num_qubits:
+                raise ValueError("Number of qubits does not match the device connectivity graph.")
+            edges = [(edge[0], edge[1]) for edge in edges_device]
+        elif graph_type == "FC":
+            edges = [(i, j) for i in range(num_qubits) for j in range(i + 1, num_qubits)]
+            device_edges = {(edge[0], edge[1]) for edge in edges_device}
+            if not device_edges.issuperset(edges):
+                circuit_encoding = "SWAP"
+        else:
+            raise ValueError(
+                f"Unsupported graph type: {graph_type}. Supported types are '1D', 'NL', and 'FC'."
+            )
+
+        possible_weights = [0.1, 0.2, 0.3, 0.5, 1.0]
+        graph = nx.Graph()
+        graph.add_nodes_from(range(num_qubits))
+        graph_info = [(i, j, random.choice(possible_weights)) for i, j in edges]
+        graph.add_weighted_edges_from(graph_info)
+
+        circuits = prepare_qaoa_circuit(
+            graph=graph,
+            qaoa_layers=qaoa_layers,
+            graph_type=graph_type,
+            circuit_encoding=circuit_encoding,
+        )
+
+        circuits_with_params: list[QuantumCircuit] = []
+        for _ in range(params.trials):
+            for p_layer, circuit in zip(qaoa_layers, circuits):
+                linear_ramp = list(range(1, p_layer + 1))
+                betas = [i * params.delta_beta / p_layer for i in reversed(linear_ramp)]
+                gammas = [i * params.delta_gamma / p_layer for i in linear_ramp]
+                circuits_with_params.append(circuit.assign_parameters(betas + gammas))
+
+        return [CircuitBatch(circuits=circuits_with_params, shots=params.shots)]
