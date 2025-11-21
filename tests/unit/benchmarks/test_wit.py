@@ -1,8 +1,17 @@
+import math
 from datetime import datetime
+from types import SimpleNamespace
 
 import pytest
+from qiskit import qasm3
 
-from metriq_gym.benchmarks.wit import WITResult
+from metriq_gym.benchmarks.wit import (
+    WITResult,
+    WormholeTeleportationConfig,
+    build_wit_config_from_params,
+    legacy_wit_circuit,
+    wit_circuit,
+)
 from pydantic import Field
 from metriq_gym.benchmarks.benchmark import BenchmarkScore, BenchmarkResult
 from metriq_gym.constants import JobType
@@ -12,6 +21,8 @@ from metriq_gym.helpers.statistics import (
 )
 from metriq_gym.exporters.base_exporter import BaseExporter
 from metriq_gym.job_manager import MetriqGymJob
+
+BASE_Z_ANGLES = (0.0283397, 0.00519953, 0.0316079)
 
 
 class _DummyExporter(BaseExporter):
@@ -23,7 +34,19 @@ def _build_metriq_job() -> MetriqGymJob:
     return MetriqGymJob(
         id="test-job",
         job_type=JobType.WIT,
-        params={"benchmark_name": "WIT", "shots": 10},
+        params={
+            "benchmark_name": "WIT",
+            "shots": 10,
+            "n_qubits_per_side": 3,
+            "message_size": 1,
+            "insert_message_method": "reset",
+            "interaction_coupling_strength": 1.5707963267948966,
+            "x_rotation_transverse_angle": 0.7853981633974483,
+            "zz_rotation_angle": 0.7853981633974483,
+            "z_rotation_angles": [0.0283397, 0.00519953, 0.0316079],
+            "time_steps": 3,
+            "num_qubits": 6,
+        },
         data={"provider_job_ids": ["qid"]},
         provider_name="provider",
         device_name="device",
@@ -107,3 +130,155 @@ def test_wit_result_uncertainty_keys_match_values():
     r = WITResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
     assert set(r.values.keys()) == {"expectation_value"}
     assert set(r.uncertainties.keys()) == {"expectation_value"}
+
+
+@pytest.mark.parametrize(
+    ("total_qubits", "method"),
+    [(6, "reset"), (7, "swap")],
+)
+def test_generalized_circuit_matches_legacy(total_qubits: int, method: str):
+    params = SimpleNamespace(
+        benchmark_name="WIT",
+        shots=1000,
+        n_qubits_per_side=3,
+        message_size=1,
+        insert_message_method=method,
+        interaction_coupling_strength=math.pi / 2,
+        x_rotation_transverse_angle=math.pi / 4,
+        zz_rotation_angle=math.pi / 4,
+        z_rotation_angles=list(BASE_Z_ANGLES),
+        time_steps=3,
+        num_qubits=total_qubits,
+    )
+    config = build_wit_config_from_params(params)
+    assert config.total_qubits == total_qubits
+    new_qasm = qasm3.dumps(wit_circuit(config))
+    legacy_qasm = qasm3.dumps(legacy_wit_circuit(total_qubits))
+    assert new_qasm == legacy_qasm
+
+
+def test_swap_insertion_adds_ancilla_and_measures_right_side():
+    config = WormholeTeleportationConfig(
+        n_qubits_per_side=3,
+        message_size=1,
+        x_rotation_transverse_angle=math.pi / 4,
+        zz_rotation_angle=math.pi / 4,
+        z_rotation_angles=BASE_Z_ANGLES,
+        time_steps=3,
+        insert_message_method="swap",
+        interaction_coupling_strength=math.pi / 2,
+    )
+    circuit = wit_circuit(config)
+    assert circuit.num_qubits == 7
+    measure_instruction = next(inst for inst in circuit.data if inst.operation.name == "measure")
+    measured_qubit = measure_instruction.qubits[0]
+    assert circuit.find_bit(measured_qubit).index == 5
+
+
+def test_reset_insertion_preserves_expected_measurement():
+    config = WormholeTeleportationConfig(
+        n_qubits_per_side=3,
+        message_size=1,
+        x_rotation_transverse_angle=math.pi / 4,
+        zz_rotation_angle=math.pi / 4,
+        z_rotation_angles=BASE_Z_ANGLES,
+        time_steps=3,
+        insert_message_method="reset",
+        interaction_coupling_strength=math.pi / 2,
+    )
+    circuit = wit_circuit(config)
+    assert circuit.num_qubits == 6
+    measure_instruction = next(inst for inst in circuit.data if inst.operation.name == "measure")
+    measured_qubit = measure_instruction.qubits[0]
+    assert circuit.find_bit(measured_qubit).index == 5
+
+
+def test_build_wit_config_from_params_detects_num_qubits_mismatch():
+    params = SimpleNamespace(
+        benchmark_name="WIT",
+        shots=1000,
+        n_qubits_per_side=3,
+        message_size=1,
+        insert_message_method="swap",
+        interaction_coupling_strength=math.pi / 2,
+        x_rotation_transverse_angle=math.pi / 4,
+        zz_rotation_angle=math.pi / 4,
+        z_rotation_angles=list(BASE_Z_ANGLES),
+        time_steps=3,
+        num_qubits=6,
+    )
+    with pytest.raises(ValueError):
+        build_wit_config_from_params(params)
+
+
+def test_wormhole_config_rejects_swap_with_large_message():
+    with pytest.raises(ValueError):
+        WormholeTeleportationConfig(
+            n_qubits_per_side=3,
+            message_size=2,
+            x_rotation_transverse_angle=math.pi / 4,
+            zz_rotation_angle=math.pi / 4,
+            z_rotation_angles=BASE_Z_ANGLES,
+            time_steps=3,
+            insert_message_method="swap",
+            interaction_coupling_strength=math.pi / 2,
+        )
+
+
+def test_build_wit_config_uses_defaults_for_generalized_mode():
+    """Test that defaults are applied when only n_qubits_per_side is specified."""
+    params = SimpleNamespace(
+        benchmark_name="WIT",
+        shots=1000,
+        n_qubits_per_side=3,
+    )
+    config = build_wit_config_from_params(params)
+
+    # Verify defaults match the legacy config values
+    assert config.n_qubits_per_side == 3
+    assert config.message_size == 1
+    assert config.x_rotation_transverse_angle == pytest.approx(math.pi / 4)
+    assert config.zz_rotation_angle == pytest.approx(math.pi / 4)
+    assert config.z_rotation_angles == pytest.approx(BASE_Z_ANGLES)
+    assert config.time_steps == 3
+    assert config.insert_message_method == "reset"
+    assert config.interaction_coupling_strength == pytest.approx(math.pi / 2)
+    assert config.total_qubits == 6
+
+
+def test_build_wit_config_allows_overriding_individual_defaults():
+    """Test that individual defaults can be overridden while others remain default."""
+    params = SimpleNamespace(
+        benchmark_name="WIT",
+        shots=1000,
+        n_qubits_per_side=3,
+        insert_message_method="swap",  # Override just this parameter
+        time_steps=5,  # Override this one too
+    )
+    config = build_wit_config_from_params(params)
+
+    # Verify overridden values
+    assert config.insert_message_method == "swap"
+    assert config.time_steps == 5
+    assert config.total_qubits == 7  # swap method adds ancilla
+
+    # Verify other defaults still apply
+    assert config.message_size == 1
+    assert config.x_rotation_transverse_angle == pytest.approx(math.pi / 4)
+    assert config.zz_rotation_angle == pytest.approx(math.pi / 4)
+    assert config.z_rotation_angles == pytest.approx(BASE_Z_ANGLES)
+    assert config.interaction_coupling_strength == pytest.approx(math.pi / 2)
+
+
+def test_build_wit_config_generates_zero_angles_for_non_default_sizes():
+    """Test that z_rotation_angles defaults to zeros for n_qubits_per_side != 3."""
+    params = SimpleNamespace(
+        benchmark_name="WIT",
+        shots=1000,
+        n_qubits_per_side=4,
+    )
+    config = build_wit_config_from_params(params)
+
+    assert config.n_qubits_per_side == 4
+    assert len(config.z_rotation_angles) == 4
+    assert config.z_rotation_angles == pytest.approx((0.0, 0.0, 0.0, 0.0))
