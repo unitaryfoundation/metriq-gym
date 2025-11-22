@@ -1,5 +1,5 @@
 {
     "benchmark_name": "WIT",
     "num_qubits": 7,
-    "num_shots": 8192
+    "shots": 8192
 }

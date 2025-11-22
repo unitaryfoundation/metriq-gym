@@ -158,7 +158,7 @@ def analyze_results(
         if JobType(benchmark_name) == JobType.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                None, result_object, int(num_qubits) - 1, float(circuit_id), params["num_shots"]
+                None, result_object, int(num_qubits) - 1, float(circuit_id), params["shots"]
             )
         elif JobType(benchmark_name) == JobType.QUANTUM_FOURIER_TRANSFORM:
             # Requires slightly different arguments.
@@ -167,13 +167,13 @@ def analyze_results(
                 result_object,
                 int(num_qubits),
                 int(circuit_id),
-                params["num_shots"],
+                params["shots"],
                 params["method"],
             )
         else:
             # Default call for Bernstein-Vazirani and Hidden Shift.
             _, fidelity = benchmark.analyze_and_print_result(
-                None, result_object, int(num_qubits), int(circuit_id), params["num_shots"]
+                None, result_object, int(num_qubits), int(circuit_id), params["shots"]
             )
 
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
@@ -225,7 +225,7 @@ class QEDCBenchmark(Benchmark):
 
     def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
         # For more information on the parameters, view the schema for this benchmark.
-        num_shots = self.params.num_shots
+        shots = self.params.shots
         benchmark_name = self.params.benchmark_name
 
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
@@ -234,7 +234,7 @@ class QEDCBenchmark(Benchmark):
         )
 
         return QEDCData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=num_shots),
+            quantum_job=device.run(circuits, shots=shots),
             circuit_metrics=circuit_metrics,
             circuit_identifiers=circuit_identifiers,
         )

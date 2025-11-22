@@ -153,7 +153,7 @@ class LinearRampQAOAData(BenchmarkData):
     trials: int
     num_random_trials: int
     confidence_level: float
-    num_shots: int
+    shots: int
     qaoa_layers: list[int]
     seed: int
     delta_beta: float
@@ -331,7 +331,7 @@ class LinearRampQAOA(Benchmark):
         num_qubits = self.params.num_qubits
         graph_type = self.params.graph_type
         qaoa_layers = self.params.qaoa_layers
-        num_shots = self.params.num_shots
+        shots = self.params.shots
         trials = self.params.trials
         num_random_trials = self.params.num_random_trials
         delta_beta = self.params.delta_beta
@@ -392,15 +392,15 @@ class LinearRampQAOA(Benchmark):
                 circuits_with_params.append(circuit.assign_parameters(betas + gammas))
 
         approx_ratio_random_mean, approx_ratio_random_std = calc_random_stats(
-            num_qubits, graph_info, num_shots, num_random_trials, optimal_sol
+            num_qubits, graph_info, shots, num_random_trials, optimal_sol
         )
 
         return LinearRampQAOAData.from_quantum_job(
-            quantum_job=device.run(circuits_with_params, shots=num_shots),
+            quantum_job=device.run(circuits_with_params, shots=shots),
             num_qubits=num_qubits,
             graph_info=graph_info,
             optimal_sol=optimal_sol,
-            num_shots=num_shots,
+            shots=shots,
             confidence_level=confidence_level,
             trials=trials,
             num_random_trials=num_random_trials,

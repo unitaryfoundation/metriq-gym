@@ -6,7 +6,7 @@
       "config": {
         "benchmark_name": "QML Kernel",
         "num_qubits": 4,
-        "num_shots": 10
+        "shots": 10
       }
     },
     {
@@ -14,7 +14,7 @@
       "config": {
         "benchmark_name": "QML Kernel",
         "num_qubits": 3,
-        "num_shots": 10
+        "shots": 10
       }
     }
   ]

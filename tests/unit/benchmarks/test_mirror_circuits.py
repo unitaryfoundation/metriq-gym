@@ -274,7 +274,7 @@ class TestMirrorCircuitsBenchmark:
         params.num_layers = 2
         params.two_qubit_gate_prob = 0.5
         params.two_qubit_gate_name = "CNOT"
-        params.num_shots = 100
+        params.shots = 100
         params.num_circuits = 5
         params.seed = 42
         return params
@@ -285,7 +285,7 @@ class TestMirrorCircuitsBenchmark:
         params.num_layers = 1
         params.two_qubit_gate_prob = 0.5
         params.two_qubit_gate_name = "CNOT"
-        params.num_shots = 100
+        params.shots = 100
         params.num_circuits = 1
         params.seed = None
         return params
@@ -330,7 +330,7 @@ class TestMirrorCircuitsBenchmark:
         assert result.num_layers == 2
         assert result.two_qubit_gate_prob == 0.5
         assert result.two_qubit_gate_name == "CNOT"
-        assert result.num_shots == 100
+        assert result.shots == 100
         assert result.num_circuits == NUM_CIRCUITS
         assert result.seed == 42
         assert result.expected_bitstrings == ["001"] * NUM_CIRCUITS
@@ -387,7 +387,7 @@ class TestMirrorCircuitsBenchmark:
             num_layers=2,
             two_qubit_gate_prob=0.5,
             two_qubit_gate_name="CNOT",
-            num_shots=100,
+            shots=100,
             num_qubits=2,
             num_circuits=2,
             seed=42,
@@ -415,7 +415,7 @@ class TestMirrorCircuitsBenchmark:
             num_layers=2,
             two_qubit_gate_prob=0.5,
             two_qubit_gate_name="CNOT",
-            num_shots=100,
+            shots=100,
             num_qubits=2,
             num_circuits=1,
             seed=42,
@@ -444,7 +444,7 @@ class TestMirrorCircuitsBenchmark:
             num_layers=2,
             two_qubit_gate_prob=0.5,
             two_qubit_gate_name="CNOT",
-            num_shots=100,
+            shots=100,
             num_qubits=2,
             num_circuits=1,
             seed=42,
@@ -468,7 +468,7 @@ class TestMirrorCircuitsBenchmark:
             num_layers=1,
             two_qubit_gate_prob=0.5,
             two_qubit_gate_name="CNOT",
-            num_shots=100,
+            shots=100,
             num_qubits=0,
             num_circuits=1,
             seed=42,
@@ -487,7 +487,7 @@ class TestMirrorCircuitsBenchmark:
             num_layers=1,
             two_qubit_gate_prob=0.5,
             two_qubit_gate_name="CNOT",
-            num_shots=100,
+            shots=100,
             num_qubits=2,
             num_circuits=2,
             seed=42,

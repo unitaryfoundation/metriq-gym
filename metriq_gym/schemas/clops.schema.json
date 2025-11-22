@@ -31,7 +31,7 @@
       "minimum": 1,
       "examples": [100]
     },
-    "num_shots": {
+    "shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) per circuit.",
       "default": 1000,

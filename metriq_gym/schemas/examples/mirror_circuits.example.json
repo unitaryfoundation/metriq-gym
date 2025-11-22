@@ -3,6 +3,6 @@
   "width": 4,
   "num_layers": 1,          
   "two_qubit_gate_prob": 0.1,  
-  "num_shots": 1000,
+  "shots": 1000,
   "num_circuits": 2
 }

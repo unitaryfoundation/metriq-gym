@@ -55,7 +55,7 @@ class MirrorCircuitsData(BenchmarkData):
     num_layers: int
     two_qubit_gate_prob: float
     two_qubit_gate_name: str
-    num_shots: int
+    shots: int
     num_qubits: int
     num_circuits: int
     seed: int | None
@@ -480,7 +480,7 @@ class MirrorCircuits(Benchmark):
         num_layers = self.params.num_layers
         two_qubit_gate_prob = self.params.two_qubit_gate_prob
         two_qubit_gate_name = self.params.two_qubit_gate_name
-        num_shots = self.params.num_shots
+        shots = self.params.shots
         num_circuits = self.params.num_circuits
         seed = self.params.seed
         target_width = getattr(self.params, "width", None)
@@ -526,11 +526,11 @@ class MirrorCircuits(Benchmark):
             expected_bitstrings.append(expected_bitstring)
 
         return MirrorCircuitsData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=num_shots),
+            quantum_job=device.run(circuits, shots=shots),
             num_layers=num_layers,
             two_qubit_gate_prob=two_qubit_gate_prob,
             two_qubit_gate_name=two_qubit_gate_name,
-            num_shots=num_shots,
+            shots=shots,
             num_qubits=actual_width,
             num_circuits=num_circuits,
             seed=seed,

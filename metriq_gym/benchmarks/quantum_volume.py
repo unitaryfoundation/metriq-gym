@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 @dataclass
 class QuantumVolumeData(BenchmarkData):
     num_qubits: int
-    num_shots: int
+    shots: int
     depth: int
     confidence_level: float
     ideal_probs: list[list[float]]
@@ -68,7 +68,7 @@ class TrialStats:
 
     Attributes:
         qubits: Number of qubits used in the circuit.
-        num_shots: Number of measurement shots performed on the quantum circuit.
+        shots: Number of measurement shots performed on the quantum circuit.
         xeb: Cross Entropy Benchmarking score.
         hog_prob: Probability of measuring heavy outputs.
         hog_pass: Boolean indicating whether the heavy output probability exceeds 2/3.
@@ -78,7 +78,7 @@ class TrialStats:
     """
 
     qubits: int
-    num_shots: int
+    shots: int
     xeb: float
     hog_prob: float
     hog_pass: bool
@@ -154,7 +154,7 @@ def calc_trial_stats(
 
     return TrialStats(
         qubits=n,
-        num_shots=shots,
+        shots=shots,
         xeb=xeb,
         hog_prob=hog_prob,
         hog_pass=hog_prob >= 2 / 3,
@@ -181,7 +181,7 @@ def calc_stats(data: QuantumVolumeData, counts: list["MeasCount"]) -> AggregateS
         trial_stat = calc_trial_stats(
             ideal_probs=data.ideal_probs[trial],
             counts=counts[trial],
-            shots=data.num_shots,
+            shots=data.shots,
             confidence_level=data.confidence_level,
         )
         trial_stats.append(trial_stat)
@@ -205,13 +205,13 @@ def calc_stats(data: QuantumVolumeData, counts: list["MeasCount"]) -> AggregateS
 class QuantumVolume(Benchmark):
     def dispatch_handler(self, device: "QuantumDevice") -> QuantumVolumeData:
         num_qubits = self.params.num_qubits
-        num_shots = self.params.num_shots
+        shots = self.params.shots
         trials = self.params.trials
         circuits, ideal_probs = prepare_qv_circuits(n=num_qubits, num_trials=trials)
         return QuantumVolumeData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=num_shots),
+            quantum_job=device.run(circuits, shots=shots),
             num_qubits=num_qubits,
-            num_shots=num_shots,
+            shots=shots,
             depth=num_qubits,
             confidence_level=self.params.confidence_level,
             ideal_probs=ideal_probs,

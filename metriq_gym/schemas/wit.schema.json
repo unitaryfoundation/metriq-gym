@@ -10,7 +10,7 @@
         "const": "WIT",
         "description": "Name of the benchmark. Must be 'WIT' for this schema."
       },
-      "num_shots": {
+      "shots": {
         "type": "integer",
         "description": "Number of measurement shots (repetitions) to use for the benchmark.",
         "default": 1000,

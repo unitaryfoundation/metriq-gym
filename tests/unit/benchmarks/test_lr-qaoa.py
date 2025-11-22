@@ -95,7 +95,7 @@ def test_calc_stats_pass():
         trials=trials,
         num_random_trials=num_random_trials,
         confidence_level=0.99,
-        num_shots=100,
+        shots=100,
         qaoa_layers=qaoa_layers,
         seed=123,
         delta_beta=1.0,

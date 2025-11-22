@@ -240,7 +240,7 @@ class WITData(BenchmarkData):
 class WIT(Benchmark):
     def dispatch_handler(self, device: "QuantumDevice") -> WITData:
         return WITData.from_quantum_job(
-            device.run(wit_circuit(self.params.num_qubits), shots=self.params.num_shots)
+            device.run(wit_circuit(self.params.num_qubits), shots=self.params.shots)
         )
 
     def poll_handler(
@@ -252,7 +252,7 @@ class WIT(Benchmark):
         counts = flatten_counts(result_data)[0]
         return WITResult(
             expectation_value=BenchmarkScore(
-                value=binary_expectation_value(self.params.num_shots, counts),
-                uncertainty=binary_expectation_stddev(self.params.num_shots, counts),
+                value=binary_expectation_value(self.params.shots, counts),
+                uncertainty=binary_expectation_stddev(self.params.shots, counts),
             )
         )
