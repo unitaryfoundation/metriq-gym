@@ -239,10 +239,20 @@ class WITData(BenchmarkData):
 
 
 class WIT(Benchmark):
+    def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            The WIT quantum circuit.
+        """
+        return wit_circuit(self.params.num_qubits)
+
     def dispatch_handler(self, device: "QuantumDevice") -> WITData:
-        return WITData.from_quantum_job(
-            device.run(wit_circuit(self.params.num_qubits), shots=self.params.shots)
-        )
+        circuit = self._build_circuits(device)
+        return WITData.from_quantum_job(device.run(circuit, shots=self.params.shots))
 
     def poll_handler(
         self,
@@ -262,5 +272,5 @@ class WIT(Benchmark):
         self,
         device: "QuantumDevice",
     ) -> list[CircuitBatch]:
-        circuit = wit_circuit(self.params.num_qubits)
+        circuit = self._build_circuits(device)
         return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]

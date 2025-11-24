@@ -154,16 +154,29 @@ def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGr
 class BSEQ(Benchmark):
     """Benchmark class for BSEQ (Bell state effective qubits) experiments."""
 
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[list[QuantumCircuit]], GraphColoring, nx.Graph]:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuit_sets, coloring, topology_graph).
+        """
+        topology_graph = connectivity_graph(device)
+        coloring = device_graph_coloring(topology_graph)
+        circuit_sets = generate_chsh_circuit_sets(coloring)
+        return circuit_sets, coloring, topology_graph
+
     def dispatch_handler(self, device: "QuantumDevice") -> BSEQData:
         """Runs the benchmark and returns job metadata."""
         shots = self.params.shots
-
-        topology_graph = connectivity_graph(device)
-        coloring = device_graph_coloring(topology_graph)
-        trans_exp_sets = generate_chsh_circuit_sets(coloring)
+        circuit_sets, coloring, topology_graph = self._build_circuits(device)
 
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
-            device.run(circ_set, shots=shots) for circ_set in trans_exp_sets
+            device.run(circ_set, shots=shots) for circ_set in circuit_sets
         ]
 
         provider_job_ids = [
@@ -207,9 +220,7 @@ class BSEQ(Benchmark):
         self,
         device: "QuantumDevice",
     ) -> list[CircuitBatch]:
-        topology_graph = connectivity_graph(device)
-        coloring = device_graph_coloring(topology_graph)
-        circuit_sets = generate_chsh_circuit_sets(coloring)
+        circuit_sets, _, _ = self._build_circuits(device)
         return [
             CircuitBatch(circuits=circuit_group, shots=self.params.shots)
             for circuit_group in circuit_sets

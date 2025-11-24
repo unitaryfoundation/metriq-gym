@@ -89,12 +89,20 @@ def calculate_accuracy_score(num_qubits: int, count_results: "MeasCount") -> lis
 
 
 class QMLKernel(Benchmark):
+    def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            The QML kernel inner product circuit.
+        """
+        return create_inner_product_circuit(self.params.num_qubits)
+
     def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
-        return QMLKernelData.from_quantum_job(
-            device.run(
-                create_inner_product_circuit(self.params.num_qubits), shots=self.params.shots
-            )
-        )
+        circuit = self._build_circuits(device)
+        return QMLKernelData.from_quantum_job(device.run(circuit, shots=self.params.shots))
 
     def poll_handler(
         self,
@@ -111,5 +119,5 @@ class QMLKernel(Benchmark):
         )
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
-        circuit = create_inner_product_circuit(self.params.num_qubits)
+        circuit = self._build_circuits(device)
         return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]
