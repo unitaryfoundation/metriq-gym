@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime, timezone
 
 import qnexus as qnx
-from qnexus.models.language import Language
 from pytket import Circuit
 from pytket.extensions.qiskit import qiskit_to_tk
 from qiskit import QuantumCircuit
