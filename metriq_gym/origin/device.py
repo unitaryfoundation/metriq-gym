@@ -5,41 +5,54 @@ from collections.abc import Sequence
 from typing import Any
 
 from pyqpanda3.intermediate_compiler import convert_qasm_string_to_qprog
+from pyqpanda3.qcloud import QCloudBackend, ChipInfo
 from qbraid import QPROGRAM
 from qbraid.programs import ExperimentType, ProgramSpec
 from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
 from qiskit import QuantumCircuit
 from qiskit.qasm2 import dumps as qasm2_dumps
 
-from ._constants import SIMULATOR_BACKENDS, SIMULATOR_MAX_QUBITS
-from .job import OriginJob
-from .qcloud_utils import get_qcloud_options
-
+from metriq_gym.origin.job import OriginJob
+from metriq_gym.origin.qcloud_utils import get_qcloud_options
 
 logger = logging.getLogger(__name__)
 
+SIMULATOR_BACKENDS = {
+    "full_amplitude": 35,
+    "partial_amplitude": 68,
+    "single_amplitude": 200,
+}
 
-def _infer_num_qubits(backend: Any, backend_name: str, *, simulator: bool) -> int | None:
+
+def get_origin_connectivity(device: "OriginDevice") -> tuple[list[int], list[tuple[int, int]]]:
+    """Return active qubits and connectivity edges for an Origin device."""
+
+    try:
+        chip_info: ChipInfo = device.backend.chip_info()
+    except Exception:  # pragma: no cover - depends on live service
+        return [], []
+    available_qubits: list[int] = chip_info.available_qubits()
+    return (available_qubits, chip_info.get_chip_topology(available_qubits))
+
+
+def _infer_num_qubits(backend: QCloudBackend, backend_name: str, *, simulator: bool) -> int | None:
     if simulator:
-        return SIMULATOR_MAX_QUBITS.get(backend_name)
+        return SIMULATOR_BACKENDS.get(backend_name)
+    total_qubits: int | None = None
     try:
         chip_info = backend.chip_info()
-    except Exception:  # pragma: no cover - depends on live service
-        return None
-    try:
-        return int(chip_info.qubits_num())
+        total_qubits = chip_info.qubits_num()
     except Exception:  # pragma: no cover - defensive programming when API changes
         logger.debug("Unable to determine qubit count from chip info", exc_info=True)
-        return None
+    return total_qubits
 
 
-def _infer_basis_gates(backend: Any, *, simulator: bool) -> list[str] | None:
+def _infer_basis_gates(backend: QCloudBackend, *, simulator: bool) -> list[str] | None:
     if simulator:
         return None
     try:
         chip_info = backend.chip_info()
-        gates = chip_info.get_basic_gates()
-        return list(gates) if gates else None
+        return chip_info.get_basic_gates()
     except Exception:  # pragma: no cover - depends on live service
         logger.debug("Unable to determine basis gates from chip info", exc_info=True)
         return None
@@ -53,7 +66,7 @@ class OriginDevice(QuantumDevice):
         *,
         provider,
         device_id: str,
-        backend: Any,
+        backend: "QCloudBackend",
         backend_name: str,
     ) -> None:
         simulator = backend_name in SIMULATOR_BACKENDS

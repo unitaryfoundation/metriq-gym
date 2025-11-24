@@ -62,7 +62,8 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
 
     Chooses between:
       - Bipartite edge-coloring for bipartite graphs (optimal),
-      - Misra-Gries edge-coloring otherwise (near-optimal, uses at most Δ+1 colors).
+      - Misra-Gries edge-coloring for complete graphs (optimal, uses exactly max_degree colors),
+      - Greedy edge-coloring otherwise (fast, good for sparse graphs).
 
     Args:
         topology_graph: The topology graph (coupling map) of the quantum device.
