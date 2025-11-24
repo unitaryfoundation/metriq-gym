@@ -76,7 +76,17 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     if rx.is_bipartite(topology_graph):
         edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
     else:
-        edge_color_map = rx.graph_misra_gries_edge_color(topology_graph)
+        # Check if graph is complete
+        num_edges = len(topology_graph.edge_list())
+        expected_edges_if_complete = num_nodes * (num_nodes - 1) // 2
+        is_complete = num_edges == expected_edges_if_complete
+
+        if is_complete:
+            # Use Misra-Gries for complete graphs (optimal: exactly max_degree colors)
+            edge_color_map = rx.graph_misra_gries_edge_color(topology_graph)
+        else:
+            # Use greedy for sparse graphs (faster, often good results)
+            edge_color_map = rx.graph_greedy_edge_color(topology_graph)
 
     edge_index_map = dict(topology_graph.edge_index_map())
     return GraphColoring(
@@ -84,3 +94,4 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
         edge_color_map=edge_color_map,
         edge_index_map=edge_index_map,
     )
+
