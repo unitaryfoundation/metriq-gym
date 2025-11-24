@@ -207,13 +207,14 @@ class BSEQ(Benchmark):
         if not job_data.coloring:
             raise ValueError("Coloring data is required for BSEQ benchmark.")
 
-        if isinstance(job_data.coloring, dict):
-            job_data.coloring = GraphColoring.from_dict(job_data.coloring)
-        good_graph = chsh_subgraph(job_data.coloring, flatten_counts(result_data))
+        coloring = job_data.coloring
+        if isinstance(coloring, dict):
+            coloring = GraphColoring.from_dict(coloring)
+        good_graph = chsh_subgraph(coloring, flatten_counts(result_data))
         lcs = largest_connected_size(good_graph)
         return BSEQResult(
             largest_connected_size=lcs,
-            fraction_connected=lcs / job_data.coloring.num_nodes,
+            fraction_connected=lcs / coloring.num_nodes,
         )
 
     def estimate_resources_handler(

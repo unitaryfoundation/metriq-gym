@@ -330,7 +330,7 @@ def calc_stats(data: LinearRampQAOAData, samples: list["MeasCount"]) -> Aggregat
 class LinearRampQAOA(Benchmark):
     def _build_circuits(
         self, device: "QuantumDevice"
-    ) -> tuple[list[QuantumCircuit], list[list], str, EncodingType]:
+    ) -> tuple[list[QuantumCircuit], list[tuple[int, int, float]], str, EncodingType]:
         """Shared circuit construction logic.
 
         Args:
