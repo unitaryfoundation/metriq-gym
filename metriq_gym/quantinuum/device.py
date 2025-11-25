@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime, timezone
 
 import qnexus as qnx
-from qnexus.models.language import Language
 from pytket import Circuit
 from pytket.extensions.qiskit import qiskit_to_tk
 from qiskit import QuantumCircuit
@@ -81,26 +80,23 @@ class QuantinuumDevice(QuantumDevice):
             backend_config=backend_config,
             project=project,
         )
-        # NOTE: This is a blocking wait that occurs during dispatch.
-        # Depending on queue and program size, compilation may take time.
-        print(
-            f"Waiting for Quantinuum compilation job {getattr(compile_job, "id", getattr(compile_job, "job_id", str(compile_job)))} to complete..."
-        )
-        qnx.jobs.wait_for(compile_job)
-        compiled_refs = [item.get_output() for item in qnx.jobs.results(compile_job)]
 
-        nshots = int(shots or 1000)
-        execute_job = qnx.start_execute_job(
-            programs=compiled_refs,
-            name=unique("execute"),
-            n_shots=[nshots] * len(compiled_refs),
-            backend_config=backend_config,
-            project=project,
-            language=Language.QIR,
+        compile_job_id = (
+            getattr(compile_job, "id", None)
+            or getattr(compile_job, "job_id", None)
+            or str(compile_job)
         )
-        job_id = (
-            getattr(execute_job, "id", None)
-            or getattr(execute_job, "job_id", None)
-            or str(execute_job)
+
+        # Return immediately with compile job - don't wait for compilation
+        print(f"Quantinuum compilation job {compile_job_id} submitted (non-blocking)")
+
+        # Store metadata needed to create execute job later during polling
+        return QuantinuumJob(
+            str(compile_job_id),
+            device=self,
+            _is_compile_job=True,
+            _shots=int(shots or 1000),
+            _backend_config=backend_config,
+            _project=project,
+            _execute_name_prefix=unique("execute"),
         )
-        return QuantinuumJob(str(job_id), device=self)
