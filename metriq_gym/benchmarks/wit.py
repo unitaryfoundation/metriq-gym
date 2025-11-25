@@ -12,7 +12,7 @@ repository](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py)
 
 import numpy as np
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, Sequence, SupportsFloat, SupportsInt, cast
 
 from qiskit import QuantumCircuit
 from metriq_gym.helpers.task_helpers import flatten_counts
@@ -31,198 +31,264 @@ if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
-def wit_circuit(num_qubits: int) -> QuantumCircuit:
-    """Create a WIT circuit for either 6 or 7 qubits.
+VALID_MESSAGE_METHODS = ("reset", "swap", "transfer")
 
-    The 7-qubit circuit is based on the circuit diagram in Figure-4 of
-    [arXiv:2205.14081](https://arxiv.org/pdf/2205.14081). Both the 6- and 7-qubit circuits assume a interraction
-    coupling constant (referred to as `g` in the paper) of pi/2.
-    """
-    if num_qubits == 6:
-        qc = QuantumCircuit(6, 1)
-        qc.h(0)
-        qc.cx(0, 5)
-        qc.h(1)
-        qc.cx(1, 4)
-        qc.h(2)
-        qc.cx(2, 3)
-        qc.rx(-np.pi / 2, 0)
-        qc.rx(-np.pi / 2, 1)
-        qc.rx(-np.pi / 2, 2)
-        qc.rz(-0.0566794, 0)
-        qc.rz(-0.01039906, 1)
-        qc.rz(-0.0632158, 2)
-        qc.rzz(-np.pi / 2, 0, 1)
-        qc.rzz(-np.pi / 2, 1, 2)
-        qc.rx(-np.pi / 2, 0)
-        qc.rx(-np.pi / 2, 1)
-        qc.rx(-np.pi / 2, 2)
-        qc.rz(-0.0566794, 0)
-        qc.rz(-0.01039906, 1)
-        qc.rz(-0.0632158, 2)
-        qc.rzz(-np.pi / 2, 0, 1)
-        qc.rzz(-np.pi / 2, 1, 2)
-        qc.rx(-np.pi / 2, 0)
-        qc.rx(-np.pi / 2, 1)
-        qc.rx(-np.pi / 2, 2)
-        qc.rz(-0.0566794, 0)
-        qc.rz(-0.01039906, 1)
-        qc.rz(-0.0632158, 2)
-        qc.rzz(-np.pi / 2, 0, 1)
-        qc.rzz(-np.pi / 2, 1, 2)
-        qc.reset(0)
-        qc.rz(0.0566794, 0)
-        qc.rz(0.01039906, 1)
-        qc.rz(0.0632158, 2)
-        qc.rzz(np.pi / 2, 0, 1)
-        qc.rzz(np.pi / 2, 1, 2)
-        qc.rx(np.pi / 2, 0)
-        qc.rx(np.pi / 2, 1)
-        qc.rx(np.pi / 2, 2)
-        qc.rz(0.0566794, 0)
-        qc.rz(0.01039906, 1)
-        qc.rz(0.0632158, 2)
-        qc.rzz(np.pi / 2, 0, 1)
-        qc.rzz(np.pi / 2, 1, 2)
-        qc.rx(np.pi / 2, 0)
-        qc.rx(np.pi / 2, 1)
-        qc.rx(np.pi / 2, 2)
-        qc.rz(0.0566794, 0)
-        qc.rz(0.01039906, 1)
-        qc.rz(0.0632158, 2)
-        qc.rzz(np.pi / 2, 0, 1)
-        qc.rzz(np.pi / 2, 1, 2)
-        qc.rx(np.pi / 2, 0)
-        qc.rx(np.pi / 2, 1)
-        qc.rx(np.pi / 2, 2)
-        # Here are the two RZZ gates that are parameterized
-        qc.rzz(np.pi / 2, 1, 4)
-        qc.rzz(np.pi / 2, 2, 3)
-        # -------------------------------------------------
-        qc.rx(np.pi / 2, 5)
-        qc.rx(np.pi / 2, 4)
-        qc.rx(np.pi / 2, 3)
-        qc.rz(0.0566794, 5)
-        qc.rz(0.01039906, 4)
-        qc.rz(0.0632158, 3)
-        qc.rzz(np.pi / 2, 5, 4)
-        qc.rzz(np.pi / 2, 4, 3)
-        qc.rx(np.pi / 2, 5)
-        qc.rx(np.pi / 2, 4)
-        qc.rx(np.pi / 2, 3)
-        qc.rz(0.0566794, 5)
-        qc.rz(0.01039906, 4)
-        qc.rz(0.0632158, 3)
-        qc.rzz(np.pi / 2, 5, 4)
-        qc.rzz(np.pi / 2, 4, 3)
-        qc.rx(np.pi / 2, 5)
-        qc.rx(np.pi / 2, 4)
-        qc.rx(np.pi / 2, 3)
-        qc.rz(0.0566794, 5)
-        qc.rz(0.01039906, 4)
-        qc.rz(0.0632158, 3)
-        qc.rzz(np.pi / 2, 5, 4)
-        qc.rzz(np.pi / 2, 4, 3)
 
-        # Perform a measurement which corresponds to the Pauli-Z operator (SparsePauliOp('ZIIIII')). Since Qiskit is
-        # little-endian, this is reversed, and the measurement is actually performed on the 5-th qubit.
-        qc.measure(5, 0)
-        return qc
+@dataclass(frozen=True)
+class WormholeTeleportationConfig:
+    """Configuration for the generalized WIT circuit."""
 
-    elif num_qubits == 7:
-        qc = QuantumCircuit(7, 1)
-        qc.h(0)
-        qc.cx(0, 5)
-        qc.h(1)
-        qc.cx(1, 4)
-        qc.h(2)
-        qc.cx(2, 3)
-        qc.rx(-np.pi / 2, 0)
-        qc.rx(-np.pi / 2, 1)
-        qc.rx(-np.pi / 2, 2)
-        qc.rz(-0.0566794, 0)
-        qc.rz(-0.01039906, 1)
-        qc.rz(-0.0632158, 2)
-        qc.rzz(-np.pi / 2, 0, 1)
-        qc.rzz(-np.pi / 2, 1, 2)
-        qc.rx(-np.pi / 2, 0)
-        qc.rx(-np.pi / 2, 1)
-        qc.rx(-np.pi / 2, 2)
-        qc.rz(-0.0566794, 0)
-        qc.rz(-0.01039906, 1)
-        qc.rz(-0.0632158, 2)
-        qc.rzz(-np.pi / 2, 0, 1)
-        qc.rzz(-np.pi / 2, 1, 2)
-        qc.rx(-np.pi / 2, 0)
-        qc.rx(-np.pi / 2, 1)
-        qc.rx(-np.pi / 2, 2)
-        qc.rz(-0.0566794, 0)
-        qc.rz(-0.01039906, 1)
-        qc.rz(-0.0632158, 2)
-        qc.rzz(-np.pi / 2, 0, 1)
-        qc.rzz(-np.pi / 2, 1, 2)
-        qc.swap(0, 6)
-        qc.rz(0.0566794, 0)
-        qc.rz(0.01039906, 1)
-        qc.rz(0.0632158, 2)
-        qc.rzz(np.pi / 2, 0, 1)
-        qc.rzz(np.pi / 2, 1, 2)
-        qc.rx(np.pi / 2, 0)
-        qc.rx(np.pi / 2, 1)
-        qc.rx(np.pi / 2, 2)
-        qc.rz(0.0566794, 0)
-        qc.rz(0.01039906, 1)
-        qc.rz(0.0632158, 2)
-        qc.rzz(np.pi / 2, 0, 1)
-        qc.rzz(np.pi / 2, 1, 2)
-        qc.rx(np.pi / 2, 0)
-        qc.rx(np.pi / 2, 1)
-        qc.rx(np.pi / 2, 2)
-        qc.rz(0.0566794, 0)
-        qc.rz(0.01039906, 1)
-        qc.rz(0.0632158, 2)
-        qc.rzz(np.pi / 2, 0, 1)
-        qc.rzz(np.pi / 2, 1, 2)
-        qc.rx(np.pi / 2, 0)
-        qc.rx(np.pi / 2, 1)
-        qc.rx(np.pi / 2, 2)
-        # Here are the two RZZ gates that are parameterized
-        qc.rzz(np.pi / 2, 1, 4)
-        qc.rzz(np.pi / 2, 2, 3)
-        # -------------------------------------------------
-        qc.rx(np.pi / 2, 5)
-        qc.rx(np.pi / 2, 4)
-        qc.rx(np.pi / 2, 3)
-        qc.rz(0.0566794, 5)
-        qc.rz(0.01039906, 4)
-        qc.rz(0.0632158, 3)
-        qc.rzz(np.pi / 2, 5, 4)
-        qc.rzz(np.pi / 2, 4, 3)
-        qc.rx(np.pi / 2, 5)
-        qc.rx(np.pi / 2, 4)
-        qc.rx(np.pi / 2, 3)
-        qc.rz(0.0566794, 5)
-        qc.rz(0.01039906, 4)
-        qc.rz(0.0632158, 3)
-        qc.rzz(np.pi / 2, 5, 4)
-        qc.rzz(np.pi / 2, 4, 3)
-        qc.rx(np.pi / 2, 5)
-        qc.rx(np.pi / 2, 4)
-        qc.rx(np.pi / 2, 3)
-        qc.rz(0.0566794, 5)
-        qc.rz(0.01039906, 4)
-        qc.rz(0.0632158, 3)
-        qc.rzz(np.pi / 2, 5, 4)
-        qc.rzz(np.pi / 2, 4, 3)
+    n_qubits_per_side: int
+    message_size: int
+    x_rotation_transverse_angle: float
+    zz_rotation_angle: float
+    z_rotation_angles: Sequence[float]
+    time_steps: int
+    insert_message_method: str
+    interaction_coupling_strength: float
 
-        # Perform a measurement which corresponds to the Pauli-Z operator (SparsePauliOp('IZIIIII')). Since Qiskit is
-        # little-endian, this is reversed, and the measurement is actually performed on the 5-th qubit. This can also
-        # be seen in Figure-4 of the paper.
-        qc.measure(5, 0)
+    def __post_init__(self) -> None:
+        if self.n_qubits_per_side < 1:
+            raise ValueError("n_qubits_per_side must be at least 1.")
+        if self.message_size < 1:
+            raise ValueError("message_size must be at least 1.")
+        if self.message_size >= self.n_qubits_per_side:
+            raise ValueError("message_size must be smaller than n_qubits_per_side.")
+        if self.time_steps < 1:
+            raise ValueError("time_steps must be at least 1.")
+        if self.insert_message_method not in VALID_MESSAGE_METHODS:
+            raise ValueError(
+                f"insert_message_method must be one of {', '.join(VALID_MESSAGE_METHODS)}."
+            )
+        if len(tuple(self.z_rotation_angles)) != self.n_qubits_per_side:
+            raise ValueError("z_rotation_angles length must match n_qubits_per_side.")
+        if self.insert_message_method in {"swap", "transfer"} and self.message_size != 1:
+            raise ValueError("message_size must be 1 when using swap or transfer insertion.")
 
-        return qc
+    @property
+    def total_qubits(self) -> int:
+        extra = 1 if self.insert_message_method in {"swap", "transfer"} else 0
+        return 2 * self.n_qubits_per_side + extra
+
+
+class WormholeTeleporterFactory:
+    """Helper for constructing holographic teleportation circuits."""
+
+    def __init__(self, config: WormholeTeleportationConfig):
+        self.config = config
+
+    def _left_indices(self) -> list[int]:
+        return list(range(self.config.n_qubits_per_side))
+
+    def _right_indices(self) -> list[int]:
+        start = self.config.n_qubits_per_side
+        end = 2 * self.config.n_qubits_per_side
+        return list(range(start, end))[::-1]
+
+    @staticmethod
+    def _make_bell_pair(qubit_pair: tuple[int, int], circuit: QuantumCircuit) -> None:
+        left, right = qubit_pair
+        circuit.h(left)
+        circuit.cx(left, right)
+
+    def _prepare_tfd_state(
+        self, circuit: QuantumCircuit, left: Sequence[int], right: Sequence[int]
+    ) -> None:
+        for pair in zip(left, right):
+            self._make_bell_pair(pair, circuit)
+
+    @staticmethod
+    def _apply_transverse_rotation(
+        qubits: Iterable[int], circuit: QuantumCircuit, theta: float
+    ) -> None:
+        for qubit in qubits:
+            circuit.rx(2 * theta, qubit)
+
+    @staticmethod
+    def _apply_ising_evolution(
+        qubits: Sequence[int], circuit: QuantumCircuit, theta: float, phases: Sequence[float]
+    ) -> None:
+        for qubit, phi in zip(qubits, phases, strict=True):
+            circuit.rz(2 * phi, qubit)
+
+        for q1, q2 in zip(qubits, qubits[1:]):
+            circuit.rzz(2 * theta, q1, q2)
+
+    def _hamiltonian_step(
+        self,
+        qubits: Sequence[int],
+        circuit: QuantumCircuit,
+        *,
+        forward: bool,
+        transpose: bool,
+    ) -> None:
+        theta_b = self.config.x_rotation_transverse_angle
+        theta_j = self.config.zz_rotation_angle
+        phases = list(self.config.z_rotation_angles)
+
+        if not forward:
+            theta_b = -theta_b
+            theta_j = -theta_j
+            phases = [-phi for phi in phases]
+
+        gates_first = transpose != forward
+        for _ in range(self.config.time_steps):
+            if gates_first:
+                self._apply_ising_evolution(qubits, circuit, theta_j, phases)
+                self._apply_transverse_rotation(qubits, circuit, theta_b)
+            else:
+                self._apply_transverse_rotation(qubits, circuit, theta_b)
+                self._apply_ising_evolution(qubits, circuit, theta_j, phases)
+
+    def _two_sided_coupling(
+        self, circuit: QuantumCircuit, left: Sequence[int], right: Sequence[int]
+    ) -> None:
+        denom = self.config.n_qubits_per_side - self.config.message_size
+        prefactor = 1.0 / denom
+        coupling_angle = 2 * self.config.interaction_coupling_strength * prefactor
+        for l_qubit, r_qubit in zip(
+            left[self.config.message_size :], right[self.config.message_size :], strict=True
+        ):
+            circuit.rzz(coupling_angle, l_qubit, r_qubit)
+
+    def circuit(self) -> QuantumCircuit:
+        total = self.config.total_qubits
+        circuit = QuantumCircuit(
+            total,
+            1,
+            name=f"wit_g_{self.config.interaction_coupling_strength:.4f}",
+        )
+
+        left_indices = self._left_indices()
+        right_indices = self._right_indices()
+        ancilla_index: int | None = (
+            2 * self.config.n_qubits_per_side
+            if self.config.insert_message_method in {"swap", "transfer"}
+            else None
+        )
+
+        self._prepare_tfd_state(circuit, left_indices, right_indices)
+        self._hamiltonian_step(left_indices, circuit, forward=False, transpose=False)
+
+        if self.config.insert_message_method == "swap":
+            if ancilla_index is None:
+                raise ValueError("swap insertion requires an ancilla qubit.")
+            circuit.swap(left_indices[0], ancilla_index)
+        elif self.config.insert_message_method == "reset":
+            circuit.reset(left_indices[0])
+        else:  # transfer
+            if ancilla_index is None:
+                raise ValueError("transfer insertion requires an ancilla qubit.")
+            updated_left = list(left_indices)
+            updated_left[0] = ancilla_index
+            left_indices = updated_left
+
+        self._hamiltonian_step(left_indices, circuit, forward=True, transpose=False)
+        self._two_sided_coupling(circuit, left_indices, right_indices)
+        self._hamiltonian_step(right_indices, circuit, forward=True, transpose=True)
+        circuit.measure(right_indices[0], 0)
+        return circuit
+
+
+def wit_circuit(config: WormholeTeleportationConfig) -> QuantumCircuit:
+    """Build a WIT circuit from the provided configuration."""
+    return WormholeTeleporterFactory(config).circuit()
+
+
+def _legacy_config(total_qubits: int) -> WormholeTeleportationConfig:
+    if total_qubits == 6:
+        insert_method = "reset"
+    elif total_qubits == 7:
+        insert_method = "swap"
     else:
-        raise ValueError(f"Unsupported number of qubits: {num_qubits}")
+        raise ValueError(f"Unsupported legacy WIT qubit count: {total_qubits}.")
+    return WormholeTeleportationConfig(
+        n_qubits_per_side=3,
+        message_size=1,
+        x_rotation_transverse_angle=float(np.pi / 4),
+        zz_rotation_angle=float(np.pi / 4),
+        z_rotation_angles=(0.0283397, 0.00519953, 0.0316079),
+        time_steps=3,
+        insert_message_method=insert_method,
+        interaction_coupling_strength=float(np.pi / 2),
+    )
+
+
+def legacy_wit_circuit(total_qubits: int) -> QuantumCircuit:
+    """Return the legacy 6- or 7-qubit WIT circuit."""
+    return wit_circuit(_legacy_config(total_qubits))
+
+
+def build_wit_config_from_params(params) -> WormholeTeleportationConfig:
+    """Convert validated schema parameters into a WormholeTeleportationConfig.
+
+    Supports two modes:
+    1. Legacy mode: specify num_qubits (6 or 7) for original benchmark behavior
+    2. Generalized mode: specify n_qubits_per_side with optional customization
+
+    All parameters except n_qubits_per_side use sensible defaults based on the
+    original WIT benchmark configuration.
+    """
+    legacy_total = getattr(params, "num_qubits", None)
+    n_qubits_per_side = getattr(params, "n_qubits_per_side", None)
+
+    if n_qubits_per_side is None:
+        if legacy_total is None:
+            raise ValueError(
+                "WIT parameters must include either 'num_qubits' or 'n_qubits_per_side'."
+            )
+        config = _legacy_config(int(cast(SupportsInt, legacy_total)))
+    else:
+        # Default values from the original WIT benchmark
+        message_size = getattr(params, "message_size", None)
+        x_rotation_transverse_angle = getattr(params, "x_rotation_transverse_angle", None)
+        zz_rotation_angle = getattr(params, "zz_rotation_angle", None)
+        z_rotation_angles = getattr(params, "z_rotation_angles", None)
+        time_steps = getattr(params, "time_steps", None)
+        insert_message_method = getattr(params, "insert_message_method", None)
+        interaction_coupling_strength = getattr(params, "interaction_coupling_strength", None)
+
+        # Apply defaults
+        if message_size is None:
+            message_size = 1
+        if x_rotation_transverse_angle is None:
+            x_rotation_transverse_angle = float(np.pi / 4)
+        if zz_rotation_angle is None:
+            zz_rotation_angle = float(np.pi / 4)
+        if time_steps is None:
+            time_steps = 3
+        if insert_message_method is None:
+            insert_message_method = "reset"
+        if interaction_coupling_strength is None:
+            interaction_coupling_strength = float(np.pi / 2)
+
+        # Handle z_rotation_angles separately - needs to match n_qubits_per_side
+        n_qubits_per_side_int = int(cast(SupportsInt, n_qubits_per_side))
+        if z_rotation_angles is None:
+            # Use default pattern from legacy config for n_qubits_per_side=3
+            if n_qubits_per_side_int == 3:
+                z_rotation_angles = (0.0283397, 0.00519953, 0.0316079)
+            else:
+                # Use zeros as a simple deterministic default for other sizes
+                z_rotation_angles = tuple([0.0] * n_qubits_per_side_int)
+
+        config = WormholeTeleportationConfig(
+            n_qubits_per_side=n_qubits_per_side_int,
+            message_size=int(cast(SupportsInt, message_size)),
+            x_rotation_transverse_angle=float(cast(SupportsFloat, x_rotation_transverse_angle)),
+            zz_rotation_angle=float(cast(SupportsFloat, zz_rotation_angle)),
+            z_rotation_angles=tuple(float(v) for v in cast(Sequence[SupportsFloat], z_rotation_angles)),
+            time_steps=int(cast(SupportsInt, time_steps)),
+            insert_message_method=str(insert_message_method).lower(),
+            interaction_coupling_strength=float(cast(SupportsFloat, interaction_coupling_strength)),
+        )
+
+    if legacy_total is not None and int(cast(SupportsInt, legacy_total)) != config.total_qubits:
+        raise ValueError(
+            "num_qubits does not match the total qubits implied by the generalized WIT parameters."
+        )
+
+    return config
 
 
 class WITResult(BenchmarkResult):
@@ -239,9 +305,12 @@ class WITData(BenchmarkData):
 
 class WIT(Benchmark):
     def dispatch_handler(self, device: "QuantumDevice") -> WITData:
-        return WITData.from_quantum_job(
-            device.run(wit_circuit(self.params.num_qubits), shots=self.params.shots)
-        )
+        config = build_wit_config_from_params(self.params)
+        shots_value = getattr(self.params, "shots", None)
+        if shots_value is None:
+            raise ValueError("WIT parameters must include 'shots'.")
+        shots = int(cast(SupportsInt, shots_value))
+        return WITData.from_quantum_job(device.run(wit_circuit(config), shots=shots))
 
     def poll_handler(
         self,
@@ -250,9 +319,13 @@ class WIT(Benchmark):
         quantum_jobs: list["QuantumJob"],
     ) -> WITResult:
         counts = flatten_counts(result_data)[0]
+        shots_value = getattr(self.params, "shots", None)
+        if shots_value is None:
+            raise ValueError("WIT parameters must include 'shots'.")
+        shots = int(cast(SupportsInt, shots_value))
         return WITResult(
             expectation_value=BenchmarkScore(
-                value=binary_expectation_value(self.params.shots, counts),
-                uncertainty=binary_expectation_stddev(self.params.shots, counts),
+                value=binary_expectation_value(shots, counts),
+                uncertainty=binary_expectation_stddev(shots, counts),
             )
         )
