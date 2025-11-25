@@ -4,17 +4,6 @@ Summary:
     Runs a six- or seven-qubit teleportation-inspired circuit that mimics the protocol from
     Shapoval et al. (2023) and reports a Pauli-Z expectation value with binomial uncertainty.
 
-Schema parameters (metriq_gym/schemas/wit.schema.json):
-    - benchmark_name (str, required): must be "WIT".
-    - shots (int, optional, default 1000): number of repetitions; higher values shrink the
-      statistical error bar.
-    - num_qubits (int, optional, default 6): choose 6 or 7 depending on hardware topology; 7
-      aligns with Fig. 4 of the reference paper.
-
-CLI dispatch example::
-
-        uv run mgym job dispatch metriq_gym/schemas/examples/wit.example.json -p local -d aer_simulator
-
 Result interpretation:
     Polling returns WITResult.expectation_value as a BenchmarkScore:
         - value: estimated Pauli-Z expectation (ideal teleportation trends toward +1).

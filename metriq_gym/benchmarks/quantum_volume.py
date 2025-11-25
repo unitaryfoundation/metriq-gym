@@ -1,34 +1,4 @@
-"""Quantum Volume benchmark implementation.
-
-Summary:
-    Samples heavy-output probabilities for random circuits to estimate the effective circuit
-    width that a device can reliably execute, following Cross et al.'s Quantum Volume protocol.
-
-Schema parameters (metriq_gym/schemas/quantum_volume.schema.json):
-    - benchmark_name (str, required): must be "Quantum Volume".
-    - num_qubits (int, required): width/depth of each random circuit layer.
-    - shots (int, optional, default 1000): measurement repetitions per circuit.
-    - trials (int, optional, default 100): number of random circuit instances.
-    - confidence_level (float, optional, default 0.95): statistical confidence target for
-      declaring success.
-
-CLI dispatch example::
-
-        uv run mgym job dispatch metriq_gym/schemas/examples/quantum_volume.example.json -p local -d aer_simulator
-
-Result interpretation:
-    Polling produces QuantumVolumeResult with metrics commonly used for QV reports:
-        - hog_prob: measured heavy-output probability; success requires exceeding 2/3.
-        - hog_pass: boolean outcome of the heavy-output test.
-        - xeb: cross-entropy benchmarking score versus ideal probabilities (higher is better).
-        - confidence_pass: indicates whether the confidence interval supports success.
-        - p_value: statistical p-value (lower suggests stronger evidence).
-        - trials: number of executed circuits.
-
-References:
-    - Cross et al., "Validating quantum computers using randomized model circuits", Nature 567,
-      365–370 (2019).
-"""
+"""Quantum Volume benchmark implementation."""
 
 import math
 import statistics

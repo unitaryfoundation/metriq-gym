@@ -5,21 +5,6 @@ Summary:
     then invert them to test how well a device preserves state fidelity across the forward
     and reverse halves of the circuit.
 
-Schema parameters (metriq_gym/schemas/mirror_circuits.schema.json):
-    - benchmark_name (str, required): must be "Mirror Circuits".
-    - width (int, optional): number of connected qubits; defaults to using the full device.
-    - num_layers (int, optional, default 3): random Clifford layers before mirroring.
-    - two_qubit_gate_prob (float, optional, default 0.5): probability of selecting two-qubit
-      entangling gates on available edges.
-    - two_qubit_gate_name (str, optional, default "CNOT"): choose "CNOT" or "CZ".
-    - shots (int, optional, default 1000): measurement repetitions per circuit.
-    - num_circuits (int, optional, default 10): number of random circuit instances.
-    - seed (int, optional): fixes random generation for reproducibility.
-
-CLI dispatch example::
-
-        uv run mgym job dispatch metriq_gym/schemas/examples/mirror_circuits.example.json -p local -d aer_simulator
-
 Result interpretation:
     Polling yields MirrorCircuitsResult with:
         - success_probability: fraction of runs matching the expected bitstring.

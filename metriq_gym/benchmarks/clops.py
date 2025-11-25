@@ -1,28 +1,4 @@
-"""CLOPS (circuit layer operations per second) benchmark implementation.
-
-Summary:
-    Builds random layered circuits tailored to the device topology and measures throughput
-    in layers-per-second using execution time reported by the provider.
-
-Schema parameters (metriq_gym/schemas/clops.schema.json):
-    - benchmark_name (str, required): must be "CLOPS".
-    - width (int, optional, default 1000): number of connected qubits to include in the circuit.
-    - num_layers (int, optional, default 1000): depth of layered two-qubit plus parameterised
-      single-qubit gates.
-    - num_circuits (int, optional, default 100): number of parameterised circuits to generate.
-    - shots (int, optional, default 1000): measurement repetitions per circuit.
-
-CLI dispatch example::
-
-        uv run mgym job dispatch metriq_gym/schemas/examples/clops.example.json -p local -d aer_simulator
-
-Result interpretation:
-    Polling returns ClopsResult.clops_score, proportional to num_circuits * num_layers *
-    shots divided by the sum of execution times. Higher scores indicate greater throughput.
-
-Reference:
-    - Jurcevic et al., "Quantum Volume, Fidelity, and Speed in Quantum Computing", arXiv:2110.14108.
-"""
+"""CLOPS (circuit layer operations per second) benchmark implementation."""
 
 import copy
 from dataclasses import dataclass

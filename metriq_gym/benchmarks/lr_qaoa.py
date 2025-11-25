@@ -5,24 +5,6 @@ Summary:
     results against classical optima to estimate approximation ratios and optimal sampling
     probabilities.
 
-Schema parameters (metriq_gym/schemas/lr_qaoa.schema.json):
-    - benchmark_name (str, required): must be "Linear Ramp QAOA".
-    - graph_type (str, required): "1D", "NL", or "FC" to select the graph topology.
-    - num_qubits (int, required): number of nodes/qubits in the generated problem graph.
-    - qaoa_layers (list[int], optional, default [3,5,7,10,15,20]): depths to evaluate.
-    - delta_beta (float, optional, default 0.3): slope for the beta parameters.
-    - delta_gamma (float, optional, default 0.3): slope for the gamma parameters.
-    - shots (int, optional, default 1000): measurement repetitions per circuit.
-    - trials (int, optional, default 3): number of circuit instances per depth.
-    - num_random_trials (int, optional, default 25): random baseline comparisons.
-    - confidence_level (float, optional, default 0.995): statistical confidence bound.
-    - seed (int, optional, default 123): reproducible weight generation.
-
-CLI dispatch examples::
-
-        uv run mgym job dispatch metriq_gym/schemas/examples/lr_qaoa_1d_chain.example.json -p local -d aer_simulator
-        uv run mgym job dispatch metriq_gym/schemas/examples/lr_qaoa_native_layout.example.json -p local -d aer_simulator
-
 Result interpretation:
     Polling returns LinearRampQAOAResult with metrics including:
         - approx_ratio_mean / stddev: how close average costs are to the optimum.

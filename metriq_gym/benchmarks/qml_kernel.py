@@ -4,15 +4,6 @@ Summary:
     Constructs a ZZ feature map kernel, computes the inner-product circuit, and measures the
     probability of returning to the all-zero state as a proxy for kernel quality.
 
-Schema parameters (metriq_gym/schemas/qml_kernel.schema.json):
-    - benchmark_name (str, required): must be "QML Kernel".
-    - num_qubits (int, required): number of qubits in the feature map.
-    - shots (int, optional, default 1000): measurement repetitions for estimating accuracy.
-
-CLI dispatch example::
-
-        uv run mgym job dispatch metriq_gym/schemas/examples/qml_kernel.example.json -p local -d aer_simulator
-
 Result interpretation:
     Polling returns QMLKernelResult.accuracy_score as a BenchmarkScore where:
         - value: fraction of shots measuring the expected all-zero bitstring.

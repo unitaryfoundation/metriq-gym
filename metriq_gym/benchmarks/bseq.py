@@ -5,15 +5,6 @@ Summary:
     its connectivity graph. Circuits are built per colouring of the topology and executed in
     four measurement bases to detect correlations.
 
-Schema parameters (metriq_gym/schemas/bseq.schema.json):
-    - benchmark_name (str, required): must be "BSEQ".
-    - shots (int, optional, default 1000): measurement repetitions per circuit; increase to
-      tighten statistical error at the cost of queue time.
-
-CLI dispatch example::
-
-        uv run mgym job dispatch metriq_gym/schemas/examples/bseq.example.json -p local -d aer_simulator
-
 Result interpretation:
     Polling returns BSEQResult with:
         - largest_connected_size: size of the biggest connected subgraph of qubit pairs that
