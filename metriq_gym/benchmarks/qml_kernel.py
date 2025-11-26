@@ -65,7 +65,6 @@ def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:
 
 
 def create_inner_product_circuit(num_qubits: int, seed: int = 0) -> QuantumCircuit:
-    # TODO: Allow seed to be set externally for reproducibility
     np.random.seed(seed)
 
     # Create the ZZ feature map circuit and build the inner-product circuit.
