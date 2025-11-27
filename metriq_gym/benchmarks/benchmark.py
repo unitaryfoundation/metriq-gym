@@ -5,8 +5,10 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel, computed_field
 from dataclasses import dataclass
 
+
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from metriq_gym.resource_estimation import CircuitBatch
 
 
 class SupportsId(Protocol):
@@ -97,4 +99,7 @@ class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
         result_data: list["GateModelResultData"],
         quantum_jobs: list["QuantumJob"],
     ) -> BR:
+        raise NotImplementedError
+
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
         raise NotImplementedError

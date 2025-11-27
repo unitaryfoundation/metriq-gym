@@ -94,3 +94,4 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
         edge_color_map=edge_color_map,
         edge_index_map=edge_index_map,
     )
+
