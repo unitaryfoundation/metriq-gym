@@ -704,8 +704,19 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
 
     job_type = JobType(params.benchmark_name)
     benchmark: Benchmark = setup_benchmark(args, params, job_type)
-    circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
-    resource_estimate = aggregate_resource_estimates(circuit_batches, hqc_fn=quantinuum_hqc_formula)
+
+    try:
+        circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
+        resource_estimate = aggregate_resource_estimates(
+            circuit_batches, hqc_fn=quantinuum_hqc_formula
+        )
+    except (ValueError, NotImplementedError) as exc:
+        print(f"✗ {job_type.value}: {exc}")
+        return
+    except Exception as exc:  # pragma: no cover - surface unexpected errors cleanly
+        print(f"✗ Failed to estimate resources: {exc}")
+        return
+
     print_resource_estimate(job_type, args.provider, args.device, resource_estimate)
 
 
