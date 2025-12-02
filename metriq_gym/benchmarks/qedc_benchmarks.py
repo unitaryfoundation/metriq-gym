@@ -15,6 +15,7 @@ from qiskit import QuantumCircuit
 from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.resource_estimation import CircuitBatch
 
 from _common import metrics
 
@@ -223,18 +224,30 @@ def get_circuits_and_metrics(
 class QEDCBenchmark(Benchmark):
     """Benchmark class for QED-C experiments."""
 
-    def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
-        # For more information on the parameters, view the schema for this benchmark.
-        shots = self.params.shots
-        benchmark_name = self.params.benchmark_name
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
+        """Shared circuit construction logic.
 
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuits, circuit_metrics, circuit_identifiers).
+        """
+        benchmark_name = self.params.benchmark_name
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
             benchmark_name=benchmark_name,
             params=self.params.model_dump(exclude={"benchmark_name"}),
         )
+        return circuits, circuit_metrics, circuit_identifiers
+
+    def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
+        # For more information on the parameters, view the schema for this benchmark.
+        circuits, circuit_metrics, circuit_identifiers = self._build_circuits(device)
 
         return QEDCData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=shots),
+            quantum_job=device.run(circuits, shots=self.params.shots),
             circuit_metrics=circuit_metrics,
             circuit_identifiers=circuit_identifiers,
         )
@@ -251,3 +264,10 @@ class QEDCBenchmark(Benchmark):
         circuit_metrics = analyze_results(self.params.model_dump(), job_data, counts_list)
 
         return QEDCResult(circuit_metrics=circuit_metrics)
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        circuits, _, _ = self._build_circuits(device)
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]

@@ -108,7 +108,30 @@ Defaults:
 * Directory: ``metriq-gym/v<major.minor>/<provider>`` (override with ``--dir`` or ``MGYM_UPLOAD_DIR``)
 * Uploads append records to ``results.json``
 
-Authentication:
+Estimate Job Resources
+======================
+
+Before dispatching, you can approximate the circuit footprint, gate counts, and (for
+Quantinuum) HQCs:
+
+.. code-block:: sh
+
+   mgym job estimate metriq_gym/schemas/examples/wit.example.json \
+       --provider quantinuum
+
+The command prints aggregated totals and per-circuit statistics. HQCs are calculated
+automatically for Quantinuum devices using the published H-series coefficients
+(``HQC = 5 + C × (N₁ + 10N₂ + 5Nₘ)/5000``; where ``C`` is the number of shots, matching code usage: ``shots * (N₁ + 10N₂ + 5Nₘ)/5000``); for other providers, only gate counts are shown.
+Benchmarks that depend on device topology (e.g. BSEQ, CLOPS, Mirror Circuits, LR-QAOA)
+require ``--device`` to be supplied so the estimator can inspect connectivity.
+
+.. code-block:: sh
+
+   mgym job estimate metriq_gym/schemas/examples/wit.example.json \
+       --provider ibm --device ibm_fez
+
+Authentication
+==============
 
 * Set ``GITHUB_TOKEN`` (or ``GH_TOKEN``). External contributors should fork the data repo first.
 * Token docs: https://docs.github.com/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token

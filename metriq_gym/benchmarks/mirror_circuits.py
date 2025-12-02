@@ -32,6 +32,8 @@ from metriq_gym.qplatform.device import connectivity_graph
 
 from typing import TYPE_CHECKING
 
+from metriq_gym.resource_estimation import CircuitBatch
+
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
@@ -476,11 +478,20 @@ def generate_mirror_circuit(
 
 
 class MirrorCircuits(Benchmark):
-    def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[QuantumCircuit], list[str], int]:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuits, expected_bitstrings, actual_width).
+        """
         num_layers = self.params.num_layers
         two_qubit_gate_prob = self.params.two_qubit_gate_prob
         two_qubit_gate_name = self.params.two_qubit_gate_name
-        shots = self.params.shots
         num_circuits = self.params.num_circuits
         seed = self.params.seed
         target_width = getattr(self.params, "width", None)
@@ -525,15 +536,20 @@ class MirrorCircuits(Benchmark):
             circuits.append(circuit)
             expected_bitstrings.append(expected_bitstring)
 
+        return circuits, expected_bitstrings, actual_width
+
+    def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
+        circuits, expected_bitstrings, actual_width = self._build_circuits(device)
+
         return MirrorCircuitsData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=shots),
-            num_layers=num_layers,
-            two_qubit_gate_prob=two_qubit_gate_prob,
-            two_qubit_gate_name=two_qubit_gate_name,
-            shots=shots,
+            quantum_job=device.run(circuits, shots=self.params.shots),
+            num_layers=self.params.num_layers,
+            two_qubit_gate_prob=self.params.two_qubit_gate_prob,
+            two_qubit_gate_name=self.params.two_qubit_gate_name,
+            shots=self.params.shots,
             num_qubits=actual_width,
-            num_circuits=num_circuits,
-            seed=seed,
+            num_circuits=self.params.num_circuits,
+            seed=self.params.seed,
             expected_bitstrings=expected_bitstrings,
         )
 
@@ -583,3 +599,7 @@ class MirrorCircuits(Benchmark):
             ),
             binary_success=bool(polarization >= POLARIZATION_THRESHOLD),
         )
+
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
+        circuits, _, _ = self._build_circuits(device)
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
