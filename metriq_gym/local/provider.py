@@ -11,7 +11,7 @@ class LocalProvider(QuantumProvider):
         self.device = LocalAerDevice(provider=self)
         self._devices: dict[str, LocalAerDevice] = {}
 
-    def get_devices(self, **_):
+    def get_devices(self, **_) -> list[QuantumDevice]:
         devices = [self.device]
 
         # Try to get IBM backends if QiskitRuntimeService is configured
