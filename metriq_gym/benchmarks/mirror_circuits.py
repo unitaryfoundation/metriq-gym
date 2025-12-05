@@ -149,9 +149,31 @@ def create_subgraph_from_qubits(
 
 
 def working_graph(width: int) -> rx.PyGraph:
-    """Return the connectivity graph used to synthesize mirror circuits."""
+    """Return the connectivity graph used to synthesize mirror circuits.
 
-    return path_graph(width)
+    Creates a symmetric (bidirectional) path graph to match the behavior of
+    symmetric device coupling maps. Each edge appears in both directions in
+    the edge list, ensuring unbiased edge selection during circuit generation.
+
+    Args:
+        width: Number of qubits in the path graph.
+
+    Returns:
+        A PyGraph with bidirectional edges representing a linear connectivity.
+    """
+    graph = path_graph(width)
+
+    # Add reverse edges to make the graph explicitly symmetric
+    # This ensures edge_list() contains edges in both directions,
+    # matching the behavior of symmetric device coupling maps
+    edges_to_add = []
+    for u, v in graph.edge_list():
+        edges_to_add.append((v, u, None))
+
+    for edge in edges_to_add:
+        graph.add_edge(edge[0], edge[1], edge[2])
+
+    return graph
 
 
 def random_paulis(
