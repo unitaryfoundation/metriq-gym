@@ -36,7 +36,7 @@ class LocalProvider(QuantumProvider):
 
         return devices
 
-    def get_device(self, device_id):
+    def get_device(self, device_id) -> QuantumDevice:
         if device_id in self._devices:
             return self._devices[device_id]
 
