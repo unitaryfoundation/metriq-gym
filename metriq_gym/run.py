@@ -16,6 +16,7 @@ import re
 from metriq_gym import __version__
 from metriq_gym.cli import list_jobs, parse_arguments, prompt_for_job
 from metriq_gym.job_manager import JobManager, MetriqGymJob
+from metriq_gym.qplatform.job import total_execution_time
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import JobType
 from metriq_gym.resource_estimation import (
@@ -601,6 +602,12 @@ def fetch_result(
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data = [task.result().data for task in quantum_jobs]
+        try:
+            total_time = total_execution_time(quantum_jobs)
+            print(f"Total execution time across {len(quantum_jobs)} jobs: {total_time:.2f} seconds")
+            metriq_job.runtime_seconds = total_time
+        except Exception:
+            logger.debug("Failed to compute benchmark runtime.", exc_info=True)
         result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
         # Cache result_data in metriq_job, excluding computed fields like 'score'
         # to keep cached payload minimal and compatible with older tests/consumers.

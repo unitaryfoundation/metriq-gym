@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import singledispatch
-from typing import Optional
+from typing import Iterable, Optional
 
 from qbraid import QuantumJob
 from qbraid.runtime import QiskitJob, AzureQuantumJob, BraketQuantumTask
@@ -36,6 +36,19 @@ def _(quantum_job: BraketQuantumTask) -> float:
     return (
         quantum_job._task.metadata()["endedAt"] - quantum_job._task.metadata()["createdAt"]
     ).total_seconds()
+
+
+def total_execution_time(quantum_jobs: Iterable[QuantumJob]) -> float:
+    """Sum execution time for completed jobs, skipping jobs that do not report it."""
+    total = 0.0
+    for qjob in quantum_jobs:
+        if qjob.status() != JobStatus.COMPLETED:
+            continue
+        try:
+            total += execution_time(qjob)
+        except (NotImplementedError, ValueError):
+            continue
+    return total
 
 
 @dataclass

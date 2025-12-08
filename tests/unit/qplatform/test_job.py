@@ -1,9 +1,10 @@
 from unittest.mock import MagicMock
 import pytest
-from qbraid.runtime import QuantumJob, QiskitJob
-from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo
+from qbraid.runtime import QuantumJob, QiskitJob, AzureQuantumJob
+from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo, total_execution_time
 from qbraid.runtime.enums import JobStatus
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 
 def test_execution_time_qiskit():
@@ -69,3 +70,50 @@ def test_job_status_unknown_fallback():
 
     assert isinstance(info, JobStatusInfo)
     assert info.status == JobStatus.UNKNOWN
+
+
+def test_total_execution_time_sums_completed_jobs():
+    def make_qiskit_job(duration_seconds: float, status: JobStatus):
+        start = datetime.now()
+        spans = SimpleNamespace(start=start, stop=start + timedelta(seconds=duration_seconds))
+        job = object.__new__(QiskitJob)
+        job.status = lambda status=status: status
+        job._job = SimpleNamespace(
+            result=lambda: SimpleNamespace(metadata={"execution": {"execution_spans": spans}})
+        )
+        return job
+
+    job_pending = make_qiskit_job(duration_seconds=0, status=JobStatus.RUNNING)
+    job_fast = make_qiskit_job(duration_seconds=5.0, status=JobStatus.COMPLETED)
+    job_slow = make_qiskit_job(duration_seconds=7.5, status=JobStatus.COMPLETED)
+
+    result = total_execution_time([job_pending, job_fast, job_slow])
+
+    assert result == pytest.approx(12.5)
+
+
+def test_total_execution_time_skips_unreported():
+    job_not_impl = MagicMock(spec=QuantumJob)
+    job_not_impl.status.return_value = JobStatus.COMPLETED
+
+    job_value_error = object.__new__(AzureQuantumJob)
+    job_value_error.status = lambda: JobStatus.COMPLETED
+    job_value_error._job = SimpleNamespace(
+        details=SimpleNamespace(begin_execution_time=None, end_execution_time=None)
+    )
+
+    def make_qiskit_job(duration_seconds: float):
+        start = datetime.now()
+        spans = SimpleNamespace(start=start, stop=start + timedelta(seconds=duration_seconds))
+        job = object.__new__(QiskitJob)
+        job.status = lambda: JobStatus.COMPLETED
+        job._job = SimpleNamespace(
+            result=lambda: SimpleNamespace(metadata={"execution": {"execution_spans": spans}})
+        )
+        return job
+
+    job_valid = make_qiskit_job(4.2)
+
+    result = total_execution_time([job_not_impl, job_value_error, job_valid])
+
+    assert result == pytest.approx(4.2)

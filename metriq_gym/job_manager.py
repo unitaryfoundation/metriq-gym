@@ -32,6 +32,7 @@ class MetriqGymJob:
     # No suite weights in this PR; reserved for future use
     app_version: str | None = __version__
     result_data: dict[str, Any] | None = None
+    runtime_seconds: float | None = None
 
     def __post_init__(self) -> None:
         """Keep platform and provider/device fields in sync on initialization.
@@ -102,6 +103,7 @@ class MetriqGymJob:
             ["provider_job_ids", pprint.pformat(self.data["provider_job_ids"])],
             ["dispatch_time", self.dispatch_time.isoformat()],
             ["app_version", self.app_version],
+            ["runtime_seconds", str(self.runtime_seconds)],
             ["result_data", pprint.pformat(self.result_data)],
         ]
         return tabulate(rows, tablefmt="fancy_grid")
