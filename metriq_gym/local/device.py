@@ -10,7 +10,6 @@ from .job import LocalAerJob
 def _make_profile(
     *, device_id: str = "aer_simulator", backend: AerSimulator | None = None
 ) -> TargetProfile:
-    device_id = "aer_simulator"
     backend = backend or AerSimulator()
     cfg = backend.configuration()
     return TargetProfile(

@@ -40,6 +40,10 @@ class BaseExporter(ABC):
             "results": results_block,
         }
 
+        runtime_seconds = getattr(self.metriq_gym_job, "runtime_seconds", None)
+        if runtime_seconds is not None:
+            record["runtime_seconds"] = runtime_seconds
+
         # Richer suite metadata for downstream aggregation (e.g., metriq-data)
         suite_meta: dict[str, Any] = {}
         if self.metriq_gym_job.suite_id:

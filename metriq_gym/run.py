@@ -16,8 +16,15 @@ import re
 from metriq_gym import __version__
 from metriq_gym.cli import list_jobs, parse_arguments, prompt_for_job
 from metriq_gym.job_manager import JobManager, MetriqGymJob
+from metriq_gym.qplatform.job import total_execution_time
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import JobType
+from metriq_gym.resource_estimation import (
+    CircuitBatch,
+    aggregate_resource_estimates,
+    print_resource_estimate,
+    quantinuum_hqc_formula,
+)
 from metriq_gym.suite_parser import parse_suite_file
 from metriq_gym.exceptions import QBraidSetupError
 
@@ -595,6 +602,15 @@ def fetch_result(
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data = [task.result().data for task in quantum_jobs]
+
+        # Compute total execution time across all jobs, if provided by the backend
+        total_time = total_execution_time(quantum_jobs)
+        if total_time is not None:
+            print(f"Total execution time across {len(quantum_jobs)} jobs: {total_time:.2f} seconds")
+        else:
+            logger.debug("Failed to compute benchmark runtime.", exc_info=True)
+        metriq_job.runtime_seconds = total_time
+
         result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
         # Cache result_data in metriq_job, excluding computed fields like 'score'
         # to keep cached payload minimal and compatible with older tests/consumers.
@@ -667,6 +683,53 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
 
 
+def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:
+    if not args.provider:
+        print("Provider is required for resource estimation.")
+        return
+
+    device = None
+    if args.device:
+        try:
+            device = setup_device(args.provider, args.device)
+        except QBraidSetupError:
+            return
+    else:
+        print("No device specified; estimating resources without device-specific topology.")
+
+    config_file = args.config
+
+    if not os.path.exists(config_file):
+        print(f"✗ {config_file}: Configuration file not found")
+        return
+
+    params = load_and_validate(config_file)
+
+    available_benchmarks = _lazy_registry().get_available_benchmarks()
+    if params.benchmark_name not in available_benchmarks:
+        print(
+            f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
+        )
+        return
+
+    job_type = JobType(params.benchmark_name)
+    benchmark: Benchmark = setup_benchmark(args, params, job_type)
+
+    try:
+        circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
+        resource_estimate = aggregate_resource_estimates(
+            circuit_batches, hqc_fn=quantinuum_hqc_formula
+        )
+    except (ValueError, NotImplementedError) as exc:
+        print(f"✗ {job_type.value}: {exc}")
+        return
+    except Exception as exc:  # pragma: no cover - surface unexpected errors cleanly
+        print(f"✗ Failed to estimate resources: {exc}")
+        return
+
+    print_resource_estimate(job_type, args.provider, args.device, resource_estimate)
+
+
 def main() -> int:
     load_dotenv()
     args = parse_arguments()
@@ -679,7 +742,7 @@ def main() -> int:
         build_parser().print_help()
         return 0
 
-    RESOURCE_ACTION_TABLE = {
+    RESOURCE_ACTION_TABLE: dict = {
         "suite": {
             "dispatch": dispatch_suite,
             "poll": poll_suite,
@@ -692,6 +755,7 @@ def main() -> int:
             "view": view_job,
             "delete": delete_job,
             "upload": upload_job,
+            "estimate": estimate_job,
         },
     }
 

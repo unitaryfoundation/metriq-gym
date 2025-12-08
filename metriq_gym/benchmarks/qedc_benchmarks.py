@@ -21,6 +21,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.resource_estimation import CircuitBatch
 
 from _common import metrics
 
@@ -159,7 +160,7 @@ def analyze_results(
         if JobType(benchmark_name) == JobType.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                None, result_object, int(num_qubits) - 1, float(circuit_id), params["num_shots"]
+                None, result_object, int(num_qubits) - 1, float(circuit_id), params["shots"]
             )
         elif JobType(benchmark_name) == JobType.QUANTUM_FOURIER_TRANSFORM:
             # Requires slightly different arguments.
@@ -168,13 +169,13 @@ def analyze_results(
                 result_object,
                 int(num_qubits),
                 int(circuit_id),
-                params["num_shots"],
+                params["shots"],
                 params["method"],
             )
         else:
             # Default call for Bernstein-Vazirani and Hidden Shift.
             _, fidelity = benchmark.analyze_and_print_result(
-                None, result_object, int(num_qubits), int(circuit_id), params["num_shots"]
+                None, result_object, int(num_qubits), int(circuit_id), params["shots"]
             )
 
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
@@ -254,18 +255,30 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> list[float | None
 class QEDCBenchmark(Benchmark):
     """Benchmark class for QED-C experiments."""
 
-    def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
-        # For more information on the parameters, view the schema for this benchmark.
-        num_shots = self.params.num_shots
-        benchmark_name = self.params.benchmark_name
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
+        """Shared circuit construction logic.
 
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuits, circuit_metrics, circuit_identifiers).
+        """
+        benchmark_name = self.params.benchmark_name
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
             benchmark_name=benchmark_name,
             params=self.params.model_dump(exclude={"benchmark_name"}),
         )
+        return circuits, circuit_metrics, circuit_identifiers
+
+    def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
+        # For more information on the parameters, view the schema for this benchmark.
+        circuits, circuit_metrics, circuit_identifiers = self._build_circuits(device)
 
         return QEDCData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=num_shots),
+            quantum_job=device.run(circuits, shots=self.params.shots),
             circuit_metrics=circuit_metrics,
             circuit_identifiers=circuit_identifiers,
         )
@@ -288,3 +301,10 @@ class QEDCBenchmark(Benchmark):
                 uncertainty=uncertainty,
             )
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        circuits, _, _ = self._build_circuits(device)
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
