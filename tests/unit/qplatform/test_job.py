@@ -72,17 +72,18 @@ def test_job_status_unknown_fallback():
     assert info.status == JobStatus.UNKNOWN
 
 
-def test_total_execution_time_sums_completed_jobs():
-    def make_qiskit_job(duration_seconds: float, status: JobStatus):
-        start = datetime.now()
-        spans = SimpleNamespace(start=start, stop=start + timedelta(seconds=duration_seconds))
-        job = object.__new__(QiskitJob)
-        job.status = lambda status=status: status
-        job._job = SimpleNamespace(
-            result=lambda: SimpleNamespace(metadata={"execution": {"execution_spans": spans}})
-        )
-        return job
+def make_qiskit_job(duration_seconds: float, status: JobStatus) -> QiskitJob:
+    start = datetime.now()
+    spans = SimpleNamespace(start=start, stop=start + timedelta(seconds=duration_seconds))
+    job = object.__new__(QiskitJob)
+    job.status = lambda status=status: status
+    job._job = SimpleNamespace(
+        result=lambda: SimpleNamespace(metadata={"execution": {"execution_spans": spans}})
+    )
+    return job
 
+
+def test_total_execution_time_sums_completed_jobs():
     job_pending = make_qiskit_job(duration_seconds=0, status=JobStatus.RUNNING)
     job_fast = make_qiskit_job(duration_seconds=5.0, status=JobStatus.COMPLETED)
     job_slow = make_qiskit_job(duration_seconds=7.5, status=JobStatus.COMPLETED)
@@ -102,17 +103,7 @@ def test_total_execution_time_skips_unreported():
         details=SimpleNamespace(begin_execution_time=None, end_execution_time=None)
     )
 
-    def make_qiskit_job(duration_seconds: float):
-        start = datetime.now()
-        spans = SimpleNamespace(start=start, stop=start + timedelta(seconds=duration_seconds))
-        job = object.__new__(QiskitJob)
-        job.status = lambda: JobStatus.COMPLETED
-        job._job = SimpleNamespace(
-            result=lambda: SimpleNamespace(metadata={"execution": {"execution_spans": spans}})
-        )
-        return job
-
-    job_valid = make_qiskit_job(4.2)
+    job_valid = make_qiskit_job(4.2, status=JobStatus.COMPLETED)
 
     result = total_execution_time([job_not_impl, job_value_error, job_valid])
 

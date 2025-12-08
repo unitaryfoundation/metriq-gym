@@ -606,7 +606,7 @@ def fetch_result(
             total_time = total_execution_time(quantum_jobs)
             print(f"Total execution time across {len(quantum_jobs)} jobs: {total_time:.2f} seconds")
             metriq_job.runtime_seconds = total_time
-        except Exception:
+        except (NotImplementedError, ValueError):
             logger.debug("Failed to compute benchmark runtime.", exc_info=True)
         result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
         # Cache result_data in metriq_job, excluding computed fields like 'score'
