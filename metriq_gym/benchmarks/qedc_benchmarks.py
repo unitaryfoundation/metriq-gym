@@ -11,13 +11,20 @@ from importlib import import_module
 from types import ModuleType
 from typing import TYPE_CHECKING
 from qiskit import QuantumCircuit
+import numpy as np
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+)
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.resource_estimation import CircuitBatch
 
 from _common import metrics
+from _common.qiskit import execute as ex
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -35,36 +42,34 @@ QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
 Type: QEDC_Metrics
 Description: 
     The structure for all returned QED-C circuit metrics. 
-    The first key represents the number of qubits for the group of circuits.
-    The second key represents the unique identifier for a circuit in the group. 
+    
+    1. The first key represents the number of qubits for the group of circuits or the subtitle.
+    2. The second key represents the unique identifier for a circuit in the group. 
         - This may be a secret string for Bernstein-Vazirani, theta value for Phase-Estimation, 
           and so on. Benchmark specific documentation can be found in QED-C's 
           QC-App-Oriented-Benchmarks repository.
-    The third key represents the metric being stored.
+    3. The third key represents the metric being stored.
+
 Example for Bernstein-Vazirani:
 {
 '3':    {
-        '1': {'create_time': 0.16371703147888184,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '2': {'create_time': 0.0005087852478027344,
-              'fidelity': 1.0,
+        '2': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         },
 '4':    {
-        '1': {'create_time': 0.0005209445953369141,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '3': {'create_time': 0.00047206878662109375,
-              'fidelity': 1.0,
+        '3': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '5': {'create_time': 0.0005078315734863281,
-              'fidelity': 1.0,
+        '5': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         }
+'subtitle': "device = X"
 }
 """
-QEDC_Metrics = dict[str, dict[str, dict[str, float]]]
+QEDC_Metrics = dict[str, dict[str, dict[str, float]] | str]
 
 
 @dataclass
@@ -84,16 +89,16 @@ class QEDCData(BenchmarkData):
 
 class QEDCResult(BenchmarkResult):
     """
-    Stores the results from running a QED-C benchmark.
+    Stores the benchmark score.
 
-    Results:
-        circuit_metrics: Stores all QED-C metrics to output.
+    Score:
+        accuracy_score: Defined as the average fidelity across all groups in the sweep.
     """
 
-    circuit_metrics: QEDC_Metrics
+    accuracy_score: BenchmarkScore
 
     def compute_score(self) -> float | None:
-        return None
+        return self.accuracy_score.value
 
 
 def import_benchmark_module(benchmark_name: str) -> ModuleType:
@@ -147,7 +152,7 @@ def analyze_results(
     benchmark_name = str(params["benchmark_name"])
     benchmark = import_benchmark_module(benchmark_name)
 
-    # Restore circuit metrics dictionary from the dispatch data
+    # Restore circuit metrics from the dispatch data
     metrics.circuit_metrics = job_data.circuit_metrics
 
     # Iterate and get the metrics for each circuit in the list.
@@ -177,7 +182,31 @@ def analyze_results(
                 None, result_object, int(num_qubits), int(circuit_id), params["shots"]
             )
 
+        # Store the fidelity.
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
+
+    # Code below plots the metrics:
+
+    # Compute statistics for metrics.
+    metrics.aggregate_metrics()
+
+    # Set backend information for plot titles.
+    provider_name = "qBraid"
+    device_name = "<unknown>"
+
+    # Set plot titles.
+    benchmark_title = f"{benchmark_name} ({params.get('method', '1')})"
+    subtitle = f"Benchmark Results - {benchmark_title} - {provider_name}"
+    metrics.circuit_metrics["subtitle"] = f"device = {device_name}"
+
+    # Determine which metrics to plot.
+    filters = ["fidelity", "hf_fidelity", "depth", "2q", "vbplot"]
+
+    # Plot the metrics.
+    metrics.plot_metrics(subtitle, filters=filters)
+
+    # Remove subtilte key.
+    metrics.circuit_metrics.pop("subtitle", None)
 
     return metrics.circuit_metrics
 
@@ -190,7 +219,8 @@ def get_circuits_and_metrics(
     Uses QED-C submodule to obtain circuits and circuit metrics.
 
     Args:
-        params: the parameters to run the benchmark with, also includes benchmark_name.
+        benchmark_name: the name of the benchmark.
+        params: the parameters to run the benchmark with.
 
     Returns:
         circuits: the list of quantum circuits for the benchmark.
@@ -207,8 +237,11 @@ def get_circuits_and_metrics(
         get_circuits=True,
     )
 
-    # Remove the subtitle key to keep our desired format.
+    # Remove the subtitle key for iterating purposes.
     circuit_metrics.pop("subtitle", None)
+
+    # Copy any initial creation metrics (i.e. create_time).
+    metrics.circuit_metrics = circuit_metrics
 
     # Store the circuit identifiers and a flat list of circuits.
     circuit_identifiers = []
@@ -218,7 +251,46 @@ def get_circuits_and_metrics(
             circuit_identifiers.append((num_qubits, circuit_id))
             flat_circuits.append(circuits[num_qubits][circuit_id])
 
-    return flat_circuits, circuit_metrics, circuit_identifiers
+            # Compute circuit properties (depth, etc.) and store to metrics.
+            ex.compute_and_store_circuit_info(
+                circuits[num_qubits][circuit_id],
+                str(num_qubits),
+                str(circuit_id),
+                do_transpile_metrics=True,
+                use_normalized_depth=True,
+            )
+
+    return flat_circuits, metrics.circuit_metrics, circuit_identifiers
+
+
+def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> list[float | None]:
+    """
+    The score is the average of fidelities across all groups.
+
+    Args:
+        circuit_metrics: the QEDC_Metrics object after analyzing results.
+
+    Returns:
+        values: the score and the uncertainty.
+    """
+    # Obtain the average fidelity and standard deviation for each qubit size (group) in the sweep.
+    metrics.circuit_metrics = circuit_metrics
+    metrics.aggregate_metrics()
+    avgs = metrics.group_metrics["avg_fidelities"]
+    s_k = np.array(metrics.group_metrics["std_fidelities"])
+
+    # The score will be the average across all groups -- the entire sweep.
+    score = np.mean(avgs)
+
+    # The uncertainty is the pooled standard deviation
+    # (the weighted estimate of variance amongst different means).
+    n_k = np.array(
+        [len(circuit_metrics[g]) for g in circuit_metrics]
+    )  # number of circuits in a group
+    pooled_variance: float = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
+    uncertainty = np.sqrt(pooled_variance)
+
+    return [score, uncertainty]
 
 
 class QEDCBenchmark(Benchmark):
@@ -263,7 +335,13 @@ class QEDCBenchmark(Benchmark):
         # Call the QED-C method after some pre-processing to obtain metrics.
         circuit_metrics = analyze_results(self.params.model_dump(), job_data, counts_list)
 
-        return QEDCResult(circuit_metrics=circuit_metrics)
+        value, uncertainty = calculate_accuracy_score(circuit_metrics)
+        return QEDCResult(
+            accuracy_score=BenchmarkScore(
+                value=value,
+                uncertainty=uncertainty,
+            )
+        )
 
     def estimate_resources_handler(
         self,

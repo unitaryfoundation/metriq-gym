@@ -62,7 +62,6 @@
       "description": "Creates circuits with mid-circuit measurements.",
       "default": false,
       "examples": [true]
-
     }
   },
   "required": ["benchmark_name"],

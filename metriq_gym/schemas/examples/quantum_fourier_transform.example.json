@@ -2,7 +2,7 @@
     "benchmark_name": "Quantum Fourier Transform",
     "shots": 1000,
     "min_qubits": 2,
-    "max_qubits": 6,
+    "max_qubits": 10,
     "skip_qubits": 1,
     "max_circuits": 3,
     "method": 1,
