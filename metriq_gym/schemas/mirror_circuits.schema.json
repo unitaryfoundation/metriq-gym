@@ -13,7 +13,7 @@
     "width": {
       "type": "integer",
       "description": "Number of qubits to use for the mirror circuit. If not specified, uses all available qubits on the device.",
-      "minimum": 1,
+      "minimum": 2,
       "examples": [4, 8, 16]
     },
     "num_layers": {
