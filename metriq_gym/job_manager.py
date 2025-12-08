@@ -1,3 +1,5 @@
+"""Local persistence and helpers for tracking dispatched metriq-gym jobs."""
+
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from metriq_gym._version import __version__
@@ -24,9 +26,29 @@ class MetriqGymJob:
     provider_name: str
     device_name: str
     dispatch_time: datetime
+    platform: dict[str, Any] | None = None
     suite_id: str | None = None
+    suite_name: str | None = None
+    # No suite weights in this PR; reserved for future use
     app_version: str | None = __version__
     result_data: dict[str, Any] | None = None
+    runtime_seconds: float | None = None
+
+    def __post_init__(self) -> None:
+        """Keep platform and provider/device fields in sync on initialization.
+
+        - If platform is missing, populate from provider_name/device_name.
+        - If platform exists but lacks keys, backfill them from provider/device fields.
+        """
+        plat = self.platform or {}
+        if not plat:
+            plat = {"provider": self.provider_name, "device": self.device_name}
+        else:
+            if "provider" not in plat:
+                plat["provider"] = self.provider_name
+            if "device" not in plat:
+                plat["device"] = self.device_name
+        self.platform = plat
 
     def to_table_row(self, show_suite_id: bool) -> list[str | None]:
         return (
@@ -51,19 +73,37 @@ class MetriqGymJob:
         job_dict = json.loads(data)
         job_dict["job_type"] = JobType(job_dict["job_type"])
         job_dict["dispatch_time"] = datetime.fromisoformat(job_dict["dispatch_time"])
+        # Backwards/forwards compatibility for platform vs. provider/device fields
+        platform = job_dict.get("platform")
+        if not platform and "provider_name" in job_dict and "device_name" in job_dict:
+            job_dict["platform"] = {
+                "provider": job_dict["provider_name"],
+                "device": job_dict["device_name"],
+            }
+        if "provider_name" not in job_dict or "device_name" not in job_dict:
+            plat = job_dict.get("platform", {})
+            job_dict.setdefault("provider_name", plat.get("provider"))
+            job_dict.setdefault("device_name", plat.get("device"))
+        # Backward compatibility for older job records: drop deprecated fields if present
+        job_dict.pop("suite_metric", None)
+        job_dict.pop("score_metric", None)
+        job_dict.pop("suite_weight", None)
         return MetriqGymJob(**job_dict)
 
     def __str__(self) -> str:
         rows: list[list[str | None]] = [
             ["suite_id", self.suite_id],
+            ["suite_name", self.suite_name],
             ["id", self.id],
             ["job_type", self.job_type.value],
             ["params", pprint.pformat(self.params)],
             ["provider_name", self.provider_name],
             ["device_name", self.device_name],
+            ["platform", pprint.pformat(self.platform)],
             ["provider_job_ids", pprint.pformat(self.data["provider_job_ids"])],
             ["dispatch_time", self.dispatch_time.isoformat()],
             ["app_version", self.app_version],
+            ["runtime_seconds", str(self.runtime_seconds)],
             ["result_data", pprint.pformat(self.result_data)],
         ]
         return tabulate(rows, tablefmt="fancy_grid")

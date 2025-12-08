@@ -7,14 +7,27 @@ sys.path.insert(0, os.path.abspath("../../../"))
 
 
 project = "metriq-gym"
-copyright = "2024, Unitary Foundation"
+copyright = "2020-2025, Unitary Foundation"
 author = "Unitary Foundation"
 release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.napoleon", "sphinx.ext.autodoc", "myst_nb"]
+extensions = [
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "myst_nb",
+]
+autosummary_generate = True
+
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": False,
+    "show-inheritance": True,
+}
+autodoc_member_order = "bysource"
 nb_execution_mode = "off"  # display existing output without running
 
 templates_path = ["_templates"]

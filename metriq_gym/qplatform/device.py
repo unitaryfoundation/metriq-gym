@@ -10,6 +10,7 @@ from qiskit.transpiler import CouplingMap
 from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
+from metriq_gym.origin.device import OriginDevice, get_origin_connectivity
 from metriq_gym.quantinuum.device import QuantinuumDevice
 
 
@@ -24,8 +25,16 @@ def _(device: QuantinuumDevice) -> str:
     device_name = device.profile.device_id
 
     df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    row = df.loc[df["device_name"] == device_name].iloc[0]
+    matching_rows = df.loc[df["device_name"] == device_name]
 
+    if matching_rows.empty:
+        available_devices = df["device_name"].tolist()
+        raise ValueError(
+            f"Device '{device_name}' not found in Quantinuum device list. "
+            f"Available devices: {available_devices}"
+        )
+
+    row = matching_rows.iloc[0]
     backend_info = row["backend_info"]
     return backend_info.version
 
@@ -58,9 +67,14 @@ def _(device: QiskitBackend) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: BraketDevice) -> rx.PyGraph:
+    if device._provider_name == "Amazon Braket":
+        device_topology = nx.complete_graph(device.num_qubits)
+    else:
+        device_topology = device._device.topology_graph.to_undirected()
+
     return cast(
         rx.PyGraph,
-        rx.networkx_converter(nx.Graph(device._device.topology_graph.to_undirected())),
+        rx.networkx_converter(nx.Graph(device_topology)),
     )
 
 
@@ -82,7 +96,16 @@ def _(device: QuantinuumDevice) -> rx.PyGraph:
     device_name = device.profile.device_id
 
     df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    row = df.loc[df["device_name"] == device_name].iloc[0]
+    matching_rows = df.loc[df["device_name"] == device_name]
+
+    if matching_rows.empty:
+        available_devices = df["device_name"].tolist()
+        raise ValueError(
+            f"Device '{device_name}' not found in Quantinuum device list. "
+            f"Available devices: {available_devices}"
+        )
+
+    row = matching_rows.iloc[0]
 
     arch = row["backend_info"].architecture
     num_qubits = len(arch.nodes)
@@ -100,7 +123,57 @@ def _(device: QuantinuumDevice) -> rx.PyGraph:
         g.add_nodes_from(range(num_qubits))
         # arch.edges contains Node objects; map them to indices
         node_index = {node: i for i, node in enumerate(arch.nodes)}
-        g.add_edges_from(
-            [(node_index[a], node_index[b], None) for (a, b) in arch.edges]
-        )
+        g.add_edges_from([(node_index[a], node_index[b], None) for (a, b) in arch.edges])
         return g
+
+
+@connectivity_graph.register
+def _(device: OriginDevice) -> rx.PyGraph:
+    num_qubits = device.num_qubits
+    if not isinstance(num_qubits, int):
+        raise NotImplementedError(
+            "Origin device does not report a qubit count for connectivity graph"
+        )
+
+    if getattr(device.profile, "simulator", False):
+        return rx.generators.complete_graph(num_qubits)
+
+    available_qubits, edges = get_origin_connectivity(device)
+    graph = rx.PyGraph()
+    graph.add_nodes_from(available_qubits)
+    node_index = {node: i for i, node in enumerate(available_qubits)}
+    graph.add_edges_from([(node_index[a], node_index[b], None) for (a, b) in edges])
+    return graph
+
+
+def normalized_metadata(device: QuantumDevice) -> dict:
+    """Return a minimal, normalized subset of device metadata.
+
+    Includes only the following keys when available:
+    - simulator: bool
+    - version: str
+    - num_qubits: int
+    """
+    meta: dict = {}
+    try:
+        simulator = getattr(getattr(device, "profile", object()), "simulator", None)
+        if isinstance(simulator, bool):
+            meta["simulator"] = simulator
+    except Exception:
+        pass
+
+    try:
+        n = getattr(device, "num_qubits", None)
+        if isinstance(n, int):
+            meta["num_qubits"] = n
+    except Exception:
+        pass
+
+    try:
+        ver = version(device)
+        if isinstance(ver, str) and ver:
+            meta["version"] = ver
+    except Exception:
+        pass
+
+    return meta

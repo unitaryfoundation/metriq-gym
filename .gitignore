@@ -41,6 +41,7 @@ docs/_build/
 .env
 .venv
 .python-version
+*.egg-info/
 
 # mypy
 .mypy_cache/

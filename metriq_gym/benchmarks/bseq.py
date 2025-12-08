@@ -6,17 +6,20 @@ the CHSH inequality. The violation of this inequality indicates successful entan
 """
 
 from dataclasses import dataclass
-
+from typing import TYPE_CHECKING
 import networkx as nx
 import rustworkx as rx
 import numpy as np
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
 
 from qiskit import QuantumCircuit
 from qiskit.result import marginal_counts, sampled_expectation_value
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.helpers.graph_helpers import (
     GraphColoring,
@@ -24,11 +27,19 @@ from metriq_gym.helpers.graph_helpers import (
     largest_connected_size,
 )
 from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.resource_estimation import CircuitBatch
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 class BSEQResult(BenchmarkResult):
     largest_connected_size: int
-    fraction_connected: float
+    fraction_connected: float = Field(...)
+
+    def compute_score(self) -> float | None:
+        return self.largest_connected_size
 
 
 @dataclass
@@ -99,7 +110,7 @@ def generate_chsh_circuit_sets(coloring: GraphColoring) -> list[QuantumCircuit]:
     return exp_sets
 
 
-def chsh_subgraph(coloring: GraphColoring, counts: list[MeasCount]) -> rx.PyGraph:
+def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGraph:
     """Constructs a subgraph of qubit pairs that violate the CHSH inequality.
 
     Args:
@@ -143,16 +154,29 @@ def chsh_subgraph(coloring: GraphColoring, counts: list[MeasCount]) -> rx.PyGrap
 class BSEQ(Benchmark):
     """Benchmark class for BSEQ (Bell state effective qubits) experiments."""
 
-    def dispatch_handler(self, device: QuantumDevice) -> BSEQData:
-        """Runs the benchmark and returns job metadata."""
-        shots = self.params.shots
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[list[QuantumCircuit]], GraphColoring, nx.Graph]:
+        """Shared circuit construction logic.
 
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuit_sets, coloring, topology_graph).
+        """
         topology_graph = connectivity_graph(device)
         coloring = device_graph_coloring(topology_graph)
-        trans_exp_sets = generate_chsh_circuit_sets(coloring)
+        circuit_sets = generate_chsh_circuit_sets(coloring)
+        return circuit_sets, coloring, topology_graph
+
+    def dispatch_handler(self, device: "QuantumDevice") -> BSEQData:
+        """Runs the benchmark and returns job metadata."""
+        shots = self.params.shots
+        circuit_sets, coloring, topology_graph = self._build_circuits(device)
 
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
-            device.run(circ_set, shots=shots) for circ_set in trans_exp_sets
+            device.run(circ_set, shots=shots) for circ_set in circuit_sets
         ]
 
         provider_job_ids = [
@@ -176,18 +200,29 @@ class BSEQ(Benchmark):
     def poll_handler(
         self,
         job_data: BSEQData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> BSEQResult:
         """Poll and calculate largest connected component."""
         if not job_data.coloring:
             raise ValueError("Coloring data is required for BSEQ benchmark.")
 
-        if isinstance(job_data.coloring, dict):
-            job_data.coloring = GraphColoring.from_dict(job_data.coloring)
-        good_graph = chsh_subgraph(job_data.coloring, flatten_counts(result_data))
+        coloring = job_data.coloring
+        if isinstance(coloring, dict):
+            coloring = GraphColoring.from_dict(coloring)
+        good_graph = chsh_subgraph(coloring, flatten_counts(result_data))
         lcs = largest_connected_size(good_graph)
         return BSEQResult(
             largest_connected_size=lcs,
-            fraction_connected=lcs / job_data.coloring.num_nodes,
+            fraction_connected=lcs / coloring.num_nodes,
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        circuit_sets, _, _ = self._build_circuits(device)
+        return [
+            CircuitBatch(circuits=circuit_group, shots=self.params.shots)
+            for circuit_group in circuit_sets
+        ]

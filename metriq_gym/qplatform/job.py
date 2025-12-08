@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import singledispatch
-from typing import Optional
+from typing import Iterable
 
 from qbraid import QuantumJob
 from qbraid.runtime import QiskitJob, AzureQuantumJob, BraketQuantumTask
@@ -38,12 +38,26 @@ def _(quantum_job: BraketQuantumTask) -> float:
     ).total_seconds()
 
 
+def total_execution_time(quantum_jobs: Iterable[QuantumJob]) -> float | None:
+    """Sum execution time for completed jobs, skipping jobs that do not report it."""
+    total = None
+    for qjob in quantum_jobs:
+        if qjob.status() != JobStatus.COMPLETED:
+            continue
+        try:
+            t = execution_time(qjob)
+        except (NotImplementedError, ValueError):
+            continue
+        total = t if total is None else total + t
+    return total
+
+
 @dataclass
 class JobStatusInfo:
     """Provider agnostic job status information."""
 
     status: JobStatus
-    queue_position: Optional[int] = None
+    queue_position: int | None = None
 
 
 def extract_status_info(quantum_job: QuantumJob, supports_queue_position: bool) -> JobStatusInfo:

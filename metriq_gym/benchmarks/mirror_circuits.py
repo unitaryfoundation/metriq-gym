@@ -12,15 +12,30 @@ from enum import StrEnum
 
 import rustworkx as rx
 import numpy as np
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+from rustworkx.generators import path_graph
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, CZGate
-from qiskit.quantum_info import random_clifford, random_pauli, Statevector
+from qiskit.quantum_info import random_clifford, random_pauli
+from qiskit.quantum_info import Clifford, Pauli
 from numpy import random
+from typing import Sequence
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from pydantic import Field
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
+
+from typing import TYPE_CHECKING
+
+from metriq_gym.resource_estimation import CircuitBatch
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
 class TwoQubitGateType(StrEnum):
@@ -29,9 +44,12 @@ class TwoQubitGateType(StrEnum):
 
 
 class MirrorCircuitsResult(BenchmarkResult):
-    success_probability: float
-    polarization: float
+    success_probability: BenchmarkScore = Field(...)
+    polarization: BenchmarkScore = Field(...)
     binary_success: bool
+
+    def compute_score(self) -> float | None:
+        return self.values.get("polarization")
 
 
 @dataclass
@@ -128,6 +146,12 @@ def create_subgraph_from_qubits(
                 subgraph.add_edge(i, j, None)
 
     return subgraph
+
+
+def working_graph(width: int) -> rx.PyGraph:
+    """Return the connectivity graph used to synthesize mirror circuits."""
+
+    return path_graph(width)
 
 
 def random_paulis(
@@ -306,6 +330,60 @@ def random_cliffords(
     return qc
 
 
+def pauli_from_layer(pauli_layer: QuantumCircuit) -> Pauli:
+    """
+    Convert a "middle_pauli" layer (only I/X/Y/Z per qubit) to a qiskit Pauli.
+    """
+    n = pauli_layer.num_qubits
+    per_qubit = ["I"] * n  # default all identity
+
+    for instr, qargs, _ in pauli_layer.data:
+        name = instr.name.lower()
+        if name in ("barrier", "delay", "measure"):
+            continue  # middle layer shouldn't have these, but be permissive
+        if len(qargs) != 1:
+            raise ValueError(f"Non-1q op '{instr.name}' found in middle_pauli layer.")
+        # Get the circuit's index for this qubit (portable across Terra versions)
+        q = pauli_layer.find_bit(qargs[0]).index
+        if name in ("x", "y", "z"):
+            per_qubit[q] = name.upper()
+        elif name in ("id", "i"):
+            per_qubit[q] = "I"
+        else:
+            raise ValueError(f"Non-Pauli op '{instr.name}' found in middle_pauli layer.")
+
+    label = "".join(per_qubit[::-1])
+    return Pauli(label)
+
+
+def expected_bitstring_without_simulation(
+    initial_clifford_layer: QuantumCircuit,
+    forward_layers: Sequence[QuantumCircuit],
+    middle_pauli: QuantumCircuit,
+) -> str:
+    n = initial_clifford_layer.num_qubits
+
+    fwd = initial_clifford_layer.copy()
+    for lyr in forward_layers:
+        fwd.compose(lyr, inplace=True)
+    c_fwd = Clifford(fwd)
+
+    P_mid = pauli_from_layer(middle_pauli)
+    P_conj = P_mid.evolve(c_fwd)
+
+    bits_little_endian = ["1" if P_conj.x[i] else "0" for i in range(n)]
+    # Qiskit counts use MSB-left bitstring formatting, so reverse the little-endian bits.
+    return "".join(bits_little_endian[::-1])
+
+
+def assert_forward_is_clifford(initial_clifford_layer, forward_layers):
+    fwd = initial_clifford_layer.copy()
+    for lyr in forward_layers:
+        fwd.compose(lyr, inplace=True)
+    # Raises if the circuit contains non-Clifford ops/angles
+    Clifford(fwd)
+
+
 def generate_mirror_circuit(
     num_layers: int,
     two_qubit_gate_prob: float,
@@ -354,11 +432,13 @@ def generate_mirror_circuit(
 
     initial_clifford_layer = random_single_cliffords(connectivity_graph, random_state, seed)
     qc.compose(initial_clifford_layer, inplace=True)
+    qc.barrier()
 
     forward_layers = []
     for layer_idx in range(num_layers):
         pauli_layer = random_paulis(connectivity_graph, random_state)
         qc.compose(pauli_layer, inplace=True)
+        qc.barrier()
         forward_layers.append(pauli_layer)
 
         selected_edges = edge_grab(two_qubit_gate_prob, connectivity_graph, random_state)
@@ -367,38 +447,51 @@ def generate_mirror_circuit(
             selected_edges, random_state, two_qubit_gate_name, layer_seed
         )
         qc.compose(clifford_layer, inplace=True)
+        qc.barrier()
         forward_layers.append(clifford_layer)
+
+    assert_forward_is_clifford(initial_clifford_layer, forward_layers)
 
     middle_pauli = random_paulis(connectivity_graph, random_state)
     qc.compose(middle_pauli, inplace=True)
+    qc.barrier()
 
     for layer in reversed(forward_layers):
         qc.compose(layer.inverse(), inplace=True)
+        qc.barrier()
 
     qc.compose(initial_clifford_layer.inverse(), inplace=True)
+    qc.barrier()
 
     qc.measure_all()
 
     sim_circuit = qc.copy()
     sim_circuit.remove_final_measurements()
 
-    try:
-        statevector = Statevector(sim_circuit)
-        probabilities = statevector.probabilities()
-        most_likely_state = np.argmax(probabilities)
-        expected_bitstring = format(most_likely_state, f"0{num_qubits}b")
-    except Exception:
-        expected_bitstring = "0" * num_qubits
+    expected_bitstring = expected_bitstring_without_simulation(
+        initial_clifford_layer=initial_clifford_layer,
+        forward_layers=forward_layers,
+        middle_pauli=middle_pauli,
+    )
 
     return qc, expected_bitstring
 
 
 class MirrorCircuits(Benchmark):
-    def dispatch_handler(self, device: QuantumDevice) -> MirrorCircuitsData:
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[QuantumCircuit], list[str], int]:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuits, expected_bitstrings, actual_width).
+        """
         num_layers = self.params.num_layers
         two_qubit_gate_prob = self.params.two_qubit_gate_prob
         two_qubit_gate_name = self.params.two_qubit_gate_name
-        shots = self.params.shots
         num_circuits = self.params.num_circuits
         seed = self.params.seed
         target_width = getattr(self.params, "width", None)
@@ -406,20 +499,27 @@ class MirrorCircuits(Benchmark):
             target_width = None
         topology_graph = connectivity_graph(device)
 
+        available_qubits = len(topology_graph.node_indices())
+
+        if available_qubits < 2:
+            raise ValueError("Mirror circuits benchmark requires a device with at least two qubits")
+
         # Select subset of qubits if width is specified
         if target_width is not None:
-            max_width = len(topology_graph.node_indices())
-            if target_width > max_width:
+            if target_width < 2:
                 raise ValueError(
-                    f"Requested width {target_width} exceeds device capacity {max_width}"
+                    f"Requested width {target_width} is too small; mirror circuits require at least two qubits"
+                )
+            if target_width > available_qubits:
+                raise ValueError(
+                    f"Requested width {target_width} exceeds device capacity {available_qubits}"
                 )
 
-            selected_qubits = select_optimal_qubit_subset(topology_graph, target_width)
-            working_graph = create_subgraph_from_qubits(topology_graph, selected_qubits)
-            actual_width = len(selected_qubits)
+            actual_width = target_width
         else:
-            working_graph = topology_graph
-            actual_width = len(topology_graph.node_indices())
+            actual_width = available_qubits
+
+        working_graph_conn = working_graph(actual_width)
 
         circuits = []
         expected_bitstrings = []
@@ -429,56 +529,77 @@ class MirrorCircuits(Benchmark):
             circuit, expected_bitstring = generate_mirror_circuit(
                 num_layers=num_layers,
                 two_qubit_gate_prob=two_qubit_gate_prob,
-                connectivity_graph=working_graph,
+                connectivity_graph=working_graph_conn,
                 two_qubit_gate_name=two_qubit_gate_name,
                 seed=circuit_seed,
             )
             circuits.append(circuit)
             expected_bitstrings.append(expected_bitstring)
 
+        return circuits, expected_bitstrings, actual_width
+
+    def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
+        circuits, expected_bitstrings, actual_width = self._build_circuits(device)
+
         return MirrorCircuitsData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=shots),
-            num_layers=num_layers,
-            two_qubit_gate_prob=two_qubit_gate_prob,
-            two_qubit_gate_name=two_qubit_gate_name,
-            shots=shots,
+            quantum_job=device.run(circuits, shots=self.params.shots),
+            num_layers=self.params.num_layers,
+            two_qubit_gate_prob=self.params.two_qubit_gate_prob,
+            two_qubit_gate_name=self.params.two_qubit_gate_name,
+            shots=self.params.shots,
             num_qubits=actual_width,
-            num_circuits=num_circuits,
-            seed=seed,
+            num_circuits=self.params.num_circuits,
+            seed=self.params.seed,
             expected_bitstrings=expected_bitstrings,
         )
 
     def poll_handler(
         self,
         job_data: MirrorCircuitsData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> MirrorCircuitsResult:
         counts_list = flatten_counts(result_data)
 
         if job_data.num_qubits == 0:
             raise ValueError("Mirror circuits benchmark requires at least 1 qubit")
 
-        success_probability = []
+        # --- Pool counts across circuits ---
+        successes_total = 0
+        shots_total = 0
         for counts, expected_bitstring in zip(counts_list, job_data.expected_bitstrings):
-            success_probability.append(
-                counts.get(expected_bitstring, 0) / sum(counts.values())
-                if sum(counts.values()) > 0
-                else 0.0
-            )
-
-        final_success_probability = np.mean(success_probability) if success_probability else 0.0
+            shots = sum(counts.values())
+            shots_total += shots
+            successes_total += counts.get(expected_bitstring, 0)
+        if shots_total == 0:
+            final_success_probability = 0.0
+            final_success_prob_err = 0.0
+        else:
+            s = successes_total / shots_total
+            final_success_probability = s
+            final_success_prob_err = np.sqrt(s * (1.0 - s) / shots_total)  # binomial SE
 
         w = job_data.num_qubits
         baseline = 1.0 / (2**w)
         polarization = (
             (final_success_probability - baseline) / (1.0 - baseline)
-            if (1.0 - baseline) > 0
+            if ((1.0 - baseline) > 0) and ((final_success_probability - baseline) > 0)
             else 0.0
         )
+        polarization_err = final_success_prob_err / (1.0 - baseline) if polarization > 0 else 0.0
 
         return MirrorCircuitsResult(
-            success_probability=final_success_probability,
-            polarization=polarization,
+            success_probability=BenchmarkScore(
+                value=final_success_probability,
+                uncertainty=final_success_prob_err,
+            ),
+            polarization=BenchmarkScore(
+                value=polarization,
+                uncertainty=polarization_err,
+            ),
             binary_success=bool(polarization >= POLARIZATION_THRESHOLD),
         )
+
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
+        circuits, _, _ = self._build_circuits(device)
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]

@@ -4,12 +4,20 @@ from dataclasses import dataclass
 from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 from qiskit.circuit.library import unitary_overlap
+from typing import TYPE_CHECKING
 
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
-
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+)
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.resource_estimation import CircuitBatch
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 @dataclass
@@ -18,7 +26,10 @@ class QMLKernelData(BenchmarkData):
 
 
 class QMLKernelResult(BenchmarkResult):
-    accuracy_score: float
+    accuracy_score: BenchmarkScore
+
+    def compute_score(self) -> float | None:
+        return self.accuracy_score.value
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:
@@ -67,27 +78,45 @@ def create_inner_product_circuit(num_qubits: int, seed: int = 0) -> QuantumCircu
     return inner_prod.assign_parameters(param_vec)
 
 
-def calculate_accuracy_score(num_qubits: int, count_results: MeasCount) -> float:
+def calculate_accuracy_score(num_qubits: int, count_results: "MeasCount") -> list[float]:
     expected_state = "0" * num_qubits
-    return count_results.get(expected_state, 0) / sum(count_results.values())
+    accuracy_score = count_results.get(expected_state, 0) / sum(count_results.values())
+    return [
+        accuracy_score,
+        np.sqrt(accuracy_score * (1 - accuracy_score) / sum(count_results.values())),
+    ]
 
 
 class QMLKernel(Benchmark):
-    def dispatch_handler(self, device: QuantumDevice) -> QMLKernelData:
-        return QMLKernelData.from_quantum_job(
-            device.run(
-                create_inner_product_circuit(self.params.num_qubits), shots=self.params.shots
-            )
-        )
+    def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            The QML kernel inner product circuit.
+        """
+        return create_inner_product_circuit(self.params.num_qubits)
+
+    def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
+        circuit = self._build_circuits(device)
+        return QMLKernelData.from_quantum_job(device.run(circuit, shots=self.params.shots))
 
     def poll_handler(
         self,
         job_data: QMLKernelData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> QMLKernelResult:
+        metrics = calculate_accuracy_score(self.params.num_qubits, flatten_counts(result_data)[0])
         return QMLKernelResult(
-            accuracy_score=calculate_accuracy_score(
-                self.params.num_qubits, flatten_counts(result_data)[0]
+            accuracy_score=BenchmarkScore(
+                value=metrics[0],
+                uncertainty=metrics[1],
             )
         )
+
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
+        circuit = self._build_circuits(device)
+        return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]

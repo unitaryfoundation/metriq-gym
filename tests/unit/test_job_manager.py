@@ -205,7 +205,11 @@ def test_job_app_version_serialization_and_export():
     loaded_job = MetriqGymJob.deserialize(serialized)
     assert loaded_job.app_version == expected_version
 
-    exporter = JsonExporter(loaded_job, BenchmarkResult())
+    class _EmptyResult(BenchmarkResult):
+        def compute_score(self):
+            return None
+
+    exporter = JsonExporter(loaded_job, _EmptyResult())
     export_dict = exporter.as_dict()
     assert export_dict["app_version"] == expected_version
 

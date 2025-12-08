@@ -6,18 +6,20 @@ Getting started
 
 To install ``metriq-gym`` run ::
 
-    pip install metriq-gym  
+    pip install metriq-gym
 
 
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
 
-   API-doc <api.rst>
-   User Guide <user_guide.rst>
+   Quickstart <quickstart>
+   CLI Workflows <cli_workflows>
+   Developer Guide <developer_guide>
+   OriginQ Guide <originq>
+   API Reference <api.rst>
    End-to-End Tutorial <end_to_end_tutorial>
-   Adding a new benchmark <adding_new_benchmark.rst>
-
+   Adding a New Benchmark <adding_new_benchmark.rst>
 
 
 Indices and tables

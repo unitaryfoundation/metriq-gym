@@ -14,7 +14,7 @@ from metriq_gym.benchmarks.mirror_circuits import (
     MirrorCircuitsData,
     MirrorCircuitsResult,
 )
-from metriq_gym.benchmarks.wormhole import Wormhole, WormholeData, WormholeResult
+from metriq_gym.benchmarks.wit import WIT, WITData, WITResult
 from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData, QEDCResult
 from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData, LinearRampQAOAResult
 
@@ -24,7 +24,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.QML_KERNEL: QMLKernel,
     JobType.QUANTUM_VOLUME: QuantumVolume,
     JobType.MIRROR_CIRCUITS: MirrorCircuits,
-    JobType.WORMHOLE: Wormhole,
+    JobType.WIT: WIT,
     JobType.BERNSTEIN_VAZIRANI: QEDCBenchmark,
     JobType.PHASE_ESTIMATION: QEDCBenchmark,
     JobType.HIDDEN_SHIFT: QEDCBenchmark,
@@ -38,7 +38,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.QML_KERNEL: QMLKernelData,
     JobType.QUANTUM_VOLUME: QuantumVolumeData,
     JobType.MIRROR_CIRCUITS: MirrorCircuitsData,
-    JobType.WORMHOLE: WormholeData,
+    JobType.WIT: WITData,
     JobType.BERNSTEIN_VAZIRANI: QEDCData,
     JobType.PHASE_ESTIMATION: QEDCData,
     JobType.HIDDEN_SHIFT: QEDCData,
@@ -52,26 +52,12 @@ BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.QML_KERNEL: QMLKernelResult,
     JobType.QUANTUM_VOLUME: QuantumVolumeResult,
     JobType.MIRROR_CIRCUITS: MirrorCircuitsResult,
-    JobType.WORMHOLE: WormholeResult,
+    JobType.WIT: WITResult,
     JobType.BERNSTEIN_VAZIRANI: QEDCResult,
     JobType.PHASE_ESTIMATION: QEDCResult,
     JobType.HIDDEN_SHIFT: QEDCResult,
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCResult,
     JobType.LR_QAOA: LinearRampQAOAResult,
-}
-
-SCHEMA_MAPPING = {
-    JobType.BSEQ: "bseq.schema.json",
-    JobType.CLOPS: "clops.schema.json",
-    JobType.QML_KERNEL: "qml_kernel.schema.json",
-    JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
-    JobType.MIRROR_CIRCUITS: "mirror_circuits.schema.json",
-    JobType.WORMHOLE: "wormhole.schema.json",
-    JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.schema.json",
-    JobType.PHASE_ESTIMATION: "phase_estimation.schema.json",
-    JobType.HIDDEN_SHIFT: "hidden_shift.schema.json",
-    JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.schema.json",
-    JobType.LR_QAOA: "lr_qaoa.schema.json",
 }
 
 

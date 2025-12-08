@@ -5,14 +5,17 @@ Tests the version and connectivity_graph functions for different device types
 using mocked qBraid device objects.
 """
 
-import pytest
+import types
 from unittest.mock import Mock
+
+import pytest
 import rustworkx as rx
 import networkx as nx
 from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
 
 from metriq_gym.local.provider import LocalProvider
-from metriq_gym.qplatform.device import version, connectivity_graph
+from metriq_gym.origin.device import OriginDevice
+from metriq_gym.qplatform.device import version, connectivity_graph, normalized_metadata
 
 
 class MockCouplingMap:
@@ -43,6 +46,75 @@ class MockTopologyGraph:
         return nx.Graph(edges)
 
 
+def _make_origin_device(
+    *, high=None, available=None, edges=None, double_edges=None, num_qubits=102
+):
+    class StubDoubleInfo:
+        def __init__(self, qubits):
+            self._qubits = qubits
+
+        def get_qubits(self):
+            return self._qubits
+
+    class StubChipInfo:
+        def __init__(self):
+            self._high = [] if high is None else list(high)
+            self._available = [] if available is None else list(available)
+            self._edges = [] if edges is None else list(edges)
+
+        def high_frequency_qubits(self):
+            return self._high
+
+        def available_qubits(self):
+            return self._available
+
+        def get_chip_topology(self, nodes):
+            if not nodes:
+                return self._edges
+            return [edge for edge in self._edges if edge[0] in nodes and edge[1] in nodes]
+
+        def double_qubits_info(self):
+            if not double_edges:
+                return []
+            return [StubDoubleInfo(pair) for pair in double_edges]
+
+        def qubits_num(self):
+            return num_qubits
+
+        def get_basic_gates(self):
+            return ["x", "cx"]
+
+    class StubBackend:
+        def __init__(self):
+            self._chip_info = StubChipInfo()
+
+        def chip_info(self):
+            return self._chip_info
+
+    backend = StubBackend()
+    device = OriginDevice(
+        provider=types.SimpleNamespace(),
+        device_id="WK_C102_400",
+        backend=backend,
+        backend_name="WK_C102_400",
+    )
+    return device
+
+
+def _make_origin_simulator_device(backend_name: str = "full_amplitude"):
+    class SimulatorBackend:
+        def chip_info(self):
+            raise RuntimeError("chip_info only available on hardware backends")
+
+    device = OriginDevice(
+        provider=types.SimpleNamespace(),
+        device_id=backend_name,
+        backend=SimulatorBackend(),
+        backend_name=backend_name,
+    )
+    return device
+
+
 @pytest.fixture
 def mock_qiskit_backend():
     device = Mock(spec=QiskitBackend)
@@ -59,6 +131,8 @@ def mock_braket_device():
     mock_internal_device = Mock()
     mock_internal_device.topology_graph = MockTopologyGraph(num_qubits=8)
     device._device = mock_internal_device
+    device._provider_name = "Rigetti"
+    device.num_qubits = 8
     return device
 
 
@@ -116,6 +190,19 @@ class TestConnectivityGraphFunction:
         assert result.num_edges() == 8
         mock_braket_device._device.topology_graph.to_undirected.assert_called_once()
 
+    def test_braket_device_all_to_all_connectivity_amazon_braket_simulators(self):
+        mock_num_qubits = 4
+        device = Mock(spec=BraketDevice)
+        device._provider_name = "Amazon Braket"
+        device.num_qubits = mock_num_qubits
+
+        result = connectivity_graph(device)
+        assert isinstance(result, rx.PyGraph)
+        assert result.num_nodes() == mock_num_qubits
+        # All-to-all connectivity: n*(n-1)/2 edges
+        expected_edges = mock_num_qubits * (mock_num_qubits - 1) // 2
+        assert result.num_edges() == expected_edges
+
     def test_azure_device_connectivity(self, mock_azure_device):
         result = connectivity_graph(mock_azure_device)
         assert isinstance(result, rx.PyGraph)
@@ -124,6 +211,27 @@ class TestConnectivityGraphFunction:
         assert result.num_nodes() == expected_nodes
         assert result.num_edges() == expected_edges
         mock_azure_device.metadata.assert_called_once()
+
+    def test_origin_simulator_connectivity_uses_complete_graph(self):
+        device = _make_origin_simulator_device()
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == device.num_qubits == 35
+        expected_edges = 35 * 34 // 2
+        assert graph.num_edges() == expected_edges
+
+    def test_origin_device_connectivity_uses_available_qubits_without_edges(self):
+        device = _make_origin_device(
+            high=[7, 9, 11], available=[7, 9, 11, 15], edges=[], num_qubits=12
+        )
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == 4
+        assert graph.num_edges() == 0
 
     def test_unsupported_device_connectivity_raises(self, mock_unsupported_device):
         with pytest.raises(NotImplementedError) as exc_info:
@@ -188,7 +296,43 @@ class TestEdgeCases:
         result = connectivity_graph(device)
         assert isinstance(result, rx.PyGraph)
         assert result.num_nodes() == 0
-        assert result.num_edges() == 0
+
+
+class TestNormalizedMetadata:
+    """Tests for normalized_metadata() helper."""
+
+    def test_qiskit_backend_metadata(self, mock_qiskit_backend):
+        meta = normalized_metadata(mock_qiskit_backend)
+        # Only version is known for this mock; simulator/num_qubits absent
+        assert isinstance(meta, dict)
+        assert meta.get("version") == "1.6.73"
+        assert "num_qubits" not in meta
+        assert "simulator" not in meta
+
+    def test_local_aer_device_metadata(self):
+        provider = LocalProvider()
+        device = provider.get_device("aer_simulator")
+        meta = normalized_metadata(device)
+        # Local Aer should report simulator flag and a version string; num_qubits should be int
+        assert isinstance(meta, dict)
+        assert meta.get("simulator") is True
+        assert isinstance(meta.get("version"), str) and meta["version"]
+        assert isinstance(meta.get("num_qubits"), int)
+
+    def test_braket_device_metadata(self, mock_braket_device):
+        meta = normalized_metadata(mock_braket_device)
+        # For mocked Braket device, only num_qubits is set
+        assert isinstance(meta, dict)
+        assert meta.get("num_qubits") == 8
+        assert "version" not in meta
+        assert "simulator" not in meta
+
+    def test_unsupported_device_metadata(self):
+        class Unsupported:
+            pass
+
+        meta = normalized_metadata(Unsupported())
+        assert meta == {}
 
     def test_azure_device_zero_qubits(self):
         device = Mock(spec=AzureQuantumDevice)
@@ -205,6 +349,8 @@ class TestEdgeCases:
         topology.to_undirected = Mock(return_value=nx.Graph())
         mock_internal_device.topology_graph = topology
         device._device = mock_internal_device
+        device._provider_name = "Rigetti"  # non-all-to-all device
+        device.num_qubits = 0
 
         result = connectivity_graph(device)
         assert isinstance(result, rx.PyGraph)

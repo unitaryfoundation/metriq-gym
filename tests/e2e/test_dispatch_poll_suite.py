@@ -1,3 +1,4 @@
+import json
 import subprocess
 from pathlib import Path
 
@@ -61,7 +62,31 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path):
     assert "Suite Results" in poll_cmd.stdout, "Suite results not found in poll output"
 
     # ------------------------------------------------------
-    # 3. Delete the suite to clean up
+    # 3. Dry-run suite upload (single PR, no network/git)
+    # ------------------------------------------------------
+    upload_out = subprocess.run(
+        [
+            "mgym",
+            "suite",
+            "upload",
+            suite_id,
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "DRY-RUN:" in upload_out.stdout
+    # Parse path from DRY-RUN summary and validate file has multiple records
+    line = next(line for line in upload_out.stdout.splitlines() if line.startswith("DRY-RUN:"))
+    path_part = line.split(" at ", 1)[1].split(";", 1)[0].strip()
+
+    with open(path_part) as f:
+        arr = json.load(f)
+        assert isinstance(arr, list) and len(arr) >= 2
+
+    # ------------------------------------------------------
+    # 4. Delete the suite to clean up
     # ------------------------------------------------------
     delete_cmd = subprocess.run(
         ["mgym", "suite", "delete", suite_id],
