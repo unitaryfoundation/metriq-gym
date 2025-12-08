@@ -33,12 +33,12 @@ QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
 
 """
 Type: QEDC_Metrics
-Description: 
-    The structure for all returned QED-C circuit metrics. 
+Description:
+    The structure for all returned QED-C circuit metrics.
     The first key represents the number of qubits for the group of circuits.
-    The second key represents the unique identifier for a circuit in the group. 
-        - This may be a secret string for Bernstein-Vazirani, theta value for Phase-Estimation, 
-          and so on. Benchmark specific documentation can be found in QED-C's 
+    The second key represents the unique identifier for a circuit in the group.
+        - This may be a secret string for Bernstein-Vazirani, theta value for Phase-Estimation,
+          and so on. Benchmark specific documentation can be found in QED-C's
           QC-App-Oriented-Benchmarks repository.
     The third key represents the metric being stored.
 Example for Bernstein-Vazirani:
@@ -201,6 +201,8 @@ def get_circuits_and_metrics(
     benchmark = import_benchmark_module(benchmark_name)
 
     # Call the QED-C submodule to get the circuits and creation information.
+    if "shots" in params:
+        params["num_shots"] = params.pop("shots")
     circuits, circuit_metrics = benchmark.run(
         **params,
         api="qiskit",
