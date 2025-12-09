@@ -11,7 +11,12 @@ EXAMPLES_DIR = PROJECT_ROOT / "metriq_gym" / "schemas" / "examples"
 
 def get_example_files():
     """Return all .json files in the examples directory."""
-    return list(EXAMPLES_DIR.glob("*.json"))
+    # Exclude LR QAOA native layout which won't work with the fully connected
+    # AER simulator device. Other LR QAOA examples should sufficiently exercise
+    # that benchmark.
+    excluded_files = {"lr_qaoa_native_layout.example.json"}
+    res = [f for f in EXAMPLES_DIR.glob("*.json") if f.name not in excluded_files]
+    return res
 
 
 def get_min_value(prop_schema: dict):
