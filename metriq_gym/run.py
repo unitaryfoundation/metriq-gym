@@ -25,7 +25,7 @@ from metriq_gym.resource_estimation import (
 )
 from metriq_gym.suite_parser import parse_suite_file
 from metriq_gym.exceptions import QBraidSetupError
-from metriq_gym.upload_paths import default_upload_dir, job_filename
+from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_filename
 
 
 if TYPE_CHECKING:
@@ -491,7 +491,6 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     commit_message = getattr(args, "commit_message", None) or pr_title
     clone_dir = getattr(args, "clone_dir", None)
     dry_run = getattr(args, "dry_run", False)
-    suite_filename = job_filename(jobs[0])
 
     try:
         from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
@@ -506,7 +505,7 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             pr_body=pr_body,
             clone_dir=clone_dir,
             payload=records,
-            filename=suite_filename,
+            filename=suite_filename(suite_name, jobs[0].dispatch_time),
             append=False,
             dry_run=dry_run,
         )

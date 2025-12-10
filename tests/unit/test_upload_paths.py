@@ -8,6 +8,7 @@ from metriq_gym.upload_paths import (
     job_filename,
     minor_series_label,
     path_component,
+    suite_filename,
 )
 
 
@@ -44,5 +45,14 @@ def test_job_filename_structure():
     name = job_filename(job, rand_bytes=1)  # deterministic length
     assert re.match(
         r"2024-01-02_03-04-05_qml_kernel_[0-9a-f]{2}\.json",
+        name,
+    )
+
+
+def test_suite_filename_structure():
+    when = datetime(2024, 6, 7, 8, 9, 10)
+    name = suite_filename("My Suite", when, rand_bytes=1)
+    assert re.match(
+        r"2024-06-07_08-09-10_my_suite_[0-9a-f]{2}\.json",
         name,
     )

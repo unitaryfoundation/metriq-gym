@@ -47,3 +47,13 @@ def job_filename(job: "MetriqGymJob", *, rand_bytes: int = 3) -> str:
     ts = dispatch_time.strftime("%Y-%m-%d_%H-%M-%S")
     rand = secrets.token_hex(rand_bytes)
     return f"{ts}_{job_label}_{rand}.json"
+
+
+def suite_filename(
+    suite_name: str | None, dispatch_time: datetime | None = None, *, rand_bytes: int = 3
+) -> str:
+    """Construct a filename for suite uploads using suite name and dispatch time."""
+    suite_label = path_component(suite_name or "suite")
+    ts = (dispatch_time or datetime.now()).strftime("%Y-%m-%d_%H-%M-%S")
+    rand = secrets.token_hex(rand_bytes)
+    return f"{ts}_{suite_label}_{rand}.json"

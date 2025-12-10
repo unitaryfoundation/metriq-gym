@@ -106,7 +106,7 @@ Defaults:
 
 * Target repo: ``unitaryfoundation/metriq-data`` (override with ``--repo`` or ``MGYM_UPLOAD_REPO``)
 * Directory: ``metriq-gym/v<major.minor>/<provider>/<device>`` (override with ``--dir`` or ``MGYM_UPLOAD_DIR``)
-* Uploads create one JSON file per run using names like ``<timestamp>_<benchmark>_<short-random>.json``.
+* Uploads create one JSON file per run using names like ``<timestamp>_<benchmark>_<short-random>.json`` (suite uploads use the suite name).
 
 Estimate Job Resources
 ======================
