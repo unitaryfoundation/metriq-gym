@@ -1,8 +1,11 @@
 import json
+import re
 import subprocess
 from pathlib import Path
 
 import pytest
+from metriq_gym import __version__ as mgym_version
+from metriq_gym.upload_paths import minor_series_label
 
 
 @pytest.fixture(autouse=True)
@@ -90,9 +93,21 @@ def test_dispatch_and_poll_single_job_on_local_simulator(tmp_path):
     line = next(line for line in dry_out.stdout.splitlines() if line.startswith("DRY-RUN:"))
     # format: DRY-RUN: wrote mock file at <path>; would create branch ...
     path_part = line.split(" at ", 1)[1].split(";", 1)[0].strip()
-    with open(path_part) as f:
+    path = Path(path_part)
+    assert path.name.endswith(".json"), "Upload should write a JSON file"
+
+    expected_version_dir = minor_series_label(mgym_version)
+    # .../metriq-gym/<version>/local/aer_simulator/<timestamp>_<job_type>_<rand>.json
+    assert path.parent.name == "aer_simulator"
+    assert path.parent.parent.name == "local"
+    assert path.parent.parent.parent.name == expected_version_dir
+    assert path.parent.parent.parent.parent.name == "metriq-gym"
+
+    assert re.match(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_qml_kernel_[0-9a-f]{6}\.json", path.name)
+
+    with open(path) as f:
         arr = json.load(f)
-        assert isinstance(arr, list) and arr, "results.json should contain a non-empty JSON array"
+        assert isinstance(arr, list) and arr, "Upload payload should be a non-empty JSON array"
 
     # ------------------------------------------------------------------
     # 5. Clean up
