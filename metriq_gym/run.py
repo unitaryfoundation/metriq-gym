@@ -11,8 +11,6 @@ from dotenv import load_dotenv
 
 from tabulate import tabulate
 from typing import Any, TYPE_CHECKING, Optional
-import re
-
 from metriq_gym import __version__
 from metriq_gym.cli import list_jobs, parse_arguments, prompt_for_job
 from metriq_gym.job_manager import JobManager, MetriqGymJob
@@ -27,6 +25,7 @@ from metriq_gym.resource_estimation import (
 )
 from metriq_gym.suite_parser import parse_suite_file
 from metriq_gym.exceptions import QBraidSetupError
+from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_filename
 
 
 if TYPE_CHECKING:
@@ -324,21 +323,6 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     export_job_result(args, metriq_job, result)
 
 
-def _minor_series_label(version: str) -> str:
-    """Return a label like 'vX.Y' from a version string.
-
-    Examples:
-        0.3.1      -> v0.3
-        0.3.1.dev0 -> v0.3
-        1.0        -> v1.0
-        unknown    -> vunknown
-    """
-    m = re.match(r"(\d+)\.(\d+)", version)
-    if m:
-        return f"v{m.group(1)}.{m.group(2)}"
-    return f"v{version}"
-
-
 def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Upload a job's results to a GitHub repo by opening a Pull Request."""
     metriq_job = prompt_for_job(args, job_manager)
@@ -356,11 +340,12 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         return
 
     base_branch = getattr(args, "base_branch", "main")
-    # Default upload dir: <root>/v<major.minor>/<provider>
     provider = metriq_job.provider_name
-    root_dir = "metriq-gym"
-    default_upload_dir = f"{root_dir}/{_minor_series_label(__version__)}/{provider}"
-    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir
+    device = metriq_job.device_name
+    # Default upload dir: <root>/v<major.minor>/<provider>/<device>
+    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir(
+        __version__, provider, device
+    )
     branch_name = getattr(args, "branch_name", None)
     pr_title = getattr(args, "pr_title", None)
     pr_body = getattr(args, "pr_body", None)
@@ -368,7 +353,7 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     clone_dir = getattr(args, "clone_dir", None)
     dry_run = getattr(args, "dry_run", False)
 
-    # Append this job's record to results.json in the target directory
+    # Write this job's record to a dedicated JSON file in the target directory
     from metriq_gym.exporters.dict_exporter import DictExporter
 
     record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
@@ -386,8 +371,8 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             pr_body=pr_body,
             clone_dir=clone_dir,
             payload=record,
-            filename="results.json",
-            append=True,
+            filename=job_filename(metriq_job, payload=record),
+            append=False,
             dry_run=dry_run,
         )
         if url.startswith("DRY-RUN:"):
@@ -492,9 +477,9 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     suite_name = jobs[0].suite_name
 
     base_branch = getattr(args, "base_branch", "main")
-    root_dir = "metriq-gym"
-    default_upload_dir = f"{root_dir}/{_minor_series_label(__version__)}/{provider}"
-    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir
+    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir(
+        __version__, provider, device
+    )
     branch_name = getattr(args, "branch_name", None) or f"mgym/upload-suite-{args.suite_id}"
     # Prefer suite name; avoid falling back to suite_id in the title
     suite_label = suite_name or "unnamed"
@@ -520,8 +505,8 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             pr_body=pr_body,
             clone_dir=clone_dir,
             payload=records,
-            filename="results.json",
-            append=True,
+            filename=suite_filename(suite_name, jobs[0].dispatch_time, payload=records),
+            append=False,
             dry_run=dry_run,
         )
         if url.startswith("DRY-RUN:"):

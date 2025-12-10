@@ -259,7 +259,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.environ.get("MGYM_UPLOAD_DIR"),
         help=(
             "Directory in the repo to place the JSON file "
-            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>)"
+            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>/<device>)"
         ),
     )
     job_upload.add_argument(
@@ -335,7 +335,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.environ.get("MGYM_UPLOAD_DIR"),
         help=(
             "Directory in the repo to place the JSON file "
-            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>)"
+            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>/<device>)"
         ),
     )
     suite_upload.add_argument(
