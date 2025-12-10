@@ -371,7 +371,7 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             pr_body=pr_body,
             clone_dir=clone_dir,
             payload=record,
-            filename=job_filename(metriq_job),
+            filename=job_filename(metriq_job, payload=record),
             append=False,
             dry_run=dry_run,
         )
@@ -505,7 +505,7 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             pr_body=pr_body,
             clone_dir=clone_dir,
             payload=records,
-            filename=suite_filename(suite_name, jobs[0].dispatch_time),
+            filename=suite_filename(suite_name, jobs[0].dispatch_time, payload=records),
             append=False,
             dry_run=dry_run,
         )

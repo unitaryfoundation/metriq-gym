@@ -1,9 +1,10 @@
 """Helpers for constructing deterministic upload paths and filenames."""
 
 import re
-import secrets
+import json
+import hashlib
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from metriq_gym.job_manager import MetriqGymJob
@@ -39,20 +40,28 @@ def default_upload_dir(version: str, provider: str, device: str) -> str:
     return f"metriq-gym/{minor_series_label(version)}/{provider_part}/{device_part}"
 
 
-def job_filename(job: "MetriqGymJob", *, rand_bytes: int = 3) -> str:
+def _hash_label(payload: Any) -> str:
+    """Short, stable hash label for a payload."""
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()[:8]
+
+
+def job_filename(job: "MetriqGymJob", *, payload: Any = None) -> str:
     dispatch_time = job.dispatch_time or datetime.now()
 
     job_label = path_component(str(job.job_type.value))
+    hash_label = _hash_label(payload) if payload is not None else None
     ts = dispatch_time.strftime("%Y-%m-%d_%H-%M-%S")
-    rand = secrets.token_hex(rand_bytes)
-    return f"{ts}_{job_label}_{rand}.json"
+    suffix = f"_{hash_label}" if hash_label else ""
+    return f"{ts}_{job_label}{suffix}.json"
 
 
 def suite_filename(
-    suite_name: str | None, dispatch_time: datetime | None = None, *, rand_bytes: int = 3
+    suite_name: str | None, dispatch_time: datetime | None = None, *, payload: Any = None
 ) -> str:
     """Construct a filename for suite uploads using suite name and dispatch time."""
     suite_label = path_component(suite_name or "suite")
+    hash_label = _hash_label(payload) if payload is not None else None
     ts = (dispatch_time or datetime.now()).strftime("%Y-%m-%d_%H-%M-%S")
-    rand = secrets.token_hex(rand_bytes)
-    return f"{ts}_{suite_label}_{rand}.json"
+    suffix = f"_{hash_label}" if hash_label else ""
+    return f"{ts}_{suite_label}{suffix}.json"

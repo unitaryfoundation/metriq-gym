@@ -97,13 +97,13 @@ def test_dispatch_and_poll_single_job_on_local_simulator(tmp_path):
     assert path.name.endswith(".json"), "Upload should write a JSON file"
 
     expected_version_dir = minor_series_label(mgym_version)
-    # .../metriq-gym/<version>/local/aer_simulator/<timestamp>_<job_type>_<rand>.json
+    # .../metriq-gym/<version>/local/aer_simulator/<timestamp>_<job_type>_<hash>.json
     assert path.parent.name == "aer_simulator"
     assert path.parent.parent.name == "local"
     assert path.parent.parent.parent.name == expected_version_dir
     assert path.parent.parent.parent.parent.name == "metriq-gym"
 
-    assert re.match(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_qml_kernel_[0-9a-f]{6}\.json", path.name)
+    assert re.match(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_qml_kernel_[0-9a-f]{8}\.json", path.name)
 
     with open(path) as f:
         arr = json.load(f)

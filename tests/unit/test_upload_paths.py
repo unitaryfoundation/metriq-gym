@@ -42,17 +42,19 @@ def test_job_filename_structure():
         dispatch_time=when,
     )
 
-    name = job_filename(job, rand_bytes=1)  # deterministic length
+    payload = {"results": {"values": {"score": 0.5}}}
+    name = job_filename(job, payload=payload)
     assert re.match(
-        r"2024-01-02_03-04-05_qml_kernel_[0-9a-f]{2}\.json",
+        r"2024-01-02_03-04-05_qml_kernel_[0-9a-f]{8}\.json",
         name,
     )
 
 
 def test_suite_filename_structure():
     when = datetime(2024, 6, 7, 8, 9, 10)
-    name = suite_filename("My Suite", when, rand_bytes=1)
+    payload = [{"results": {"values": {"score": 1}}}]
+    name = suite_filename("My Suite", when, payload=payload)
     assert re.match(
-        r"2024-06-07_08-09-10_my_suite_[0-9a-f]{2}\.json",
+        r"2024-06-07_08-09-10_my_suite_[0-9a-f]{8}\.json",
         name,
     )
