@@ -29,8 +29,7 @@ def path_component(value: str | None) -> str:
     """Normalize provider/device names for safe path segments."""
     cleaned = (value or "unknown").strip().lower()
     cleaned = re.sub(r"[^a-z0-9._-]+", "_", cleaned)
-    cleaned = cleaned.strip("_")
-    return cleaned or "unknown"
+    return cleaned.strip("_")
 
 
 def default_upload_dir(version: str, provider: str, device: str) -> str:
