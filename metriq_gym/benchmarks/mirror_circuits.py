@@ -166,13 +166,8 @@ def working_graph(width: int) -> rx.PyGraph:
     # Add reverse edges to make the graph explicitly symmetric
     # This ensures edge_list() contains edges in both directions,
     # matching the behavior of symmetric device coupling maps
-    edges_to_add = []
     for u, v in graph.edge_list():
-        edges_to_add.append((v, u, None))
-
-    for edge in edges_to_add:
-        graph.add_edge(edge[0], edge[1], edge[2])
-
+        graph.add_edge(v, u, None)
     return graph
 
 
