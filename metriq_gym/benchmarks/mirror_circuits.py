@@ -48,8 +48,8 @@ class MirrorCircuitsResult(BenchmarkResult):
     polarization: BenchmarkScore = Field(...)
     binary_success: bool
 
-    def compute_score(self) -> float | None:
-        return self.values.get("polarization")
+    def compute_score(self) -> BenchmarkScore:
+        return self.polarization
 
 
 @dataclass
