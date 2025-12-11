@@ -2,6 +2,7 @@ from unittest.mock import patch
 import pytest
 import json
 import logging
+from pathlib import Path
 from datetime import datetime
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from tests.unit.test_schema_validator import FAKE_BENCHMARK_NAME, FakeJobType
@@ -14,10 +15,9 @@ def patch_job_type_enum():
 
 
 @pytest.fixture
-def job_manager(tmpdir):
-    jobs_file = tmpdir.join("test_jobs.jsonl")
-    JobManager.jobs_file = str(jobs_file)
-    return JobManager()
+def job_manager(tmp_path):
+    jobs_file = tmp_path / "test_jobs.jsonl"
+    return JobManager(jobs_file=jobs_file)
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def test_add_job(job_manager, sample_job):
 
 def test_load_jobs_with_existing_data(job_manager, sample_job):
     job_manager.add_job(sample_job)
-    new_job_manager = JobManager()
+    new_job_manager = JobManager(jobs_file=job_manager.jobs_file)
     jobs = new_job_manager.get_jobs()
     assert len(jobs) == 1
     assert jobs[0].id == sample_job.id
@@ -57,8 +57,8 @@ def test_mixed_valid_and_invalid_jobs_are_handled_gracefully(tmpdir, caplog):
     Test that JobManager loads only valid jobs from a file containing a mix
     of valid and invalid entries, and logs appropriate warnings for each invalid entry.
     """
-    jobs_file = tmpdir.join("mixed_jobs.jsonl")
-    JobManager.jobs_file = str(jobs_file)
+    jobs_file = Path(tmpdir.join("mixed_jobs.jsonl"))
+    manager = JobManager(jobs_file=jobs_file)
 
     # Prepare job entries
     valid_job_1 = MetriqGymJob(
@@ -126,7 +126,7 @@ def test_mixed_valid_and_invalid_jobs_are_handled_gracefully(tmpdir, caplog):
         f.write(valid_job_2.serialize() + "\n")  # Valid
 
     caplog.set_level(logging.WARNING)
-    manager = JobManager()
+    manager = JobManager(jobs_file=jobs_file)
     loaded_jobs = manager.get_jobs()
 
     # Expect only 2 valid jobs to be loaded
@@ -152,14 +152,13 @@ def test_mixed_valid_and_invalid_jobs_are_handled_gracefully(tmpdir, caplog):
 
 def test_load_jobs_with_only_invalid_entries(tmpdir, caplog):
     """Test that a warning is logged when no valid jobs are found."""
-    jobs_file = tmpdir.join("test_jobs_only_invalid.jsonl")
-    JobManager.jobs_file = str(jobs_file)
+    jobs_file = Path(tmpdir.join("test_jobs_only_invalid.jsonl"))
 
     with open(jobs_file, "w") as f:
         f.write('{"bad": "entry", "no_required_fields": true}\n')  # Invalid entry
 
     caplog.set_level(logging.WARNING)
-    job_manager = JobManager()
+    job_manager = JobManager(jobs_file=jobs_file)
     jobs = job_manager.get_jobs()
 
     assert jobs == []  # No valid jobs
@@ -169,10 +168,8 @@ def test_load_jobs_with_only_invalid_entries(tmpdir, caplog):
 
 def test_load_jobs_file_missing(tmpdir):
     """Test that no errors occur and jobs list is empty when jobs file is missing."""
-    missing_file_path = tmpdir.join("non_existent.jsonl")
-    JobManager.jobs_file = str(missing_file_path)
-
-    job_manager = JobManager()
+    missing_file_path = Path(tmpdir.join("non_existent.jsonl"))
+    job_manager = JobManager(jobs_file=missing_file_path)
     assert job_manager.get_jobs() == []
 
 
@@ -219,7 +216,7 @@ def test_update_job_success(job_manager, sample_job):
     job_manager.add_job(sample_job)
     sample_job.provider_name = UPDATED_VALUE
     job_manager.update_job(sample_job)
-    new_manager = JobManager()
+    new_manager = JobManager(jobs_file=job_manager.jobs_file)
     job = new_manager.get_job(sample_job.id)
     assert job.provider_name == UPDATED_VALUE
 
@@ -234,10 +231,10 @@ def test_update_job_disk_write_failure(monkeypatch, job_manager, sample_job, cap
     sample_job.provider_name = "fail_provider"
 
     # Simulate disk write failure
-    def fail_open(*args, **kwargs):
+    def fail_rewrite():
         raise OSError("Disk write error")
 
-    monkeypatch.setattr("builtins.open", fail_open)
+    monkeypatch.setattr(job_manager, "_rewrite_jobs_file", fail_rewrite)
     caplog.set_level(logging.ERROR)
-    job_manager.update_job(sample_job)
-    assert any("Failed to update job with id" in r.message for r in caplog.records)
+    with pytest.raises(OSError):
+        job_manager.update_job(sample_job)
