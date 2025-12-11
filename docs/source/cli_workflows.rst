@@ -30,6 +30,12 @@ Export a job result to JSON with:
 
 This creates ``<METRIQ_GYM_JOB_ID>.json`` in the current working directory by default.
 
+Local Job Database (volatile)
+=============================
+
+The CLI keeps a local ``localdb.jsonl`` (path controlled by ``MGYM_LOCAL_DB_DIR``; otherwise a platform-specific user data dir) to track jobs between ``dispatch`` and ``poll``. 
+⚠️ This file is meant as a transient queue, not archival storage. If you want to retain history, back it up yourself or export results regularly.
+
 Using Local Simulators
 ======================
 
