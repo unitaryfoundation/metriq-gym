@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath("../../../"))
 
 
 project = "metriq-gym"
-copyright = "2024, Unitary Foundation"
+copyright = "2020-2025, Unitary Foundation"
 author = "Unitary Foundation"
 release = "0.1.0"
 

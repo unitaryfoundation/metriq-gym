@@ -155,6 +155,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
         help="Export results to JSON file (optional)",
     )
+    suite_poll.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Ignore locally cached results and refetch provider job data",
+    )
 
     suite_view = suite_subparsers.add_parser("view", help="View suite jobs")
     suite_view.add_argument(
@@ -191,6 +196,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Backend to use",
     )
 
+    job_estimate = job_subparsers.add_parser("estimate", help="Estimate resources for a job")
+    job_estimate.add_argument("config", type=str, help="Path to job configuration file.")
+    job_estimate.add_argument(
+        "-p",
+        "--provider",
+        type=str,
+        help="String identifier for backend provider service",
+    )
+    job_estimate.add_argument(
+        "-d",
+        "--device",
+        type=str,
+        help="Backend to use (optional for resource estimation)",
+    )
+
     job_poll = job_subparsers.add_parser("poll", help="Poll job")
     job_view = job_subparsers.add_parser("view", help="View job")
     job_delete = job_subparsers.add_parser("delete", help="Delete job")
@@ -209,6 +229,11 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default=argparse.SUPPRESS,
         help="Export results to JSON file (optional)",
+    )
+    job_poll.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Ignore locally cached results and refetch provider job data",
     )
 
     job_upload.add_argument(
@@ -234,7 +259,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.environ.get("MGYM_UPLOAD_DIR"),
         help=(
             "Directory in the repo to place the JSON file "
-            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>)"
+            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>/<device>)"
         ),
     )
     job_upload.add_argument(
@@ -310,7 +335,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.environ.get("MGYM_UPLOAD_DIR"),
         help=(
             "Directory in the repo to place the JSON file "
-            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>)"
+            "(env: MGYM_UPLOAD_DIR; default: metriq-gym/v<major.minor>/<provider>/<device>)"
         ),
     )
     suite_upload.add_argument(

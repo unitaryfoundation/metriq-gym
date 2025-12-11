@@ -8,7 +8,6 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
-    MetricDirection,
 )
 
 
@@ -44,39 +43,46 @@ class TestBenchmarkData:
 
 
 class TestBenchmarkDirections:
-    def test_direction_required_for_float_metric(self):
+    def test_no_direction_required_for_float_metric(self):
         class R(BenchmarkResult):
-            score: float  # missing direction
+            numeric_value: float
 
-        with pytest.raises(ValueError):
-            R(score=1.23)
+            def compute_score(self):
+                return None
 
-    def test_direction_required_for_benchmarkscore_metric(self):
+        # Should not raise
+        r = R(numeric_value=1.23)
+        assert r.values["numeric_value"] == pytest.approx(1.23)
+
+    def test_no_direction_required_for_benchmarkscore_metric(self):
         class R(BenchmarkResult):
-            metric: BenchmarkScore  # missing direction
+            metric: BenchmarkScore
 
-        with pytest.raises(ValueError):
-            R(metric=BenchmarkScore(value=0.5, uncertainty=0.1))
+            def compute_score(self):
+                return None
 
-    def test_direction_not_required_for_bool(self):
+        # Should not raise
+        r = R(metric=BenchmarkScore(value=0.5, uncertainty=0.1))
+        assert r.values["metric"] == pytest.approx(0.5)
+
+    def test_bool_metric_allowed(self):
         class R(BenchmarkResult):
             ok: bool
 
+            def compute_score(self):
+                return float(self.ok)
+
         r = R(ok=True)
-        assert r.directions == {}
+        assert r.values["ok"] == 1.0
 
-    def test_directions_from_field_metadata_float(self):
+    def test_fields_with_metadata_are_ok(self):
         class R(BenchmarkResult):
-            accuracy: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+            accuracy: float = Field(...)
+            latency: BenchmarkScore = Field(...)
 
-        r = R(accuracy=0.99)
-        assert r.directions == {"accuracy": "higher"}
+            def compute_score(self):
+                return None
 
-    def test_directions_from_field_metadata_benchmarkscore(self):
-        class R(BenchmarkResult):
-            latency: BenchmarkScore = Field(
-                ..., json_schema_extra={"direction": MetricDirection.LOWER}
-            )
-
-        r = R(latency=BenchmarkScore(value=12.0, uncertainty=0.5))
-        assert r.directions == {"latency": "lower"}
+        r = R(accuracy=0.99, latency=BenchmarkScore(value=12.0, uncertainty=0.5))
+        assert r.values["accuracy"] == pytest.approx(0.99)
+        assert r.uncertainties["latency"] == pytest.approx(0.5)

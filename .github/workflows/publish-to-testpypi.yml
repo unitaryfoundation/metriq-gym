@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repo + submodules
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0  # fetch full history and tags for versioning

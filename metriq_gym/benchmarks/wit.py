@@ -24,18 +24,17 @@ from typing import TYPE_CHECKING
 
 from qiskit import QuantumCircuit
 from metriq_gym.helpers.task_helpers import flatten_counts
-from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
-    MetricDirection,
 )
 from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
     binary_expectation_value,
 )
+from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -236,9 +235,10 @@ def wit_circuit(num_qubits: int) -> QuantumCircuit:
 
 
 class WITResult(BenchmarkResult):
-    expectation_value: BenchmarkScore = Field(
-        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
-    )
+    expectation_value: BenchmarkScore
+
+    def compute_score(self) -> float | None:
+        return self.expectation_value.value
 
 
 @dataclass
@@ -247,10 +247,20 @@ class WITData(BenchmarkData):
 
 
 class WIT(Benchmark):
+    def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            The WIT quantum circuit.
+        """
+        return wit_circuit(self.params.num_qubits)
+
     def dispatch_handler(self, device: "QuantumDevice") -> WITData:
-        return WITData.from_quantum_job(
-            device.run(wit_circuit(self.params.num_qubits), shots=self.params.shots)
-        )
+        circuit = self._build_circuits(device)
+        return WITData.from_quantum_job(device.run(circuit, shots=self.params.shots))
 
     def poll_handler(
         self,
@@ -265,3 +275,10 @@ class WIT(Benchmark):
                 uncertainty=binary_expectation_stddev(self.params.shots, counts),
             )
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        circuit = self._build_circuits(device)
+        return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]

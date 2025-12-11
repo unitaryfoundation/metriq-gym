@@ -31,7 +31,6 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.helpers.graph_helpers import (
@@ -40,6 +39,7 @@ from metriq_gym.helpers.graph_helpers import (
     largest_connected_size,
 )
 from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -48,7 +48,10 @@ if TYPE_CHECKING:
 
 class BSEQResult(BenchmarkResult):
     largest_connected_size: int
-    fraction_connected: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    fraction_connected: float = Field(...)
+
+    def compute_score(self) -> float | None:
+        return self.largest_connected_size
 
 
 @dataclass
@@ -163,16 +166,29 @@ def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGr
 class BSEQ(Benchmark):
     """Benchmark class for BSEQ (Bell state effective qubits) experiments."""
 
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[list[QuantumCircuit]], GraphColoring, nx.Graph]:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuit_sets, coloring, topology_graph).
+        """
+        topology_graph = connectivity_graph(device)
+        coloring = device_graph_coloring(topology_graph)
+        circuit_sets = generate_chsh_circuit_sets(coloring)
+        return circuit_sets, coloring, topology_graph
+
     def dispatch_handler(self, device: "QuantumDevice") -> BSEQData:
         """Runs the benchmark and returns job metadata."""
         shots = self.params.shots
-
-        topology_graph = connectivity_graph(device)
-        coloring = device_graph_coloring(topology_graph)
-        trans_exp_sets = generate_chsh_circuit_sets(coloring)
+        circuit_sets, coloring, topology_graph = self._build_circuits(device)
 
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
-            device.run(circ_set, shots=shots) for circ_set in trans_exp_sets
+            device.run(circ_set, shots=shots) for circ_set in circuit_sets
         ]
 
         provider_job_ids = [
@@ -203,11 +219,22 @@ class BSEQ(Benchmark):
         if not job_data.coloring:
             raise ValueError("Coloring data is required for BSEQ benchmark.")
 
-        if isinstance(job_data.coloring, dict):
-            job_data.coloring = GraphColoring.from_dict(job_data.coloring)
-        good_graph = chsh_subgraph(job_data.coloring, flatten_counts(result_data))
+        coloring = job_data.coloring
+        if isinstance(coloring, dict):
+            coloring = GraphColoring.from_dict(coloring)
+        good_graph = chsh_subgraph(coloring, flatten_counts(result_data))
         lcs = largest_connected_size(good_graph)
         return BSEQResult(
             largest_connected_size=lcs,
-            fraction_connected=lcs / job_data.coloring.num_nodes,
+            fraction_connected=lcs / coloring.num_nodes,
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        circuit_sets, _, _ = self._build_circuits(device)
+        return [
+            CircuitBatch(circuits=circuit_group, shots=self.params.shots)
+            for circuit_group in circuit_sets
+        ]

@@ -10,14 +10,13 @@ from qiskit import QuantumCircuit
 
 from metriq_gym.circuits import qiskit_random_circuit_sampling
 
-from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -37,11 +36,14 @@ class QuantumVolumeData(BenchmarkData):
 class QuantumVolumeResult(BenchmarkResult):
     num_qubits: int
     confidence_pass: bool
-    xeb: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
-    hog_prob: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    xeb: float
+    hog_prob: float
     hog_pass: bool
-    p_value: float = Field(..., json_schema_extra={"direction": MetricDirection.LOWER})
+    p_value: float
     trials: int
+
+    def compute_score(self) -> float | None:
+        return None
 
 
 def prepare_qv_circuits(n: int, num_trials: int) -> tuple[list[QuantumCircuit], list[list[float]]]:
@@ -204,19 +206,32 @@ def calc_stats(data: QuantumVolumeData, counts: list["MeasCount"]) -> AggregateS
 
 
 class QuantumVolume(Benchmark):
-    def dispatch_handler(self, device: "QuantumDevice") -> QuantumVolumeData:
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[QuantumCircuit], list[list[float]]]:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuits, ideal_probs).
+        """
         num_qubits = self.params.num_qubits
-        shots = self.params.shots
         trials = self.params.trials
         circuits, ideal_probs = prepare_qv_circuits(n=num_qubits, num_trials=trials)
+        return circuits, ideal_probs
+
+    def dispatch_handler(self, device: "QuantumDevice") -> QuantumVolumeData:
+        circuits, ideal_probs = self._build_circuits(device)
         return QuantumVolumeData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=shots),
-            num_qubits=num_qubits,
-            shots=shots,
-            depth=num_qubits,
+            quantum_job=device.run(circuits, shots=self.params.shots),
+            num_qubits=self.params.num_qubits,
+            shots=self.params.shots,
+            depth=self.params.num_qubits,
             confidence_level=self.params.confidence_level,
             ideal_probs=ideal_probs,
-            trials=trials,
+            trials=self.params.trials,
         )
 
     def poll_handler(
@@ -236,3 +251,10 @@ class QuantumVolume(Benchmark):
             p_value=stats.p_value,
             trials=stats.trials,
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list["CircuitBatch"]:
+        circuits, _ = self._build_circuits(device)
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]

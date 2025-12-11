@@ -14,10 +14,10 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    MetricDirection,
 )
 from metriq_gym.qplatform.job import execution_time
 from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -29,7 +29,10 @@ class ClopsData(BenchmarkData):
 
 
 class ClopsResult(BenchmarkResult):
-    clops_score: float = Field(..., json_schema_extra={"direction": MetricDirection.HIGHER})
+    clops_score: float = Field(...)
+
+    def compute_score(self) -> float | None:
+        return self.clops_score
 
 
 # adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::create_qubit_map
@@ -138,7 +141,15 @@ class Clops(Benchmark):
     https://arxiv.org/abs/2110.14108
     """
 
-    def dispatch_handler(self, device: "QuantumDevice") -> ClopsData:
+    def _build_circuits(self, device: "QuantumDevice") -> list[QuantumCircuit]:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            List of CLOPS circuits.
+        """
         topology_graph = connectivity_graph(device)
         num_qubits = device.num_qubits
         if num_qubits is None:
@@ -154,6 +165,10 @@ class Clops(Benchmark):
             topology_graph=topology_graph,
             total_qubits=num_qubits,
         )
+        return circuits
+
+    def dispatch_handler(self, device: "QuantumDevice") -> ClopsData:
+        circuits = self._build_circuits(device)
         return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
 
     def poll_handler(
@@ -166,3 +181,10 @@ class Clops(Benchmark):
             execution_time(quantum_job) for quantum_job in quantum_jobs
         )
         return ClopsResult(clops_score=clops_score)
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list["CircuitBatch"]:
+        circuits = self._build_circuits(device)
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]

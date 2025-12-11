@@ -22,15 +22,14 @@ from qiskit.circuit import ParameterVector
 from qiskit.circuit.library import unitary_overlap
 from typing import TYPE_CHECKING
 
-from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
-    MetricDirection,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -43,9 +42,10 @@ class QMLKernelData(BenchmarkData):
 
 
 class QMLKernelResult(BenchmarkResult):
-    accuracy_score: BenchmarkScore = Field(
-        ..., json_schema_extra={"direction": MetricDirection.HIGHER}
-    )
+    accuracy_score: BenchmarkScore
+
+    def compute_score(self) -> float | None:
+        return self.accuracy_score.value
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:
@@ -104,12 +104,20 @@ def calculate_accuracy_score(num_qubits: int, count_results: "MeasCount") -> lis
 
 
 class QMLKernel(Benchmark):
+    def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            The QML kernel inner product circuit.
+        """
+        return create_inner_product_circuit(self.params.num_qubits)
+
     def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
-        return QMLKernelData.from_quantum_job(
-            device.run(
-                create_inner_product_circuit(self.params.num_qubits), shots=self.params.shots
-            )
-        )
+        circuit = self._build_circuits(device)
+        return QMLKernelData.from_quantum_job(device.run(circuit, shots=self.params.shots))
 
     def poll_handler(
         self,
@@ -124,3 +132,7 @@ class QMLKernel(Benchmark):
                 uncertainty=metrics[1],
             )
         )
+
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
+        circuit = self._build_circuits(device)
+        return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]
