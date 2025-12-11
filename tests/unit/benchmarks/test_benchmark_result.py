@@ -22,7 +22,6 @@ def test_payload_includes_null_uncertainty_for_numeric_and_benchmarkscore(metriq
     num_payload = _DummyExporter(metriq_job, num_result).as_dict()
 
     assert num_payload["results"]["numeric_metric"] == pytest.approx(1.23)
-    assert num_payload["results"]["uncertainties"]["numeric_metric"] is None
     assert "score" not in num_payload["results"]
 
     # BenchmarkScore without uncertainty should also be None
@@ -34,4 +33,3 @@ def test_payload_includes_null_uncertainty_for_numeric_and_benchmarkscore(metriq
 
     assert bs_payload["results"]["expectation_value"]["value"] == pytest.approx(0.7)
     assert bs_payload["results"]["expectation_value"]["uncertainty"] is None
-    assert bs_payload["results"]["uncertainties"]["expectation_value"] is None

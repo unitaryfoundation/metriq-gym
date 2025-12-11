@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from metriq_gym.benchmarks.benchmark import BenchmarkResult, BenchmarkScore
+from metriq_gym.benchmarks.benchmark import BenchmarkResult
 from metriq_gym.job_manager import MetriqGymJob
 
 
@@ -23,19 +23,10 @@ class BaseExporter(ABC):
     def as_dict(self):
         # Preserve existing top-level fields.
         # For uploads/exports, include the full result payload (already contains score)
-        # and also surface scalar uncertainties for convenience.
         results_block = self.result.model_dump()
         if results_block.get("score") is None:
             results_block.pop("score", None)
-        result_uncertainties = dict(self.result.uncertainties or {})
-        score_val = getattr(self.result, "score", None)
-        if isinstance(score_val, BenchmarkScore):
-            results_block["score"] = score_val.model_dump()
-            result_uncertainties["score"] = score_val.uncertainty
-        elif score_val is not None:
-            raise TypeError("score must be a BenchmarkScore or None")
-        if result_uncertainties:
-            results_block["uncertainties"] = result_uncertainties
+        # Do not emit a separate uncertainties block; structured fields carry their own
         record = {
             "app_version": self.metriq_gym_job.app_version,
             "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),

@@ -62,7 +62,6 @@ def test_wit_result_exports_symmetric_results_and_uncertainties():
     payload = exporter.as_dict()
     assert payload["results"]["expectation_value"]["value"] == pytest.approx(0.5)
     assert payload["results"]["expectation_value"]["uncertainty"] == pytest.approx(0.05)
-    assert payload["results"]["uncertainties"]["expectation_value"] == pytest.approx(0.05)
     assert payload["platform"] == {"provider": "provider", "device": "device"}
     assert result.values == pytest.approx({"expectation_value": 0.5})
     assert result.uncertainties == pytest.approx({"expectation_value": 0.05})

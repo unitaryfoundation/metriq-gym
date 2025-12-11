@@ -16,4 +16,3 @@ def test_json_exporter_serializes_none_uncertainty_to_null(metriq_job, tmp_path)
 
     assert data["results"]["expectation_value"]["value"] == 0.42
     assert data["results"]["expectation_value"]["uncertainty"] is None
-    assert data["results"]["uncertainties"]["expectation_value"] is None
