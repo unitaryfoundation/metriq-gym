@@ -115,8 +115,8 @@ class JobManager:
     jobs: list[MetriqGymJob]
     jobs_file: Path
 
-    def __init__(self) -> None:
-        self.jobs_file = get_data_db_path()
+    def __init__(self, jobs_file: Path | str | None = None) -> None:
+        self.jobs_file = Path(jobs_file) if jobs_file is not None else get_data_db_path()
         # Track original lines (parsed jobs and raw skipped) to preserve order on rewrite.
         # Each entry is (line_number, kind, payload) where kind is "job" or "raw".
         self._line_entries: list[tuple[int, str, Any]] = []
