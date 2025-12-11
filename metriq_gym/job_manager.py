@@ -191,7 +191,12 @@ class JobManager:
             with open(self.jobs_file, "a") as file:
                 file.write(job.serialize() + "\n")
         except Exception as e:
-            logger.error(f"Failed to append job {job.id} to {self.jobs_file}: {e}")
+            self.jobs.pop()
+            self._line_entries.pop()
+            logger.error(
+                f"Failed to append job {job.id} to {self.jobs_file}: {e}. "
+                "Job was not persisted and has been removed from memory."
+            )
         return job.id
 
     def get_jobs(self) -> list[MetriqGymJob]:
@@ -250,7 +255,7 @@ class JobManager:
                         file.write(payload.serialize() + "\n")
                     else:
                         file.write(str(payload).strip() + "\n")
-            os.replace(temp_file, self.jobs_file)
+            Path.replace(Path(temp_file), self.jobs_file)
         except Exception as e:
             logger.error(f"Failed to rewrite jobs file {self.jobs_file}: {e}")
             if os.path.exists(temp_file):
@@ -262,7 +267,7 @@ class JobManager:
         """Create a timestamped backup of the current jobs file before rewrite."""
         if not self.jobs_file.exists():
             return None
-        ts = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        ts = datetime.now().strftime("%Y%m%d%H%M%S")
         backup_path = Path(f"{self.jobs_file}.{ts}.bak")
         try:
             shutil.copy2(self.jobs_file, backup_path)
