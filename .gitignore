@@ -33,6 +33,9 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+docs/build/
+docs/source/generated/
+docs/jupyter_execute/
 
 # Jupyter Notebook
 .ipynb_checkpoints

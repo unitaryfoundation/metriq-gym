@@ -1,3 +1,5 @@
+"""CLOPS (circuit layer operations per second) benchmark implementation."""
+
 import copy
 from dataclasses import dataclass
 
