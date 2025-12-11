@@ -7,7 +7,8 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def store_env(monkeypatch, tmp_path):
-    monkeypatch.setenv("MGR_LOCAL_JOB_DIR", str(tmp_path))
+    monkeypatch.setenv("MGYM_LOCAL_DB_DIR", str(tmp_path))
+    monkeypatch.setenv("MGYM_LOCAL_SIMULATOR_CACHE_DIR", str(tmp_path))
 
 
 @pytest.mark.e2e

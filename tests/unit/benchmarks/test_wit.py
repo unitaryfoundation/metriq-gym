@@ -60,8 +60,9 @@ def test_wit_result_exports_symmetric_results_and_uncertainties():
     exporter = _DummyExporter(job, result)
 
     payload = exporter.as_dict()
-    assert payload["results"]["values"] == {"expectation_value": pytest.approx(0.5)}
-    assert payload["results"]["uncertainties"] == {"expectation_value": pytest.approx(0.05)}
+    assert payload["results"]["expectation_value"]["value"] == pytest.approx(0.5)
+    assert payload["results"]["expectation_value"]["uncertainty"] == pytest.approx(0.05)
+    assert payload["results"]["uncertainties"]["expectation_value"] == pytest.approx(0.05)
     assert payload["platform"] == {"provider": "provider", "device": "device"}
     assert result.values == pytest.approx({"expectation_value": 0.5})
     assert result.uncertainties == pytest.approx({"expectation_value": 0.05})
@@ -73,12 +74,14 @@ def test_wit_result_includes_score_in_export():
     exporter = _DummyExporter(job, result)
 
     payload = exporter.as_dict()
-    assert payload["results"]["score"] == pytest.approx(0.5)
+    assert payload["results"]["score"]["value"] == pytest.approx(0.5)
+    assert payload["results"]["score"]["uncertainty"] == pytest.approx(0.05)
 
 
 def test_wit_result_score_properties():
     r = WITResult(expectation_value=BenchmarkScore(value=0.33, uncertainty=0.01))
-    assert r.score == pytest.approx(0.33)
+    assert r.score.value == pytest.approx(0.33)
+    assert r.score.uncertainty == pytest.approx(0.01)
 
 
 def test_missing_direction_no_longer_raises_validation_error():
@@ -86,7 +89,7 @@ def test_missing_direction_no_longer_raises_validation_error():
         metric: BenchmarkScore
 
         def compute_score(self):
-            return None
+            return self.metric
 
     r = DummyResult(metric=BenchmarkScore(value=1.0, uncertainty=0.0))
     assert r.values["metric"] == pytest.approx(1.0)
@@ -97,7 +100,7 @@ def test_metadata_is_optional_and_ignored_for_scoring():
         latency: BenchmarkScore = Field(...)
 
         def compute_score(self):
-            return None
+            return self.latency
 
     r = DummyResult2(latency=BenchmarkScore(value=12.3, uncertainty=0.5))
     assert r.values["latency"] == pytest.approx(12.3)

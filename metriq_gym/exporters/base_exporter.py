@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from metriq_gym.benchmarks.benchmark import BenchmarkResult
+from metriq_gym.benchmarks.benchmark import BenchmarkResult, BenchmarkScore
 from metriq_gym.job_manager import MetriqGymJob
 
 
@@ -22,16 +22,20 @@ class BaseExporter(ABC):
 
     def as_dict(self):
         # Preserve existing top-level fields.
-        results_block = {
-            "values": self.result.values,
-            "uncertainties": self.result.uncertainties if self.result.uncertainties else {},
-        }
-        # For single-job dispatches, also include the benchmark-declared score metric
-        # Include only the declared score metric (no implicit inference)
+        # For uploads/exports, include the full result payload (already contains score)
+        # and also surface scalar uncertainties for convenience.
+        results_block = self.result.model_dump()
+        if results_block.get("score") is None:
+            results_block.pop("score", None)
+        result_uncertainties = dict(self.result.uncertainties or {})
         score_val = getattr(self.result, "score", None)
-        if score_val is not None:
-            results_block["score"] = score_val
-
+        if isinstance(score_val, BenchmarkScore):
+            results_block["score"] = score_val.model_dump()
+            result_uncertainties["score"] = score_val.uncertainty
+        elif score_val is not None:
+            raise TypeError("score must be a BenchmarkScore or None")
+        if result_uncertainties:
+            results_block["uncertainties"] = result_uncertainties
         record = {
             "app_version": self.metriq_gym_job.app_version,
             "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),

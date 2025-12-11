@@ -42,7 +42,7 @@ def test_job_filename_structure():
         dispatch_time=when,
     )
 
-    payload = {"results": {"values": {"score": 0.5}}}
+    payload = {"results": {"score": {"value": 0.5, "uncertainty": None}}}
     name = job_filename(job, payload=payload)
     assert re.match(
         r"2024-01-02_03-04-05_qml_kernel_[0-9a-f]{8}\.json",
@@ -52,7 +52,7 @@ def test_job_filename_structure():
 
 def test_suite_filename_structure():
     when = datetime(2024, 6, 7, 8, 9, 10)
-    payload = [{"results": {"values": {"score": 1}}}]
+    payload = [{"results": {"score": {"value": 1, "uncertainty": None}}}]
     name = suite_filename("My Suite", when, payload=payload)
     assert re.match(
         r"2024-06-07_08-09-10_my_suite_[0-9a-f]{8}\.json",

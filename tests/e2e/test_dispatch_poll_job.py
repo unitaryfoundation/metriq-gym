@@ -10,7 +10,8 @@ from metriq_gym.upload_paths import minor_series_label
 
 @pytest.fixture(autouse=True)
 def store_env(monkeypatch, tmp_path):
-    monkeypatch.setenv("MGR_LOCAL_JOB_DIR", str(tmp_path))
+    monkeypatch.setenv("MGYM_LOCAL_DB_DIR", str(tmp_path))
+    monkeypatch.setenv("MGYM_LOCAL_SIMULATOR_CACHE_DIR", str(tmp_path))
 
 
 @pytest.mark.e2e
@@ -68,7 +69,7 @@ def test_dispatch_and_poll_single_job_on_local_simulator(tmp_path):
     assert outfile.exists(), "Poll did not write the expected JSON file"
 
     data = json.loads(outfile.read_text())
-    result = data["results"]["values"]["accuracy_score"]
+    result = data["results"]["accuracy_score"]["value"]
     assert result, "No results found in the JSON file"
     assert result == 1.0, "Expected accuracy score of 1.0 for the local simulator"
 

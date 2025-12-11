@@ -28,8 +28,8 @@ class QMLKernelData(BenchmarkData):
 class QMLKernelResult(BenchmarkResult):
     accuracy_score: BenchmarkScore
 
-    def compute_score(self) -> float | None:
-        return self.accuracy_score.value
+    def compute_score(self) -> BenchmarkScore:
+        return self.accuracy_score
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:
