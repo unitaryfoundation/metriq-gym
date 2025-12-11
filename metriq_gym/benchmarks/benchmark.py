@@ -64,7 +64,7 @@ class BenchmarkResult(BaseModel, ABC):
             if isinstance(value, BenchmarkScore):
                 u = value.uncertainty
                 yield name, float(value.value), (float(u) if u is not None else None)
-            if isinstance(value, (int, float)):
+            elif isinstance(value, (int, float)):
                 # Bare numeric metrics have unspecified uncertainty
                 yield name, float(value), None
 
