@@ -149,9 +149,9 @@ class TestMirrorCircuitGeneration:
         assert isinstance(graph, rx.PyGraph)
         assert len(graph.node_indices()) == width
 
-        # For a path graph with n nodes, there should be (n-1) edges
-        # But for a symmetric graph, each edge appears in both directions
-        # So we expect 2*(n-1) edges in the edge list
+        # For a path graph with n nodes, there should be (n-1) edges.
+        # However, in this implementation, both (u, v) and (v, u) are explicitly added as separate edges,
+        # so we expect 2*(n-1) edges in the edge list. This is not a property of undirected graphs in general.
         expected_edge_count = 2 * (width - 1)
         actual_edge_count = len(graph.edge_list())
         assert actual_edge_count == expected_edge_count, (
