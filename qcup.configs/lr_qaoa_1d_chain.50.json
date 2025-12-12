@@ -1,0 +1,12 @@
+{
+  "benchmark_name": "Linear Ramp QAOA",
+  "graph_type": "1D",
+  "num_qubits": 50,
+  "shots": 1000,
+  "trials": 10,
+  "confidence_level": 0.999,
+  "seed":123,
+  "qaoa_layers":[10],
+  "delta_beta":0.3,
+  "delta_gamma":0.6
+}
