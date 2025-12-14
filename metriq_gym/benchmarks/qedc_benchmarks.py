@@ -12,6 +12,7 @@ Result interpretation:
 
 Reference:
     - QED-C QC-App-Oriented-Benchmarks repository for algorithm-specific methodology.
+      https://github.com/SRI-International/QC-App-Oriented-Benchmarks
 """
 
 from dataclasses import dataclass

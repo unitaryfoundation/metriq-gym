@@ -12,9 +12,11 @@ Result interpretation:
           higher implies better performance.
         - binary_success: boolean indicating whether polarization exceeded 1/e.
 
-Reference:
+References:
     - Proctor et al., "Measuring the capabilities of quantum computers", Nature Physics 18, 75-79 (2022).
       https://www.nature.com/articles/s41567-021-01409-7
+    - Phys. Rev. Lett. 129, 150502 (2022).
+      https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.129.150502
 """
 
 from dataclasses import dataclass
