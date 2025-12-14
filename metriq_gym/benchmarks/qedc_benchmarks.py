@@ -1,9 +1,18 @@
-"""
-A general structure for dispatching and polling QED-C benchmarks.
-Credit to QED-C for implementing the benchmarks.
+"""QED-C application-oriented benchmark wrapper.
 
-The benchmarks generate N circuits for M qubits ranging from min_qubits to max_qubits.
-Each circuit is then run, and the metrics are computed.
+Summary:
+    Provides a generic dispatch/poll pipeline around the QED-C benchmark suite (Bernstein-
+    Vazirani, Phase Estimation, Hidden Shift, Quantum Fourier Transform) via the QC-App-
+    Oriented-Benchmarks submodule.
+
+Result interpretation:
+    Polling returns QEDCResult.circuit_metrics, a nested dictionary keyed by qubit count and
+    circuit identifier, populated with the fidelity or related metrics computed by the QED-C
+    analyser. Inspect the per-circuit entries to understand performance trends.
+
+Reference:
+    - QED-C QC-App-Oriented-Benchmarks repository for algorithm-specific methodology.
+      https://github.com/SRI-International/QC-App-Oriented-Benchmarks
 """
 
 from dataclasses import dataclass

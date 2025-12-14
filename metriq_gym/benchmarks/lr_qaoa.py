@@ -1,3 +1,22 @@
+"""Linear Ramp QAOA benchmark implementation.
+
+Summary:
+    Solves weighted Max-Cut instances with a linear-ramp parameter schedule and compares
+    results against classical optima to estimate approximation ratios and optimal sampling
+    probabilities.
+
+Result interpretation:
+    Polling returns LinearRampQAOAResult with metrics including:
+        - approx_ratio_mean / stddev: how close average costs are to the optimum.
+        - optimal_probability_mean / stddev: frequency of sampling an optimal bitstring.
+        - confidence_pass: boolean indicating whether results meet the configured confidence.
+    Higher approximation ratios and optimal probabilities reflect better QAOA performance.
+
+References:
+    - Wurtz and Love, arXiv:2106.15645 (Linear-ramp QAOA parameter schedule)
+    - arXiv:2405.09169 (Additional LR-QAOA methodology)
+"""
+
 import math
 import statistics
 import networkx as nx

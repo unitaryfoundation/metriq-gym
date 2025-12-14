@@ -1,13 +1,21 @@
-"""WIT (Wormhole-inspired teleportation) benchmark for the Metriq Gym
-(credit to Paul Nation for the original code for IBM devices).
+"""WIT (wormhole-inspired teleportation) benchmark implementation.
 
-The WIT benchmark is based on the following paper:
-    Towards Quantum Gravity in the Lab on Quantum Processors
-    Illya Shapoval, Vincent Paul Su, Wibe de Jong, Miro Urbanek, Brian Swingle
-    Quantum 7, 1138 (2023)
+Summary:
+    Runs a six- or seven-qubit teleportation-inspired circuit that mimics the protocol from
+    Shapoval et al. (2023) and reports a Pauli-Z expectation value with binomial uncertainty.
 
-A generalized version of the WIT benchmark software can also be found as a companion [software
-repository](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py) to the above paper.
+Result interpretation:
+    Polling returns WITResult.expectation_value as a BenchmarkScore:
+        - value: estimated Pauli-Z expectation (ideal teleportation trends toward +1).
+        - uncertainty: binomial standard deviation computed from the observed counts.
+    Compare value versus uncertainty to decide whether more shots are required or if noise is
+    degrading the teleportation fidelity.
+
+References:
+    - I. Shapoval et al., "Towards Quantum Gravity in the Lab on Quantum Processors", Quantum 7,
+      1138 (2023), arXiv:2205.14081.
+    - Companion script: https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py.
+    - Implementation lineage credited to Paul Nation (IBM Quantum).
 """
 
 import numpy as np
