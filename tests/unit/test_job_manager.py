@@ -203,8 +203,7 @@ def test_job_app_version_serialization_and_export():
     assert loaded_job.app_version == expected_version
 
     class _EmptyResult(BenchmarkResult):
-        def compute_score(self):
-            return None
+        pass
 
     exporter = JsonExporter(loaded_job, _EmptyResult())
     export_dict = exporter.as_dict()

@@ -237,8 +237,8 @@ def wit_circuit(num_qubits: int) -> QuantumCircuit:
 class WITResult(BenchmarkResult):
     expectation_value: BenchmarkScore
 
-    def compute_score(self) -> float | None:
-        return self.expectation_value.value
+    def compute_score(self) -> BenchmarkScore:
+        return self.expectation_value
 
 
 @dataclass

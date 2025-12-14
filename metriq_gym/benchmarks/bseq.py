@@ -31,6 +31,7 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
+    BenchmarkScore,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.helpers.graph_helpers import (
@@ -50,8 +51,8 @@ class BSEQResult(BenchmarkResult):
     largest_connected_size: int
     fraction_connected: float = Field(...)
 
-    def compute_score(self) -> float | None:
-        return self.largest_connected_size
+    def compute_score(self) -> BenchmarkScore:
+        return BenchmarkScore(value=float(self.largest_connected_size))
 
 
 @dataclass

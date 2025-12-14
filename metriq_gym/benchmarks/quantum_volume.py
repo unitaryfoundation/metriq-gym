@@ -42,9 +42,6 @@ class QuantumVolumeResult(BenchmarkResult):
     p_value: float
     trials: int
 
-    def compute_score(self) -> float | None:
-        return None
-
 
 def prepare_qv_circuits(n: int, num_trials: int) -> tuple[list[QuantumCircuit], list[list[float]]]:
     circuits = []
