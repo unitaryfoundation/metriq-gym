@@ -9,11 +9,12 @@ Result interpretation:
     Polling yields MirrorCircuitsResult with:
         - success_probability: fraction of runs matching the expected bitstring.
         - polarization: rescales success_probability to remove the uniform-random baseline;
-          higher implies better coherence.
+          higher implies better performance.
         - binary_success: boolean indicating whether polarization exceeded 1/e.
 
 Reference:
-    - Proctor et al., "Scalable Randomized Benchmarking of Quantum Computers", arXiv:2008.11294.
+    - Proctor et al., "Measuring the capabilities of quantum computers", Nature Physics 18, 75-79 (2022).
+      https://www.nature.com/articles/s41567-021-01409-7
 """
 
 from dataclasses import dataclass
