@@ -1,7 +1,7 @@
 """Mirror Circuits benchmark implementation.
 
 Summary:
-    Generates randomly parameterised mirror circuits that apply layers of Clifford gates,
+    Generates randomly parameterized mirror circuits that apply layers of Clifford gates,
     then invert them to test how well a device preserves state fidelity across the forward
     and reverse halves of the circuit.
 
