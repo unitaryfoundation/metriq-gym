@@ -2,14 +2,14 @@
 
 Summary:
     Generates randomly parameterized mirror circuits that apply layers of Clifford gates,
-    then invert them to test how well a device preserves state fidelity across the forward
-    and reverse halves of the circuit.
+    add a middle Pauli layer, and then revert the forward layers to test how well a device
+    preserves state fidelity across the forward and reverse halves of the circuit.
 
 Result interpretation:
     Polling yields MirrorCircuitsResult with:
         - success_probability: fraction of runs matching the expected bitstring.
-        - polarization: decay parameter relative to an exponential threshold; higher implies
-          better coherence.
+        - polarization: rescales success_probability to remove the uniform-random baseline;
+          higher implies better coherence.
         - binary_success: boolean indicating whether polarization exceeded 1/e.
 
 Reference:
