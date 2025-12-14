@@ -12,8 +12,9 @@ Result interpretation:
         - confidence_pass: boolean indicating whether results meet the configured confidence.
     Higher approximation ratios and optimal probabilities reflect better QAOA performance.
 
-Reference:
-    - Based on the linear-ramp QAOA studies described in Wurtz and Love, arXiv:2106.13250.
+References:
+    - Wurtz and Love, arXiv:2106.15645 (Linear-ramp QAOA parameter schedule)
+    - arXiv:2405.09169 (Additional LR-QAOA methodology)
 """
 
 import math
