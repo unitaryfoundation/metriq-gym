@@ -5,6 +5,14 @@ Summary:
     its connectivity graph. Circuits are built per colouring of the topology and executed in
     four measurement bases to detect correlations.
 
+Connectivity graph:
+    The benchmark uses the device's native connectivity graph to determine which qubit pairs
+    can be coupled. For superconducting devices (e.g., IBM), this reflects the physical
+    coupling map with sparse connectivity. For trapped-ion devices (e.g., IonQ, Quantinuum)
+    and simulators, all-to-all connectivity is assumed (complete graph). The graph structure
+    affects edge coloring: complete graphs with n qubits require n-1 colors (optimal), while
+    sparse topologies typically require fewer colors but test fewer qubit pairs.
+
 Result interpretation:
     Polling returns BSEQResult with:
         - largest_connected_size: size of the biggest connected subgraph of qubit pairs that
