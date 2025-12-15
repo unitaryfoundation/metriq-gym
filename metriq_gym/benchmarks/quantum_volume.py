@@ -1,3 +1,5 @@
+"""Quantum Volume benchmark implementation."""
+
 import math
 import statistics
 from scipy.stats import binom

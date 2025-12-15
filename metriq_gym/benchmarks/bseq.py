@@ -1,8 +1,28 @@
-""" "Bell state effective qubits" BSEQ benchmark for the Metriq Gym
-(credit to Paul Nation for the original code for IBM devices).
+"""BSEQ (Bell state effective qubits) benchmark implementation.
 
-This benchmark evaluates a quantum device's ability to produce entangled states and measure correlations that violate
-the CHSH inequality. The violation of this inequality indicates successful entanglement between qubits.
+Summary:
+    Evaluates how well a device generates Bell pairs that violate the CHSH inequality across
+    its connectivity graph. Circuits are built per colouring of the topology and executed in
+    four measurement bases to detect correlations.
+
+Connectivity graph:
+    The benchmark uses the device's native connectivity graph to determine which qubit pairs
+    can be coupled. For superconducting devices (e.g., IBM), this reflects the physical
+    coupling map with sparse connectivity. For trapped-ion devices (e.g., IonQ, Quantinuum)
+    and simulators, all-to-all connectivity is assumed (complete graph). The graph structure
+    affects edge coloring: complete graphs with n qubits require n-1 colors (optimal), while
+    sparse topologies typically require fewer colors but test fewer qubit pairs.
+
+Result interpretation:
+    Polling returns BSEQResult with:
+        - largest_connected_size: size of the biggest connected subgraph of qubit pairs that
+          violated CHSH (> 2). Higher means entanglement spans more of the device.
+        - fraction_connected: largest_connected_size normalised by the discovered qubit count,
+          making it easier to compare devices of different sizes.
+
+References:
+    - Original routines attributed to Paul Nation (Qiskit Device Benchmarking).
+    - J. F. Clauser et al., Phys. Rev. Lett. 23, 880 (1969).
 """
 
 from dataclasses import dataclass

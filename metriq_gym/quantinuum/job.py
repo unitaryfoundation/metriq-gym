@@ -1,6 +1,7 @@
 from typing import Any
 
 import qnexus as qnx
+from pytket.circuit import BasisOrder
 from qbraid.runtime import GateModelResultData, JobStatus, QuantumJob, Result
 
 
@@ -31,7 +32,11 @@ class QuantinuumJob(QuantumJob):
 
         all_counts = []
         for result in results:
-            counts = result.download_result().get_counts()
+            # Quantinuum (as documented in pytket) by default uses bitstrings
+            # with the least significant bit first. We convert to
+            # most significant bit first (dlo = descending lexographic order)
+            # for consistency with other backends.
+            counts = result.download_result().get_counts(basis=BasisOrder.dlo)
             norm_counts = {"".join(map(str, k)): v for k, v in counts.items()}
             all_counts.append(norm_counts)
 
