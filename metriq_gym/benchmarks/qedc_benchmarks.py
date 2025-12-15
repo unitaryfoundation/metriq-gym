@@ -252,7 +252,7 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, floa
     s_k = np.array(metrics.group_metrics["std_fidelities"])
 
     # The score will be the average across all groups -- the entire sweep.
-    score = np.mean(avgs)
+    score = float(np.mean(avgs))
 
     # The uncertainty is the pooled standard deviation
     # (the weighted estimate of variance amongst different means).
@@ -260,7 +260,7 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, floa
         [len(circuit_metrics[g]) for g in circuit_metrics]
     )  # number of circuits in a group
     pooled_variance: float = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
-    uncertainty = np.sqrt(pooled_variance)
+    uncertainty = float(np.sqrt(pooled_variance))
 
     return (score, uncertainty)
 
