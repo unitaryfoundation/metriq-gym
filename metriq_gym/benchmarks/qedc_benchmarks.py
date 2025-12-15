@@ -259,8 +259,12 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, floa
 
     # The uncertainty is the pooled standard deviation
     # (the weighted estimate of variance amongst different means).
-    pooled_variance: float = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
-    uncertainty = float(np.sqrt(pooled_variance))
+    denom: float = np.sum(n_k - 1)
+    if denom == 0:
+        uncertainty = 0.0
+    else:
+        pooled_variance: float = np.sum((n_k - 1) * s_k**2) / denom
+        uncertainty = float(np.sqrt(pooled_variance))
 
     return (score, uncertainty)
 
