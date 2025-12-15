@@ -97,7 +97,7 @@ class QEDCResult(BenchmarkResult):
     Stores the benchmark score.
 
     Score:
-        accuracy_score: Defined as the average fidelity across all groups in the sweep.
+        accuracy_score: Defined as the weighted average fidelity across all groups in the sweep.
     """
 
     accuracy_score: BenchmarkScore
@@ -237,7 +237,7 @@ def get_circuits_and_metrics(
 
 def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, float]:
     """
-    The score is the average of fidelities across all groups.
+    The score is the weighted average of fidelities across all groups.
 
     Args:
         circuit_metrics: the QEDC_Metrics object after analyzing results.
@@ -250,15 +250,15 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, floa
     metrics.aggregate_metrics()
     avgs = metrics.group_metrics["avg_fidelities"]
     s_k = np.array(metrics.group_metrics["std_fidelities"])
-
-    # The score will be the average across all groups -- the entire sweep.
-    score = float(np.mean(avgs))
-
-    # The uncertainty is the pooled standard deviation
-    # (the weighted estimate of variance amongst different means).
     n_k = np.array(
         [len(circuit_metrics[g]) for g in circuit_metrics]
     )  # number of circuits in a group
+
+    # The score will be the weighted average across all groups -- the entire sweep.
+    score = float(np.sum(n_k * avgs) / np.sum(n_k))
+
+    # The uncertainty is the pooled standard deviation
+    # (the weighted estimate of variance amongst different means).
     pooled_variance: float = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
     uncertainty = float(np.sqrt(pooled_variance))
 
