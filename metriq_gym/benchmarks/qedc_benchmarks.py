@@ -102,7 +102,7 @@ class QEDCResult(BenchmarkResult):
 
     accuracy_score: BenchmarkScore
 
-    def compute_score(self) -> BenchmarkScore | None:
+    def compute_score(self) -> BenchmarkScore:
         return self.accuracy_score
 
 
@@ -235,7 +235,7 @@ def get_circuits_and_metrics(
     return flat_circuits, circuit_metrics, circuit_identifiers
 
 
-def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> list[float | None]:
+def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, float]:
     """
     The score is the average of fidelities across all groups.
 
@@ -262,7 +262,7 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> list[float | None
     pooled_variance: float = np.sum((n_k - 1) * s_k**2) / np.sum(n_k - 1)
     uncertainty = np.sqrt(pooled_variance)
 
-    return [score, uncertainty]
+    return (score, uncertainty)
 
 
 class QEDCBenchmark(Benchmark):
