@@ -1,3 +1,4 @@
+
 """BSEQ (Bell state effective qubits) benchmark implementation.
 
 Summary:
@@ -182,14 +183,13 @@ def build_bseq_circuits(
         max_colors: Optional maximum number of colors to use.
 
     Returns:
-        Tuple of (circuit_sets, coloring, topology_graph).
+        Tuple of (circuit_sets, coloring).
     """
-    topology_graph = connectivity_graph(device)
     coloring = device_graph_coloring(topology_graph)
     if max_colors is not None:
         coloring.limit_colors(max_colors)
     circuit_sets = generate_chsh_circuit_sets(coloring)
-    return circuit_sets, coloring, topology_graph
+    return circuit_sets, coloring
 
 
 class BSEQ(Benchmark):
@@ -199,7 +199,8 @@ class BSEQ(Benchmark):
         """Runs the benchmark and returns job metadata."""
         shots = self.params.shots
         max_colors = self.params.max_colors
-        circuit_sets, coloring, topology_graph = build_bseq_circuits(device, max_colors)
+        topology_graph = connectivity_graph(device)
+        circuit_sets, coloring = build_bseq_circuits(topology_graph, max_colors)
 
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
             device.run(circ_set, shots=shots) for circ_set in circuit_sets
