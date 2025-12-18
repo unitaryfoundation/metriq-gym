@@ -172,29 +172,34 @@ def chsh_subgraph(coloring: GraphColoring, counts: list["MeasCount"]) -> rx.PyGr
     return good_graph
 
 
+def build_bseq_circuits(
+    topology_graph: rx.PyGraph, max_colors: int | None = None
+) -> tuple[list[list[QuantumCircuit]], GraphColoring]:
+    """Construct the BSEQ circuits to run based on the device topology.
+
+    Args:
+        topology_graph: The device connectivity graph.
+        max_colors: Optional maximum number of colors to use.
+
+    Returns:
+        Tuple of (circuit_sets, coloring, topology_graph).
+    """
+    topology_graph = connectivity_graph(device)
+    coloring = device_graph_coloring(topology_graph)
+    if max_colors is not None:
+        coloring.limit_colors(max_colors)
+    circuit_sets = generate_chsh_circuit_sets(coloring)
+    return circuit_sets, coloring, topology_graph
+
+
 class BSEQ(Benchmark):
     """Benchmark class for BSEQ (Bell state effective qubits) experiments."""
-
-    def _build_circuits(
-        self, device: "QuantumDevice"
-    ) -> tuple[list[list[QuantumCircuit]], GraphColoring, nx.Graph]:
-        """Shared circuit construction logic.
-
-        Args:
-            device: The quantum device to build circuits for.
-
-        Returns:
-            Tuple of (circuit_sets, coloring, topology_graph).
-        """
-        topology_graph = connectivity_graph(device)
-        coloring = device_graph_coloring(topology_graph)
-        circuit_sets = generate_chsh_circuit_sets(coloring)
-        return circuit_sets, coloring, topology_graph
 
     def dispatch_handler(self, device: "QuantumDevice") -> BSEQData:
         """Runs the benchmark and returns job metadata."""
         shots = self.params.shots
-        circuit_sets, coloring, topology_graph = self._build_circuits(device)
+        max_colors = self.params.max_colors
+        circuit_sets, coloring, topology_graph = build_bseq_circuits(device, max_colors)
 
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
             device.run(circ_set, shots=shots) for circ_set in circuit_sets
@@ -242,7 +247,7 @@ class BSEQ(Benchmark):
         self,
         device: "QuantumDevice",
     ) -> list[CircuitBatch]:
-        circuit_sets, _, _ = self._build_circuits(device)
+        circuit_sets, _ = build_bseq_circuits(connectivity_graph(device), self.params.max_colors)
         return [
             CircuitBatch(circuits=circuit_group, shots=self.params.shots)
             for circuit_group in circuit_sets

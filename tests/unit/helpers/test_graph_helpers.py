@@ -110,8 +110,10 @@ def test_device_graph_coloring_complete_graph_uses_misra_gries():
     assert len(graph.edge_list()) == 10
 
     # Mock the rustworkx functions to verify which one is called
-    with patch("metriq_gym.helpers.graph_helpers.rx.graph_misra_gries_edge_color") as mock_misra, \
-         patch("metriq_gym.helpers.graph_helpers.rx.graph_greedy_edge_color") as mock_greedy:
+    with (
+        patch("metriq_gym.helpers.graph_helpers.rx.graph_misra_gries_edge_color") as mock_misra,
+        patch("metriq_gym.helpers.graph_helpers.rx.graph_greedy_edge_color") as mock_greedy,
+    ):
         # Set return values for the mocks
         mock_misra.return_value = {0: 0, 1: 1, 2: 2, 3: 3, 4: 0, 5: 1, 6: 2, 7: 3, 8: 4, 9: 4}
 
@@ -140,8 +142,10 @@ def test_device_graph_coloring_sparse_graph_uses_greedy():
     assert not rx.is_bipartite(graph)
 
     # Mock the rustworkx functions to verify which one is called
-    with patch("metriq_gym.helpers.graph_helpers.rx.graph_misra_gries_edge_color") as mock_misra, \
-         patch("metriq_gym.helpers.graph_helpers.rx.graph_greedy_edge_color") as mock_greedy:
+    with (
+        patch("metriq_gym.helpers.graph_helpers.rx.graph_misra_gries_edge_color") as mock_misra,
+        patch("metriq_gym.helpers.graph_helpers.rx.graph_greedy_edge_color") as mock_greedy,
+    ):
         # Set return value for the greedy mock
         mock_greedy.return_value = {0: 0, 1: 1, 2: 2, 3: 1}
 
@@ -153,3 +157,37 @@ def test_device_graph_coloring_sparse_graph_uses_greedy():
 
         assert isinstance(coloring, GraphColoring)
         assert coloring.num_nodes == 4
+
+
+def test_graph_coloring_limit_colors():
+    graph = rx.generators.complete_graph(num_nodes=4)
+
+    coloring = device_graph_coloring(graph)
+
+    assert isinstance(coloring, GraphColoring)
+    assert coloring.num_nodes == 4
+    assert coloring.num_colors == 4
+
+    # copy the first two colors to ensure those are what remain
+    max_colors = 2
+    retained_colors = {e: c for e, c in coloring.edge_color_map.items() if c < max_colors}
+    coloring.limit_colors(max_colors)
+    assert coloring.num_colors == max_colors
+    assert coloring.edge_color_map == retained_colors
+
+
+def test_graph_coloring_limit_colors_no_effect():
+    graph = rx.PyGraph()
+    graph.add_nodes_from(range(4))
+    graph.add_edges_from([(0, 1, 1), (1, 2, 1), (2, 3, 1)])
+
+    coloring = device_graph_coloring(graph)
+
+    assert isinstance(coloring, GraphColoring)
+    assert coloring.num_nodes == 4
+    assert coloring.num_colors == 2
+
+    original_edge_color_map = coloring.edge_color_map.copy()
+    coloring.limit_colors(4)
+    assert coloring.num_colors == 2
+    assert coloring.edge_color_map == original_edge_color_map
