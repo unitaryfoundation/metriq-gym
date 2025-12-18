@@ -20,8 +20,14 @@ from importlib import import_module
 from types import ModuleType
 from typing import TYPE_CHECKING
 from qiskit import QuantumCircuit
+import numpy as np
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+)
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.resource_estimation import CircuitBatch
@@ -53,22 +59,17 @@ Description:
 Example for Bernstein-Vazirani:
 {
 '3':    {
-        '1': {'create_time': 0.16371703147888184,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '2': {'create_time': 0.0005087852478027344,
-              'fidelity': 1.0,
+        '2': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         },
 '4':    {
-        '1': {'create_time': 0.0005209445953369141,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '3': {'create_time': 0.00047206878662109375,
-              'fidelity': 1.0,
+        '3': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '5': {'create_time': 0.0005078315734863281,
-              'fidelity': 1.0,
+        '5': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         }
 }
@@ -93,13 +94,16 @@ class QEDCData(BenchmarkData):
 
 class QEDCResult(BenchmarkResult):
     """
-    Stores the results from running a QED-C benchmark.
+    Stores the benchmark score.
 
-    Results:
-        circuit_metrics: Stores all QED-C metrics to output.
+    Score:
+        accuracy_score: Defined as the weighted average fidelity across all groups in the sweep.
     """
 
-    circuit_metrics: QEDC_Metrics
+    accuracy_score: BenchmarkScore
+
+    def compute_score(self) -> BenchmarkScore:
+        return self.accuracy_score
 
 
 def import_benchmark_module(benchmark_name: str) -> ModuleType:
@@ -231,6 +235,40 @@ def get_circuits_and_metrics(
     return flat_circuits, circuit_metrics, circuit_identifiers
 
 
+def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, float]:
+    """
+    The score is the weighted average of fidelities across all groups.
+
+    Args:
+        circuit_metrics: the QEDC_Metrics object after analyzing results.
+
+    Returns:
+        values: the score and the uncertainty.
+    """
+    # Obtain the average fidelity and standard deviation for each qubit size (group) in the sweep.
+    metrics.circuit_metrics = circuit_metrics
+    metrics.aggregate_metrics()
+    avgs = metrics.group_metrics["avg_fidelities"]
+    s_k = np.array(metrics.group_metrics["std_fidelities"])
+    n_k = np.array(
+        [len(circuit_metrics[g]) for g in circuit_metrics]
+    )  # number of circuits in a group
+
+    # The score will be the weighted average across all groups -- the entire sweep.
+    score = float(np.sum(n_k * avgs) / np.sum(n_k))
+
+    # The uncertainty is the pooled standard deviation
+    # (the weighted estimate of variance amongst different means).
+    denom: float = np.sum(n_k - 1)
+    if denom == 0:
+        uncertainty = 0.0
+    else:
+        pooled_variance: float = np.sum((n_k - 1) * s_k**2) / denom
+        uncertainty = float(np.sqrt(pooled_variance))
+
+    return (score, uncertainty)
+
+
 class QEDCBenchmark(Benchmark):
     """Benchmark class for QED-C experiments."""
 
@@ -273,7 +311,13 @@ class QEDCBenchmark(Benchmark):
         # Call the QED-C method after some pre-processing to obtain metrics.
         circuit_metrics = analyze_results(self.params.model_dump(), job_data, counts_list)
 
-        return QEDCResult(circuit_metrics=circuit_metrics)
+        value, uncertainty = calculate_accuracy_score(circuit_metrics)
+        return QEDCResult(
+            accuracy_score=BenchmarkScore(
+                value=value,
+                uncertainty=uncertainty,
+            )
+        )
 
     def estimate_resources_handler(
         self,
