@@ -114,6 +114,15 @@ wheels = [
 ]
 
 [[package]]
+name = "asteval"
+version = "1.0.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/cf/82ccb7bc570ebfc5ad8357a6ead94492b0da845ab6b6fb4468fbb21118ca/asteval-1.0.7.tar.gz", hash = "sha256:729fa010511957afcbdbadb0304da09cef6904c145b6901e917afac2dd5668a1", size = 51859, upload-time = "2025-11-06T21:42:37.045Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/da/875925db2ed80dc7b919b2817da555848b608620be9662c5f835670d5d8d/asteval-1.0.7-py3-none-any.whl", hash = "sha256:d78df08681dfff59031ca624ba7030f9dc576a7a16e2f7a5137c6e7ef3ee60c4", size = 22089, upload-time = "2025-11-06T21:42:35.245Z" },
+]
+
+[[package]]
 name = "asttokens"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1198,6 +1207,22 @@ wheels = [
 ]
 
 [[package]]
+name = "lmfit"
+version = "1.3.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "asteval" },
+    { name = "dill" },
+    { name = "numpy" },
+    { name = "scipy" },
+    { name = "uncertainties" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/e5/a35942aed2de95e228728c34609b51fe3ec9182398eac50d288eef313aa2/lmfit-1.3.4.tar.gz", hash = "sha256:3c22c28c43f717f6c5b4a3bd81e893a2149739c26a592c046f2e33c23cfbe497", size = 630720, upload-time = "2025-07-19T20:09:01.876Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/7e/7b91c89a4cf0f543a83be978657afb20c86af6d725253e319589dcc4ce52/lmfit-1.3.4-py3-none-any.whl", hash = "sha256:afce1593b42324d37ae2908249b0c55445e2f4c1a0474ff706a8e2f7b5d949fa", size = 97662, upload-time = "2025-07-19T20:09:00.32Z" },
+]
+
+[[package]]
 name = "markdown"
 version = "3.9"
 source = { registry = "https://pypi.org/simple" }
@@ -1348,6 +1373,7 @@ dependencies = [
     { name = "qbraid", extra = ["azure", "braket", "cirq", "ionq", "qiskit"] },
     { name = "qiskit" },
     { name = "qiskit-aer" },
+    { name = "qiskit-experiments" },
     { name = "qiskit-ibm-runtime" },
     { name = "qnexus" },
     { name = "ruamel-yaml-clib", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
@@ -1382,6 +1408,7 @@ requires-dist = [
     { name = "qbraid", extras = ["azure", "braket", "cirq", "ionq", "qiskit"], specifier = ">=0.10.0,<0.10.1" },
     { name = "qiskit", specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
+    { name = "qiskit-experiments", specifier = ">=0.13.0" },
     { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.44.0" },
     { name = "qnexus", specifier = ">=0.34.1,<1.0.0" },
     { name = "ruamel-yaml-clib", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = "==0.2.15" },
@@ -2470,6 +2497,49 @@ wheels = [
 ]
 
 [[package]]
+name = "qiskit-experiments"
+version = "0.13.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lmfit" },
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "qiskit" },
+    { name = "qiskit-ibm-experiment" },
+    { name = "qiskit-ibm-runtime" },
+    { name = "rustworkx" },
+    { name = "scipy" },
+    { name = "uncertainties" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/d3/93cd3374dc8e85e97f80a53627fac2464476163a448842ecd196f1508f6f/qiskit_experiments-0.13.0.tar.gz", hash = "sha256:59fa8fdaf1b467e94d46b010a9844709c3ea0d2e771a9b0d79d15864b92f9e44", size = 750931, upload-time = "2025-11-05T17:16:04.014Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/64/0f/35e0d3ef7d38389939ef9061ec4946ee76a51cb7e6662607c8a75c5ce100/qiskit_experiments-0.13.0-py3-none-any.whl", hash = "sha256:8eee6d1b945a10f5d2e98fd846850a008c07c24a9b5777127c35673868de589f", size = 629251, upload-time = "2025-11-05T17:16:02.48Z" },
+]
+
+[[package]]
+name = "qiskit-ibm-experiment"
+version = "0.4.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "python-dateutil" },
+    { name = "pyyaml" },
+    { name = "qiskit" },
+    { name = "requests" },
+    { name = "requests-ntlm" },
+    { name = "typing-extensions" },
+    { name = "urllib3" },
+    { name = "websocket-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b8/70/41affde88704599bf7bc36cf66b51ed5d1983b9632e646fedc6ef4760a6c/qiskit-ibm-experiment-0.4.8.tar.gz", hash = "sha256:f5866b63fde3247008c578286b8bf5a61493e0d9839467f0d1fcfa24f45a9077", size = 66303, upload-time = "2024-09-05T13:25:54.569Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6a/81/82966b0d9703a1c4732b48953510179b2baaacac31e0eb7e5c29a63d4eb7/qiskit_ibm_experiment-0.4.8-py3-none-any.whl", hash = "sha256:0924fff8de7f86a6fbf77895bda467840450cbc721b114de709cc45071bfc4b5", size = 57300, upload-time = "2024-09-05T13:25:52.576Z" },
+]
+
+[[package]]
 name = "qiskit-ibm-runtime"
 version = "0.41.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3174,6 +3244,15 @@ wheels = [
 ]
 
 [[package]]
+name = "uncertainties"
+version = "3.2.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/0c/cb09f33b26955399c675ab378e4063ed7e48422d3d49f96219ab0be5eba9/uncertainties-3.2.3.tar.gz", hash = "sha256:76a5653e686f617a42922d546a239e9efce72e6b35411b7750a1d12dcba03031", size = 160492, upload-time = "2025-04-21T19:58:28.63Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/5e/f1e1dd319e35e962a4e00b33150a8868b6329cc1d19fd533436ba5488f09/uncertainties-3.2.3-py3-none-any.whl", hash = "sha256:313353900d8f88b283c9bad81e7d2b2d3d4bcc330cbace35403faaed7e78890a", size = 60118, upload-time = "2025-04-21T19:58:26.864Z" },
+]
+
+[[package]]
 name = "urllib3"
 version = "2.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3203,6 +3282,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/24/30/6b0809f4510673dc723187aeaf24c7f5459922d01e2f794277a3dfb90345/wcwidth-0.2.14.tar.gz", hash = "sha256:4d478375d31bc5395a3c55c40ccdf3354688364cd61c4f6adacaa9215d0b3605", size = 102293, upload-time = "2025-09-22T16:29:53.023Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/b5/123f13c975e9f27ab9c0770f514345bd406d0e8d3b7a0723af9d43f710af/wcwidth-0.2.14-py2.py3-none-any.whl", hash = "sha256:a7bb560c8aee30f9957e5f9895805edd20602f2d7f720186dfd906e82b4982e1", size = 37286, upload-time = "2025-09-22T16:29:51.641Z" },
+]
+
+[[package]]
+name = "websocket-client"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/41/aa4bf9664e4cda14c3b39865b12251e8e7d239f4cd0e3cc1b6c2ccde25c1/websocket_client-1.9.0.tar.gz", hash = "sha256:9e813624b6eb619999a97dc7958469217c3176312b3a16a4bd1bc7e08a46ec98", size = 70576, upload-time = "2025-10-07T21:16:36.495Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/34/db/b10e48aa8fff7407e67470363eac595018441cf32d5e1001567a7aeba5d2/websocket_client-1.9.0-py3-none-any.whl", hash = "sha256:af248a825037ef591efbf6ed20cc5faa03d3b47b9e5a2230a529eeee1c1fc3ef", size = 82616, upload-time = "2025-10-07T21:16:34.951Z" },
 ]
 
 [[package]]
