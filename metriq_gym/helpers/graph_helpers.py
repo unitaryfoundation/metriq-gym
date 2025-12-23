@@ -26,6 +26,22 @@ class GraphColoring:
         else:
             self.num_colors = 0
 
+    def limit_colors(self, max_colors: int) -> None:
+        """Adjusts the coloring to use at most max_colors colors.
+
+        Args:
+            max_colors: Maximum number of colors to use.
+        """
+        if self.num_colors <= max_colors:
+            return
+
+        new_edge_color_map = {
+            edge: color for edge, color in self.edge_color_map.items() if color < max_colors
+        }
+
+        self.edge_color_map = new_edge_color_map
+        self.num_colors = max_colors
+
     @classmethod
     def from_dict(cls, data: dict) -> "GraphColoring":
         """Reconstruct GraphColoring from a dictionary, ensuring integer keys."""
@@ -94,4 +110,3 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
         edge_color_map=edge_color_map,
         edge_index_map=edge_index_map,
     )
-
