@@ -22,7 +22,6 @@ import argparse
 import warnings
 import logging
 import os
-import json
 import random
 import numpy as np
 import rustworkx as rx
@@ -137,7 +136,6 @@ def random_chain_fast(G, length, *, seed=None, backend=None, twoq_gate=None,
         adj[u].append(v)
         adj[v].append(u)
 
-    nodes_with_deg = [n for n in range(n_nodes) if adj[n]]
     allowed_edges_list = list(allowed)
 
     for _ in range(restarts):
@@ -326,15 +324,14 @@ def setup_aws_provider():
 
     print(f"Device: {device_name}")
     print(f"  Qubits: {num_qubits}")
-    print(f"  Topology: Complete graph (all-to-all connectivity)")
-    print(f"  Noise: Enabled (1% depolarizing noise)")
+    print("  Topology: Complete graph (all-to-all connectivity)")
+    print("  Noise: Enabled (1% depolarizing noise)")
 
     return device, device_name, num_qubits
 
 
 def run_aws_experiment(device, device_name, qubit_chain, two_disjoint_layers, lengths, num_samples, nshots):
     """Run LayerFidelity experiment on AWS Braket local simulator with noise."""
-    from braket.devices import LocalSimulator
     from qbraid import transpile as qb_transpile
     from braket.circuits import Circuit
 
@@ -487,7 +484,7 @@ def setup_quantinuum_provider(device_name="H1-1LE"):
         raise RuntimeError(f"Device '{device_name}' not found")
 
     print(f"Device: {device.device_name}")
-    print(f"  Topology: Complete graph (all-to-all connectivity)")
+    print("  Topology: Complete graph (all-to-all connectivity)")
 
     return device, project
 
@@ -531,7 +528,7 @@ def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers,
         if (i + 1) % 5 == 0 or i == len(circuits) - 1:
             print(f"  Transpiled and uploaded {i+1}/{len(circuits)} circuits")
 
-    print(f"All circuits uploaded")
+    print("All circuits uploaded")
 
     # Compile
     opt_level = int(os.getenv("QUANTINUUM_NEXUS_OPT_LEVEL", "2"))
@@ -544,7 +541,7 @@ def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers,
         optimisation_level=opt_level,
         timeout=1800,
     )
-    print(f"Circuits compiled")
+    print("Circuits compiled")
 
     # Execute
     print(f"\nSubmitting job with {len(compiled_circuit_refs)} circuits, {nshots} shots each...")
@@ -612,7 +609,7 @@ def analyze_eplg_results(exp_data, two_disjoint_layers, qubit_chain):
     exp_data.block_for_results()
 
     # Run analysis
-    analysis_result = exp_data.experiment.analysis.run(exp_data)
+    exp_data.experiment.analysis.run(exp_data)
 
     # Wait for analysis to complete
     max_wait = 60
@@ -653,7 +650,7 @@ def analyze_eplg_results(exp_data, two_disjoint_layers, qubit_chain):
         print("Chain too short for EPLG analysis")
         print("="*60)
         print(f"Chain has only {len(pfs)} process fidelities")
-        print(f"Need at least 5 for meaningful analysis")
+        print("Need at least 5 for meaningful analysis")
         return None, None
 
     chain_fids = []
@@ -790,7 +787,6 @@ def main():
 
     elif args.provider == "aws":
         device, device_name, num_qubits = setup_aws_provider()
-        G = create_complete_graph(num_qubits)
         qubit_chain = random_chain_complete_graph(num_qubits, num_qubits_in_chain, args.seed)
         print(f"Qubit chain: {qubit_chain}")
 
@@ -805,7 +801,6 @@ def main():
     elif args.provider == "quantinuum":
         device, project = setup_quantinuum_provider(args.device)
         num_qubits = 20  # H1 series
-        G = create_complete_graph(num_qubits)
         qubit_chain = random_chain_complete_graph(num_qubits, num_qubits_in_chain, args.seed)
         print(f"Qubit chain: {qubit_chain}")
 
