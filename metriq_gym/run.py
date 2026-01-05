@@ -34,6 +34,8 @@ if TYPE_CHECKING:
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
 
+DEFAULT_UPLOAD_PR_LABELS = ["data", "source:metriq-gym"]
+
 
 def load_provider(provider_name: str):
     """Lazy proxy to qbraid.runtime.load_provider.
@@ -369,6 +371,7 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             commit_message=commit_message,
             pr_title=pr_title,
             pr_body=pr_body,
+            pr_labels=DEFAULT_UPLOAD_PR_LABELS,
             clone_dir=clone_dir,
             payload=record,
             filename=job_filename(metriq_job, payload=record),
@@ -503,6 +506,7 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             commit_message=commit_message,
             pr_title=pr_title,
             pr_body=pr_body,
+            pr_labels=DEFAULT_UPLOAD_PR_LABELS,
             clone_dir=clone_dir,
             payload=records,
             filename=suite_filename(suite_name, jobs[0].dispatch_time, payload=records),
