@@ -26,22 +26,6 @@ class GraphColoring:
         else:
             self.num_colors = 0
 
-    def limit_colors(self, max_colors: int) -> None:
-        """Adjusts the coloring to use at most max_colors colors.
-
-        Args:
-            max_colors: Maximum number of colors to use.
-        """
-        if self.num_colors <= max_colors:
-            return
-
-        new_edge_color_map = {
-            edge: color for edge, color in self.edge_color_map.items() if color < max_colors
-        }
-
-        self.edge_color_map = new_edge_color_map
-        self.num_colors = max_colors
-
     @classmethod
     def from_dict(cls, data: dict) -> "GraphColoring":
         """Reconstruct GraphColoring from a dictionary, ensuring integer keys."""
@@ -50,6 +34,27 @@ class GraphColoring:
             edge_color_map={int(k): v for k, v in data["edge_color_map"].items()},
             edge_index_map={int(k): v for k, v in data["edge_index_map"].items()},
         )
+
+
+def limit_colors(coloring: GraphColoring, max_colors: int) -> "GraphColoring":
+    """Adjusts the coloring to use at most max_colors colors.
+
+    Args:
+        max_colors: Maximum number of colors to use.
+
+    Returns:
+        A new GraphColoring instance with limited colors.
+    """
+
+    new_edge_color_map = {
+        edge: color for edge, color in coloring.edge_color_map.items() if color < max_colors
+    }
+
+    return GraphColoring(
+        num_nodes=coloring.num_nodes,
+        edge_color_map=new_edge_color_map,
+        edge_index_map=coloring.edge_index_map,
+    )
 
 
 def largest_connected_size(good_graph: rx.PyGraph) -> int:

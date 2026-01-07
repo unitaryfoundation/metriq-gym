@@ -1,4 +1,3 @@
-
 """BSEQ (Bell state effective qubits) benchmark implementation.
 
 Summary:
@@ -45,6 +44,7 @@ from metriq_gym.benchmarks.benchmark import (
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.helpers.graph_helpers import (
     GraphColoring,
+    limit_colors,
     device_graph_coloring,
     largest_connected_size,
 )
@@ -187,7 +187,7 @@ def build_bseq_circuits(
     """
     coloring = device_graph_coloring(topology_graph)
     if max_colors is not None:
-        coloring.limit_colors(max_colors)
+        coloring = limit_colors(coloring, max_colors)
     circuit_sets = generate_chsh_circuit_sets(coloring)
     return circuit_sets, coloring
 

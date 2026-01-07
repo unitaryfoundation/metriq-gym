@@ -2,6 +2,7 @@ import rustworkx as rx
 from unittest.mock import patch
 
 from metriq_gym.helpers.graph_helpers import (
+    limit_colors,
     device_graph_coloring,
     largest_connected_size,
     GraphColoring,
@@ -171,7 +172,7 @@ def test_graph_coloring_limit_colors():
     # copy the first two colors to ensure those are what remain
     max_colors = 2
     retained_colors = {e: c for e, c in coloring.edge_color_map.items() if c < max_colors}
-    coloring.limit_colors(max_colors)
+    coloring = limit_colors(coloring, max_colors)
     assert coloring.num_colors == max_colors
     assert coloring.edge_color_map == retained_colors
 
@@ -188,6 +189,6 @@ def test_graph_coloring_limit_colors_no_effect():
     assert coloring.num_colors == 2
 
     original_edge_color_map = coloring.edge_color_map.copy()
-    coloring.limit_colors(4)
+    coloring = limit_colors(coloring, 4)
     assert coloring.num_colors == 2
     assert coloring.edge_color_map == original_edge_color_map
