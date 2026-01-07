@@ -582,8 +582,6 @@ class MirrorCircuits(Benchmark):
             shots = sum(counts.values())
             shots_total += shots
             successes_total += counts.get(expected_bitstring, 0)
-            # print('Expected bitstring:', expected_bitstring)
-            # print(counts)
         if shots_total == 0:
             final_success_probability = 0.0
             final_success_prob_err = 0.0
