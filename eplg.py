@@ -531,7 +531,7 @@ def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers,
     print("All circuits uploaded")
 
     # Compile
-    opt_level = int(os.getenv("QUANTINUUM_NEXUS_OPT_LEVEL", "2"))
+    opt_level = int(os.getenv("QUANTINUUM_NEXUS_OPT_LEVEL", "1"))
     print(f"\nCompiling {len(circuit_refs)} circuits for {device.device_name}...")
     compiled_circuit_refs = qnexus.compile(
         programs=circuit_refs,
