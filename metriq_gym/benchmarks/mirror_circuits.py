@@ -450,7 +450,6 @@ def generate_mirror_circuit(
     for layer_idx in range(num_layers):
         pauli_layer = random_paulis(connectivity_graph, random_state)
         qc.compose(pauli_layer, inplace=True)
-        qc.barrier()
         forward_layers.append(pauli_layer)
 
         selected_edges = edge_grab(two_qubit_gate_prob, connectivity_graph, random_state)
@@ -459,19 +458,19 @@ def generate_mirror_circuit(
             selected_edges, random_state, two_qubit_gate_name, layer_seed
         )
         qc.compose(clifford_layer, inplace=True)
-        qc.barrier()
         forward_layers.append(clifford_layer)
 
     assert_forward_is_clifford(initial_clifford_layer, forward_layers)
-
+    
+    qc.barrier() 
     middle_pauli = random_paulis(connectivity_graph, random_state)
     qc.compose(middle_pauli, inplace=True)
     qc.barrier()
 
     for layer in reversed(forward_layers):
         qc.compose(layer.inverse(), inplace=True)
-        qc.barrier()
 
+    qc.barrier()
     qc.compose(initial_clifford_layer.inverse(), inplace=True)
     qc.barrier()
 
