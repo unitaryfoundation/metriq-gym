@@ -122,7 +122,7 @@ def test_benchmark_schema_compliance_e2e(schema_path, tmp_path, monkeypatch):
 
     # 5. Dispatch (This triggers the Schema Validator internally)
     # If parameters were renamed in schema but not code, this step explodes.
-    # Uses fake_jakarta which has 7 qubits needed for WIT, but is smaller/restricited couplings
+    # Uses fake_jakarta which has 7 qubits needed for WIT, but is smaller/restricted couplings
     # than the default AER simulator, which would be too large for BSEQ running locally.
     dispatch_cmd = subprocess.run(
         ["mgym", "job", "dispatch", str(temp_config_path), "-p", "local", "-d", "fake_jakarta"],
