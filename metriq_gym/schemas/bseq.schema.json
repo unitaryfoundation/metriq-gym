@@ -19,7 +19,7 @@
     },
     "max_colors": {
       "type": "integer",
-      "description": "If specified, the maximum number of colors to use in the BSEQ benchmark. If unspecified, all colors will be used."
+      "description": "If specified, Maximum number of colors to use in the BSEQ benchmark. If unspecified, all colors will be used."
     }
   },
   "required": ["benchmark_name"]
