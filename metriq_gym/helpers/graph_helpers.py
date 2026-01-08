@@ -40,6 +40,7 @@ def limit_colors(coloring: GraphColoring, max_colors: int) -> "GraphColoring":
     """Adjusts the coloring to use at most max_colors colors.
 
     Args:
+        coloring: The original GraphColoring instance to limit.
         max_colors: Maximum number of colors to use.
 
     Returns:
