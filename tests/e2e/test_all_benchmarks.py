@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 import pytest
 from pathlib import Path
@@ -135,11 +136,13 @@ def test_benchmark_schema_compliance_e2e(schema_path, tmp_path, monkeypatch):
         )
 
     # 6. Extract Job ID
-    try:
-        # Output: "✓ <Name> dispatched with metriq-gym Job ID: <uuid>"
-        job_id = dispatch_cmd.stdout.strip().split("Job ID: ")[-1]
-    except IndexError:
+    # Output: "✓ <Name> dispatched with metriq-gym Job ID: <uuid>"
+    # Use regex to extract just the UUID, since pyqrack may print warnings
+    # to stdout after the job ID line (e.g., "No platforms found. Check OpenCL installation!")
+    match = re.search(r"Job ID: ([0-9a-f-]+)", dispatch_cmd.stdout)
+    if not match:
         pytest.fail(f"Could not extract Job ID. Stdout: {dispatch_cmd.stdout}")
+    job_id = match.group(1)
 
     # 7. Poll (Verify execution)
     poll_cmd = subprocess.run(["mgym", "job", "poll", job_id], capture_output=True, text=True)
