@@ -297,7 +297,7 @@ def run_ibm_experiment(backend, twoq_gate, qubit_chain, two_disjoint_layers, len
         seed=42,
     )
 
-    lfexp.experiment_options.max_circuits = 144
+    lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
     circuits = lfexp.circuits()
     print(f"Generated {len(circuits)} circuits")
     print(f"Submitting {len(circuits)} circuits with {nshots} shots each...")
