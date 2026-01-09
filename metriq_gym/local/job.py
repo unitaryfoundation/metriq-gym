@@ -19,9 +19,11 @@ class LocalAerJob(QuantumJob):
         *,
         device: QuantumDevice | None = None,
         counts: dict[str, int] | None = None,
+        execution_time: float | None = None,
         **_,
     ) -> None:
         super().__init__(job_id, device)
+        self._execution_time_s = execution_time
 
         if counts is not None:
             if device is None:
@@ -37,6 +39,7 @@ class LocalAerJob(QuantumJob):
                     "device_id": self._device_id,
                     "completed_at_utc": dt.datetime.now().isoformat(),
                     "counts": counts,
+                    "execution_time_s": execution_time,
                 },
             )
         else:  # At polling time a job is created with load_job
@@ -46,6 +49,7 @@ class LocalAerJob(QuantumJob):
 
             self._counts = data.get("counts", {})
             self._device_id = data.get("device_id")
+            self._execution_time_s = data.get("execution_time_s")
 
     def result(self) -> Result:
         return Result(
