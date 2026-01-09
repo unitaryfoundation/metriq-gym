@@ -1,26 +1,11 @@
 """Unified EPLG benchmark script for IBM, AWS, and Quantinuum providers.
 
-Usage Examples:
-    # IBM
-    python eplg.py --provider ibm --device ibm_fez
-
-    # AWS (local noisy simulator)
-    python eplg.py --provider aws --device local
-
-    # Quantinuum
-    python eplg.py --provider quantinuum --device H1-1LE
-
-Configuration:
-    Edit the script directly to change:
-    - Chain lengths (num_qubits_in_chain)
-    - Chain type for IBM (CHAIN_TYPE: "random" or "best")
-    - Circuit lengths, samples, shots, etc.
+Usage:
+    Edit the TUNABLE PARAMETERS section below, then run:
+    python eplg.py
 
 Note: The EPLG table shows scores at 10, 20, 50, and 100 qubits, computed automatically.
 """
-import argparse
-import warnings
-import logging
 import os
 import random
 import numpy as np
@@ -31,10 +16,38 @@ from qiskit_experiments.library.randomized_benchmarking import LayerFidelity
 # Load environment variables
 load_dotenv()
 
-# Suppress warnings and errors from qiskit_experiments
-warnings.filterwarnings('ignore')
-logging.getLogger('qiskit_experiments').setLevel(logging.CRITICAL)
-os.environ['QISKIT_EXPERIMENTS_SKIP_SERVICE'] = '1'
+
+# ============================================================================
+# TUNABLE PARAMETERS
+# ============================================================================
+
+# --- Provider and device selection ---
+PROVIDER = "quantinuum"  # "ibm", "aws", or "quantinuum"
+DEVICE = "H1-1LE"  # IBM: device name, AWS: "local", Quantinuum: "H1-1LE", "H1-1", etc.
+
+# --- Common parameters ---
+LENGTHS = [2, 4]  # Circuit depths to test
+NUM_SAMPLES = 3  # Number of random circuits per depth
+SHOTS = 100  # Measurement shots per circuit
+SEED = 12345  # Random seed for reproducibility
+
+# --- IBM-specific parameters ---
+IBM_NUM_QUBITS_IN_CHAIN = 120
+IBM_CHAIN_TYPE = "best"  # "random" or "best" - "best" searches all paths for highest fidelity
+IBM_TWOQ_GATE = None  # None = auto-detect. Options: "ecr", "cx", "cz", etc.
+
+# --- AWS-specific parameters ---
+AWS_NUM_QUBITS_IN_CHAIN = 10
+AWS_TWOQ_GATE = "cz"
+AWS_ONE_QUBIT_BASIS_GATES = ["rz", "rx", "x"]
+AWS_NOISE_PROB = 0.01  # Depolarizing noise probability (1% = 0.01)
+
+# --- Quantinuum-specific parameters ---
+QUANTINUUM_NUM_QUBITS_IN_CHAIN = 10
+QUANTINUUM_TWOQ_GATE = "cz"
+QUANTINUUM_ONE_QUBIT_BASIS_GATES = ["rz", "rx", "x"]
+QUANTINUUM_NUM_QUBITS = 20  # Total qubits available on H1 series devices
+QUANTINUUM_OPT_LEVEL = 1  # Compilation optimization level (0-3)
 
 
 # ============================================================================
@@ -219,7 +232,7 @@ def flatten(paths, cutoff=None):
     ]
 
 
-def setup_ibm_provider(device_name, twoq_gate=None):
+def setup_ibm_provider(device_name, twoq_gate=IBM_TWOQ_GATE):
     """Setup IBM Quantum provider and backend."""
     from qiskit_ibm_runtime import QiskitRuntimeService
 
@@ -335,8 +348,8 @@ def run_aws_experiment(device, device_name, qubit_chain, two_disjoint_layers, le
     from qbraid import transpile as qb_transpile
     from braket.circuits import Circuit
 
-    twoq_gate = "cz"
-    one_qubit_basis_gates = ["rz", "rx", "x"]
+    twoq_gate = AWS_TWOQ_GATE
+    one_qubit_basis_gates = AWS_ONE_QUBIT_BASIS_GATES
 
     lfexp = LayerFidelity(
         physical_qubits=qubit_chain,
@@ -363,7 +376,7 @@ def run_aws_experiment(device, device_name, qubit_chain, two_disjoint_layers, le
 
     # Add noise model
     print("\nAdding noise model to circuits...")
-    noise_prob = 0.01
+    noise_prob = AWS_NOISE_PROB
     noisy_circuits = []
     for original_circuit in braket_circuits:
         gate_instructions = []
@@ -495,8 +508,8 @@ def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers,
     from qbraid import transpile as qb_transpile
     from pytket.passes import DecomposeBoxes
 
-    twoq_gate = "cz"
-    one_qubit_basis_gates = ["rz", "rx", "x"]
+    twoq_gate = QUANTINUUM_TWOQ_GATE
+    one_qubit_basis_gates = QUANTINUUM_ONE_QUBIT_BASIS_GATES
 
     lfexp = LayerFidelity(
         physical_qubits=qubit_chain,
@@ -531,7 +544,7 @@ def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers,
     print("All circuits uploaded")
 
     # Compile
-    opt_level = int(os.getenv("QUANTINUUM_NEXUS_OPT_LEVEL", "1"))
+    opt_level = QUANTINUUM_OPT_LEVEL
     print(f"\nCompiling {len(circuit_refs)} circuits for {device.device_name}...")
     compiled_circuit_refs = qnexus.compile(
         programs=circuit_refs,
@@ -710,84 +723,40 @@ def print_eplg_table(device_name, chain_lens, chain_eplgs):
 # ============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Unified EPLG benchmark for IBM, AWS, and Quantinuum providers"
-    )
-    parser.add_argument(
-        "--provider",
-        type=str,
-        required=True,
-        choices=["ibm", "aws", "quantinuum"],
-        help="Cloud provider (ibm, aws, or quantinuum)"
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        required=True,
-        help="Device name. IBM: ibm_fez, ibm_kyiv, etc. AWS: local (only). Quantinuum: H1-1LE, H1-1, etc."
-    )
-    parser.add_argument(
-        "--lengths",
-        type=str,
-        default="2,4",
-        help="Comma-separated list of circuit lengths (default: 2,4)"
-    )
-    parser.add_argument(
-        "--num-samples",
-        type=int,
-        default=3,
-        help="Number of samples per length (default: 3)"
-    )
-    parser.add_argument(
-        "--shots",
-        type=int,
-        default=100,
-        help="Number of shots per circuit (default: 100)"
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=12345,
-        help="Random seed for chain generation (default: 12345)"
-    )
-
-    args = parser.parse_args()
-
-    # Parse lengths
-    lengths = [int(x) for x in args.lengths.split(",")]
-
-    # Set chain lengths and chain type based on provider (edit these as needed)
-    if args.provider == "ibm":
-        num_qubits_in_chain = 120
-        chain_type = "best"  # "random" or "best"
-    elif args.provider == "aws":
-        num_qubits_in_chain = 10
-    elif args.provider == "quantinuum":
-        num_qubits_in_chain = 10
+    # Set chain lengths and chain type based on provider
+    if PROVIDER == "ibm":
+        num_qubits_in_chain = IBM_NUM_QUBITS_IN_CHAIN
+        chain_type = IBM_CHAIN_TYPE
+    elif PROVIDER == "aws":
+        num_qubits_in_chain = AWS_NUM_QUBITS_IN_CHAIN
+    elif PROVIDER == "quantinuum":
+        num_qubits_in_chain = QUANTINUUM_NUM_QUBITS_IN_CHAIN
+    else:
+        raise ValueError(f"Invalid PROVIDER: {PROVIDER}. Must be 'ibm', 'aws', or 'quantinuum'")
 
     print("="*60)
-    print(f"EPLG Benchmark - {args.provider.upper()}")
+    print(f"EPLG Benchmark - {PROVIDER.upper()}")
     print("="*60)
 
     # Provider-specific execution
-    if args.provider == "ibm":
-        backend, twoq_gate, service = setup_ibm_provider(args.device)
+    if PROVIDER == "ibm":
+        backend, twoq_gate, service = setup_ibm_provider(DEVICE)
         qubit_chain = generate_ibm_chain(
-            backend, twoq_gate, num_qubits_in_chain, chain_type, args.seed
+            backend, twoq_gate, num_qubits_in_chain, chain_type, SEED
         )
         all_pairs = to_edges(qubit_chain)
         two_disjoint_layers = [all_pairs[0::2], all_pairs[1::2]]
 
         exp_data = run_ibm_experiment(
             backend, twoq_gate, qubit_chain, two_disjoint_layers,
-            lengths, args.num_samples, args.shots
+            LENGTHS, NUM_SAMPLES, SHOTS
         )
 
         device_name = backend.name
 
-    elif args.provider == "aws":
+    elif PROVIDER == "aws":
         device, device_name, num_qubits = setup_aws_provider()
-        qubit_chain = random_chain_complete_graph(num_qubits, num_qubits_in_chain, args.seed)
+        qubit_chain = random_chain_complete_graph(num_qubits, num_qubits_in_chain, SEED)
         print(f"Qubit chain: {qubit_chain}")
 
         all_pairs = to_edges(qubit_chain)
@@ -795,13 +764,13 @@ def main():
 
         exp_data = run_aws_experiment(
             device, device_name, qubit_chain, two_disjoint_layers,
-            lengths, args.num_samples, args.shots
+            LENGTHS, NUM_SAMPLES, SHOTS
         )
 
-    elif args.provider == "quantinuum":
-        device, project = setup_quantinuum_provider(args.device)
-        num_qubits = 20  # H1 series
-        qubit_chain = random_chain_complete_graph(num_qubits, num_qubits_in_chain, args.seed)
+    elif PROVIDER == "quantinuum":
+        device, project = setup_quantinuum_provider(DEVICE)
+        num_qubits = QUANTINUUM_NUM_QUBITS
+        qubit_chain = random_chain_complete_graph(num_qubits, num_qubits_in_chain, SEED)
         print(f"Qubit chain: {qubit_chain}")
 
         all_pairs = to_edges(qubit_chain)
@@ -809,7 +778,7 @@ def main():
 
         exp_data = run_quantinuum_experiment(
             device, project, qubit_chain, two_disjoint_layers,
-            lengths, args.num_samples, args.shots
+            LENGTHS, NUM_SAMPLES, SHOTS
         )
         device_name = device.device_name
 
