@@ -23,7 +23,7 @@ load_dotenv()
 
 # --- Provider and device selection ---
 PROVIDER = "quantinuum"  # "ibm", "aws", or "quantinuum"
-DEVICE = "H1-1LE"  # IBM: device name, AWS: "local", Quantinuum: "H1-1LE", "H1-1", etc.
+DEVICE = "H1-1LE"  # IBM: device name, AWS: "local", Quantinuum: "H1-1LE" (20q), "H2-1LE" (56q), etc.
 
 # --- Common parameters ---
 LENGTHS = [2, 4]  # Circuit depths to test
@@ -46,7 +46,7 @@ AWS_NOISE_PROB = 0.01  # Depolarizing noise probability (1% = 0.01)
 QUANTINUUM_NUM_QUBITS_IN_CHAIN = 10
 QUANTINUUM_TWOQ_GATE = "cz"
 QUANTINUUM_ONE_QUBIT_BASIS_GATES = ["rz", "rx", "x"]
-QUANTINUUM_NUM_QUBITS = 20  # Total qubits available on H1 series devices
+QUANTINUUM_NUM_QUBITS = 20  # Total qubits available (H1: 20, H2: 56)
 QUANTINUUM_OPT_LEVEL = 1  # Compilation optimization level (0-3)
 
 
@@ -505,8 +505,7 @@ def setup_quantinuum_provider(device_name="H1-1LE"):
 def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers, lengths, num_samples, nshots):
     """Run LayerFidelity experiment on Quantinuum."""
     import qnexus
-    from qbraid import transpile as qb_transpile
-    from pytket.passes import DecomposeBoxes
+    from pytket.extensions.qiskit import qiskit_to_tk
 
     twoq_gate = QUANTINUUM_TWOQ_GATE
     one_qubit_basis_gates = QUANTINUUM_ONE_QUBIT_BASIS_GATES
@@ -529,8 +528,9 @@ def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers,
     print(f"\nCompiling and uploading {len(circuits)} circuits to NEXUS...")
     circuit_refs = []
     for i, qiskit_circuit in enumerate(circuits):
-        pytket_circuit = qb_transpile(qiskit_circuit, "pytket")
-        DecomposeBoxes().apply(pytket_circuit)
+        # Decompose to basis gates before converting to avoid Clifford gate issues
+        decomposed_circuit = qiskit_circuit.decompose(reps=3)
+        pytket_circuit = qiskit_to_tk(decomposed_circuit)
 
         circuit_ref = qnexus.circuits.upload(
             circuit=pytket_circuit,
@@ -770,7 +770,8 @@ def main():
     elif PROVIDER == "quantinuum":
         device, project = setup_quantinuum_provider(DEVICE)
         num_qubits = QUANTINUUM_NUM_QUBITS
-        qubit_chain = random_chain_complete_graph(num_qubits, num_qubits_in_chain, SEED)
+        # Use contiguous qubits starting from 0 to avoid sparse qubit indexing issues
+        qubit_chain = list(range(num_qubits_in_chain))
         print(f"Qubit chain: {qubit_chain}")
 
         all_pairs = to_edges(qubit_chain)
