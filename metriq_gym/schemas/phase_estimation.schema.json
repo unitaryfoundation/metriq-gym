@@ -21,8 +21,8 @@
     "min_qubits": {
       "type": "integer",
       "description": "Minimum number of qubits to start generating circuits for the benchmark.",
-      "default": 2,
-      "minimum": 2,
+      "default": 3,
+      "minimum": 3,
       "examples": [4]
     },
     "max_qubits": {

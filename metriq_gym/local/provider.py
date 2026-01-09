@@ -1,6 +1,7 @@
 from qbraid.runtime import QuantumDevice, QuantumProvider
 from qiskit_aer import AerSimulator
 from qiskit_ibm_runtime import QiskitRuntimeService
+from qiskit_ibm_runtime.fake_provider import FakeProviderForBackendV2
 
 from metriq_gym.local.device import LocalAerDevice
 
@@ -42,7 +43,15 @@ class LocalProvider(QuantumProvider):
         if device_id == "aer_simulator":
             return self.device
         try:
-            aer_backend = AerSimulator.from_backend(QiskitRuntimeService().backend(device_id))
+            # Try loading a local fake backend first, which doesn't require an
+            # IBM Quantum account, otherwise load from the runtime service.
+
+            fake_local_backends = {b.name: b for b in FakeProviderForBackendV2().backends()}
+            if device_id in fake_local_backends:
+                backend = fake_local_backends[device_id]
+            else:
+                backend = QiskitRuntimeService().backend(device_id)
+            aer_backend = AerSimulator.from_backend(backend)
         except Exception as exc:
             raise ValueError("Unknown device identifier") from exc
 
