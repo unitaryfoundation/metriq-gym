@@ -361,7 +361,7 @@ def run_aws_experiment(device, device_name, qubit_chain, two_disjoint_layers, le
         one_qubit_basis_gates=one_qubit_basis_gates,
     )
 
-    lfexp.experiment_options.max_circuits = 144
+    lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
     circuits = lfexp.circuits()
     print(f"\nGenerated {len(circuits)} circuits")
 
@@ -521,7 +521,7 @@ def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers,
         one_qubit_basis_gates=one_qubit_basis_gates,
     )
 
-    lfexp.experiment_options.max_circuits = 144
+    lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
     circuits = lfexp.circuits()
     print(f"\nGenerated {len(circuits)} circuits")
 
