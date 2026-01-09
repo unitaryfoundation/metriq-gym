@@ -164,7 +164,7 @@ def _allowed_edges(
 
 
 def random_chain_from_graph(
-    graph: rx.PyGraph,
+    graph: rx.PyGraph | rx.PyDiGraph,
     length: int,
     seed: int | None = None,
     backend=None,
@@ -174,7 +174,7 @@ def random_chain_from_graph(
     """Sample a random simple path of given length from a graph.
 
     Args:
-        graph: Connectivity graph.
+        graph: Connectivity graph (PyGraph or PyDiGraph).
         length: Desired chain length (number of nodes).
         seed: Random seed.
         backend: Optional Qiskit backend for gate filtering.
@@ -185,7 +185,11 @@ def random_chain_from_graph(
         List of qubit indices forming the chain.
     """
     rng = random.Random(seed)
-    graph_und = graph.to_undirected(multigraph=False)
+    # Convert to undirected if needed
+    if isinstance(graph, rx.PyDiGraph):
+        graph_und = graph.to_undirected(multigraph=False)
+    else:
+        graph_und = graph
 
     allowed = _allowed_edges(graph_und, backend, twoq_gate)
     if not allowed:
@@ -319,8 +323,14 @@ def select_best_chain_ibm(
     coupling_map = backend.target.build_coupling_map(twoq_gate)
     graph = coupling_map.graph
 
+    # Convert to undirected if needed
+    if isinstance(graph, rx.PyDiGraph):
+        graph_und = graph.to_undirected(multigraph=False)
+    else:
+        graph_und = graph
+
     paths = rx.all_pairs_all_simple_paths(
-        graph.to_undirected(multigraph=False),
+        graph_und,
         min_depth=num_qubits_in_chain,
         cutoff=num_qubits_in_chain,
     )
