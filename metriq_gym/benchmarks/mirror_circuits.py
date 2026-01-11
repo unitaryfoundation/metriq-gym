@@ -359,7 +359,9 @@ def pauli_from_layer(pauli_layer: QuantumCircuit) -> Pauli:
     n = pauli_layer.num_qubits
     per_qubit = ["I"] * n  # default all identity
 
-    for instr, qargs, _ in pauli_layer.data:
+    for instruction in pauli_layer.data:
+        instr = instruction.operation
+        qargs = instruction.qubits
         name = instr.name.lower()
         if name in ("barrier", "delay", "measure"):
             continue  # middle layer shouldn't have these, but be permissive
