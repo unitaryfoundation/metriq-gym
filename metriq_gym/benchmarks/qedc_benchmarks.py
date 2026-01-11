@@ -1,24 +1,42 @@
-"""
-A general structure for dispatching and polling QED-C benchmarks.
-Credit to QED-C for implementing the benchmarks.
+"""QED-C application-oriented benchmark wrapper.
 
-The benchmarks generate N circuits for M qubits ranging from min_qubits to max_qubits.
-Each circuit is then run, and the metrics are computed.
+Summary:
+    Provides a generic dispatch/poll pipeline around the QED-C benchmark suite (Bernstein-
+    Vazirani, Phase Estimation, Hidden Shift, Quantum Fourier Transform) via the QC-App-
+    Oriented-Benchmarks submodule.
+
+Result interpretation:
+    Polling returns QEDCResult.circuit_metrics, a nested dictionary keyed by qubit count and
+    circuit identifier, populated with the fidelity or related metrics computed by the QED-C
+    analyser. Inspect the per-circuit entries to understand performance trends.
+
+Reference:
+    - QED-C QC-App-Oriented-Benchmarks repository for algorithm-specific methodology.
+      https://github.com/SRI-International/QC-App-Oriented-Benchmarks
 """
 
 from dataclasses import dataclass
 from importlib import import_module
 from types import ModuleType
-
-from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-from qbraid.runtime.result_data import MeasCount
+from typing import TYPE_CHECKING
 from qiskit import QuantumCircuit
+import numpy as np
 
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from metriq_gym.benchmarks.benchmark import (
+    Benchmark,
+    BenchmarkData,
+    BenchmarkResult,
+    BenchmarkScore,
+)
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.resource_estimation import CircuitBatch
 
 from _common import metrics
+
+if TYPE_CHECKING:
+    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qbraid.runtime.result_data import MeasCount
 
 
 QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
@@ -30,33 +48,28 @@ QEDC_BENCHMARK_IMPORTS: dict[JobType, str] = {
 
 """
 Type: QEDC_Metrics
-Description: 
-    The structure for all returned QED-C circuit metrics. 
+Description:
+    The structure for all returned QED-C circuit metrics.
     The first key represents the number of qubits for the group of circuits.
-    The second key represents the unique identifier for a circuit in the group. 
-        - This may be a secret string for Bernstein-Vazirani, theta value for Phase-Estimation, 
-          and so on. Benchmark specific documentation can be found in QED-C's 
+    The second key represents the unique identifier for a circuit in the group.
+        - This may be a secret string for Bernstein-Vazirani, theta value for Phase-Estimation,
+          and so on. Benchmark specific documentation can be found in QED-C's
           QC-App-Oriented-Benchmarks repository.
     The third key represents the metric being stored.
 Example for Bernstein-Vazirani:
 {
 '3':    {
-        '1': {'create_time': 0.16371703147888184,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '2': {'create_time': 0.0005087852478027344,
-              'fidelity': 1.0,
+        '2': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         },
 '4':    {
-        '1': {'create_time': 0.0005209445953369141,
-              'fidelity': 1.0,
+        '1': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '3': {'create_time': 0.00047206878662109375,
-              'fidelity': 1.0,
+        '3': {'fidelity': 1.0,
               'hf_fidelity': 1.0},
-        '5': {'create_time': 0.0005078315734863281,
-              'fidelity': 1.0,
+        '5': {'fidelity': 1.0,
               'hf_fidelity': 1.0}
         }
 }
@@ -81,13 +94,16 @@ class QEDCData(BenchmarkData):
 
 class QEDCResult(BenchmarkResult):
     """
-    Stores the results from running a QED-C benchmark.
+    Stores the benchmark score.
 
-    Results:
-        circuit_metrics: Stores all QED-C metrics to output.
+    Score:
+        accuracy_score: Defined as the weighted average fidelity across all groups in the sweep.
     """
 
-    circuit_metrics: QEDC_Metrics
+    accuracy_score: BenchmarkScore
+
+    def compute_score(self) -> BenchmarkScore:
+        return self.accuracy_score
 
 
 def import_benchmark_module(benchmark_name: str) -> ModuleType:
@@ -111,7 +127,7 @@ def import_benchmark_module(benchmark_name: str) -> ModuleType:
 
 
 def analyze_results(
-    params: dict[str, float | str], job_data: QEDCData, counts_list: list[MeasCount]
+    params: dict[str, float | str], job_data: QEDCData, counts_list: list["MeasCount"]
 ) -> QEDC_Metrics:
     """
     Iterates over each circuit group and circuit id to process results.
@@ -153,7 +169,7 @@ def analyze_results(
         if JobType(benchmark_name) == JobType.PHASE_ESTIMATION:
             # Requires slightly different arguments.
             _, fidelity = benchmark.analyze_and_print_result(
-                None, result_object, int(num_qubits) - 1, float(circuit_id), params["num_shots"]
+                None, result_object, int(num_qubits) - 1, float(circuit_id), params["shots"]
             )
         elif JobType(benchmark_name) == JobType.QUANTUM_FOURIER_TRANSFORM:
             # Requires slightly different arguments.
@@ -162,13 +178,13 @@ def analyze_results(
                 result_object,
                 int(num_qubits),
                 int(circuit_id),
-                params["num_shots"],
+                params["shots"],
                 params["method"],
             )
         else:
             # Default call for Bernstein-Vazirani and Hidden Shift.
             _, fidelity = benchmark.analyze_and_print_result(
-                None, result_object, int(num_qubits), int(circuit_id), params["num_shots"]
+                None, result_object, int(num_qubits), int(circuit_id), params["shots"]
             )
 
         metrics.store_metric(num_qubits, circuit_id, "fidelity", fidelity)
@@ -195,8 +211,12 @@ def get_circuits_and_metrics(
     benchmark = import_benchmark_module(benchmark_name)
 
     # Call the QED-C submodule to get the circuits and creation information.
+    # Conver to QED-C parameter naming conventions.
+    qedc_params = params.copy()
+    if "shots" in qedc_params:
+        qedc_params["num_shots"] = qedc_params.pop("shots")
     circuits, circuit_metrics = benchmark.run(
-        **params,
+        **qedc_params,
         api="qiskit",
         get_circuits=True,
     )
@@ -215,21 +235,67 @@ def get_circuits_and_metrics(
     return flat_circuits, circuit_metrics, circuit_identifiers
 
 
+def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, float]:
+    """
+    The score is the weighted average of fidelities across all groups.
+
+    Args:
+        circuit_metrics: the QEDC_Metrics object after analyzing results.
+
+    Returns:
+        values: the score and the uncertainty.
+    """
+    # Obtain the average fidelity and standard deviation for each qubit size (group) in the sweep.
+    metrics.circuit_metrics = circuit_metrics
+    metrics.aggregate_metrics()
+    avgs = metrics.group_metrics["avg_fidelities"]
+    s_k = np.array(metrics.group_metrics["std_fidelities"])
+    n_k = np.array(
+        [len(circuit_metrics[g]) for g in circuit_metrics]
+    )  # number of circuits in a group
+
+    # The score will be the weighted average across all groups -- the entire sweep.
+    score = float(np.sum(n_k * avgs) / np.sum(n_k))
+
+    # The uncertainty is the pooled standard deviation
+    # (the weighted estimate of variance amongst different means).
+    denom: float = np.sum(n_k - 1)
+    if denom == 0:
+        uncertainty = 0.0
+    else:
+        pooled_variance: float = np.sum((n_k - 1) * s_k**2) / denom
+        uncertainty = float(np.sqrt(pooled_variance))
+
+    return (score, uncertainty)
+
+
 class QEDCBenchmark(Benchmark):
     """Benchmark class for QED-C experiments."""
 
-    def dispatch_handler(self, device: QuantumDevice) -> QEDCData:
-        # For more information on the parameters, view the schema for this benchmark.
-        num_shots = self.params.num_shots
-        benchmark_name = self.params.benchmark_name
+    def _build_circuits(
+        self, device: "QuantumDevice"
+    ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
+        """Shared circuit construction logic.
 
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            Tuple of (circuits, circuit_metrics, circuit_identifiers).
+        """
+        benchmark_name = self.params.benchmark_name
         circuits, circuit_metrics, circuit_identifiers = get_circuits_and_metrics(
             benchmark_name=benchmark_name,
             params=self.params.model_dump(exclude={"benchmark_name"}),
         )
+        return circuits, circuit_metrics, circuit_identifiers
+
+    def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
+        # For more information on the parameters, view the schema for this benchmark.
+        circuits, circuit_metrics, circuit_identifiers = self._build_circuits(device)
 
         return QEDCData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=num_shots),
+            quantum_job=device.run(circuits, shots=self.params.shots),
             circuit_metrics=circuit_metrics,
             circuit_identifiers=circuit_identifiers,
         )
@@ -237,12 +303,25 @@ class QEDCBenchmark(Benchmark):
     def poll_handler(
         self,
         job_data: QEDCData,
-        result_data: list[GateModelResultData],
-        quantum_jobs: list[QuantumJob],
+        result_data: list["GateModelResultData"],
+        quantum_jobs: list["QuantumJob"],
     ) -> QEDCResult:
         counts_list = flatten_counts(result_data)
 
         # Call the QED-C method after some pre-processing to obtain metrics.
         circuit_metrics = analyze_results(self.params.model_dump(), job_data, counts_list)
 
-        return QEDCResult(circuit_metrics=circuit_metrics)
+        value, uncertainty = calculate_accuracy_score(circuit_metrics)
+        return QEDCResult(
+            accuracy_score=BenchmarkScore(
+                value=value,
+                uncertainty=uncertainty,
+            )
+        )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        circuits, _, _ = self._build_circuits(device)
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]

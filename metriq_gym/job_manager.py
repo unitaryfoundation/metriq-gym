@@ -1,7 +1,9 @@
 """Local persistence and helpers for tracking dispatched metriq-gym jobs."""
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime
+from pathlib import Path
+import shutil
 from metriq_gym._version import __version__
 import json
 import os
@@ -29,8 +31,10 @@ class MetriqGymJob:
     platform: dict[str, Any] | None = None
     suite_id: str | None = None
     suite_name: str | None = None
+    # No suite weights in this PR; reserved for future use
     app_version: str | None = __version__
     result_data: dict[str, Any] | None = None
+    runtime_seconds: float | None = None
 
     def __post_init__(self) -> None:
         """Keep platform and provider/device fields in sync on initialization.
@@ -82,6 +86,9 @@ class MetriqGymJob:
             plat = job_dict.get("platform", {})
             job_dict.setdefault("provider_name", plat.get("provider"))
             job_dict.setdefault("device_name", plat.get("device"))
+        # Drop any unknown fields to keep older/newer records loadable
+        allowed_keys = {f.name for f in fields(MetriqGymJob)}
+        job_dict = {k: v for k, v in job_dict.items() if k in allowed_keys}
         return MetriqGymJob(**job_dict)
 
     def __str__(self) -> str:
@@ -97,6 +104,7 @@ class MetriqGymJob:
             ["provider_job_ids", pprint.pformat(self.data["provider_job_ids"])],
             ["dispatch_time", self.dispatch_time.isoformat()],
             ["app_version", self.app_version],
+            ["runtime_seconds", str(self.runtime_seconds)],
             ["result_data", pprint.pformat(self.result_data)],
         ]
         return tabulate(rows, tablefmt="fancy_grid")
@@ -105,9 +113,13 @@ class MetriqGymJob:
 # TODO: https://github.com/unitaryfoundation/metriq-gym/issues/51
 class JobManager:
     jobs: list[MetriqGymJob]
-    jobs_file = get_data_db_path()
+    jobs_file: Path
 
-    def __init__(self):
+    def __init__(self, jobs_file: Path | str | None = None) -> None:
+        self.jobs_file = Path(jobs_file) if jobs_file is not None else get_data_db_path()
+        # Track original lines (parsed jobs and raw skipped) to preserve order on rewrite.
+        # Each entry is (line_number, kind, payload) where kind is "job" or "raw".
+        self._line_entries: list[tuple[int, str, Any]] = []
         self._load_jobs()
 
     def _log_skip(self, line_number: int, reason: str) -> None:
@@ -131,7 +143,7 @@ class JobManager:
         """
         self.jobs = []
 
-        if not os.path.exists(self.jobs_file):
+        if not self.jobs_file.exists():
             return
 
         with open(self.jobs_file) as file:
@@ -162,14 +174,29 @@ class JobManager:
                     logger.warning(f"{line_number} Unexpected exception ({type(e).__name__}): {e}")
                 else:
                     self.jobs.append(job)
+                    self._line_entries.append((line_number, "job", job))
+                    continue
+                # Keep skipped lines so later rewrites don't drop user data and preserve order
+                self._line_entries.append((line_number, "raw", stripped_line))
 
         if not self.jobs:
             logger.warning(f"No valid jobs found in {self.jobs_file}.")
 
     def add_job(self, job: MetriqGymJob) -> str:
         self.jobs.append(job)
-        with open(self.jobs_file, "a") as file:
-            file.write(job.serialize() + "\n")
+        max_line = max((ln for ln, _, _ in self._line_entries), default=0)
+        self._line_entries.append((max_line + 1, "job", job))
+        # Append safely without rewriting existing records (minimize data-loss risk)
+        try:
+            with open(self.jobs_file, "a") as file:
+                file.write(job.serialize() + "\n")
+        except Exception as e:
+            self.jobs.pop()
+            self._line_entries.pop()
+            logger.error(
+                f"Failed to append job {job.id} to {self.jobs_file}: {e}. "
+                "Job was not persisted and has been removed from memory."
+            )
         return job.id
 
     def get_jobs(self) -> list[MetriqGymJob]:
@@ -191,17 +218,13 @@ class JobManager:
 
     def delete_job(self, job_id: str) -> None:
         self.jobs = [job for job in self.jobs if job.id != job_id]
-        temp_file = f"{self.jobs_file}.tmp"
-        try:
-            with open(temp_file, "w") as file:
-                for job in self.jobs:
-                    file.write(job.serialize() + "\n")
-            os.replace(temp_file, self.jobs_file)
-            logger.info(f"Deleted job with id {job_id} from {self.jobs_file}")
-        except Exception as e:
-            logger.error(f"Failed to delete job with id {job_id}: {e}")
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+        self._line_entries = [
+            (ln, kind, payload)
+            for (ln, kind, payload) in self._line_entries
+            if not (kind == "job" and isinstance(payload, MetriqGymJob) and payload.id == job_id)
+        ]
+        self._rewrite_jobs_file()
+        logger.info(f"Deleted job with id {job_id} from {self.jobs_file}")
 
     def update_job(self, updated_job: MetriqGymJob) -> None:
         """Persist updated job information to disk."""
@@ -212,13 +235,43 @@ class JobManager:
         else:
             raise ValueError(f"Cannot update job: job with id {updated_job.id} not found")
 
+        new_entries: list[tuple[int, str, Any]] = []
+        for ln, kind, payload in self._line_entries:
+            if kind == "job" and isinstance(payload, MetriqGymJob) and payload.id == updated_job.id:
+                new_entries.append((ln, "job", updated_job))
+            else:
+                new_entries.append((ln, kind, payload))
+        self._line_entries = new_entries
+        self._rewrite_jobs_file()
+
+    def _rewrite_jobs_file(self) -> None:
+        """Rewrite the jobs file preserving original line order (parsed + skipped)."""
+        backup_path = self._backup_jobs_file()
         temp_file = f"{self.jobs_file}.tmp"
         try:
             with open(temp_file, "w") as file:
-                for job in self.jobs:
-                    file.write(job.serialize() + "\n")
-            os.replace(temp_file, self.jobs_file)
+                for ln, kind, payload in sorted(self._line_entries, key=lambda x: x[0]):
+                    if kind == "job":
+                        file.write(payload.serialize() + "\n")
+                    else:
+                        file.write(str(payload).strip() + "\n")
+            Path.replace(Path(temp_file), self.jobs_file)
         except Exception as e:
-            logger.error(f"Failed to update job with id {updated_job.id}: {e}")
+            logger.error(f"Failed to rewrite jobs file {self.jobs_file}: {e}")
             if os.path.exists(temp_file):
                 os.remove(temp_file)
+            if backup_path:
+                logger.error(f"Original file preserved at {backup_path}")
+
+    def _backup_jobs_file(self) -> Path | None:
+        """Create a timestamped backup of the current jobs file before rewrite."""
+        if not self.jobs_file.exists():
+            return None
+        ts = datetime.now().strftime("%Y%m%d%H%M%S")
+        backup_path = Path(f"{self.jobs_file}.{ts}.bak")
+        try:
+            shutil.copy2(self.jobs_file, backup_path)
+            return backup_path
+        except Exception as e:
+            logger.error(f"Failed to back up {self.jobs_file}: {e}")
+            return None

@@ -6,6 +6,7 @@ import tempfile
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 from typing import Optional, Any
 
 
@@ -34,6 +35,7 @@ class GitHubPRExporter(BaseExporter):
         commit_message: Optional[str] = None,
         pr_title: Optional[str] = None,
         pr_body: Optional[str] = None,
+        pr_labels: Optional[list[str]] = None,
         clone_dir: Optional[str] = None,
         payload: dict[str, Any] | list[dict[str, Any]] | None = None,
         filename: Optional[str] = None,
@@ -52,6 +54,7 @@ class GitHubPRExporter(BaseExporter):
             commit_message: Commit message. Defaults to a message with job id.
             pr_title: Pull request title. Defaults to a title with job id.
             pr_body: Pull request body. Optional.
+            pr_labels: Labels to add to the created pull request. Optional.
             clone_dir: Optional directory to perform clone/work. Defaults to a temp dir.
             payload: Optional data to write instead of self.as_dict().
             filename: Filename to write. Defaults to "<job_id>.json".
@@ -176,7 +179,7 @@ class GitHubPRExporter(BaseExporter):
                     f"{base_branch}...{login}:{branch_name}?expand=1"
                 )
                 try:
-                    pr_url = self._create_pull_request(
+                    pr_url, pr_number = self._create_pull_request(
                         token=token,  # type: ignore[arg-type]
                         owner=owner,
                         repo=repo_name,
@@ -185,9 +188,21 @@ class GitHubPRExporter(BaseExporter):
                         base=base_branch,
                         body=pr_body,
                     )
+                    if pr_labels:
+                        # Labels must be added via the issues API after PR creation.
+                        self._add_labels_to_pull_request(
+                            token=token,  # type: ignore[arg-type]
+                            owner=owner,
+                            repo=repo_name,
+                            pr_number=pr_number,
+                            labels=pr_labels,
+                        )
                     return pr_url
                 except Exception:
                     # Fallback: return compare URL so user can open PR manually in browser
+                    if pr_labels:
+                        labels_param = urllib.parse.quote(",".join(pr_labels))
+                        return f"{compare_url}&labels={labels_param}"
                     return compare_url
             else:
                 return (
@@ -244,7 +259,7 @@ class GitHubPRExporter(BaseExporter):
         head: str,
         base: str,
         body: Optional[str] = None,
-    ) -> str:
+    ) -> tuple[str, int]:
         api_url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
         data = {
             "title": title,
@@ -268,9 +283,26 @@ class GitHubPRExporter(BaseExporter):
 
         # Expect an 'html_url' field in the PR response
         pr_url = resp_data.get("html_url")
-        if not pr_url:
-            raise RuntimeError("GitHub PR creation: missing html_url in response")
-        return pr_url
+        pr_number = resp_data.get("number")
+        if not pr_url or not pr_number:
+            raise RuntimeError("GitHub PR creation: missing html_url or number in response")
+        return pr_url, int(pr_number)
+
+    def _add_labels_to_pull_request(
+        self, *, token: str, owner: str, repo: str, pr_number: int, labels: list[str]
+    ) -> None:
+        api_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/labels"
+        data = {"labels": labels}
+        req = urllib.request.Request(
+            api_url,
+            data=json.dumps(data).encode("utf-8"),
+            headers=self._headers(token, content_type="application/json"),
+            method="POST",
+        )
+        try:
+            urllib.request.urlopen(req).read()
+        except urllib.error.HTTPError as e:
+            raise RuntimeError(f"GitHub label add failed: {e.read().decode('utf-8')}") from e
 
     def _run_out(self, cmd: list[str]) -> tuple[str, str]:
         try:

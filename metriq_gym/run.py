@@ -9,86 +9,148 @@ import logging
 import uuid
 from dotenv import load_dotenv
 
-from qbraid import QbraidError
-from qbraid.runtime import (
-    get_providers,
-    GateModelResultData,
-    JobStatus,
-    QuantumDevice,
-    QuantumProvider,
-    load_job,
-    load_provider,
-)
 from tabulate import tabulate
-
-from metriq_gym.exporters.dict_exporter import DictExporter
-from metriq_gym.registry import (
-    BENCHMARK_DATA_CLASSES,
-    BENCHMARK_HANDLERS,
-    BENCHMARK_RESULT_CLASSES,
-    get_available_benchmarks,
-)
-from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+from typing import Any, TYPE_CHECKING, Optional
+from metriq_gym import __version__
 from metriq_gym.cli import list_jobs, parse_arguments, prompt_for_job
-from metriq_gym.exceptions import QBraidSetupError
-from metriq_gym.exporters.cli_exporter import CliExporter
-from metriq_gym.exporters.json_exporter import JsonExporter
-from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
-from metriq_gym._version import __version__
-import re
 from metriq_gym.job_manager import JobManager, MetriqGymJob
-from metriq_gym.qplatform.job import job_status
-from metriq_gym.qplatform.device import normalized_metadata
+from metriq_gym.qplatform.job import total_execution_time
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import JobType
+from metriq_gym.resource_estimation import (
+    CircuitBatch,
+    aggregate_resource_estimates,
+    print_resource_estimate,
+    quantinuum_hqc_formula,
+)
 from metriq_gym.suite_parser import parse_suite_file
+from metriq_gym.exceptions import QBraidSetupError
+from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_filename
+
+
+if TYPE_CHECKING:
+    from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
 
-available_benchmarks = get_available_benchmarks()
-
-COMMON_SUITE_KEYS = ["provider", "device", "timestamp", "app_version"]
+DEFAULT_UPLOAD_PR_LABELS = ["data", "source:metriq-gym"]
 
 
-def setup_device(provider_name: str, backend_name: str) -> QuantumDevice:
+def load_provider(provider_name: str):
+    """Lazy proxy to qbraid.runtime.load_provider.
+
+    Exposed at module level so tests can monkeypatch `metriq_gym.run.load_provider`.
     """
-    Setup a QBraid device with id backend_name from specified provider.
+    from qbraid.runtime import load_provider as _load_provider
+
+    return _load_provider(provider_name)
+
+
+def get_providers() -> list[str]:
+    """Lazy proxy to qbraid.runtime.get_providers.
+
+    Exposed at module level so tests can monkeypatch `metriq_gym.run.get_providers`.
+    """
+    from qbraid.runtime import get_providers as _get_providers
+
+    return _get_providers()
+
+
+def load_job(job_id: str, *, provider: str, **kwargs):
+    """Lazy proxy to qbraid.runtime.load_job.
+
+    Exposed at module level so tests can monkeypatch `metriq_gym.run.load_job`.
+    """
+    from qbraid.runtime import load_job as _load_job
+
+    return _load_job(job_id, provider=provider, **kwargs)
+
+
+def job_status(quantum_job):
+    """Lazy proxy to metriq_gym.qplatform.job.job_status.
+
+    Exposed so tests and callers can patch `metriq_gym.run.job_status` and to
+    keep heavy imports out of CLI cold start.
+    """
+    from metriq_gym.qplatform.job import job_status as _job_status
+
+    return _job_status(quantum_job)
+
+
+def _lazy_registry():
+    # Import registry lazily to avoid importing heavy benchmark modules on CLI startup
+    from . import registry as _registry
+
+    return _registry
+
+
+COMMON_SUITE_METADATA = {
+    "provider": ("platform", "provider"),
+    "device": ("platform", "device"),
+    "timestamp": ("timestamp",),
+    "app_version": ("app_version",),
+}
+
+
+def setup_device(provider_name: str, device_name: str):
+    """
+    Setup a QBraid device with id device_name from specified provider.
 
     Args:
         provider_name: a metriq-gym supported provider name.
-        backend_name: the id of a device supported by the provider.
+        device_name: the id of a device supported by the provider.
     Raises:
         QBraidSetupError: If no device matching the name is found in the provider.
     """
-    try:
-        provider: QuantumProvider = load_provider(provider_name)
-    except QbraidError:
-        logger.error(f"No provider matching the name '{provider_name}' found.")
-        logger.error(f"Providers available: {get_providers()}")
+    from qbraid import QbraidError
+    from metriq_gym.exceptions import QBraidSetupError
+
+    if not provider_name:
+        providers = ", ".join(get_providers())
+        logger.error("No provider name specified.")
+        logger.error(f"Providers available: {providers}")
         raise QBraidSetupError("Provider not found")
 
     try:
-        device = provider.get_device(backend_name)
+        provider = load_provider(provider_name)
     except QbraidError:
+        providers = ", ".join(get_providers())
+        logger.error(f"No provider matching the name '{provider_name}' found.")
+        logger.error(f"Providers available: {providers}")
+        raise QBraidSetupError("Provider not found")
+
+    if not device_name:
+        devices = ", ".join([device.id for device in provider.get_devices()])
+        logger.error("No device name specified.")
+        logger.error(f"Devices available: {devices}")
+        raise QBraidSetupError("Device not found")
+
+    try:
+        device = provider.get_device(device_name)
+    except QbraidError:
+        devices = ", ".join([device.id for device in provider.get_devices()])
         logger.error(
-            f"No device matching the name '{backend_name}' found in provider '{provider_name}'."
+            f"No device matching the name '{device_name}' found in provider '{provider_name}'."
         )
-        logger.error(f"Devices available: {[device.id for device in provider.get_devices()]}")
+        logger.error(f"Devices available: {devices}")
         raise QBraidSetupError("Device not found")
     return device
 
 
-def setup_benchmark(args, params, job_type: JobType) -> Benchmark:
-    return BENCHMARK_HANDLERS[job_type](args, params)
+def setup_benchmark(args, params, job_type: JobType) -> "Benchmark":
+    reg = _lazy_registry()
+    return reg.BENCHMARK_HANDLERS[job_type](args, params)
 
 
-def setup_job_data_class(job_type: JobType) -> type[BenchmarkData]:
-    return BENCHMARK_DATA_CLASSES[job_type]
+def setup_job_data_class(job_type: JobType) -> type["BenchmarkData"]:
+    reg = _lazy_registry()
+    return reg.BENCHMARK_DATA_CLASSES[job_type]
 
 
-def setup_benchmark_result_class(job_type: JobType) -> type[BenchmarkResult]:
-    return BENCHMARK_RESULT_CLASSES[job_type]
+def setup_benchmark_result_class(job_type: JobType) -> type["BenchmarkResult"]:
+    reg = _lazy_registry()
+    return reg.BENCHMARK_RESULT_CLASSES[job_type]
 
 
 def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -103,7 +165,7 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"Starting dispatch on {args.provider}:{args.device}...")
 
     try:
-        device: QuantumDevice = setup_device(args.provider, args.device)
+        device = setup_device(args.provider, args.device)
     except QBraidSetupError:
         return
 
@@ -117,9 +179,10 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     params = load_and_validate(config_file)
 
     # Validate that the benchmark exists
-    if params.benchmark_name not in available_benchmarks:
+    reg = _lazy_registry()
+    if params.benchmark_name not in reg.get_available_benchmarks():
         print(
-            f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
+            f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {reg.get_available_benchmarks()}"
         )
         return
 
@@ -129,6 +192,9 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     handler: Benchmark = setup_benchmark(args, params, job_type)
     job_data: BenchmarkData = handler.dispatch_handler(device)
+
+    # Lazy import to avoid heavy modules during CLI cold start
+    from metriq_gym.qplatform.device import normalized_metadata
 
     job_id = job_manager.add_job(
         MetriqGymJob(
@@ -165,7 +231,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"Starting suite dispatch on {args.provider}:{args.device}...")
 
     try:
-        device: QuantumDevice = setup_device(args.provider, args.device)
+        device = setup_device(args.provider, args.device)
     except QBraidSetupError:
         return
 
@@ -181,6 +247,9 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"✗ {config_file}: No benchmarks found in the suite")
         return
 
+    # Lazy import once per function call
+    from metriq_gym.qplatform.device import normalized_metadata
+
     results = []
     successful_jobs = []
 
@@ -190,9 +259,10 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             params = validate_and_create_model(benchmark_entry.config)
 
             # Validate that the benchmark exists
-            if params.benchmark_name not in available_benchmarks:
+            reg = _lazy_registry()
+            if params.benchmark_name not in reg.get_available_benchmarks():
                 results.append(
-                    f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
+                    f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {reg.get_available_benchmarks()}"
                 )
                 continue
 
@@ -255,21 +325,6 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     export_job_result(args, metriq_job, result)
 
 
-def _minor_series_label(version: str) -> str:
-    """Return a label like 'vX.Y' from a version string.
-
-    Examples:
-        0.3.1      -> v0.3
-        0.3.1.dev0 -> v0.3
-        1.0        -> v1.0
-        unknown    -> vunknown
-    """
-    m = re.match(r"(\d+)\.(\d+)", version)
-    if m:
-        return f"v{m.group(1)}.{m.group(2)}"
-    return f"v{version}"
-
-
 def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Upload a job's results to a GitHub repo by opening a Pull Request."""
     metriq_job = prompt_for_job(args, job_manager)
@@ -287,11 +342,12 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         return
 
     base_branch = getattr(args, "base_branch", "main")
-    # Default upload dir: <root>/v<major.minor>/<provider>
     provider = metriq_job.provider_name
-    root_dir = "metriq-gym"
-    default_upload_dir = f"{root_dir}/{_minor_series_label(__version__)}/{provider}"
-    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir
+    device = metriq_job.device_name
+    # Default upload dir: <root>/v<major.minor>/<provider>/<device>
+    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir(
+        __version__, provider, device
+    )
     branch_name = getattr(args, "branch_name", None)
     pr_title = getattr(args, "pr_title", None)
     pr_body = getattr(args, "pr_body", None)
@@ -299,10 +355,14 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     clone_dir = getattr(args, "clone_dir", None)
     dry_run = getattr(args, "dry_run", False)
 
-    # Append this job's record to results.json in the target directory
+    # Write this job's record to a dedicated JSON file in the target directory
+    from metriq_gym.exporters.dict_exporter import DictExporter
+
     record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
 
     try:
+        from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
+
         url = GitHubPRExporter(metriq_job, result).export(
             repo=repo,
             base_branch=base_branch,
@@ -311,10 +371,11 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             commit_message=commit_message,
             pr_title=pr_title,
             pr_body=pr_body,
+            pr_labels=DEFAULT_UPLOAD_PR_LABELS,
             clone_dir=clone_dir,
             payload=record,
-            filename="results.json",
-            append=True,
+            filename=job_filename(metriq_job, payload=record),
+            append=False,
             dry_run=dry_run,
         )
         if url.startswith("DRY-RUN:"):
@@ -336,7 +397,7 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not jobs:
         print(f"No jobs found for suite ID {args.suite_id}.")
         return
-    results: list[BenchmarkResult] = []
+    results: list[Any] = []
     for metriq_job in jobs:
         result = fetch_result(metriq_job, args, job_manager)
         if result is None:
@@ -346,15 +407,28 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     export_suite_results(args, jobs, results)
 
 
+def _get_nested(mapping: dict[str, Any], path: tuple[str, ...]) -> Any | None:
+    current: Any = mapping
+    for key in path:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return None
+    return current
+
+
 def print_selected(d, selected_keys):
-    for k in selected_keys:
-        if k in d:
-            print(f"{k}: {d[k]}")
+    for label, path in selected_keys.items():
+        value = _get_nested(d, path)
+        if value is not None:
+            print(f"{label}: {value}")
 
 
-def export_suite_results(args, jobs: list[MetriqGymJob], results: list[BenchmarkResult]) -> None:
+def export_suite_results(args, jobs: list[MetriqGymJob], results: list["BenchmarkResult"]) -> None:
     if not jobs:
         return
+
+    from metriq_gym.exporters.dict_exporter import DictExporter
 
     records = []
     for job, result in zip(jobs, results):
@@ -364,7 +438,7 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list[Benchmark
         raise NotImplementedError("JSON export of suite results is not implemented yet.")
     else:
         print("\n--- Suite Metadata ---")
-        print_selected(records[0], COMMON_SUITE_KEYS)
+        print_selected(records[0], COMMON_SUITE_METADATA)
         print("\n--- Suite Results ---")
         print(tabulate_job_results(records))
 
@@ -385,7 +459,7 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         return
 
     # Ensure all results are available first
-    results: list[BenchmarkResult] = []
+    results: list[Any] = []
     for metriq_job in jobs:
         result = fetch_result(metriq_job, args, job_manager)
         if result is None:
@@ -394,6 +468,8 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         results.append(result)
 
     # Build array of per-job records (no common header)
+    from metriq_gym.exporters.dict_exporter import DictExporter
+
     records: list[dict] = []
     for job, result in zip(jobs, results):
         records.append(DictExporter(job, result).export() | {"params": job.params})
@@ -404,9 +480,9 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     suite_name = jobs[0].suite_name
 
     base_branch = getattr(args, "base_branch", "main")
-    root_dir = "metriq-gym"
-    default_upload_dir = f"{root_dir}/{_minor_series_label(__version__)}/{provider}"
-    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir
+    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir(
+        __version__, provider, device
+    )
     branch_name = getattr(args, "branch_name", None) or f"mgym/upload-suite-{args.suite_id}"
     # Prefer suite name; avoid falling back to suite_id in the title
     suite_label = suite_name or "unnamed"
@@ -420,6 +496,8 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     dry_run = getattr(args, "dry_run", False)
 
     try:
+        from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
+
         url = GitHubPRExporter(jobs[0], results[0]).export(
             repo=repo,
             base_branch=base_branch,
@@ -428,10 +506,11 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             commit_message=commit_message,
             pr_title=pr_title,
             pr_body=pr_body,
+            pr_labels=DEFAULT_UPLOAD_PR_LABELS,
             clone_dir=clone_dir,
             payload=records,
-            filename="results.json",
-            append=True,
+            filename=suite_filename(suite_name, jobs[0].dispatch_time, payload=records),
+            append=False,
             dry_run=dry_run,
         )
         if url.startswith("DRY-RUN:"):
@@ -445,11 +524,11 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"✗ Upload failed: {e}")
 
 
-def tabulate_job_results(records, sep=" – "):
+def tabulate_job_results(records, sep=" +/- "):
     rows = []
     metric_keys = set()
     for record in records:
-        metric_keys.update(record["results"].keys())
+        metric_keys.update(record.get("results", {}).get("values", {}).keys())
     metric_keys = sorted(metric_keys)
 
     headers = ["Job Type", "Parameters"] + metric_keys
@@ -464,41 +543,72 @@ def tabulate_job_results(records, sep=" – "):
         else:
             params_str = str(params)
         row = [name, params_str]
+        values = record.get("results", {}).get("values", {})
+        uncertainties = record.get("results", {}).get("uncertainties", {})
         for metric in metric_keys:
-            row.append(record["results"].get(metric, ""))
+            value = values.get(metric, "")
+            uncertainty = uncertainties.get(metric)
+            if uncertainty is None or uncertainty == "":
+                row.append(value)
+            else:
+                row.append(f"{value}{sep}{uncertainty}")
         rows.append(row)
 
     return tabulate(rows, headers=headers, floatfmt=".4g")
 
 
 def export_job_result(
-    args: argparse.Namespace, metriq_job: MetriqGymJob, result: BenchmarkResult
+    args: argparse.Namespace, metriq_job: MetriqGymJob, result: "BenchmarkResult"
 ) -> None:
     if hasattr(args, "json"):
+        from metriq_gym.exporters.json_exporter import JsonExporter
+
         JsonExporter(metriq_job, result).export(args.json)
     else:
+        from metriq_gym.exporters.cli_exporter import CliExporter
+
         CliExporter(metriq_job, result).export()
 
 
 def fetch_result(
     metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
-) -> BenchmarkResult | None:
+) -> Optional["BenchmarkResult"]:
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    if metriq_job.result_data is not None:
+    if metriq_job.result_data is not None and not getattr(args, "no_cache", False):
+        print("[Cached result data]")
         return job_result_type.model_validate(metriq_job.result_data)
 
-    job_data: BenchmarkData = setup_job_data_class(job_type)(**metriq_job.data)
-    handler = setup_benchmark(args, validate_and_create_model(metriq_job.params), job_type)
+    job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
+    handler: Benchmark = setup_benchmark(
+        args, validate_and_create_model(metriq_job.params), job_type
+    )
+    from qbraid.runtime import JobStatus
+
     quantum_jobs = [
         (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
         for job_id in job_data.provider_job_ids
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
-        result_data: list[GateModelResultData] = [task.result().data for task in quantum_jobs]
-        result: BenchmarkResult = handler.poll_handler(job_data, result_data, quantum_jobs)
-        # Cache result_data in metriq_job and update job_manager if provided
-        metriq_job.result_data = result.model_dump()
+        result_data = [task.result().data for task in quantum_jobs]
+
+        # Compute total execution time across all jobs, if provided by the backend
+        total_time = total_execution_time(quantum_jobs)
+        if total_time is not None:
+            print(f"Total execution time across {len(quantum_jobs)} jobs: {total_time:.2f} seconds")
+        else:
+            logger.debug("Failed to compute benchmark runtime.", exc_info=True)
+        metriq_job.runtime_seconds = total_time
+
+        result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
+        # Cache result_data in metriq_job, excluding computed fields like 'score'
+        # to keep cached payload minimal and compatible with older tests/consumers.
+        # Fallback to calling model_dump() without kwargs for simple stand-ins used in tests.
+        try:
+            metriq_job.result_data = result.model_dump(exclude={"score"})
+        except TypeError:
+            # Some mocks (e.g., SimpleNamespace with model_dump as lambda) may not accept kwargs
+            metriq_job.result_data = result.model_dump()
         job_manager.update_job(metriq_job)
         return result
     else:
@@ -562,12 +672,66 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
 
 
+def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:
+    if not args.provider:
+        print("Provider is required for resource estimation.")
+        return
+
+    device = None
+    if args.device:
+        try:
+            device = setup_device(args.provider, args.device)
+        except QBraidSetupError:
+            return
+    else:
+        print("No device specified; estimating resources without device-specific topology.")
+
+    config_file = args.config
+
+    if not os.path.exists(config_file):
+        print(f"✗ {config_file}: Configuration file not found")
+        return
+
+    params = load_and_validate(config_file)
+
+    available_benchmarks = _lazy_registry().get_available_benchmarks()
+    if params.benchmark_name not in available_benchmarks:
+        print(
+            f"✗ {config_file}: Unsupported benchmark '{params.benchmark_name}'. Available: {available_benchmarks}"
+        )
+        return
+
+    job_type = JobType(params.benchmark_name)
+    benchmark: Benchmark = setup_benchmark(args, params, job_type)
+
+    try:
+        circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
+        resource_estimate = aggregate_resource_estimates(
+            circuit_batches, hqc_fn=quantinuum_hqc_formula
+        )
+    except (ValueError, NotImplementedError) as exc:
+        print(f"✗ {job_type.value}: {exc}")
+        return
+    except Exception as exc:  # pragma: no cover - surface unexpected errors cleanly
+        print(f"✗ Failed to estimate resources: {exc}")
+        return
+
+    print_resource_estimate(job_type, args.provider, args.device, resource_estimate)
+
+
 def main() -> int:
     load_dotenv()
     args = parse_arguments()
     job_manager = JobManager()
 
-    RESOURCE_ACTION_TABLE = {
+    # If no resource subcommand is provided, print help and exit 0
+    if getattr(args, "resource", None) is None:
+        from metriq_gym.cli import build_parser
+
+        build_parser().print_help()
+        return 0
+
+    RESOURCE_ACTION_TABLE: dict = {
         "suite": {
             "dispatch": dispatch_suite,
             "poll": poll_suite,
@@ -580,6 +744,7 @@ def main() -> int:
             "view": view_job,
             "delete": delete_job,
             "upload": upload_job,
+            "estimate": estimate_job,
         },
     }
 

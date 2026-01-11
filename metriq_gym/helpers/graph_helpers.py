@@ -36,6 +36,28 @@ class GraphColoring:
         )
 
 
+def limit_colors(coloring: GraphColoring, max_colors: int) -> "GraphColoring":
+    """Adjusts the coloring to use at most max_colors colors.
+
+    Args:
+        coloring: The original GraphColoring instance to limit.
+        max_colors: Maximum number of colors to use.
+
+    Returns:
+        A new GraphColoring instance with limited colors.
+    """
+
+    new_edge_color_map = {
+        edge: color for edge, color in coloring.edge_color_map.items() if color < max_colors
+    }
+
+    return GraphColoring(
+        num_nodes=coloring.num_nodes,
+        edge_color_map=new_edge_color_map,
+        edge_index_map=coloring.edge_index_map,
+    )
+
+
 def largest_connected_size(good_graph: rx.PyGraph) -> int:
     """Finds the size of the largest connected component in the CHSH subgraph.
 
@@ -61,9 +83,9 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     the complexity of the benchmarking process by organizing the graph into independent sets of qubit pairs.
 
     Chooses between:
-      - One-factorization (optimal) for complete graphs,
-      - Bipartite edge-coloring for bipartite graphs,
-      - Greedy edge-coloring otherwise.
+      - Bipartite edge-coloring for bipartite graphs (optimal),
+      - Misra-Gries edge-coloring for complete graphs (optimal, uses exactly max_degree colors),
+      - Greedy edge-coloring otherwise (fast, good for sparse graphs).
 
     Args:
         topology_graph: The topology graph (coupling map) of the quantum device.
@@ -76,7 +98,17 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
     if rx.is_bipartite(topology_graph):
         edge_color_map = rx.graph_bipartite_edge_color(topology_graph)
     else:
-        edge_color_map = rx.graph_greedy_edge_color(topology_graph)
+        # Check if graph is complete
+        num_edges = len(topology_graph.edge_list())
+        expected_edges_if_complete = num_nodes * (num_nodes - 1) // 2
+        is_complete = num_edges == expected_edges_if_complete
+
+        if is_complete:
+            # Use Misra-Gries for complete graphs (optimal: exactly max_degree colors)
+            edge_color_map = rx.graph_misra_gries_edge_color(topology_graph)
+        else:
+            # Use greedy for sparse graphs (faster, often good results)
+            edge_color_map = rx.graph_greedy_edge_color(topology_graph)
 
     edge_index_map = dict(topology_graph.edge_index_map())
     return GraphColoring(

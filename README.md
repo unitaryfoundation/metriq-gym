@@ -1,5 +1,9 @@
 <div align="center">
-  <img src="./docs/assets/logo.svg" alt="metriq-gym logo" width="450" />
+  <img 
+    src="https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/refs/heads/main/docs/assets/logo.svg" 
+    alt="metriq-gym logo" 
+    width="450" 
+  />
 </div>
 
 # metriq-gym
@@ -48,12 +52,19 @@ Four easy steps to get started with `metriq-gym`!
 
 You will see the results of the benchmark printed in your terminal. E.g.
 ```sh
-{'device': 'aer_simulator',
+Polling job...
+{'app_version': '0.4.2.dev5+ge262034d2.d20251015',
  'job_type': 'WIT',
- 'provider': 'local',
- 'results': {'expectation_value': 0.99658203125},
- 'timestamp': '2025-07-29T20:31:17.978851',
- 'version': '0.1.3.dev0'}
+ 'platform': {'device': 'aer_simulator',
+              'device_metadata': {'num_qubits': 31,
+                                  'simulator': True,
+                                  'version': '0.17.2'},
+              'provider': 'local'},
+ 'suite_id': None,
+ 'timestamp': '2025-10-16T12:44:17.367694'}
+
+Results:
+  expectation_value: 0.9959716796875 ± 0.0006998267213650185
 ```
 
 Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/examples/``.

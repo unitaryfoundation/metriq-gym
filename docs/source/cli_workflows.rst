@@ -30,6 +30,12 @@ Export a job result to JSON with:
 
 This creates ``<METRIQ_GYM_JOB_ID>.json`` in the current working directory by default.
 
+Local Job Database (volatile)
+=============================
+
+The CLI keeps a local ``localdb.jsonl`` (path controlled by ``MGYM_LOCAL_DB_DIR``; otherwise a platform-specific user data dir) to track jobs between ``dispatch`` and ``poll``. 
+⚠️ This file is meant as a transient queue, not archival storage. If you want to retain history, back it up yourself or export results regularly.
+
 Using Local Simulators
 ======================
 
@@ -105,10 +111,33 @@ Commands:
 Defaults:
 
 * Target repo: ``unitaryfoundation/metriq-data`` (override with ``--repo`` or ``MGYM_UPLOAD_REPO``)
-* Directory: ``metriq-gym/v<major.minor>/<provider>`` (override with ``--dir`` or ``MGYM_UPLOAD_DIR``)
-* Uploads append records to ``results.json``
+* Directory: ``metriq-gym/v<major.minor>/<provider>/<device>`` (override with ``--dir`` or ``MGYM_UPLOAD_DIR``)
+* Uploads create one JSON file per run using names like ``<timestamp>_<benchmark>_<hash>.json`` (suite uploads use the suite name) to reduce conflicts on repeated uploads.
 
-Authentication:
+Estimate Job Resources
+======================
+
+Before dispatching, you can approximate the circuit footprint, gate counts, and (for
+Quantinuum) HQCs:
+
+.. code-block:: sh
+
+   mgym job estimate metriq_gym/schemas/examples/wit.example.json \
+       --provider quantinuum
+
+The command prints aggregated totals and per-circuit statistics. HQCs are calculated
+automatically for Quantinuum devices using the published H-series coefficients
+(``HQC = 5 + C × (N₁ + 10N₂ + 5Nₘ)/5000``; where ``C`` is the number of shots, matching code usage: ``shots * (N₁ + 10N₂ + 5Nₘ)/5000``); for other providers, only gate counts are shown.
+Benchmarks that depend on device topology (e.g. BSEQ, CLOPS, Mirror Circuits, LR-QAOA)
+require ``--device`` to be supplied so the estimator can inspect connectivity.
+
+.. code-block:: sh
+
+   mgym job estimate metriq_gym/schemas/examples/wit.example.json \
+       --provider ibm --device ibm_fez
+
+Authentication
+==============
 
 * Set ``GITHUB_TOKEN`` (or ``GH_TOKEN``). External contributors should fork the data repo first.
 * Token docs: https://docs.github.com/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token
@@ -117,6 +146,13 @@ Credential Management
 =====================
 
 Copy ``.env.example`` to ``.env`` and populate provider API tokens before running on hardware.
+
+Note that for the Quantinuum NEXUS provider, you must first run a manual login workflow to link your account.
+From your command line, run:
+
+.. code-block:: sh
+
+   qnx login
 
 Viewing Jobs
 ============

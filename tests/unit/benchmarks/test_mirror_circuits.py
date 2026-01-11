@@ -28,6 +28,26 @@ from metriq_gym.benchmarks.mirror_circuits import (
 from qbraid.runtime.result_data import MeasCount, GateModelResultData
 
 
+def _edge_pairs(graph: rx.PyGraph) -> set[tuple[int, int]]:
+    """Normalize edge tuples into unordered pairs for assertions.
+
+    rustworkx edges may appear as ``(u, v)`` or ``(u, v, data)`` tuples. Only the endpoints
+    matter for these topology checks, so extra elements (edge weights/data) are intentionally
+    ignored.
+    """
+    pairs: set[tuple[int, int]] = set()
+    for edge in graph.edge_list():
+        if len(edge) == 2:
+            u, v = edge
+        elif len(edge) >= 3:
+            # rustworkx includes edge data at index 2; discard it for endpoint comparisons
+            u, v = edge[0], edge[1]
+        else:
+            raise AssertionError(f"Unexpected edge format: {edge}")
+        pairs.add((min(u, v), max(u, v)))
+    return pairs
+
+
 class TestMirrorCircuitGeneration:
     def test_random_paulis(self):
         graph = rx.PyGraph()
@@ -149,73 +169,50 @@ class TestMirrorCircuitGeneration:
 
         assert circuit.num_qubits == 0
 
-    @patch("metriq_gym.benchmarks.mirror_circuits.Statevector")
-    def test_generate_mirror_circuit(self, mock_statevector):
-        # Mock the statevector and its probabilities
-        mock_sv = MagicMock()
-        mock_sv.probabilities.return_value = np.array([0.36, 0.64, 0, 0])  # |01⟩ most probable
-        mock_statevector.return_value = mock_sv
 
+    def test_generate_mirror_circuit(self):
+        # 2-node connected graph
         graph = rx.PyGraph()
-        # First add nodes, then edges (RustWorkX requirement)
         graph.add_nodes_from([0, 1])
         graph.add_edges_from([(0, 1, None)])
-
-        circuit, expected_bitstring = generate_mirror_circuit(
+    
+        # Deterministic generation with a seed
+        circuit_1, expected_1 = generate_mirror_circuit(
             num_layers=2,
             two_qubit_gate_prob=0.5,
             connectivity_graph=graph,
             two_qubit_gate_name="CNOT",
             seed=42,
         )
-
-        assert circuit.num_qubits == 2
-        assert expected_bitstring == "01"  # From our mocked probabilities
-        assert circuit.depth() > 0
-
-        # Verify the Statevector was used
-        mock_statevector.assert_called_once()
-
-        # Test that mirror circuit works with subgraph
-        large_graph = rx.PyGraph()
-        large_graph.add_nodes_from([0, 1, 2, 3, 4, 5])
-        large_graph.add_edges_from([(0, 1, None), (1, 2, None), (2, 3, None), (3, 4, None)])
-
-        subset_3 = select_optimal_qubit_subset(large_graph, 3)
-        assert len(subset_3) == 3
-
-        subgraph_3 = create_subgraph_from_qubits(large_graph, subset_3)
+        assert circuit_1.num_qubits == 2
+        assert isinstance(expected_1, str) and set(expected_1) <= {"0", "1"} and len(expected_1) == 2
+    
+        # Same seed should give same expected bitstring
+        circuit_2, expected_2 = generate_mirror_circuit(
+            num_layers=2,
+            two_qubit_gate_prob=0.5,
+            connectivity_graph=graph,
+            two_qubit_gate_name="CNOT",
+            seed=42,
+        )
+        assert expected_2 == expected_1
+    
+        # Also test a 3-qubit subgraph path taken from a larger graph
+        big = rx.PyGraph()
+        big.add_nodes_from([0, 1, 2, 3, 4])
+        big.add_edges_from([(0, 1, None), (1, 2, None), (2, 3, None), (3, 4, None)])
+        subset = select_optimal_qubit_subset(big, 3)
+        subgraph_3 = create_subgraph_from_qubits(big, subset)
         assert len(subgraph_3.node_indices()) == 3
-
-        mock_statevector.reset_mock()
-        mock_sv2 = MagicMock()
-        mock_sv2.probabilities.return_value = np.array([0.5, 0.5, 0, 0, 0, 0, 0, 0])
-        mock_statevector.return_value = mock_sv2
-
+    
         circuit_sub, bitstring_sub = generate_mirror_circuit(
-            num_layers=1, two_qubit_gate_prob=0.5, connectivity_graph=subgraph_3, seed=42
+            num_layers=1,
+            two_qubit_gate_prob=0.5,
+            connectivity_graph=subgraph_3,
+            seed=42,
         )
-
         assert circuit_sub.num_qubits == 3
-        assert len(bitstring_sub) == 3
-
-    @patch("metriq_gym.benchmarks.mirror_circuits.Statevector")
-    def test_generate_mirror_circuit_simulation_error(self, mock_statevector):
-        # Mock Statevector to raise an exception
-        mock_statevector.side_effect = Exception("Simulation failed")
-
-        graph = rx.PyGraph()
-        # First add nodes, then edges (RustWorkX requirement)
-        graph.add_nodes_from([0, 1])
-        graph.add_edges_from([(0, 1, None)])
-
-        circuit, expected_bitstring = generate_mirror_circuit(
-            num_layers=1, two_qubit_gate_prob=0.5, connectivity_graph=graph, seed=42
-        )
-
-        assert circuit.num_qubits == 2
-        assert expected_bitstring == "00"  # Fallback to all zeros
-        assert circuit.depth() > 0
+        assert isinstance(bitstring_sub, str) and len(bitstring_sub) == 3 and set(bitstring_sub) <= {"0", "1"}
 
     def test_generate_mirror_circuit_invalid_prob(self):
         graph = rx.PyGraph()
@@ -235,23 +232,20 @@ class TestMirrorCircuitGeneration:
                 connectivity_graph=graph,
                 two_qubit_gate_name="INVALID",
             )
-
-    @patch("metriq_gym.benchmarks.mirror_circuits.Statevector")
-    def test_generate_mirror_circuit_empty_graph(self, mock_statevector):
-        # Mock for empty graph case (1 qubit, ground state)
-        mock_sv = MagicMock()
-        mock_sv.probabilities.return_value = np.array([1.0, 0.0])  # |0⟩ state
-        mock_statevector.return_value = mock_sv
-
-        graph = rx.PyGraph()
-
+            
+    def test_generate_mirror_circuit_empty_graph(self):
+        graph = rx.PyGraph()  # empty graph
+    
         circuit, expected_bitstring = generate_mirror_circuit(
-            num_layers=1, two_qubit_gate_prob=0.5, connectivity_graph=graph
+            num_layers=1,
+            two_qubit_gate_prob=0.5,
+            connectivity_graph=graph,
+            seed=99,
         )
-
+    
+        # By convention in the benchmark, an empty graph falls back to a single-qubit circuit.
         assert circuit.num_qubits == 1
         assert expected_bitstring == "0"
-
 
 class TestTwoQubitGateType:
     def test_enum_values(self):
@@ -344,6 +338,11 @@ class TestMirrorCircuitsBenchmark:
 
         # Verify that generate_mirror_circuit was called correctly
         assert mock_generate_circuit.call_count == 5  # num_circuits times
+        for call in mock_generate_circuit.call_args_list:
+            line_graph = call.kwargs["connectivity_graph"]
+            assert isinstance(line_graph, rx.PyGraph)
+            assert set(line_graph.node_indices()) == {0, 1, 2}
+            assert _edge_pairs(line_graph) == {(0, 1), (1, 2)}
 
         # Test width parameter functionality
         mock_params_with_width = MagicMock()
@@ -363,6 +362,9 @@ class TestMirrorCircuitsBenchmark:
 
         assert result_with_width.num_qubits == 2
         mock_generate_circuit.assert_called_once()
+        width_call_graph = mock_generate_circuit.call_args.kwargs["connectivity_graph"]
+        assert set(width_call_graph.node_indices()) == {0, 1}
+        assert _edge_pairs(width_call_graph) == {(0, 1)}
 
         # Test width parameter validation
         mock_params_invalid = MagicMock()
@@ -401,11 +403,11 @@ class TestMirrorCircuitsBenchmark:
         result = benchmark.poll_handler(job_data, result_data, quantum_jobs)
 
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 1.0
+        assert result.success_probability.value == 1.0
         assert result.binary_success is True
         # Polarization should be 1.0 for perfect success
         expected_polarization = (1.0 - 0.25) / (1.0 - 0.25)  # (S - 1/4) / (1 - 1/4)
-        assert result.polarization == expected_polarization
+        assert result.polarization.value == expected_polarization
 
     def test_poll_handler_partial_success(self, benchmark):
         job_data = MirrorCircuitsData(
@@ -428,13 +430,13 @@ class TestMirrorCircuitsBenchmark:
         result = benchmark.poll_handler(job_data, result_data, quantum_jobs)
 
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 0.7
+        assert result.success_probability.value == 0.7
         assert result.binary_success is True  # 0.7 > 2/3
 
         # Calculate expected polarization
         baseline = 0.25  # 1/4 for 2 qubits
         expected_polarization = (0.7 - baseline) / (1.0 - baseline)
-        assert abs(result.polarization - expected_polarization) < 1e-10
+        assert abs(result.polarization.value - expected_polarization) < 1e-10
 
     def test_poll_handler_failure(self, benchmark):
         job_data = MirrorCircuitsData(
@@ -457,7 +459,7 @@ class TestMirrorCircuitsBenchmark:
         result = benchmark.poll_handler(job_data, result_data, quantum_jobs)
 
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 0.1
+        assert result.success_probability.value == 0.1
         assert result.binary_success is False  # 0.1 < 1/e
 
     def test_poll_handler_zero_qubits_error(self, benchmark):
@@ -505,5 +507,5 @@ class TestMirrorCircuitsBenchmark:
 
         # Average success should be (80 + 60) / (100 + 100) = 70%
         assert isinstance(result, MirrorCircuitsResult)
-        assert result.success_probability == 0.7
+        assert result.success_probability.value == 0.7
         assert result.binary_success is True  # 0.7 > 2/3
