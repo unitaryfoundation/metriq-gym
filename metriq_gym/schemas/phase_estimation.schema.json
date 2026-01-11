@@ -1,7 +1,7 @@
 {
   "_comment": "TODO (424)",
   "$id": "metriq-gym/phase_estimation.schema.json",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Phase Estimation",
   "description": "Phase Estimation benchmark schema definition, describing parameters for the benchmark.",
   "type": "object",
@@ -11,7 +11,7 @@
       "const": "Phase Estimation",
       "description": "Name of the benchmark. Must be 'Phase Estimation' for this schema."
     },
-    "num_shots": {
+    "shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
       "default": 1000,
@@ -21,8 +21,8 @@
     "min_qubits": {
       "type": "integer",
       "description": "Minimum number of qubits to start generating circuits for the benchmark.",
-      "default": 2,
-      "minimum": 2,
+      "default": 3,
+      "minimum": 3,
       "examples": [4]
     },
     "max_qubits": {

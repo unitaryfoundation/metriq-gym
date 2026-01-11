@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from pydantic import BaseModel
 from qbraid import QbraidError
 from qbraid.runtime import JobStatus
-from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult
+from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, BenchmarkScore
 from metriq_gym.run import (
     setup_device,
     dispatch_job,
@@ -327,7 +327,7 @@ class DummyResult(BenchmarkResult):
     value: int
 
     def compute_score(self):
-        return float(self.value)
+        return BenchmarkScore(value=float(self.value), uncertainty=None)
 
 
 @dataclass

@@ -1,7 +1,7 @@
 {
   "_comment": "TODO (424)",
   "$id": "metriq-gym/quantum_fourier_transform.schema.json",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Quantum Fourier Transform",
   "description": "Quantum Fourier Transform benchmark schema definition, describing parameters for the benchmark.",
   "type": "object",
@@ -11,7 +11,7 @@
       "const": "Quantum Fourier Transform",
       "description": "Name of the benchmark. Must be 'Quantum Fourier Transform' for this schema."
     },
-    "num_shots": {
+    "shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
       "default": 1000,

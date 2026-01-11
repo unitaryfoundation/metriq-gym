@@ -1,5 +1,9 @@
 <div align="center">
-  <img src="./docs/assets/logo.svg" alt="metriq-gym logo" width="450" />
+  <img 
+    src="https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/refs/heads/main/docs/assets/logo.svg" 
+    alt="metriq-gym logo" 
+    width="450" 
+  />
 </div>
 
 # metriq-gym

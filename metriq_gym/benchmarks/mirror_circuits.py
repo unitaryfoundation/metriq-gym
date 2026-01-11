@@ -1,10 +1,22 @@
-"""
-Mirror circuits benchmark for the Metriq Gym.
+"""Mirror Circuits benchmark implementation.
 
-This benchmark evaluates a quantum device's ability to execute mirror circuits,
-which are quantum circuits with a reflection structure that perform calculations
-and then reverse them. Mirror circuits provide scalable benchmarking capabilities
-for quantum computers as defined in Proctor et al., arXiv:2008.11294.
+Summary:
+    Generates randomly parameterized mirror circuits that apply layers of Clifford gates,
+    add a middle Pauli layer, and then revert the forward layers to test how well a device
+    preserves state fidelity across the forward and reverse halves of the circuit.
+
+Result interpretation:
+    Polling yields MirrorCircuitsResult with:
+        - success_probability: fraction of runs matching the expected bitstring.
+        - polarization: rescales success_probability to remove the uniform-random baseline;
+          higher implies better performance.
+        - binary_success: boolean indicating whether polarization exceeded 1/e.
+
+References:
+    - Proctor et al., "Measuring the capabilities of quantum computers", Nature Physics 18, 75-79 (2022).
+      https://www.nature.com/articles/s41567-021-01409-7
+    - Phys. Rev. Lett. 129, 150502 (2022).
+      https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.129.150502
 """
 
 from dataclasses import dataclass
@@ -48,8 +60,8 @@ class MirrorCircuitsResult(BenchmarkResult):
     polarization: BenchmarkScore = Field(...)
     binary_success: bool
 
-    def compute_score(self) -> float | None:
-        return self.values.get("polarization")
+    def compute_score(self) -> BenchmarkScore:
+        return self.polarization
 
 
 @dataclass
@@ -455,7 +467,6 @@ def generate_mirror_circuit(
     for layer_idx in range(num_layers):
         pauli_layer = random_paulis(connectivity_graph, random_state)
         qc.compose(pauli_layer, inplace=True)
-        qc.barrier()
         forward_layers.append(pauli_layer)
 
         selected_edges = edge_grab(two_qubit_gate_prob, connectivity_graph, random_state)
@@ -464,19 +475,19 @@ def generate_mirror_circuit(
             selected_edges, random_state, two_qubit_gate_name, layer_seed
         )
         qc.compose(clifford_layer, inplace=True)
-        qc.barrier()
         forward_layers.append(clifford_layer)
 
     assert_forward_is_clifford(initial_clifford_layer, forward_layers)
-
+    
+    qc.barrier() 
     middle_pauli = random_paulis(connectivity_graph, random_state)
     qc.compose(middle_pauli, inplace=True)
     qc.barrier()
 
     for layer in reversed(forward_layers):
         qc.compose(layer.inverse(), inplace=True)
-        qc.barrier()
 
+    qc.barrier()
     qc.compose(initial_clifford_layer.inverse(), inplace=True)
     qc.barrier()
 

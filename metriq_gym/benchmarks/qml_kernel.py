@@ -1,3 +1,19 @@
+"""Quantum Machine Learning Kernel benchmark implementation.
+
+Summary:
+    Constructs a ZZ feature map kernel, computes the inner-product circuit, and measures the
+    probability of returning to the all-zero state as a proxy for kernel quality.
+
+Result interpretation:
+    Polling returns QMLKernelResult.accuracy_score as a BenchmarkScore where:
+        - value: fraction of shots measuring the expected all-zero bitstring.
+        - uncertainty: binomial standard deviation from the sample counts.
+    Higher accuracy suggests better kernel reproducibility on the selected hardware.
+
+Reference:
+    - Inspired by ZZ-feature map approaches, e.g., arXiv:2405.09724.
+"""
+
 import numpy as np
 from dataclasses import dataclass
 
@@ -28,8 +44,8 @@ class QMLKernelData(BenchmarkData):
 class QMLKernelResult(BenchmarkResult):
     accuracy_score: BenchmarkScore
 
-    def compute_score(self) -> float | None:
-        return self.accuracy_score.value
+    def compute_score(self) -> BenchmarkScore:
+        return self.accuracy_score
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:

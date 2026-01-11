@@ -36,6 +36,28 @@ class GraphColoring:
         )
 
 
+def limit_colors(coloring: GraphColoring, max_colors: int) -> "GraphColoring":
+    """Adjusts the coloring to use at most max_colors colors.
+
+    Args:
+        coloring: The original GraphColoring instance to limit.
+        max_colors: Maximum number of colors to use.
+
+    Returns:
+        A new GraphColoring instance with limited colors.
+    """
+
+    new_edge_color_map = {
+        edge: color for edge, color in coloring.edge_color_map.items() if color < max_colors
+    }
+
+    return GraphColoring(
+        num_nodes=coloring.num_nodes,
+        edge_color_map=new_edge_color_map,
+        edge_index_map=coloring.edge_index_map,
+    )
+
+
 def largest_connected_size(good_graph: rx.PyGraph) -> int:
     """Finds the size of the largest connected component in the CHSH subgraph.
 
@@ -94,4 +116,3 @@ def device_graph_coloring(topology_graph: rx.PyGraph) -> GraphColoring:
         edge_color_map=edge_color_map,
         edge_index_map=edge_index_map,
     )
-

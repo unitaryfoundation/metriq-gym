@@ -1,6 +1,7 @@
 from typing import Any
 
 import qnexus as qnx
+from pytket.circuit import BasisOrder
 from qbraid.runtime import GateModelResultData, JobStatus, QuantumJob, Result
 
 
@@ -29,14 +30,23 @@ class QuantinuumJob(QuantumJob):
         if not results:
             raise RuntimeError(f"No results available for job {self.id}")
 
-        counts = results[0].download_result().get_counts()
-        norm_counts = {"".join(map(str, k)): v for k, v in counts.items()}
+        all_counts = []
+        for result in results:
+            # Quantinuum (as documented in pytket) by default uses bitstrings
+            # with the least significant bit first. We convert to
+            # most significant bit first (dlo = descending lexographic order)
+            # for consistency with other backends.
+            counts = result.download_result().get_counts(basis=BasisOrder.dlo)
+            norm_counts = {"".join(map(str, k)): v for k, v in counts.items()}
+            all_counts.append(norm_counts)
+
+        measurement_counts = all_counts[0] if len(all_counts) == 1 else all_counts
 
         return Result(
             device_id=self._device.name if self._device else "unknown",
             job_id=self.id,
             success=True,
-            data=GateModelResultData(measurement_counts=norm_counts),
+            data=GateModelResultData(measurement_counts=measurement_counts),
         )
 
     def status(self) -> JobStatus:

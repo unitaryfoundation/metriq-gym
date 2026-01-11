@@ -1,3 +1,5 @@
+"""Quantum Volume benchmark implementation."""
+
 import math
 import statistics
 from scipy.stats import binom
@@ -39,9 +41,6 @@ class QuantumVolumeResult(BenchmarkResult):
     hog_pass: bool
     p_value: float
     trials: int
-
-    def compute_score(self) -> float | None:
-        return None
 
 
 def prepare_qv_circuits(n: int, num_trials: int) -> tuple[list[QuantumCircuit], list[list[float]]]:
