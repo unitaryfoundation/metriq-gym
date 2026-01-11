@@ -136,11 +136,11 @@ class TestMirrorCircuitGeneration:
         assert len(selected_edges.edge_list()) == 0
 
     def test_working_graph_is_symmetric(self):
-        """Test that working_graph produces a symmetric (bidirectional) graph.
+        """Test that working_graph produces an undirected path graph.
 
-        This ensures that edge_list() contains edges in both directions,
-        matching the behavior of symmetric device coupling maps and
-        preventing bias in edge selection during circuit generation.
+        Since path_graph() returns an undirected PyGraph, edges are automatically
+        bidirectional via has_edge() queries, even though edge_list() only returns
+        each edge once. This ensures proper connectivity for circuit generation.
         """
         width = 5
         graph = working_graph(width)
@@ -149,27 +149,18 @@ class TestMirrorCircuitGeneration:
         assert isinstance(graph, rx.PyGraph)
         assert len(graph.node_indices()) == width
 
-        # For a path graph with n nodes, there should be (n-1) edges.
-        # However, in this implementation, both (u, v) and (v, u) are explicitly added as separate edges,
-        # so we expect 2*(n-1) edges in the edge list. This is not a property of undirected graphs in general.
-        expected_edge_count = 2 * (width - 1)
+        # For an undirected path graph with n nodes, there are (n-1) edges
+        expected_edge_count = width - 1
         actual_edge_count = len(graph.edge_list())
         assert actual_edge_count == expected_edge_count, (
-            f"Expected {expected_edge_count} edges (bidirectional), but got {actual_edge_count}"
+            f"Expected {expected_edge_count} edges for path graph, but got {actual_edge_count}"
         )
 
-        # Verify that for each edge (u, v), the reverse edge (v, u) also exists
-        edge_list = graph.edge_list()
-        for u, v in edge_list:
-            # Check if the reverse edge exists in the edge list
-            reverse_exists = (v, u) in edge_list
-            assert reverse_exists, f"Edge ({u}, {v}) exists but reverse ({v}, {u}) does not"
-
-        # Verify the graph is still properly connected as a path
-        # Check that consecutive nodes have edges
+        # Verify the graph is properly connected as a path
+        # For undirected graphs, both has_edge(u, v) and has_edge(v, u) return True
         for i in range(width - 1):
-            assert graph.has_edge(i, i + 1)
-            assert graph.has_edge(i + 1, i)  # Also check reverse direction
+            assert graph.has_edge(i, i + 1), f"Missing edge ({i}, {i+1})"
+            assert graph.has_edge(i + 1, i), f"Edge ({i}, {i+1}) not bidirectional"
 
     def test_random_cliffords(self):
         graph = rx.PyGraph()
