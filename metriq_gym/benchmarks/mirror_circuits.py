@@ -161,8 +161,18 @@ def create_subgraph_from_qubits(
 
 
 def working_graph(width: int) -> rx.PyGraph:
-    """Return the connectivity graph used to synthesize mirror circuits."""
+    """Return the connectivity graph used to synthesize mirror circuits.
 
+    Creates an undirected path graph representing linear qubit connectivity.
+    Since path_graph() returns an undirected PyGraph, edges are automatically
+    bidirectional (both has_edge(u, v) and has_edge(v, u) return True).
+
+    Args:
+        width: Number of qubits in the path graph.
+
+    Returns:
+        An undirected PyGraph representing a linear connectivity.
+    """
     return path_graph(width)
 
 
@@ -349,7 +359,9 @@ def pauli_from_layer(pauli_layer: QuantumCircuit) -> Pauli:
     n = pauli_layer.num_qubits
     per_qubit = ["I"] * n  # default all identity
 
-    for instr, qargs, _ in pauli_layer.data:
+    for instruction in pauli_layer.data:
+        instr = instruction.operation
+        qargs = instruction.qubits
         name = instr.name.lower()
         if name in ("barrier", "delay", "measure"):
             continue  # middle layer shouldn't have these, but be permissive
