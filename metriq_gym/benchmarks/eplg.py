@@ -147,21 +147,21 @@ def _allowed_edges(
     For IBM backends with require_gate=True, filters edges to only those
     supporting the specified two-qubit gate.
     """
-    edges = [tuple(e) for e in graph.edge_list()]
+    edges: list[tuple[int, int]] = [(int(e[0]), int(e[1])) for e in graph.edge_list()]
 
     if not require_gate or backend is None or twoq_gate is None:
-        return {tuple(sorted(e)) for e in edges}
+        return {(min(u, v), max(u, v)) for u, v in edges}
 
     # IBM-specific: filter by gate availability
     try:
         gmap = backend.target[twoq_gate]
-        allowed = set()
+        allowed: set[tuple[int, int]] = set()
         for u, v in edges:
             if (u, v) in gmap or (v, u) in gmap:
-                allowed.add(tuple(sorted((u, v))))
+                allowed.add((min(u, v), max(u, v)))
         return allowed
     except (AttributeError, KeyError):
-        return {tuple(sorted(e)) for e in edges}
+        return {(min(u, v), max(u, v)) for u, v in edges}
 
 
 def random_chain_from_graph(
@@ -200,7 +200,7 @@ def random_chain_from_graph(
         raise RuntimeError("No allowed 2-qubit edges found to form a chain.")
 
     n_nodes = graph_und.num_nodes()
-    adj = {i: [] for i in range(n_nodes)}
+    adj: dict[int, list[int]] = {i: [] for i in range(n_nodes)}
     for u, v in allowed:
         adj[u].append(v)
         adj[v].append(u)
@@ -333,12 +333,12 @@ def select_best_chain_ibm(
     else:
         graph_und = graph
 
-    paths = rx.all_pairs_all_simple_paths(
+    all_paths = rx.all_pairs_all_simple_paths(
         graph_und,
         min_depth=num_qubits_in_chain,
         cutoff=num_qubits_in_chain,
     )
-    paths = _flatten_paths(paths, cutoff=400)
+    paths: list[list[int]] = _flatten_paths(all_paths, cutoff=400)
 
     if not paths:
         raise ValueError(
@@ -346,7 +346,8 @@ def select_best_chain_ibm(
             "Try smaller num_qubits_in_chain."
         )
 
-    return max(paths, key=lambda p: _path_fidelity(p, backend, twoq_gate))
+    best_path = max(paths, key=lambda p: _path_fidelity(list(p), backend, twoq_gate))
+    return list(best_path)
 
 
 # =============================================================================
@@ -376,7 +377,7 @@ def analyze_eplg_results(
 
     # Wait for analysis
     max_wait = 60
-    waited = 0
+    waited: float = 0
     status = str(exp_data.analysis_status())
     while "RUNNING" in status and waited < max_wait:
         time.sleep(0.5)
@@ -389,10 +390,15 @@ def analyze_eplg_results(
 
     # Compute LF by chain length
     lf_sets = two_disjoint_layers
-    full_layer = [None] * (len(lf_sets[0]) + len(lf_sets[1]))
-    full_layer[::2] = lf_sets[0]
-    full_layer[1::2] = lf_sets[1]
-    full_layer = [(qubit_chain[0],)] + full_layer + [(qubit_chain[-1],)]
+    interleaved: list[tuple[int, ...]] = []
+    for i in range(max(len(lf_sets[0]), len(lf_sets[1]))):
+        if i < len(lf_sets[0]):
+            interleaved.append(lf_sets[0][i])
+        if i < len(lf_sets[1]):
+            interleaved.append(lf_sets[1][i])
+    full_layer: list[tuple[int, ...]] = (
+        [(qubit_chain[0],)] + interleaved + [(qubit_chain[-1],)]
+    )
 
     pfs = []
     for qubits in full_layer:
@@ -571,8 +577,9 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         from metriq_gym.helpers.task_helpers import flatten_counts
 
         # Deserialize two_disjoint_layers back to tuples
-        two_disjoint_layers = [
-            [tuple(edge) for edge in layer] for layer in job_data.two_disjoint_layers
+        two_disjoint_layers: list[list[tuple[int, int]]] = [
+            [(int(edge[0]), int(edge[1])) for edge in layer]
+            for layer in job_data.two_disjoint_layers
         ]
 
         # Recreate the LayerFidelity experiment
