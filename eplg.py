@@ -307,7 +307,7 @@ def run_ibm_experiment(backend, twoq_gate, qubit_chain, two_disjoint_layers, len
         lengths=lengths,
         backend=backend,
         num_samples=num_samples,
-        seed=42,
+        seed=SEED,
     )
 
     lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
@@ -356,7 +356,7 @@ def run_aws_experiment(device, device_name, qubit_chain, two_disjoint_layers, le
         two_qubit_layers=two_disjoint_layers,
         lengths=lengths,
         num_samples=num_samples,
-        seed=42,
+        seed=SEED,
         two_qubit_gate=twoq_gate,
         one_qubit_basis_gates=one_qubit_basis_gates,
     )
@@ -515,7 +515,7 @@ def run_quantinuum_experiment(device, project, qubit_chain, two_disjoint_layers,
         two_qubit_layers=two_disjoint_layers,
         lengths=lengths,
         num_samples=num_samples,
-        seed=42,
+        seed=SEED,
         two_qubit_gate=twoq_gate,
         one_qubit_basis_gates=one_qubit_basis_gates,
     )
