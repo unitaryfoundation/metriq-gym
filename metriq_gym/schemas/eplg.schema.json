@@ -22,13 +22,13 @@
         "type": "integer",
         "minimum": 1
       },
-      "description": "Circuit depths (number of layers) to test.",
+      "description": "Number of layers (circuit depths) in the randomized benchmarking protocol.",
       "default": [2, 4, 8, 16],
       "examples": [[2, 4], [2, 4, 8, 16]]
     },
     "num_samples": {
       "type": "integer",
-      "description": "Number of random circuits per depth.",
+      "description": "Number of random circuits sampled per depth in the randomized benchmarking protocol.",
       "default": 3,
       "minimum": 1,
       "examples": [3, 6, 10]
@@ -54,7 +54,8 @@
     },
     "two_qubit_gate": {
       "type": "string",
-      "description": "Two-qubit gate to use. If omitted, auto-detect from device.",
+      "description": "Two-qubit gate to use. For IBM devices, auto-detected if omitted.",
+      "default": "cz",
       "examples": ["cz", "cx", "ecr"]
     },
     "one_qubit_basis_gates": {

@@ -13,8 +13,10 @@ Result interpretation:
         - score: average EPLG across reference points (lower is better)
 
 References:
-    - Layer Fidelity methodology from qiskit-experiments
-    - IBM Quantum device benchmarking practices
+    - McKay et al., "Benchmarking quantum processor performance at scale"
+      https://arxiv.org/abs/2311.05933
+    - Based on qiskit-device-benchmarking layer fidelity notebook:
+      https://github.com/qiskit-community/qiskit-device-benchmarking/blob/main/notebooks/layer_fidelity.ipynb
 """
 
 import random
@@ -36,11 +38,6 @@ from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-
-
-# Default basis gates for non-IBM devices
-DEFAULT_ONE_QUBIT_BASIS_GATES = ["rz", "rx", "x"]
-DEFAULT_TWO_QUBIT_GATE = "cz"
 
 @dataclass
 class EPLGData(BenchmarkData):
@@ -76,6 +73,7 @@ class EPLGResult(BenchmarkResult):
         ]
         if not picked_vals:
             return BenchmarkScore(value=0.0)
+        # TODO: Propagate uncertainty from ProcessFidelity fits through EPLG calculation
         return BenchmarkScore(value=sum(picked_vals) / len(picked_vals))
 
 
@@ -116,7 +114,8 @@ def eplg_score_at_lengths(
             picked_vals.append(chain_eplgs[idx[t]])
             picks.append((t, t))
         else:
-            # Nearest-neighbor fallback
+            # Nearest-neighbor fallback when target length not available
+            # TODO: Consider interpolation or curve fitting for more accurate estimates
             nearest = min(chain_lens, key=lambda x: (abs(x - t), x))
             picked_vals.append(chain_eplgs[idx[nearest]])
             picks.append((t, nearest))
@@ -141,14 +140,16 @@ def _allowed_edges(
     graph: rx.PyGraph,
     backend=None,
     twoq_gate: str | None = None,
+    require_gate: bool = True,
 ) -> set[tuple[int, int]]:
     """Return set of undirected edges allowed for the chain.
 
-    For IBM backends, filters edges to only those supporting the two-qubit gate.
+    For IBM backends with require_gate=True, filters edges to only those
+    supporting the specified two-qubit gate.
     """
     edges = [tuple(e) for e in graph.edge_list()]
 
-    if backend is None or twoq_gate is None:
+    if not require_gate or backend is None or twoq_gate is None:
         return {tuple(sorted(e)) for e in edges}
 
     # IBM-specific: filter by gate availability
@@ -169,6 +170,7 @@ def random_chain_from_graph(
     seed: int | None = None,
     backend=None,
     twoq_gate: str | None = None,
+    require_gate: bool = True,
     restarts: int = 200,
 ) -> list[int]:
     """Sample a random simple path of given length from a graph.
@@ -179,19 +181,21 @@ def random_chain_from_graph(
         seed: Random seed.
         backend: Optional Qiskit backend for gate filtering.
         twoq_gate: Two-qubit gate name for filtering.
+        require_gate: If True and backend is provided, only use edges that
+            support the specified two-qubit gate.
         restarts: Number of random restart attempts.
 
     Returns:
         List of qubit indices forming the chain.
     """
     rng = random.Random(seed)
-    # Convert to undirected if needed
-    if isinstance(graph, rx.PyDiGraph):
+    # Always work with undirected graph
+    if hasattr(graph, "to_undirected"):
         graph_und = graph.to_undirected(multigraph=False)
     else:
         graph_und = graph
 
-    allowed = _allowed_edges(graph_und, backend, twoq_gate)
+    allowed = _allowed_edges(graph_und, backend, twoq_gate, require_gate)
     if not allowed:
         raise RuntimeError("No allowed 2-qubit edges found to form a chain.")
 
@@ -323,8 +327,8 @@ def select_best_chain_ibm(
     coupling_map = backend.target.build_coupling_map(twoq_gate)
     graph = coupling_map.graph
 
-    # Convert to undirected if needed
-    if isinstance(graph, rx.PyDiGraph):
+    # Always work with undirected graph
+    if hasattr(graph, "to_undirected"):
         graph_und = graph.to_undirected(multigraph=False)
     else:
         graph_und = graph
@@ -442,21 +446,19 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             Tuple of (qubit_chain, two_qubit_gate, one_qubit_basis_gates).
         """
         num_qubits_in_chain = self.params.num_qubits_in_chain
-        chain_type = getattr(self.params, "chain_type", "random")
-        two_qubit_gate = getattr(self.params, "two_qubit_gate", None)
-        one_qubit_basis_gates = getattr(
-            self.params, "one_qubit_basis_gates", DEFAULT_ONE_QUBIT_BASIS_GATES
-        )
-        seed = getattr(self.params, "seed", 12345)
+        chain_type = self.params.chain_type
+        two_qubit_gate = self.params.two_qubit_gate
+        one_qubit_basis_gates = self.params.one_qubit_basis_gates
+        seed = self.params.seed
 
         ibm_backend = _get_ibm_backend(device)
 
         if ibm_backend is not None:
-            # IBM device
-            if two_qubit_gate is None:
-                two_qubit_gate = _pick_twoq_gate(ibm_backend)
-            if two_qubit_gate is None:
-                two_qubit_gate = DEFAULT_TWO_QUBIT_GATE
+            # IBM device: auto-detect gate if not specified
+            detected_gate = _pick_twoq_gate(ibm_backend, two_qubit_gate)
+            if detected_gate is not None:
+                two_qubit_gate = detected_gate
+            # two_qubit_gate now has either the detected gate or the schema default
 
             if chain_type == "best":
                 qubit_chain = select_best_chain_ibm(
@@ -470,12 +472,10 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                     seed=seed,
                     backend=ibm_backend,
                     twoq_gate=two_qubit_gate,
+                    require_gate=False,
                 )
         else:
-            # Non-IBM device: assume all-to-all or use connectivity graph
-            if two_qubit_gate is None:
-                two_qubit_gate = DEFAULT_TWO_QUBIT_GATE
-
+            # Non-IBM device: use connectivity graph
             graph = connectivity_graph(device)
             num_qubits = graph.num_nodes()
 
@@ -484,9 +484,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             is_complete = graph.num_edges() >= expected_edges
 
             if is_complete:
-                qubit_chain = random_chain_complete_graph(
-                    num_qubits, num_qubits_in_chain, seed
-                )
+                # For fully connected devices, use contiguous qubit indices
+                qubit_chain = list(range(num_qubits_in_chain))
             else:
                 qubit_chain = random_chain_from_graph(
                     graph, num_qubits_in_chain, seed=seed
@@ -507,36 +506,24 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             device
         )
 
-        lengths = getattr(self.params, "lengths", [2, 4, 8, 16])
-        num_samples = getattr(self.params, "num_samples", 3)
-        seed = getattr(self.params, "seed", 12345)
+        lengths = self.params.lengths
+        num_samples = self.params.num_samples
+        seed = self.params.seed
 
         all_pairs = to_edges(qubit_chain)
         two_disjoint_layers = [all_pairs[0::2], all_pairs[1::2]]
 
-        ibm_backend = _get_ibm_backend(device)
-
-        if ibm_backend is not None:
-            # IBM: use backend directly for LayerFidelity
-            lfexp = LayerFidelity(
-                physical_qubits=qubit_chain,
-                two_qubit_layers=two_disjoint_layers,
-                lengths=lengths,
-                backend=ibm_backend,
-                num_samples=num_samples,
-                seed=seed,
-            )
-        else:
-            # Non-IBM: specify gates explicitly
-            lfexp = LayerFidelity(
-                physical_qubits=qubit_chain,
-                two_qubit_layers=two_disjoint_layers,
-                lengths=lengths,
-                num_samples=num_samples,
-                seed=seed,
-                two_qubit_gate=two_qubit_gate,
-                one_qubit_basis_gates=one_qubit_basis_gates,
-            )
+        # Create LayerFidelity experiment with explicit gate specification
+        # (gates were already determined/auto-detected in _select_qubit_chain)
+        lfexp = LayerFidelity(
+            physical_qubits=qubit_chain,
+            two_qubit_layers=two_disjoint_layers,
+            lengths=lengths,
+            num_samples=num_samples,
+            seed=seed,
+            two_qubit_gate=two_qubit_gate,
+            one_qubit_basis_gates=one_qubit_basis_gates,
+        )
 
         lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
         circuits = lfexp.circuits()
@@ -549,7 +536,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             self._build_circuits(device)
         )
 
-        shots = getattr(self.params, "shots", 100)
+        shots = self.params.shots
         quantum_job = device.run(circuits, shots=shots)
 
         # Serialize two_disjoint_layers as nested lists
@@ -562,10 +549,10 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             num_qubits_in_chain=self.params.num_qubits_in_chain,
             qubit_chain=qubit_chain,
             two_disjoint_layers=serialized_layers,
-            lengths=getattr(self.params, "lengths", [2, 4, 8, 16]),
-            num_samples=getattr(self.params, "num_samples", 3),
+            lengths=self.params.lengths,
+            num_samples=self.params.num_samples,
             shots=shots,
-            seed=getattr(self.params, "seed", 12345),
+            seed=self.params.seed,
             two_qubit_gate=two_qubit_gate,
             one_qubit_basis_gates=one_qubit_basis_gates,
         )
@@ -618,6 +605,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             )
             experiment_results.append(exp_result)
 
+        # backend_name is arbitrary - only used for Result object construction,
+        # not for analysis
         qiskit_result = QiskitResult(
             backend_name="qbraid_device",
             backend_version="1.0",
@@ -659,5 +648,4 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
     ) -> list[CircuitBatch]:
         """Return circuit batches for resource estimation."""
         circuits, _, _, _, _ = self._build_circuits(device)
-        shots = getattr(self.params, "shots", 100)
-        return [CircuitBatch(circuits=circuits, shots=shots)]
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
