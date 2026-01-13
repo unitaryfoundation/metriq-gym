@@ -19,7 +19,6 @@ References:
       https://github.com/qiskit-community/qiskit-device-benchmarking/blob/main/notebooks/layer_fidelity.ipynb
 """
 
-from importlib.resources import path
 import random
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -231,9 +230,9 @@ def analyze_eplg_results(
     # Compute LF by chain length
     lf_sets, lf_qubits = two_disjoint_layers, qubit_chain
     full_layer = [None] * (len(lf_sets[0]) + len(lf_sets[1]))
-    full_layer[::2] = lf_sets[0]
-    full_layer[1::2] = lf_sets[1]
-    full_layer = [(lf_qubits[0],)] + full_layer + [(lf_qubits[-1],)]
+    full_layer[::2] = lf_sets[0]  # type: ignore[assignment]
+    full_layer[1::2] = lf_sets[1]  # type: ignore[assignment]
+    full_layer = [(lf_qubits[0],)] + full_layer + [(lf_qubits[-1],)]  # type: ignore[assignment,operator]
 
     pfs = [pfdf.loc[pfdf[pfdf.qubits == qubits].index[0], "value"] for qubits in full_layer]
     pfs = list(map(lambda x: x.n if x != 0 else 0, pfs))
