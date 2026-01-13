@@ -48,7 +48,7 @@ dependencies = [
     "qnexus>=0.34.1,<1.0.0",
     "pytket-qiskit>=0.71.0,<0.77.0",
     "pyqpanda3>=0.3.2",
-    "iqm-client[qiskit]>=33.0.1",
+    "iqm-client[qiskit]>=33.0.2,<34.0.0",
 ]
 
 [project.scripts]
