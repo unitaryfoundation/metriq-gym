@@ -1,6 +1,26 @@
+"""Linear Ramp QAOA benchmark implementation.
+
+Summary:
+    Solves weighted Max-Cut instances with a linear-ramp parameter schedule and compares
+    results against classical optima to estimate approximation ratios and optimal sampling
+    probabilities.
+
+Result interpretation:
+    Polling returns LinearRampQAOAResult with metrics including:
+        - approx_ratio_mean / stddev: how close average costs are to the optimum.
+        - optimal_probability_mean / stddev: frequency of sampling an optimal bitstring.
+        - confidence_pass: boolean indicating whether results meet the configured confidence.
+    Higher approximation ratios and optimal probabilities reflect better QAOA performance.
+
+References:
+    - Wurtz and Love, arXiv:2106.15645 (Linear-ramp QAOA parameter schedule)
+    - arXiv:2405.09169 (Additional LR-QAOA methodology)
+"""
+
 import math
 import statistics
 import networkx as nx
+import numpy as np
 import rustworkx as rx
 from scipy import stats
 from dataclasses import dataclass
@@ -18,6 +38,7 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
+    BenchmarkScore,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
@@ -168,9 +189,12 @@ class LinearRampQAOAResult(BenchmarkResult):
     approx_ratio: list[float]
     random_approx_ratio: float = Field(...)
     confidence_pass: list[bool]
+    effective_approx_ratio: list[float] | None = None
 
-    def compute_score(self) -> float | None:
-        return self.approx_ratio[0]
+    def compute_score(self) -> BenchmarkScore:
+        if not self.effective_approx_ratio:
+            raise ValueError("effective_approx_ratio must be populated to compute score.")
+        return BenchmarkScore(value=float(np.mean(self.effective_approx_ratio)))
 
 
 def prepare_qaoa_circuit(
@@ -232,6 +256,7 @@ class AggregateStats:
     optimal_probability: list[float]
     approx_ratio: list[float]
     confidence_pass: list[bool]
+    effective_approx_ratio: list[float]
 
 
 def calc_trial_stats(
@@ -317,6 +342,10 @@ def calc_stats(data: LinearRampQAOAData, samples: list["MeasCount"]) -> Aggregat
         all(stat[ith_layer].confidence_pass for stat in trial_stats)
         for ith_layer in range(len(data.qaoa_layers))
     ]
+    effective_approx_ratio = [
+        (r - data.approx_ratio_random_mean) / (1 - data.approx_ratio_random_mean)
+        for r in approx_ratio
+    ]
 
     return AggregateStats(
         trial_stats=trial_stats,
@@ -324,6 +353,7 @@ def calc_stats(data: LinearRampQAOAData, samples: list["MeasCount"]) -> Aggregat
         approx_ratio=approx_ratio,
         optimal_probability=optimal_probability,
         confidence_pass=confidence_pass,
+        effective_approx_ratio=effective_approx_ratio,
     )
 
 
@@ -403,7 +433,9 @@ class LinearRampQAOA(Benchmark):
         return circuits_with_params, graph_info, optimal_sol, circuit_encoding
 
     def dispatch_handler(self, device: "QuantumDevice") -> LinearRampQAOAData:
-        circuits_with_params, graph_info, optimal_sol, circuit_encoding = self._build_circuits(device)
+        circuits_with_params, graph_info, optimal_sol, circuit_encoding = self._build_circuits(
+            device
+        )
 
         approx_ratio_random_mean, approx_ratio_random_std = calc_random_stats(
             self.params.num_qubits,
@@ -443,6 +475,7 @@ class LinearRampQAOA(Benchmark):
             approx_ratio=stats.approx_ratio,
             random_approx_ratio=job_data.approx_ratio_random_mean,
             confidence_pass=stats.confidence_pass,
+            effective_approx_ratio=stats.effective_approx_ratio,
         )
 
     def estimate_resources_handler(
