@@ -10,8 +10,6 @@ from metriq_gym.benchmarks.eplg import (
 )
 
 
-
-
 def test_eplg_score_at_lengths_exact_match():
     """Test EPLG score when targets match chain lengths exactly."""
     chain_lens = [10, 20, 50, 100]
@@ -34,8 +32,6 @@ def test_eplg_score_at_lengths_nearest_neighbor():
     # All targets (10, 20, 50, 100) fall back to nearest (8)
     assert picked_vals == [0.03, 0.03, 0.03, 0.03]
     assert picks == [(10, 8), (20, 8), (50, 8), (100, 8)]
-
-
 
 
 def test_random_chain_from_graph_path():

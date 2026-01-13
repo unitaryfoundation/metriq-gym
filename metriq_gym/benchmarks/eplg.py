@@ -25,7 +25,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import rustworkx as rx
+import time
 from qiskit_experiments.library.randomized_benchmarking import LayerFidelity
+from qiskit.result import Result as QiskitResult
+from qiskit.result.models import ExperimentResult, ExperimentResultData
+from qiskit_experiments.framework import ExperimentData
+
+from metriq_gym.helpers.task_helpers import flatten_counts
 
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
@@ -39,16 +45,17 @@ from metriq_gym.resource_estimation import CircuitBatch
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
+
 @dataclass
 class EPLGData(BenchmarkData):
     """Stores intermediate data between dispatch and poll."""
 
     num_qubits_in_chain: int
-    qubit_chain: list[int] # Indices of qubits forming the chain
+    qubit_chain: list[int]  # Indices of qubits forming the chain
     two_disjoint_layers: list[list[list[int]]]  # List of disjoint edges along the chain
-    lengths: list[int] # Lenghts of RB protocol to test
-    num_samples: int # Number of random benchmark samples per length
-    shots: int # Number of shots per circuit
+    lengths: list[int]  # Lengths of RB protocol to test
+    num_samples: int  # Number of random benchmark samples per length
+    shots: int  # Number of shots per circuit
     seed: int
     two_qubit_gate: str
     one_qubit_basis_gates: list[str]
@@ -67,9 +74,7 @@ class EPLGResult(BenchmarkResult):
     def compute_score(self) -> BenchmarkScore:
         """Compute average EPLG across reference points (10, 20, 50, 100 qubits)."""
         picked_vals = [
-            v
-            for v in [self.eplg_10, self.eplg_20, self.eplg_50, self.eplg_100]
-            if v is not None
+            v for v in [self.eplg_10, self.eplg_20, self.eplg_50, self.eplg_100] if v is not None
         ]
         if not picked_vals:
             return BenchmarkScore(value=0.0)
@@ -185,9 +190,8 @@ def random_chain_from_graph(
         if len(path) == length:
             return path
 
-    raise RuntimeError(
-        f"Failed to sample chain of length={length} after {restarts} restarts."
-    )
+    raise RuntimeError(f"Failed to sample chain of length={length} after {restarts} restarts.")
+
 
 # =============================================================================
 # Analysis Functions
@@ -195,7 +199,7 @@ def random_chain_from_graph(
 
 
 def analyze_eplg_results(
-    exp_data,
+    exp_data: ExperimentData,
     two_disjoint_layers: list[list[tuple[int, int]]],
     qubit_chain: list[int],
 ) -> tuple[list[int], list[float]] | tuple[None, None]:
@@ -209,7 +213,6 @@ def analyze_eplg_results(
     Returns:
         Tuple of (chain_lengths, chain_eplgs) or (None, None) if analysis fails.
     """
-    import time
 
     exp_data.block_for_results()
     exp_data.experiment.analysis.run(exp_data)
@@ -227,12 +230,13 @@ def analyze_eplg_results(
     pfdf = df[df.name == "ProcessFidelity"]
     pfdf = pfdf.fillna({"value": 0})
 
-    # Compute LF by chain length
+    # Build full layer by interleaving the disjoint layers
     lf_sets, lf_qubits = two_disjoint_layers, qubit_chain
-    full_layer = [None] * (len(lf_sets[0]) + len(lf_sets[1]))
-    full_layer[::2] = lf_sets[0]  # type: ignore[assignment]
-    full_layer[1::2] = lf_sets[1]  # type: ignore[assignment]
-    full_layer = [(lf_qubits[0],)] + full_layer + [(lf_qubits[-1],)]  # type: ignore[assignment,operator]
+    full_layer = []
+    for edge0, edge1 in zip(lf_sets[0], lf_sets[1]):
+        full_layer.append(edge0)
+        full_layer.append(edge1)
+    full_layer = [(lf_qubits[0],)] + full_layer + [(lf_qubits[-1],)]
 
     pfs = [pfdf.loc[pfdf[pfdf.qubits == qubits].index[0], "value"] for qubits in full_layer]
     pfs = list(map(lambda x: x.n if x != 0 else 0, pfs))
@@ -296,7 +300,9 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         )
 
         # Separate the chain into two disjoint layers
-        pairwise_chain_indices = [(qubit_chain[i], qubit_chain[i + 1]) for i in range(len(qubit_chain) - 1)]
+        pairwise_chain_indices = [
+            (qubit_chain[i], qubit_chain[i + 1]) for i in range(len(qubit_chain) - 1)
+        ]
         two_disjoint_layers = [pairwise_chain_indices[0::2], pairwise_chain_indices[1::2]]
 
         lfexp = LayerFidelity(
@@ -324,9 +330,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         quantum_job = device.run(circuits, shots=shots)
 
         # Serialize the two_disjoint_layers as nested lists
-        serialized_layers = [
-            [list(edge) for edge in layer] for layer in two_disjoint_layers
-        ]
+        serialized_layers = [[list(edge) for edge in layer] for layer in two_disjoint_layers]
 
         return EPLGData.from_quantum_job(
             quantum_job,
@@ -348,11 +352,6 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         quantum_jobs: list["QuantumJob"],
     ) -> EPLGResult:
         """Process results and compute EPLG metrics."""
-        from qiskit.result import Result as QiskitResult
-        from qiskit.result.models import ExperimentResult, ExperimentResultData
-        from qiskit_experiments.framework import ExperimentData
-
-        from metriq_gym.helpers.task_helpers import flatten_counts
 
         # Deserialize two_disjoint_layers back to tuples
         two_disjoint_layers: list[list[tuple[int, int]]] = [
@@ -371,9 +370,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             two_qubit_gate=job_data.two_qubit_gate,
             one_qubit_basis_gates=job_data.one_qubit_basis_gates,
         )
-        lfexp.experiment_options.max_circuits = (
-            2 * job_data.num_samples * len(job_data.lengths)
-        )
+        lfexp.experiment_options.max_circuits = 2 * job_data.num_samples * len(job_data.lengths)
         original_circuits = lfexp.circuits()
 
         counts_list = flatten_counts(result_data)
@@ -428,9 +425,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             eplg_100=picked_vals[3] if len(picked_vals) > 3 else None,
         )
 
-    def estimate_resources_handler(
-        self, device: "QuantumDevice"
-    ) -> list[CircuitBatch]:
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
         """Return circuit batches for resource estimation."""
         circuits, _, _, _, _ = self._build_circuits(device)
         return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
