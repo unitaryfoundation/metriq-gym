@@ -4,26 +4,12 @@ import pytest
 import rustworkx as rx
 
 from metriq_gym.benchmarks.eplg import (
-    to_edges,
     eplg_score_at_lengths,
-    random_chain_complete_graph,
     random_chain_from_graph,
     EPLGResult,
 )
 
 
-def test_to_edges():
-    """Test path to edges conversion."""
-    path = [0, 1, 2, 3]
-    edges = to_edges(path)
-    assert edges == [(0, 1), (1, 2), (2, 3)]
-
-
-def test_to_edges_single_node():
-    """Test path with single node."""
-    path = [0]
-    edges = to_edges(path)
-    assert edges == []
 
 
 def test_eplg_score_at_lengths_exact_match():
@@ -50,19 +36,6 @@ def test_eplg_score_at_lengths_nearest_neighbor():
     assert picks == [(10, 8), (20, 8), (50, 8), (100, 8)]
 
 
-def test_random_chain_complete_graph():
-    """Test random chain selection from complete graph."""
-    chain = random_chain_complete_graph(10, 5, seed=42)
-
-    assert len(chain) == 5
-    assert len(set(chain)) == 5  # All unique
-    assert all(0 <= q < 10 for q in chain)
-
-
-def test_random_chain_complete_graph_too_long():
-    """Test error when chain length exceeds qubit count."""
-    with pytest.raises(ValueError, match="cannot exceed"):
-        random_chain_complete_graph(5, 10, seed=42)
 
 
 def test_random_chain_from_graph_path():

@@ -46,15 +46,9 @@
       "default": 12345,
       "examples": [12345, 42]
     },
-    "chain_type": {
-      "type": "string",
-      "enum": ["best", "random"],
-      "description": "Chain selection method. 'best' searches for highest predicted fidelity (IBM devices only), 'random' selects randomly.",
-      "default": "random"
-    },
     "two_qubit_gate": {
       "type": "string",
-      "description": "Two-qubit gate to use. For IBM devices, auto-detected if omitted.",
+      "description": "Two-qubit gate to use.",
       "default": "cz",
       "examples": ["cz", "cx", "ecr"]
     },
