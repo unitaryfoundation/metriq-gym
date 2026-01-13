@@ -232,7 +232,7 @@ def analyze_eplg_results(
 
     # Build full layer by interleaving the disjoint layers
     lf_sets, lf_qubits = two_disjoint_layers, qubit_chain
-    full_layer = []
+    full_layer: list[tuple[int, ...]] = []
     for edge0, edge1 in zip(lf_sets[0], lf_sets[1]):
         full_layer.append(edge0)
         full_layer.append(edge1)
