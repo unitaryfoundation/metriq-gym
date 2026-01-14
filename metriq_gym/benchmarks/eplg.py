@@ -39,7 +39,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
     BenchmarkScore,
 )
-from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.qplatform.device import connectivity_graph, connectivity_graph_for_gate
 from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
@@ -125,7 +125,7 @@ def eplg_score_at_lengths(
 
 
 def random_chain_from_graph(
-    graph: rx.PyGraph | rx.PyDiGraph,
+    graph: rx.PyGraph,
     length: int,
     seed: int | None = None,
     restarts: int = 200,
@@ -133,7 +133,7 @@ def random_chain_from_graph(
     """Sample a random simple path of given length from a graph.
 
     Args:
-        graph: Connectivity graph (PyGraph or PyDiGraph).
+        graph: Connectivity graph (undirected).
         length: Desired chain length (number of nodes).
         seed: Random seed.
         restarts: Number of random restart attempts.
@@ -142,15 +142,10 @@ def random_chain_from_graph(
         List of qubit indices forming the chain.
     """
     rng = random.Random(seed)
-    # Always work with undirected graph
-    if hasattr(graph, "to_undirected"):
-        graph_und = graph.to_undirected(multigraph=False)
-    else:
-        graph_und = graph
 
     allowed = {tuple(sorted(e)) for e in graph.edge_list()}
 
-    n_nodes = graph_und.num_nodes()
+    n_nodes = graph.num_nodes()
     adj: dict[int, list[int]] = {i: [] for i in range(n_nodes)}
     for u, v in allowed:
         adj[u].append(v)
@@ -292,7 +287,12 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         num_samples = self.params.num_samples
         seed = self.params.seed
 
-        graph = connectivity_graph(device)
+        # If the device has restricted connectivity for the 2 qubit gate, use
+        # that restricted topology to create the chain
+        graph = connectivity_graph_for_gate(device, two_qubit_gate)
+        if graph is None:
+            graph = connectivity_graph(device)
+
         qubit_chain = random_chain_from_graph(
             graph,
             num_qubits_in_chain,

@@ -48,7 +48,7 @@
     },
     "two_qubit_gate": {
       "type": "string",
-      "description": "Two-qubit gate to use.",
+      "description": "Two-qubit gate to use. This should be a native entangling gate supported by the device.",
       "default": "cz",
       "examples": ["cz", "cx", "ecr"]
     },
@@ -57,7 +57,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Single-qubit basis gates for LayerFidelity experiment.",
+      "description": "Single-qubit basis gates for LayerFidelity experiment. This should complement the chosen two qubit gate to be a universal gateset",
       "default": ["rz", "rx", "x"],
       "examples": [["rz", "rx", "x"]]
     }
