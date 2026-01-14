@@ -6,6 +6,12 @@ from qbraid.runtime import QuantumProvider
 from .device import OriginDevice, SIMULATOR_BACKENDS
 from .qcloud_utils import get_service
 
+# Map user-facing device names to OriginQ backend identifiers
+DEVICE_ALIASES: dict[str, str] = {
+    "wukong_102": "origin_wukong",
+    "wukong_72": "72",
+}
+
 
 class OriginProvider(QuantumProvider):
     """Adapter that exposes OriginQ Wukong devices through the qBraid runtime API."""
@@ -37,12 +43,14 @@ class OriginProvider(QuantumProvider):
 
     def get_device(self, device_id: str) -> OriginDevice:
         device_id = device_id.strip()
+        # Resolve alias to backend name (e.g., "wukong_102" -> "origin_wukong")
+        backend_name = DEVICE_ALIASES.get(device_id, device_id)
         if device_id not in self._devices:
-            backend = self.service.backend(device_id)
+            backend = self.service.backend(backend_name)
             self._devices[device_id] = OriginDevice(
                 provider=self,
                 device_id=device_id,
                 backend=backend,
-                backend_name=device_id,
+                backend_name=backend_name,
             )
         return self._devices[device_id]

@@ -38,9 +38,8 @@ Origin currently exposes a pair of Wukong superconducting devices and several
 simulators. Metriq-Gym registers the following identifiers via the qBraid entry
 point system:
 
-* ``origin_wukong`` – Alias for the 102-qubit hardware backend (ID
-  ``WK_C102_400``). This is the default when examples reference Wukong.
-* ``72`` – 72-qubit hardware backend.
+* ``wukong_102`` – 102-qubit hardware backend (ID ``WK_C102_400``).
+* ``wukong_72`` – 72-qubit hardware backend.
 * ``full_amplitude`` / ``partial_amplitude`` / ``single_amplitude`` – Simulator
   backends with increasing qubit limits. See
   ``metriq_gym/origin/_constants.py`` for the supported maxima.
@@ -60,13 +59,13 @@ device identifier to ``--device``. A few examples:
 
 .. code-block:: sh
 
-   # 102-qubit hardware (alias)
+   # 102-qubit hardware
    uv run mgym job dispatch metriq_gym/schemas/examples/wit.example.json \
-     --provider origin --device origin_wukong
+     --provider origin --device wukong_102
 
-   # 72-qubit hardware (numeric ID)
+   # 72-qubit hardware
    uv run mgym job dispatch metriq_gym/schemas/examples/wit.example.json \
-     --provider origin --device 72
+     --provider origin --device wukong_72
 
    # Simulator with up to 35 qubits
    uv run mgym job dispatch metriq_gym/schemas/examples/wit.example.json \
