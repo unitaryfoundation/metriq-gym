@@ -287,7 +287,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         num_samples = self.params.num_samples
         seed = self.params.seed
 
-        # If the device has restricted connectivity for the 2 qubit gate, use
+        # If the device has restricted connectivity for the 2 gate, use
         # that restricted topology to create the chain
         graph = connectivity_graph_for_gate(device, two_qubit_gate)
         if graph is None:
@@ -316,7 +316,10 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         )
 
         lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
-        circuits = lfexp.circuits()
+        if self.params.decompose_clifford_ops:
+            circuits = lfexp._transpiled_circuits()
+        else:
+            circuits = lfexp.circuits()
 
         return circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates
 

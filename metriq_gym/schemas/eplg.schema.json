@@ -60,6 +60,13 @@
       "description": "Single-qubit basis gates for LayerFidelity experiment. This should complement the chosen two qubit gate to be a universal gateset",
       "default": ["rz", "rx", "x"],
       "examples": [["rz", "rx", "x"]]
+    },
+    "decompose_clifford_ops": {
+      "type": "boolean",
+      "description": "Decompose the parameterized clifford operation types in the circuit to primitive operations; this may be necessary for providers that don't support Qiskit clifford primitives",
+      "default": false,
+      "examples": [true]
+
     }
   },
   "required": ["benchmark_name", "num_qubits_in_chain"]
