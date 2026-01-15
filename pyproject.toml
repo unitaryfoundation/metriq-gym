@@ -9,7 +9,7 @@ maintainers = [
     { name = "Vincent Russo", email = "vincent@unitary.foundation" }
 ]
 readme = "README.md"
-license = "GPL-3.0-or-later"
+license = "Apache-2.0"
 license-files = [
     "LICENSE",
     "submodules/qiskit-device-benchmarking/LICENSE",
