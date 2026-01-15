@@ -227,13 +227,15 @@ def analyze_eplg_results(
 
     # Build full layer by interleaving the disjoint layers
     lf_sets, lf_qubits = two_disjoint_layers, qubit_chain
-    full_layer: list[tuple[int, ...]] = []
-    for edge0, edge1 in zip(lf_sets[0], lf_sets[1]):
-        full_layer.append(edge0)
-        full_layer.append(edge1)
+    full_layer: list[tuple[int, ...] | None] = [None] * (len(lf_sets[0]) + len(lf_sets[1]))
+    full_layer[::2] = lf_sets[0]
+    full_layer[1::2] = lf_sets[1]
     full_layer = [(lf_qubits[0],)] + full_layer + [(lf_qubits[-1],)]
 
-    pfs = [pfdf.loc[pfdf[pfdf.qubits == qubits].index[0], "value"] for qubits in full_layer]
+    # Collect process fidelities for each segment in the full layer; any missing failed
+    # to fit and will be assigned a value of 0
+    pf_map = pfdf.set_index("qubits")["value"]
+    pfs = pf_map.reindex(full_layer, fill_value=0).tolist()
     pfs = list(map(lambda x: x.n if x != 0 else 0, pfs))
     pfs[0] = pfs[0] ** 2
     pfs[-1] = pfs[-1] ** 2
@@ -377,7 +379,6 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         original_circuits = lfexp.circuits()
 
         counts_list = flatten_counts(result_data)
-
         # Build Qiskit Result from counts
         experiment_results = []
         for i, counts in enumerate(counts_list):
