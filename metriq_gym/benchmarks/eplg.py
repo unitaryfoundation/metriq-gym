@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import rustworkx as rx
 import time
+import warnings
 from qiskit_experiments.library.randomized_benchmarking import LayerFidelity
 from qiskit.result import Result as QiskitResult
 from qiskit.result.models import ExperimentResult, ExperimentResultData
@@ -235,7 +236,16 @@ def analyze_eplg_results(
     # Collect process fidelities for each segment in the full layer; any missing failed
     # to fit and will be assigned a value of 0
     pf_map = pfdf.set_index("qubits")["value"]
-    pfs = pf_map.reindex(full_layer, fill_value=0).tolist()
+    # Reindex without filling to detect gaps and emit a warning
+    pfs_series = pf_map.reindex(full_layer)
+    missing_idx = pfs_series[pfs_series.isna()].index.tolist()
+    if missing_idx:
+        warnings.warn(
+            f"Missing ProcessFidelity for {len(missing_idx)} segment(s); filling with 0. Qubits missing {missing_idx}",
+            category=RuntimeWarning,
+            stacklevel=2,
+        )
+    pfs = pfs_series.fillna(0).tolist()
     pfs = list(map(lambda x: x.n if x != 0 else 0, pfs))
     pfs[0] = pfs[0] ** 2
     pfs[-1] = pfs[-1] ** 2
@@ -243,11 +253,11 @@ def analyze_eplg_results(
     chain_lens = list(range(4, len(pfs), 2))
 
     if len(chain_lens) == 0:
-        print("\n" + "=" * 60)
-        print("Chain too short for EPLG analysis")
-        print("=" * 60)
-        print(f"Chain has only {len(pfs)} process fidelities")
-        print("Need at least 5 for meaningful analysis")
+        warnings.warn(
+            f"Chain too short for EPLG analysis; has {len(pfs)} process fidelities; need at least 5.",
+            category=RuntimeWarning,
+            stacklevel=2,
+        )
         return None, None
 
     chain_fids = []
