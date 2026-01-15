@@ -17,10 +17,12 @@ from metriq_gym.benchmarks.mirror_circuits import (
 from metriq_gym.benchmarks.wit import WIT, WITData, WITResult
 from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData, QEDCResult
 from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData, LinearRampQAOAResult
+from metriq_gym.benchmarks.eplg import EPLG, EPLGData, EPLGResult
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,
     JobType.CLOPS: Clops,
+    JobType.EPLG: EPLG,
     JobType.QML_KERNEL: QMLKernel,
     JobType.QUANTUM_VOLUME: QuantumVolume,
     JobType.MIRROR_CIRCUITS: MirrorCircuits,
@@ -35,6 +37,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.BSEQ: BSEQData,
     JobType.CLOPS: ClopsData,
+    JobType.EPLG: EPLGData,
     JobType.QML_KERNEL: QMLKernelData,
     JobType.QUANTUM_VOLUME: QuantumVolumeData,
     JobType.MIRROR_CIRCUITS: MirrorCircuitsData,
@@ -49,6 +52,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
 BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.BSEQ: BSEQResult,
     JobType.CLOPS: ClopsResult,
+    JobType.EPLG: EPLGResult,
     JobType.QML_KERNEL: QMLKernelResult,
     JobType.QUANTUM_VOLUME: QuantumVolumeResult,
     JobType.MIRROR_CIRCUITS: MirrorCircuitsResult,

@@ -146,6 +146,19 @@ def _(device: OriginDevice) -> rx.PyGraph:
     return graph
 
 
+@singledispatch
+def connectivity_graph_for_gate(device: QuantumDevice, gate: str) -> rx.PyGraph | None:
+    """Return connectivity graph that works for the given gate, if available for the device."""
+    return None
+
+
+@connectivity_graph_for_gate.register
+def _(device: QiskitBackend, gate: str) -> rx.PyGraph | None:
+    if gate in device._backend.target:
+        return device._backend.target[gate].graph.to_undirected(multigraph=False)
+    return None
+
+
 def normalized_metadata(device: QuantumDevice) -> dict:
     """Return a minimal, normalized subset of device metadata.
 
