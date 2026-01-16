@@ -52,19 +52,24 @@ Four easy steps to get started with `metriq-gym`!
 
 You will see the results of the benchmark printed in your terminal. E.g.
 ```sh
-Polling job...
-{'app_version': '0.4.2.dev5+ge262034d2.d20251015',
+{'app_version': '0.6.0',
  'job_type': 'WIT',
  'platform': {'device': 'aer_simulator',
               'device_metadata': {'num_qubits': 31,
                                   'simulator': True,
                                   'version': '0.17.2'},
               'provider': 'local'},
+ 'results': {'expectation_value': {'uncertainty': 0.0006673812593654682,
+                                   'value': 0.996337890625},
+             'score': {'uncertainty': 0.0006673812593654682,
+                       'value': 0.996337890625}},
+ 'runtime_seconds': 0.009346791077405214,
  'suite_id': None,
- 'timestamp': '2025-10-16T12:44:17.367694'}
+ 'timestamp': '2026-01-16T15:42:18.173736'}
 
 Results:
-  expectation_value: 0.9959716796875 ± 0.0006998267213650185
+  expectation_value: 0.996337890625 ± 0.0006673812593654682
+  score: 0.996337890625 ± 0.0006673812593654682
 ```
 
 Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/examples/``.
@@ -87,4 +92,4 @@ Guide](https://metriq-gym.readthedocs.io/en/latest/developer_guide.html). Issues
 
 ## License
 
-metriq-gym is available under the [GNU GPL v3.0 or later](LICENSE).
+metriq-gym is available under the [Apache License 2.0](LICENSE).
