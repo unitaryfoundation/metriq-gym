@@ -60,7 +60,7 @@ def test_list_jobs_prefers_max_qubits_for_qft(capsys):
             provider_name="local",
             job_type=JobType.QUANTUM_FOURIER_TRANSFORM,
             dispatch_time=datetime.fromisoformat("2021-09-01T12:00:00"),
-            params={"num_qubits": 3, "max_qubits": 6},
+            params={"max_qubits": 6},
             data={},
         )
     ]
@@ -68,7 +68,7 @@ def test_list_jobs_prefers_max_qubits_for_qft(capsys):
     list_jobs(mock_jobs, show_index=False, show_suite_id=False)
     captured = capsys.readouterr()
 
-    table = [["qft1", "local", "local_sim", "Quantum Fourier Transform", 3, "2021-09-01T12:00:00"]]
+    table = [["qft1", "local", "local_sim", "Quantum Fourier Transform", 6, "2021-09-01T12:00:00"]]
     expected_output = tabulate(table, headers=LIST_JOBS_HEADERS, tablefmt="grid") + "\n"
     assert captured.out == expected_output
 
@@ -81,7 +81,7 @@ def test_list_jobs_uses_width_alias_for_num_qubits(capsys):
             provider_name="local",
             job_type=JobType.MIRROR_CIRCUITS,
             dispatch_time=datetime.fromisoformat("2021-09-01T12:00:00"),
-            params={"width": 11},
+            params={"width": 11, "max_qubits": 20},
             data={},
         )
     ]
