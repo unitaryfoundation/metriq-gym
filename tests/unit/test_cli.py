@@ -44,11 +44,74 @@ def test_list_jobs_all(capsys):
 
     # Expected output using tabulate
     table = [
-        ["1234", "ibm", "ibmq_qasm_simulator", "Quantum Volume", "2021-09-01T12:00:00"],
-        ["5678", "ionq", "ionq_simulator", "Quantum Volume", "2021-09-02T12:00:00"],
+        ["1234", "ibm", "ibmq_qasm_simulator", "Quantum Volume", None, "2021-09-01T12:00:00"],
+        ["5678", "ionq", "ionq_simulator", "Quantum Volume", None, "2021-09-02T12:00:00"],
     ]
     expected_output = tabulate(table, headers=LIST_JOBS_HEADERS, tablefmt="grid") + "\n"
 
+    assert captured.out == expected_output
+
+
+def test_list_jobs_prefers_max_qubits_for_qft(capsys):
+    mock_jobs = [
+        MetriqGymJob(
+            id="qft1",
+            device_name="local_sim",
+            provider_name="local",
+            job_type=JobType.QUANTUM_FOURIER_TRANSFORM,
+            dispatch_time=datetime.fromisoformat("2021-09-01T12:00:00"),
+            params={"max_qubits": 6},
+            data={},
+        )
+    ]
+
+    list_jobs(mock_jobs, show_index=False, show_suite_id=False)
+    captured = capsys.readouterr()
+
+    table = [["qft1", "local", "local_sim", "Quantum Fourier Transform", 6, "2021-09-01T12:00:00"]]
+    expected_output = tabulate(table, headers=LIST_JOBS_HEADERS, tablefmt="grid") + "\n"
+    assert captured.out == expected_output
+
+
+def test_list_jobs_uses_width_alias_for_num_qubits(capsys):
+    mock_jobs = [
+        MetriqGymJob(
+            id="mc1",
+            device_name="local_sim",
+            provider_name="local",
+            job_type=JobType.MIRROR_CIRCUITS,
+            dispatch_time=datetime.fromisoformat("2021-09-01T12:00:00"),
+            params={"width": 11, "max_qubits": 20},
+            data={},
+        )
+    ]
+
+    list_jobs(mock_jobs, show_index=False, show_suite_id=False)
+    captured = capsys.readouterr()
+
+    table = [["mc1", "local", "local_sim", "Mirror Circuits", 11, "2021-09-01T12:00:00"]]
+    expected_output = tabulate(table, headers=LIST_JOBS_HEADERS, tablefmt="grid") + "\n"
+    assert captured.out == expected_output
+
+
+def test_list_jobs_uses_qubits_alias_for_num_qubits(capsys):
+    mock_jobs = [
+        MetriqGymJob(
+            id="q2",
+            device_name="local_sim",
+            provider_name="local",
+            job_type=JobType.WIT,
+            dispatch_time=datetime.fromisoformat("2021-09-01T12:00:00"),
+            params={"qubits": 9},
+            data={},
+        )
+    ]
+
+    list_jobs(mock_jobs, show_index=False, show_suite_id=False)
+    captured = capsys.readouterr()
+
+    table = [["q2", "local", "local_sim", "WIT", 9, "2021-09-01T12:00:00"]]
+    expected_output = tabulate(table, headers=LIST_JOBS_HEADERS, tablefmt="grid") + "\n"
     assert captured.out == expected_output
 
 

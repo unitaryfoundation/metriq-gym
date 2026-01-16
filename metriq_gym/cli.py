@@ -25,7 +25,14 @@ from metriq_gym.job_manager import JobManager, MetriqGymJob
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-LIST_JOBS_HEADERS = ["Metriq-gym Job Id", "Provider", "Device", "Type", "Dispatch time (UTC)"]
+LIST_JOBS_HEADERS = [
+    "Metriq-gym Job Id",
+    "Provider",
+    "Device",
+    "Type",
+    "# Qubits",
+    "Dispatch time (UTC)",
+]
 LIST_JOBS_HEADERS_FULL = ["Suite ID"] + LIST_JOBS_HEADERS
 
 LATEST_JOB_ID = "latest"
