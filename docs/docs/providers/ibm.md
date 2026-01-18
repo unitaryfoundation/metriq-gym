@@ -30,18 +30,28 @@ QISKIT_IBM_INSTANCE="<instance-crn>"       # for specific instance access
 
 ## Available Devices
 
-IBM Quantum devices vary by access level. Common devices include:
+Device availability depends on your IBM Quantum plan and changes frequently. To see your available devices:
 
-| Device | Qubits | Type |
-|--------|--------|------|
-| `ibm_fez` | 156 | Heron r2 |
-| `ibm_marrakesh` | 156 | Heron r2 |
-| `ibm_torino` | 133 | Heron r1 |
-| `ibm_sherbrooke` | 127 | Eagle r3 |
-| `ibm_brisbane` | 127 | Eagle r3 |
+**Via IBM Quantum Platform:**
+Visit [quantum.ibm.com](https://quantum.ibm.com) and check your dashboard.
 
-!!! note
-    Device availability depends on your IBM Quantum plan. Check the [IBM Quantum Platform](https://quantum.ibm.com) for current device status.
+**Via Python:**
+```python
+from qiskit_ibm_runtime import QiskitRuntimeService
+
+service = QiskitRuntimeService(channel="ibm_quantum_platform")
+for backend in service.backends():
+    print(f"{backend.name}: {backend.num_qubits} qubits")
+```
+
+**Via qBraid:**
+```python
+from metriq_gym.run import load_provider
+
+provider = load_provider("ibm")
+for device in provider.get_devices():
+    print(f"{device.id}: {device.status}")
+```
 
 ## Usage
 

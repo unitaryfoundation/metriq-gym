@@ -6,6 +6,8 @@ repo_name: unitaryfoundation/metriq-gym
 
 theme:
   name: material
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
   palette:
     - scheme: default
       primary: indigo
@@ -20,8 +22,7 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.sections
-    - navigation.expand
+    - navigation.indexes
     - navigation.top
     - content.code.copy
     - content.code.annotate
