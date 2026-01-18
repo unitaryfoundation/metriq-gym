@@ -11,7 +11,7 @@
 [![Unitary Foundation](https://img.shields.io/badge/Supported%20By-Unitary%20Foundation-FFFF00.svg)](https://unitary.foundation)
 [![PyPI version](https://img.shields.io/pypi/v/metriq-gym.svg?color=blue)](https://pypi.org/project/metriq-gym/)
 [![Downloads](https://static.pepy.tech/badge/metriq-gym)](https://pepy.tech/project/metriq-gym)
-[![Doc Status](https://readthedocs.org/projects/metriq-gym/badge/?version=latest)](https://metriq-gym.readthedocs.io/en/latest/)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://unitaryfoundation.github.io/metriq-gym/)
 [![Discord Chat](https://img.shields.io/badge/dynamic/json?color=orange&label=Discord&query=approximate_presence_count&suffix=%20online.&url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2FJqVGmpkP96%3Fwith_counts%3Dtrue)](http://discord.unitary.foundation)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
@@ -76,9 +76,11 @@ Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/
 
 ## Documentation
 
-- CLI workflows, credential setup, and upload instructions: [Command-Line Workflows](https://metriq-gym.readthedocs.io/en/latest/cli_workflows.html)
-- Contributor and release guidance: [Developer Guide](https://metriq-gym.readthedocs.io/en/latest/developer_guide.html)
-- API reference and benchmark integration notes: [metriq-gym Docs](https://metriq-gym.readthedocs.io/)
+- [Quickstart Guide](https://unitaryfoundation.github.io/metriq-gym/getting-started/quickstart/) - Get up and running quickly
+- [CLI Reference](https://unitaryfoundation.github.io/metriq-gym/cli/overview/) - Command-line workflows and credential setup
+- [Provider Configuration](https://unitaryfoundation.github.io/metriq-gym/providers/overview/) - Setup guides for IBM, IonQ, AWS, Azure, Quantinuum, OriginQ
+- [Benchmarks](https://unitaryfoundation.github.io/metriq-gym/benchmarks/overview/) - Available benchmarks and configuration
+- [Developer Guide](https://unitaryfoundation.github.io/metriq-gym/development/developer-guide/) - Contributing to metriq-gym
 
 ## Community
 
@@ -88,7 +90,7 @@ Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/
 ## Contributing
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow checklist, and review the [Developer
-Guide](https://metriq-gym.readthedocs.io/en/latest/developer_guide.html). Issues and pull requests are welcome!
+Guide](https://unitaryfoundation.github.io/metriq-gym/development/developer-guide/). Issues and pull requests are welcome!
 
 ## License
 

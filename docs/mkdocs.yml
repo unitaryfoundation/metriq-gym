@@ -1,0 +1,89 @@
+site_name: Metriq-Gym
+site_url: https://unitaryfoundation.github.io/metriq-gym/
+site_description: Open-source quantum benchmarking framework
+repo_url: https://github.com/unitaryfoundation/metriq-gym
+repo_name: unitaryfoundation/metriq-gym
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Quickstart: getting-started/quickstart.md
+    - End-to-End Tutorial: getting-started/tutorial.md
+  - CLI Reference:
+    - Overview: cli/overview.md
+    - Job Commands: cli/job-commands.md
+    - Suite Commands: cli/suite-commands.md
+    - Resource Estimation: cli/estimation.md
+  - Provider Configuration:
+    - Overview: providers/overview.md
+    - IBM Quantum: providers/ibm.md
+    - IonQ: providers/ionq.md
+    - AWS Braket: providers/braket.md
+    - Azure Quantum: providers/azure.md
+    - Quantinuum: providers/quantinuum.md
+    - OriginQ (Wukong): providers/originq.md
+    - Local Simulators: providers/local.md
+  - Benchmarks:
+    - Overview: benchmarks/overview.md
+    - BSEQ: benchmarks/bseq.md
+    - CLOPS: benchmarks/clops.md
+    - EPLG: benchmarks/eplg.md
+    - Mirror Circuits: benchmarks/mirror-circuits.md
+    - QML Kernel: benchmarks/qml-kernel.md
+    - Quantum Volume: benchmarks/quantum-volume.md
+    - WIT: benchmarks/wit.md
+    - LR-QAOA: benchmarks/lr-qaoa.md
+    - QED-C Benchmarks: benchmarks/qedc.md
+  - Uploading Results:
+    - GitHub Integration: uploading/github.md
+    - Metriq Platform: uploading/metriq-platform.md
+  - Development:
+    - Developer Guide: development/developer-guide.md
+    - Adding New Benchmarks: development/adding-benchmarks.md
+    - API Reference: development/api-reference.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [".."]
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/unitaryfoundation/metriq-gym
