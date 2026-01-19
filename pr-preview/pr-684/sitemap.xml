@@ -1,123 +1,123 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/bseq/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/bseq/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/clops/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/clops/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/eplg/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/eplg/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/lr-qaoa/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/lr-qaoa/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/mirror-circuits/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/mirror-circuits/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/overview/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/overview/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/qedc/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/qedc/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/qml-kernel/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/qml-kernel/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/quantum-volume/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/quantum-volume/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/wit/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/benchmarks/wit/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/cli/estimation/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/cli/estimation/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/cli/job-commands/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/cli/job-commands/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/cli/overview/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/cli/overview/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/cli/suite-commands/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/cli/suite-commands/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/development/adding-benchmarks/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/development/adding-benchmarks/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/development/api-reference/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/development/api-reference/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/development/developer-guide/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/development/developer-guide/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/getting-started/quickstart/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/getting-started/quickstart/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/getting-started/tutorial/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/getting-started/tutorial/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/providers/azure/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/providers/azure/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/providers/braket/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/providers/braket/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/providers/ibm/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/providers/ibm/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/providers/ionq/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/providers/ionq/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/providers/local/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/providers/local/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/providers/originq/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/providers/originq/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/providers/overview/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/providers/overview/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/providers/quantinuum/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/providers/quantinuum/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/uploading/github/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/uploading/github/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
     <url>
-         <loc>https://unitaryfoundation.github.io/metriq-gym/uploading/metriq-platform/</loc>
+         <loc>https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-684/uploading/metriq-platform/</loc>
          <lastmod>2026-01-19</lastmod>
     </url>
 </urlset>
