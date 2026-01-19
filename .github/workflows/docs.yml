@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'docs/**'
+      - 'metriq_gym/**'  # Rebuild when source changes (for docstring-based docs)
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -39,7 +40,7 @@ jobs:
           mkdocs build --strict
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: docs/site
 
