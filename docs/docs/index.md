@@ -1,8 +1,8 @@
+# Metriq-Gym
+
 <div align="center">
   <img src="assets/logo.svg" alt="metriq-gym logo" width="450" />
 </div>
-
-# Metriq-Gym
 
 **Metriq-Gym** is an open-source framework for running standardized quantum benchmarks across different quantum hardware providers. It provides a unified CLI and Python interface to dispatch, monitor, and analyze benchmark jobs on simulators and real quantum devices.
 
