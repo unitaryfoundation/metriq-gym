@@ -35,7 +35,9 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           cd docs
-          mkdocs build --site-url "https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-${PR_NUMBER}/"
+          # Update site_url for preview deployment
+          sed -i "s|site_url:.*|site_url: https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-${PR_NUMBER}/|" mkdocs.yml
+          mkdocs build
 
       - name: Deploy preview
         uses: rossjrw/pr-preview-action@v1
