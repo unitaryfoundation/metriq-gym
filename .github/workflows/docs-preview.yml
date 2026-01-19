@@ -1,0 +1,44 @@
+name: Deploy Documentation Preview
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'metriq_gym/**'
+      - '.github/workflows/docs-preview.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install mkdocs mkdocs-material mkdocstrings[python]
+
+      - name: Build documentation
+        run: |
+          cd docs
+          mkdocs build
+
+      - name: Deploy preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: docs/site
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: auto
