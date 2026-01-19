@@ -47,17 +47,7 @@ nav:
     - Quantinuum: providers/quantinuum.md
     - OriginQ (Wukong): providers/originq.md
     - Local Simulators: providers/local.md
-  - Benchmarks:
-    - Overview: benchmarks/overview.md
-    - BSEQ: benchmarks/bseq.md
-    - CLOPS: benchmarks/clops.md
-    - EPLG: benchmarks/eplg.md
-    - Mirror Circuits: benchmarks/mirror-circuits.md
-    - QML Kernel: benchmarks/qml-kernel.md
-    - Quantum Volume: benchmarks/quantum-volume.md
-    - WIT: benchmarks/wit.md
-    - LR-QAOA: benchmarks/lr-qaoa.md
-    - QED-C Benchmarks: benchmarks/qedc.md
+  - Benchmarks: benchmarks/overview.md
   - Uploading Results:
     - GitHub Integration: uploading/github.md
     - Metriq Platform: uploading/metriq-platform.md
