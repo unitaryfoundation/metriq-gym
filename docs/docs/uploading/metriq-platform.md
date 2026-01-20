@@ -1,19 +1,9 @@
 # Metriq Platform
 
-Metriq-Gym is part of the Metriq ecosystem for tracking quantum computing progress. This page explains how your uploaded results appear on the platform.
+This page explains how your uploaded results appear on the Metriq platform.
 
-## The Metriq Ecosystem
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ metriq-gym  │ ──▶ │ metriq-data │ ──▶ │ metriq.info │
-│  (collect)  │     │   (store)   │     │  (display)  │
-└─────────────┘     └─────────────┘     └─────────────┘
-```
-
-1. **Metriq-Gym**: Run benchmarks and collect results
-2. **metriq-data**: GitHub repository storing all benchmark data
-3. **metriq.info**: Web platform displaying results and trends
+!!! tip
+    For an overview of how Metriq-Gym fits into the Metriq ecosystem, see the [home page](../index.md#the-metriq-ecosystem).
 
 ## Metriq.info
 
@@ -98,8 +88,8 @@ To ensure your results are valuable:
 
 ### Do
 
-- Run benchmarks with sufficient shots (1000+)
-- Use recommended trial counts for statistical significance
+- Run benchmarks with sufficient shots for statistical significance
+- Use recommended trial counts for your benchmark
 - Include all relevant parameters
 - Verify results before uploading
 

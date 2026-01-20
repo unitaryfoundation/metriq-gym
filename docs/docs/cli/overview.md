@@ -22,6 +22,7 @@ Resources:
 | `mgym job poll [job_id]` | Poll job status and retrieve results |
 | `mgym job view [job_id]` | View job details |
 | `mgym job upload <job_id>` | Upload results to GitHub |
+| `mgym job delete [job_id]` | Delete a job from local database |
 | `mgym job estimate <config>` | Estimate resource usage |
 
 ### Suite Commands
@@ -30,7 +31,9 @@ Resources:
 |---------|-------------|
 | `mgym suite dispatch <suite.json>` | Dispatch all benchmarks in a suite |
 | `mgym suite poll [suite_id]` | Poll suite status |
+| `mgym suite view [suite_id]` | View all jobs in a suite |
 | `mgym suite upload <suite_id>` | Upload all suite results |
+| `mgym suite delete [suite_id]` | Delete all jobs in a suite |
 
 ## Global Options
 

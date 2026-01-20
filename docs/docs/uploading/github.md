@@ -1,6 +1,6 @@
 # GitHub Integration
 
-Metriq-Gym uploads benchmark results to GitHub via pull requests, enabling community contribution to the benchmark database.
+Metriq-Gym uploads benchmark results to GitHub via pull requests, enabling community contribution to the [metriq-data](https://github.com/unitaryfoundation/metriq-data) benchmark database.
 
 ## Overview
 

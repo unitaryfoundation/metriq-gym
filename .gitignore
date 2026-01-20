@@ -37,6 +37,9 @@ docs/build/
 docs/source/generated/
 docs/jupyter_execute/
 
+# MkDocs documentation
+docs/site/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 

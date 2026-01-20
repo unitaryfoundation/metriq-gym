@@ -10,6 +10,19 @@
 
 Metriq-Gym is part of the [Metriq](https://metriq.info) ecosystem, a community-driven platform for tracking quantum computing progress. Results collected with Metriq-Gym can be uploaded to the [Metriq platform](https://metriq.info) to contribute to the global benchmarking database.
 
+### The Metriq Ecosystem
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ metriq-gym  │ ──▶ │ metriq-data │ ──▶ │ metriq.info │
+│  (collect)  │     │   (store)   │     │  (display)  │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+1. **Metriq-Gym**: Run benchmarks and collect results
+2. **[metriq-data](https://github.com/unitaryfoundation/metriq-data)**: GitHub repository storing all benchmark data
+3. **[metriq.info](https://metriq.info)**: Web platform displaying results and trends
+
 ## Key Features
 
 - **Multi-provider support**: Run benchmarks on IBM Quantum, IonQ, AWS Braket, Azure Quantum, Quantinuum, OriginQ, and local simulators
