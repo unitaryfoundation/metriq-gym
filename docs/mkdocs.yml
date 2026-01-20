@@ -30,6 +30,7 @@ theme:
 
 nav:
   - Home: index.md
+  - The Metriq Ecosystem: ecosystem.md
   - Getting Started:
     - Quickstart: getting-started/quickstart.md
     - End-to-End Tutorial: getting-started/tutorial.md
@@ -50,7 +51,7 @@ nav:
   - Benchmarks: benchmarks/overview.md
   - Uploading Results:
     - GitHub Integration: uploading/github.md
-    - Metriq Platform: uploading/metriq-platform.md
+    - Result Format: uploading/metriq-platform.md
   - Development:
     - Developer Guide: development/developer-guide.md
     - Adding New Benchmarks: development/adding-benchmarks.md
