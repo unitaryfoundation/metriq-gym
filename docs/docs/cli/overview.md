@@ -9,6 +9,7 @@ mgym <resource> <action> [options]
 ```
 
 Resources:
+
 - `job` - Single benchmark operations
 - `suite` - Benchmark suite operations
 
@@ -76,6 +77,7 @@ The CLI maintains a local job database (`.metriq_gym_jobs.jsonl`) to track jobs 
     The local database is meant as a transient queue, not archival storage. Export results regularly or back up the file if you need to retain history.
 
 Database location:
+
 - Custom: Set `MGYM_LOCAL_DB_DIR`
 - Default: Platform-specific user data directory (e.g., `~/Library/Application Support/metriq-gym` on macOS)
 

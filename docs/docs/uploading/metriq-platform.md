@@ -26,6 +26,7 @@ The metriq-data repository is periodically scanned for new results. Merged PRs a
 ### Result Display
 
 Results are displayed with:
+
 - Device and provider information
 - Benchmark type and parameters
 - Metric values with uncertainties
@@ -34,6 +35,7 @@ Results are displayed with:
 ### Historical Tracking
 
 The platform tracks results over time, allowing you to see:
+
 - How device performance changes
 - Calibration effects
 - Long-term trends
