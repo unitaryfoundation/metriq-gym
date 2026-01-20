@@ -19,7 +19,10 @@ mgym job poll <JOB_ID>
 
 ## Configuration
 
-All benchmarks use JSON configuration files. Example configurations are available in `metriq_gym/schemas/examples/`.
+All benchmarks use JSON configuration files:
+
+- **Schemas**: `metriq_gym/schemas/*.schema.json` - Define parameters, types, and allowed values
+- **Examples**: `metriq_gym/schemas/examples/*.example.json` - Ready-to-run configurations
 
 ## Available Benchmarks
 

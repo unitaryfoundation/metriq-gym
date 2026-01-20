@@ -13,13 +13,13 @@ Metriq-Gym is part of the [Metriq](https://metriq.info) ecosystem, a community-d
 ### The Metriq Ecosystem
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ metriq-gym  │ ──▶ │ metriq-data │ ──▶ │ metriq.info │
-│  (collect)  │     │   (store)   │     │  (display)  │
-└─────────────┘     └─────────────┘     └─────────────┘
+          ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+          │ metriq-gym  │ ──▶ │ metriq-data │ ──▶ │ metriq.info │
+          │  (collect)  │     │   (store)   │     │  (display)  │
+          └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-1. **Metriq-Gym**: Run benchmarks and collect results
+1. **[metriq-gym](https://github.com/unitaryfoundation/metriq-gym)**: Run benchmarks and collect results
 2. **[metriq-data](https://github.com/unitaryfoundation/metriq-data)**: GitHub repository storing all benchmark data
 3. **[metriq.info](https://metriq.info)**: Web platform displaying results and trends
 
