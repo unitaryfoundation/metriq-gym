@@ -8,7 +8,7 @@
 
 ## What is Metriq?
 
-Metriq-Gym is part of the [Metriq](https://metriq.info) ecosystem, a community-driven platform for tracking quantum computing progress. Results collected with Metriq-Gym can be uploaded to the [Metriq platform](https://metriq.info) to contribute to the global benchmarking database.
+Metriq-Gym is part of the [Metriq ecosystem](ecosystem.md), a community-driven platform for tracking quantum computing progress. Results collected with Metriq-Gym can be uploaded to contribute to the global benchmarking database on [metriq.info](https://metriq.info).
 
 ## Key Features
 
@@ -42,9 +42,9 @@ mgym job poll latest
 
 ## Documentation
 
-- [Quickstart](getting-started/quickstart.md) - Get running in minutes
-- [End-to-End Tutorial](getting-started/tutorial.md) - Complete walkthrough including result upload
-- [CLI Reference](cli/overview.md) - All available commands
+- [The Metriq Ecosystem](ecosystem.md) - How your results contribute to the community
+- [Getting Started](getting-started/quickstart.md) - Installation, first benchmark, and uploading results
+- [CLI Reference](cli/overview.md) - Complete command documentation
 - [Provider Configuration](providers/overview.md) - Setup guides for each provider
 - [Benchmarks](benchmarks/overview.md) - Available benchmarks and their configurations
 - [Developer Guide](development/developer-guide.md) - Contributing to Metriq-Gym
