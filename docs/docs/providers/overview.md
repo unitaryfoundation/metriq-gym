@@ -94,27 +94,6 @@ for device in devices:
 
 Via CLI, use provider-specific documentation to find device names.
 
-## Common Patterns
-
-### Dispatch to Hardware
-
-```bash
-mgym job dispatch config.json --provider ibm --device ibm_fez
-```
-
-### Dispatch to Simulator with Noise Model
-
-```bash
-# Use local provider with IBM noise model
-mgym job dispatch config.json --provider local --device ibm_sherbrooke
-```
-
-### Check Job Status
-
-```bash
-mgym job poll <JOB_ID>
-```
-
 ## Next Steps
 
 - [IBM Quantum](ibm.md) - IBM Quantum Platform setup
