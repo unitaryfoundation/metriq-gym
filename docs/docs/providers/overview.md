@@ -51,6 +51,9 @@ cp .env.example .env
 nano .env
 ```
 
+!!! warning "Protect Your Credentials"
+    Never commit `.env` files to version control. Ensure `.env` is in your `.gitignore` file.
+
 ### Environment Variables Reference
 
 | Variable | Provider | Description |
