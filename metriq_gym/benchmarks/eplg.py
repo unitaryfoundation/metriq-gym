@@ -13,10 +13,9 @@ Result interpretation:
         - score: average EPLG across reference points (lower is better)
 
 References:
-    - McKay et al., "Benchmarking quantum processor performance at scale"
-      https://arxiv.org/abs/2311.05933
-    - Based on qiskit-device-benchmarking layer fidelity notebook:
-      https://github.com/qiskit-community/qiskit-device-benchmarking/blob/main/notebooks/layer_fidelity.ipynb
+    - [McKay et al., "Benchmarking quantum processor performance at scale",
+      arXiv:2311.05933](https://arxiv.org/abs/2311.05933).
+    - Based on [qiskit-device-benchmarking layer fidelity notebook](https://github.com/qiskit-community/qiskit-device-benchmarking/blob/main/notebooks/layer_fidelity.ipynb).
 """
 
 import random

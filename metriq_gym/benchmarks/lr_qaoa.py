@@ -13,8 +13,9 @@ Result interpretation:
     Higher approximation ratios and optimal probabilities reflect better QAOA performance.
 
 References:
-    - Wurtz and Love, arXiv:2106.15645 (Linear-ramp QAOA parameter schedule)
-    - arXiv:2405.09169 (Additional LR-QAOA methodology)
+    - [Wurtz and Love, "Counterdiabaticity and the quantum approximate optimization algorithm",
+      arXiv:2106.15645](https://arxiv.org/abs/2106.15645).
+    - [Pelofske et al., arXiv:2405.09169](https://arxiv.org/abs/2405.09169).
 """
 
 import math

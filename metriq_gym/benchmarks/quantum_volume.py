@@ -1,4 +1,22 @@
-"""Quantum Volume benchmark implementation."""
+"""Quantum Volume benchmark implementation.
+
+Summary:
+    Measures quantum volume by running random SU(4) circuits and computing the heavy output
+    probability. A device achieves quantum volume 2^n if it can reliably execute n-qubit
+    circuits with depth n.
+
+Result interpretation:
+    Polling returns QuantumVolumeResult with:
+        - num_qubits: the circuit width tested.
+        - hog_prob: heavy output generation probability (should exceed 2/3 for a pass).
+        - confidence_pass: boolean indicating statistical confidence threshold was met.
+        - xeb: linear cross-entropy benchmarking fidelity estimate.
+
+References:
+    - [Cross et al., "Validating quantum computers using randomized model circuits",
+      Phys. Rev. A 100, 032328 (2019)](https://doi.org/10.1103/PhysRevA.100.032328).
+    - [Qiskit Quantum Volume documentation](https://docs.quantum.ibm.com/api/qiskit/qiskit.circuit.library.QuantumVolume).
+"""
 
 import math
 import statistics

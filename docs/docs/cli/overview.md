@@ -83,6 +83,5 @@ Database location:
 
 ## Next Steps
 
-- [Job Commands](job-commands.md) - Detailed job command reference
+- [Job Commands](job-commands.md) - Detailed job command reference (including resource estimation)
 - [Suite Commands](suite-commands.md) - Working with benchmark suites
-- [Resource Estimation](estimation.md) - Estimating job costs
