@@ -38,7 +38,6 @@ nav:
     - Overview: cli/overview.md
     - Job Commands: cli/job-commands.md
     - Suite Commands: cli/suite-commands.md
-    - Resource Estimation: cli/estimation.md
   - Provider Configuration:
     - Overview: providers/overview.md
     - IBM Quantum: providers/ibm.md

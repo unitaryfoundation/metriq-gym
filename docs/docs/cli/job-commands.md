@@ -211,3 +211,68 @@ mgym job delete <job_id>
 
 !!! note
     This only removes the job from the local tracking database. It does not cancel jobs running on quantum hardware.
+
+---
+
+## estimate
+
+Estimate circuit resource requirements before dispatching jobs. Useful for cost planning on paid hardware like Quantinuum.
+
+```bash
+mgym job estimate <config_file> --provider <provider> [--device <device>]
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `config_file` | Path to benchmark configuration JSON file |
+
+### Options
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--provider` | `-p` | Provider name (required) |
+| `--device` | `-d` | Device identifier (required for topology-dependent benchmarks) |
+
+### Examples
+
+```bash
+# Basic estimation
+mgym job estimate metriq_gym/schemas/examples/wit.example.json \
+    --provider quantinuum
+
+# With device (required for BSEQ, Mirror Circuits, etc.)
+mgym job estimate metriq_gym/schemas/examples/bseq.example.json \
+    --provider ibm --device ibm_fez
+```
+
+### Quantinuum HQC Estimation
+
+For Quantinuum providers, the estimator calculates H-series Quantum Credits (HQCs):
+
+```
+HQC = 5 + C * (N1 + 10*N2 + 5*Nm) / 5000
+```
+
+Where:
+
+- `C` = number of shots
+- `N1` = single-qubit gate count
+- `N2` = two-qubit gate count
+- `Nm` = measurement count
+
+### Device-Dependent Benchmarks
+
+Some benchmarks require device topology information:
+
+| Benchmark | Requires Device |
+|-----------|----------------|
+| BSEQ | Yes |
+| CLOPS | Yes |
+| Mirror Circuits | Yes |
+| LR-QAOA | Yes |
+| EPLG | No |
+| Quantum Volume | No |
+| WIT | No |
+| QML Kernel | No |
