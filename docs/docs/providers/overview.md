@@ -2,6 +2,16 @@
 
 Metriq-Gym supports multiple quantum hardware providers through a unified interface built on [qBraid Runtime](https://docs.qbraid.com/runtime/).
 
+## Why qBraid?
+
+We chose qBraid Runtime as our provider abstraction layer for several reasons:
+
+- **Unified interface**: qBraid provides consistent APIs for common device operations (transpilation, job submission, result retrieval) across different providers, reducing provider-specific code paths that could introduce variability in benchmark execution.
+- **Extensibility**: The provider interface is straightforward to extend. We've used it to add support for providers that qBraid doesn't natively support, including OriginQ and Quantinuum (via NEXUS).
+- **Transpilation consistency**: Using a common transpilation pipeline helps ensure that circuit transformations are applied consistently across providers, which is important for fair benchmark comparisons.
+
+Note that benchmarks executed through qBraid may differ slightly from those run through native provider SDKs due to differences in transpilation strategies or default settings. For reproducibility, Metriq-Gym records the software versions and configuration used for each benchmark run.
+
 ## Supported Providers
 
 | Provider | Provider ID | Description |
