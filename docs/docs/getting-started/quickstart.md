@@ -1,10 +1,10 @@
-# Quickstart
+# Getting Started
 
-Metriq-Gym provides a command-line interface for running quantum benchmark jobs on simulators and hardware. This guide focuses on the essentials so you can submit your first job quickly.
+This guide walks you through running your first benchmark, checking results, and optionally uploading them to the Metriq community database.
 
 ## Installation
 
-Install the package from PyPI:
+Install Metriq-Gym from PyPI:
 
 ```bash
 pip install metriq-gym
@@ -14,14 +14,14 @@ pip install metriq-gym
 
 ### 1. Download an Example Configuration
 
-Download an example configuration file for the WIT (Wormhole-inspired teleportation) benchmark:
+Benchmarks are configured via JSON files. Download an example for the WIT (Wormhole-inspired teleportation) benchmark:
 
 ```bash
 curl -O https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/main/metriq_gym/schemas/examples/wit.example.json
 ```
 
 !!! note
-    Example configurations for all benchmarks are available in the `metriq_gym/schemas/examples/` directory.
+    Example configurations for all benchmarks are in `metriq_gym/schemas/examples/`.
 
 ### 2. Dispatch the Benchmark
 
@@ -31,30 +31,106 @@ Run the benchmark on the local Aer simulator:
 mgym job dispatch wit.example.json -p local -d aer_simulator
 ```
 
-This command dispatches the job and returns a job ID that you'll use to check results.
+Output:
+```
+Starting dispatch on local:aer_simulator...
+Dispatching WIT...
+Job dispatched with metriq-gym Job ID: 7cb5b2df-e62d-423f-ac22-4bf6739d2ea4
+```
 
 ### 3. Poll for Results
 
-Check the status and retrieve results:
+Check status and retrieve results:
 
 ```bash
 mgym job poll latest
 ```
 
-If the job completed, metrics such as expectation values are reported in your terminal.
+Output:
+```
+{'app_version': '0.6.0',
+ 'job_type': 'WIT',
+ 'platform': {'device': 'aer_simulator', 'provider': 'local'},
+ 'results': {'expectation_value': {'uncertainty': 0.0007, 'value': 0.996}},
+ 'timestamp': '2025-01-15T09:54:47.904520'}
+
+Results:
+  expectation_value: 0.996 ± 0.0007
+```
+
+For WIT, the ideal expectation value is `1.0`. A result of `~0.996` indicates correct circuit execution.
 
 !!! tip
-    Use `mgym job poll` without arguments to choose from recent jobs interactively.
+    Use `mgym job poll` without arguments to interactively select from recent jobs.
+
+## Viewing Job Details
+
+List all tracked jobs:
+
+```bash
+mgym job view
+```
+
+View a specific job:
+
+```bash
+mgym job view <JOB_ID>
+```
+
+## Running on Real Hardware
+
+To run benchmarks on cloud quantum hardware:
+
+### 1. Set Up Credentials
+
+Create a `.env` file with your provider credentials:
+
+```bash
+# IBM Quantum
+QISKIT_IBM_TOKEN="your-ibm-token"
+
+# IonQ
+IONQ_API_KEY="your-ionq-key"
+
+# See Provider Configuration for all options
+```
+
+See [Provider Configuration](../providers/overview.md) for detailed setup instructions.
+
+### 2. Dispatch to Hardware
+
+```bash
+mgym job dispatch wit.example.json --provider ibm --device ibm_fez
+```
+
+!!! note
+    Hardware jobs may be queued. Poll periodically to check status.
+
+## Uploading Results
+
+Contribute your results to the community database on [metriq.info](https://metriq.info).
+
+### 1. Set Up GitHub Token
+
+Create a Personal Access Token at [github.com/settings/tokens](https://github.com/settings/tokens) with `repo` scope, then:
+
+```bash
+export GITHUB_TOKEN="your-token-here"
+```
+
+### 2. Upload
+
+```bash
+mgym job upload <JOB_ID>
+```
+
+This creates a pull request to [unitaryfoundation/metriq-data](https://github.com/unitaryfoundation/metriq-data). Once merged, your results appear on [metriq.info](https://metriq.info).
+
+See [GitHub Integration](../uploading/github.md) for advanced options.
 
 ## Configuration Files
 
-Each benchmark is configured via JSON documents. The `metriq_gym/schemas/examples/` directory contains ready-to-run templates for all supported benchmarks. Customize a copy to:
-
-- Switch benchmarks (change `benchmark_name`)
-- Adjust qubit counts or shots
-- Supply provider-specific options
-
-Example WIT configuration:
+Benchmark configurations are JSON files specifying the benchmark type and parameters:
 
 ```json
 {
@@ -64,20 +140,17 @@ Example WIT configuration:
 }
 ```
 
-## Running on Real Hardware
+Customize by:
 
-To run benchmarks on cloud quantum hardware:
+- Changing `benchmark_name` for different benchmarks
+- Adjusting `num_qubits` or `shots`
+- Adding benchmark-specific parameters
 
-1. Set up provider credentials in a `.env` file (see [Provider Configuration](../providers/overview.md))
-2. Specify the provider and device:
-
-```bash
-mgym job dispatch wit.example.json --provider ibm --device ibm_fez
-```
+See [Benchmarks](../benchmarks/overview.md) for available benchmarks and their parameters.
 
 ## Next Steps
 
-- [End-to-End Tutorial](tutorial.md) - Complete walkthrough including uploading results
-- [CLI Reference](../cli/overview.md) - All available commands
-- [Provider Configuration](../providers/overview.md) - Setup guides for each provider
-- [Benchmarks](../benchmarks/overview.md) - Available benchmarks and their configurations
+- [CLI Reference](../cli/overview.md) - Complete command documentation
+- [Provider Configuration](../providers/overview.md) - Setup guides for all providers
+- [Benchmarks](../benchmarks/overview.md) - Available benchmarks
+- [Python API](tutorial.md) - Using Metriq-Gym programmatically

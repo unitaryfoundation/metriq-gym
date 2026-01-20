@@ -32,8 +32,8 @@ nav:
   - Home: index.md
   - The Metriq Ecosystem: ecosystem.md
   - Getting Started:
-    - Quickstart: getting-started/quickstart.md
-    - End-to-End Tutorial: getting-started/tutorial.md
+    - Getting Started: getting-started/quickstart.md
+    - Python API: getting-started/tutorial.md
   - CLI Reference:
     - Overview: cli/overview.md
     - Job Commands: cli/job-commands.md
