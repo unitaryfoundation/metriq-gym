@@ -184,4 +184,4 @@ dispatch_job(dispatch_config, job_manager)
 - [CLI Reference](../cli/overview.md) - Detailed command documentation
 - [Provider Configuration](../providers/overview.md) - Setup guides for all providers
 - [Benchmarks](../benchmarks/overview.md) - Available benchmarks
-- [Metriq Platform](../uploading/metriq-platform.md) - How results appear on metriq.info
+- [Metriq Platform](metriq-platform.md) - How results appear on metriq.info
