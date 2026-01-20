@@ -58,10 +58,9 @@ nav:
 
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: [".."]
+
+hooks:
+  - hooks.py
 
 markdown_extensions:
   - admonition
