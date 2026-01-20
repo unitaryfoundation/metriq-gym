@@ -9,6 +9,7 @@ mgym <resource> <action> [options]
 ```
 
 Resources:
+
 - `job` - Single benchmark operations
 - `suite` - Benchmark suite operations
 
