@@ -50,30 +50,6 @@ Where:
 - `N2` = two-qubit gate count
 - `Nm` = measurement count
 
-Example output:
-
-```
-Resource Estimation for WIT benchmark
-=====================================
-
-Circuits: 1
-Total shots: 8192
-
-Per-circuit statistics:
-+----------+--------+----------+----------+-------+
-| Circuit  | Qubits | 1Q Gates | 2Q Gates | Meas  |
-+==========+========+==========+==========+=======+
-| wit_0    | 7      | 42       | 28       | 7     |
-+----------+--------+----------+----------+-------+
-
-Aggregated totals:
-- Total 1Q gates: 42
-- Total 2Q gates: 28
-- Total measurements: 7
-
-Quantinuum HQC estimate: 52.4
-```
-
 ### Device-Dependent Benchmarks
 
 Some benchmarks require device topology information for accurate estimation:
