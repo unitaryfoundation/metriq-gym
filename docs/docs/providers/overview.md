@@ -61,6 +61,9 @@ cp .env.example .env
 nano .env
 ```
 
+!!! warning "Protect your credentials"
+    Your `.env` file contains sensitive API keys and tokens. Ensure it is listed in your `.gitignore` to avoid accidentally committing secrets to version control. Never share or publish this file.
+
 ### Environment Variables Reference
 
 | Variable | Provider | Description |
