@@ -36,6 +36,7 @@ The metriq-data repository is periodically scanned for new results. Merged PRs a
 ### Result Display
 
 Results are displayed with:
+
 - Device and provider information
 - Benchmark type and parameters
 - Metric values with uncertainties
