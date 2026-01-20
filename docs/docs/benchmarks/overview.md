@@ -19,7 +19,22 @@ mgym job poll <JOB_ID>
 
 ## Configuration
 
-All benchmarks use JSON configuration files. Example configurations are available in `metriq_gym/schemas/examples/`.
+All benchmarks use JSON configuration files validated against JSON schemas.
+
+**Example configurations**: [`metriq_gym/schemas/examples/`](https://github.com/unitaryfoundation/metriq-gym/tree/main/metriq_gym/schemas/examples)
+
+**JSON schemas**: [`metriq_gym/schemas/`](https://github.com/unitaryfoundation/metriq-gym/tree/main/metriq_gym/schemas) - Define valid parameters and their constraints
+
+Example configuration:
+
+```json
+{
+  "benchmark_name": "Quantum Volume",
+  "num_qubits": 5,
+  "shots": 1000,
+  "trials": 100
+}
+```
 
 ## Available Benchmarks
 
