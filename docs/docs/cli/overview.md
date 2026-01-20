@@ -19,22 +19,22 @@ Resources:
 
 | Command | Description |
 |---------|-------------|
-| `mgym job dispatch <config>` | Dispatch a benchmark job |
-| `mgym job poll [job_id]` | Poll job status and retrieve results |
-| `mgym job view [job_id]` | View job details |
-| `mgym job upload <job_id>` | Upload results to GitHub |
-| `mgym job delete [job_id]` | Delete a job from local database |
-| `mgym job estimate <config>` | Estimate resource usage |
+| [`mgym job estimate <config>`](job-commands.md#estimate) | Estimate resource usage |
+| [`mgym job dispatch <config>`](job-commands.md#dispatch) | Dispatch a benchmark job |
+| [`mgym job poll [job_id]`](job-commands.md#poll) | Poll job status and retrieve results |
+| [`mgym job view [job_id]`](job-commands.md#view) | View job details |
+| [`mgym job upload <job_id>`](job-commands.md#upload) | Upload results to GitHub |
+| [`mgym job delete [job_id]`](job-commands.md#delete) | Delete a job from local database |
 
 ### Suite Commands
 
 | Command | Description |
 |---------|-------------|
-| `mgym suite dispatch <suite.json>` | Dispatch all benchmarks in a suite |
-| `mgym suite poll [suite_id]` | Poll suite status |
-| `mgym suite view [suite_id]` | View all jobs in a suite |
-| `mgym suite upload <suite_id>` | Upload all suite results |
-| `mgym suite delete [suite_id]` | Delete all jobs in a suite |
+| [`mgym suite dispatch <suite.json>`](suite-commands.md#dispatch) | Dispatch all benchmarks in a suite |
+| [`mgym suite poll [suite_id]`](suite-commands.md#poll) | Poll suite status |
+| [`mgym suite view [suite_id]`](suite-commands.md#view) | View all jobs in a suite |
+| [`mgym suite upload <suite_id>`](suite-commands.md#upload) | Upload all suite results |
+| [`mgym suite delete [suite_id]`](suite-commands.md#delete) | Delete all jobs in a suite |
 
 ## Global Options
 
