@@ -44,6 +44,7 @@ Results are displayed with:
 ### Historical Tracking
 
 The platform tracks results over time, allowing you to see:
+
 - How device performance changes
 - Calibration effects
 - Long-term trends
