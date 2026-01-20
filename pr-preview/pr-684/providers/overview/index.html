@@ -676,6 +676,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#why-qbraid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why qBraid?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#supported-providers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1353,6 +1364,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#why-qbraid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why qBraid?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#supported-providers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1524,6 +1546,14 @@
 
 <h1 id="provider-configuration">Provider Configuration<a class="headerlink" href="#provider-configuration" title="Permanent link">&para;</a></h1>
 <p>Metriq-Gym supports multiple quantum hardware providers through a unified interface built on <a href="https://docs.qbraid.com/runtime/">qBraid Runtime</a>.</p>
+<h2 id="why-qbraid">Why qBraid?<a class="headerlink" href="#why-qbraid" title="Permanent link">&para;</a></h2>
+<p>We chose qBraid Runtime as our provider abstraction layer for several reasons:</p>
+<ul>
+<li><strong>Unified interface</strong>: qBraid provides consistent APIs for common device operations (transpilation, job submission, result retrieval) across different providers, reducing provider-specific code paths that could introduce variability in benchmark execution.</li>
+<li><strong>Extensibility</strong>: The provider interface is straightforward to extend. We've used it to add support for providers that qBraid doesn't natively support, including OriginQ and Quantinuum (via NEXUS).</li>
+<li><strong>Transpilation consistency</strong>: Using a common transpilation pipeline helps ensure that circuit transformations are applied consistently across providers, which is important for fair benchmark comparisons.</li>
+</ul>
+<p>Note that benchmarks executed through qBraid may differ slightly from those run through native provider SDKs due to differences in transpilation strategies or default settings. For reproducibility, Metriq-Gym records the software versions and configuration used for each benchmark run.</p>
 <h2 id="supported-providers">Supported Providers<a class="headerlink" href="#supported-providers" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
