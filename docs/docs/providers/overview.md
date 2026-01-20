@@ -2,6 +2,17 @@
 
 Metriq-Gym supports multiple quantum hardware providers through a unified interface built on [qBraid Runtime](https://docs.qbraid.com/runtime/).
 
+## About qBraid Runtime
+
+Metriq-Gym uses [qBraid Runtime](https://docs.qbraid.com/runtime/) as an abstraction layer for quantum hardware access. This provides:
+
+- **Unified API**: Same code works across IBM, IonQ, AWS Braket, and Azure Quantum
+- **Automatic transpilation**: Circuits are converted to provider-native formats
+- **Credential management**: Consistent environment variable configuration
+
+!!! note "Impact on Benchmarks"
+    qBraid handles circuit transpilation, which may differ from provider-native SDKs. For most benchmarks, this has negligible impact. However, performance-sensitive measurements like CLOPS should note that results reflect the qBraid pipeline, not native SDK performance.
+
 ## Supported Providers
 
 | Provider | Provider ID | Description |
@@ -83,27 +94,6 @@ for device in devices:
 ```
 
 Via CLI, use provider-specific documentation to find device names.
-
-## Common Patterns
-
-### Dispatch to Hardware
-
-```bash
-mgym job dispatch config.json --provider ibm --device ibm_fez
-```
-
-### Dispatch to Simulator with Noise Model
-
-```bash
-# Use local provider with IBM noise model
-mgym job dispatch config.json --provider local --device ibm_sherbrooke
-```
-
-### Check Job Status
-
-```bash
-mgym job poll <JOB_ID>
-```
 
 ## Next Steps
 
