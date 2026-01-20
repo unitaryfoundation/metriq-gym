@@ -776,56 +776,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#common-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Patterns
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Common Patterns">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#dispatch-to-hardware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dispatch to Hardware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dispatch-to-simulator-with-noise-model" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dispatch to Simulator with Noise Model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#check-job-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Check Job Status
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1464,56 +1414,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#common-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Patterns
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Common Patterns">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#dispatch-to-hardware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dispatch to Hardware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dispatch-to-simulator-with-noise-model" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dispatch to Simulator with Noise Model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#check-job-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Check Job Status
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1700,17 +1600,6 @@
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>
 <p>Via CLI, use provider-specific documentation to find device names.</p>
-<h2 id="common-patterns">Common Patterns<a class="headerlink" href="#common-patterns" title="Permanent link">&para;</a></h2>
-<h3 id="dispatch-to-hardware">Dispatch to Hardware<a class="headerlink" href="#dispatch-to-hardware" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span>ibm<span class="w"> </span>--device<span class="w"> </span>ibm_fez
-</code></pre></div>
-<h3 id="dispatch-to-simulator-with-noise-model">Dispatch to Simulator with Noise Model<a class="headerlink" href="#dispatch-to-simulator-with-noise-model" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Use local provider with IBM noise model</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span><span class="nb">local</span><span class="w"> </span>--device<span class="w"> </span>ibm_sherbrooke
-</code></pre></div>
-<h3 id="check-job-status">Check Job Status<a class="headerlink" href="#check-job-status" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
-</code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../ibm/">IBM Quantum</a> - IBM Quantum Platform setup</li>
