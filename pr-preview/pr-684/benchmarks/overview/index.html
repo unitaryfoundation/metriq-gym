@@ -997,28 +997,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#metriq_gym.benchmarks.quantum_volume" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        quantum_volume
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metriq_gym.benchmarks.clops" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        clops
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#metriq_gym.benchmarks.mirror_circuits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1440,28 +1418,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#metriq_gym.benchmarks.quantum_volume" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        quantum_volume
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metriq_gym.benchmarks.clops" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        clops
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#metriq_gym.benchmarks.mirror_circuits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1600,14 +1556,6 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="#metriq_gym.benchmarks.quantum_volume">Quantum Volume</a></td>
-<td>Measures effective qubit count via random SU(4) circuits</td>
-</tr>
-<tr>
-<td><a href="#metriq_gym.benchmarks.clops">CLOPS</a></td>
-<td>Circuit layer operations per second (throughput)</td>
-</tr>
-<tr>
 <td><a href="#metriq_gym.benchmarks.mirror_circuits">Mirror Circuits</a></td>
 <td>Tests state fidelity via forward/reverse Clifford layers</td>
 </tr>
@@ -1639,138 +1587,6 @@
 </table>
 <hr />
 
-
-<div class="doc doc-object doc-module">
-
-
-
-<h3 id="metriq_gym.benchmarks.quantum_volume" class="doc doc-heading">
-            <code>quantum_volume</code>
-
-
-<a href="#metriq_gym.benchmarks.quantum_volume" class="headerlink" title="Permanent link">&para;</a></h3>
-
-    <div class="doc doc-contents first">
-
-        <p>Quantum Volume benchmark implementation.</p>
-
-
-<details class="summary" open>
-  <summary>Summary</summary>
-  <p>Measures quantum volume by running random SU(4) circuits and computing the heavy output
-probability. A device achieves quantum volume 2^n if it can reliably execute n-qubit
-circuits with depth n.</p>
-</details>
-
-<details class="result-interpretation" open>
-  <summary>Result interpretation</summary>
-  <p>Polling returns QuantumVolumeResult with:
-    - num_qubits: the circuit width tested.
-    - hog_prob: heavy output generation probability (should exceed 2/3 for a pass).
-    - confidence_pass: boolean indicating statistical confidence threshold was met.
-    - xeb: linear cross-entropy benchmarking fidelity estimate.</p>
-</details>
-
-<details class="references" open>
-  <summary>References</summary>
-  <ul>
-<li><a href="https://doi.org/10.1103/PhysRevA.100.032328">Cross et al., "Validating quantum computers using randomized model circuits",
-  Phys. Rev. A 100, 032328 (2019)</a>.</li>
-<li><a href="https://docs.quantum.ibm.com/api/qiskit/qiskit.circuit.library.QuantumVolume">Qiskit Quantum Volume documentation</a>.</li>
-</ul>
-</details>
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-module">
-
-
-
-<h3 id="metriq_gym.benchmarks.clops" class="doc doc-heading">
-            <code>clops</code>
-
-
-<a href="#metriq_gym.benchmarks.clops" class="headerlink" title="Permanent link">&para;</a></h3>
-
-    <div class="doc doc-contents first">
-
-        <p>CLOPS (Circuit Layer Operations Per Second) benchmark implementation.</p>
-
-
-<details class="summary" open>
-  <summary>Summary</summary>
-  <p>Measures the throughput of a quantum system by timing the execution of parameterized
-quantum volume-style circuits. CLOPS captures end-to-end performance including
-compilation, communication, and execution overhead.</p>
-</details>
-
-<details class="result-interpretation" open>
-  <summary>Result interpretation</summary>
-  <p>Polling returns ClopsResult with:
-    - clops_score: circuit layer operations per second (higher is better).
-This metric reflects real-world workload performance rather than isolated gate speeds.</p>
-</details>
-
-<details class="references" open>
-  <summary>References</summary>
-  <ul>
-<li><a href="https://arxiv.org/abs/2110.14108">Wack et al., "Quality, Speed, and Scale: three key attributes to measure the
-  performance of near-term quantum computers", arXiv:2110.14108</a>.</li>
-<li><a href="https://github.com/qiskit-community/qiskit-device-benchmarking">Qiskit Device Benchmarking CLOPS</a>.</li>
-</ul>
-</details>
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
 
 <div class="doc doc-object doc-module">
 
