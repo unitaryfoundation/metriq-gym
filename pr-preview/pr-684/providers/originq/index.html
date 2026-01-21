@@ -935,41 +935,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Devices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hardware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hardware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#simulators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simulators
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1020,17 +992,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-available-devices" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify Available Devices
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1497,41 +1458,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Devices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hardware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hardware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#simulators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simulators
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1582,17 +1515,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-available-devices" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify Available Devices
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1712,84 +1634,31 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>brew<span class="w"> </span>reinstall<span class="w"> </span>libidn2
 </code></pre></div>
 <p>Install this library <strong>before</strong> running <code>uv sync</code> or installing Metriq-Gym to avoid missing symbol errors during the <code>pyqpanda3</code> build.</p>
-<h2 id="available-devices">Available Devices<a class="headerlink" href="#available-devices" title="Permanent link">&para;</a></h2>
-<h3 id="hardware">Hardware<a class="headerlink" href="#hardware" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device ID</th>
-<th>Alias</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>WK_C102_400</code></td>
-<td><code>origin_wukong</code></td>
-<td>102-qubit Wukong hardware</td>
-</tr>
-<tr>
-<td><code>72</code></td>
-<td>-</td>
-<td>72-qubit hardware backend</td>
-</tr>
-</tbody>
-</table>
-<h3 id="simulators">Simulators<a class="headerlink" href="#simulators" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device ID</th>
-<th>Max Qubits</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>full_amplitude</code></td>
-<td>35</td>
-<td>Full state vector simulation</td>
-</tr>
-<tr>
-<td><code>partial_amplitude</code></td>
-<td>64</td>
-<td>Partial amplitude simulation</td>
-</tr>
-<tr>
-<td><code>single_amplitude</code></td>
-<td>100</td>
-<td>Single amplitude simulation</td>
-</tr>
-</tbody>
-</table>
+<h2 id="discovering-devices">Discovering Devices<a class="headerlink" href="#discovering-devices" title="Permanent link">&para;</a></h2>
+<p>To see currently available devices:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;origin&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">():</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>OriginQ offers both hardware (including the Wukong quantum computer) and various simulators.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="dispatch-to-wukong-hardware">Dispatch to Wukong Hardware<a class="headerlink" href="#dispatch-to-wukong-hardware" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Using alias</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span>--provider<span class="w"> </span>origin<span class="w"> </span>--device<span class="w"> </span>origin_wukong
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Using numeric ID</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span>--provider<span class="w"> </span>origin<span class="w"> </span>--device<span class="w"> </span><span class="m">72</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Using alias</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>--provider<span class="w"> </span>origin<span class="w"> </span>--device<span class="w"> </span>origin_wukong
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Using numeric ID</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span>--provider<span class="w"> </span>origin<span class="w"> </span>--device<span class="w"> </span><span class="m">72</span>
 </code></pre></div>
 <h3 id="dispatch-to-originq-simulator">Dispatch to OriginQ Simulator<a class="headerlink" href="#dispatch-to-originq-simulator" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>--provider<span class="w"> </span>origin<span class="w"> </span>--device<span class="w"> </span>full_amplitude
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>--provider<span class="w"> </span>origin<span class="w"> </span>--device<span class="w"> </span>full_amplitude
 </code></pre></div>
 <h3 id="poll-results">Poll Results<a class="headerlink" href="#poll-results" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
-</code></pre></div>
-<h2 id="verify-available-devices">Verify Available Devices<a class="headerlink" href="#verify-available-devices" title="Permanent link">&para;</a></h2>
-<p>List devices accessible with your account:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from metriq_gym.run import load_provider; provider = load_provider(&#39;origin&#39;); print([device.id for device in provider.get_devices()])&quot;</span>
-</code></pre></div>
-<p>Or in Python:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">metriq_gym.run</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s1">&#39;origin&#39;</span><span class="p">)</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">devices</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">()</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">:</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
 </code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="resource-is-null-error">"resource is null" Error<a class="headerlink" href="#resource-is-null-error" title="Permanent link">&para;</a></h3>
@@ -1799,16 +1668,16 @@
 <p>Verify available devices with the listing command above.</p>
 <h3 id="missing-libidn2-macos">Missing libidn2 (macOS)<a class="headerlink" href="#missing-libidn2-macos" title="Permanent link">&para;</a></h3>
 <p>If you see symbol errors related to <code>pyqpanda3</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Install the library</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>brew<span class="w"> </span>reinstall<span class="w"> </span>libidn2
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Reinstall metriq-gym</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>pip<span class="w"> </span>install<span class="w"> </span>--force-reinstall<span class="w"> </span>metriq-gym
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Install the library</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>brew<span class="w"> </span>reinstall<span class="w"> </span>libidn2
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Reinstall metriq-gym</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>pip<span class="w"> </span>install<span class="w"> </span>--force-reinstall<span class="w"> </span>metriq-gym
 </code></pre></div>
 <h3 id="authentication-errors">Authentication Errors<a class="headerlink" href="#authentication-errors" title="Permanent link">&para;</a></h3>
 <p>Verify your API token is correctly set:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ORIGIN_API_KEY&quot;</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ORIGIN_API_KEY&quot;</span><span class="p">))</span>
 </code></pre></div>
 <h3 id="connection-issues">Connection Issues<a class="headerlink" href="#connection-issues" title="Permanent link">&para;</a></h3>
 <p>OriginQ services are based in China. Connection latency or timeouts may occur from other regions. Consider:
@@ -1817,11 +1686,11 @@
 - Running during off-peak hours</p>
 <h2 id="device-topology">Device Topology<a class="headerlink" href="#device-topology" title="Permanent link">&para;</a></h2>
 <p>Wukong devices use a 2D grid topology. For topology-dependent benchmarks (BSEQ, Mirror Circuits), the provider automatically retrieves connectivity information.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">metriq_gym.run</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s1">&#39;origin&#39;</span><span class="p">)</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">device</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_device</span><span class="p">(</span><span class="s1">&#39;origin_wukong&#39;</span><span class="p">)</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Topology available via device.metadata</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">metriq_gym.run</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s1">&#39;origin&#39;</span><span class="p">)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">device</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_device</span><span class="p">(</span><span class="s1">&#39;origin_wukong&#39;</span><span class="p">)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Topology available via device.metadata</span>
 </code></pre></div>
 
 

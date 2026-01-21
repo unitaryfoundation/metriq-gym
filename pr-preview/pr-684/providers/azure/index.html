@@ -879,52 +879,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Devices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ionq" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IonQ
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#quantinuum" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quantinuum
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rigetti" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rigetti
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1497,52 +1458,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Devices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ionq" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IonQ
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#quantinuum" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quantinuum
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rigetti" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rigetti
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1716,88 +1638,31 @@
 <p>The connection string format is:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>SubscriptionId=xxx;ResourceGroupName=xxx;WorkspaceName=xxx;Location=xxx
 </code></pre></div></p>
-<h2 id="available-devices">Available Devices<a class="headerlink" href="#available-devices" title="Permanent link">&para;</a></h2>
-<p>Azure Quantum provides access to multiple hardware providers:</p>
-<h3 id="ionq">IonQ<a class="headerlink" href="#ionq" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>ionq.simulator</code></td>
-<td>IonQ simulator</td>
-</tr>
-<tr>
-<td><code>ionq.qpu.aria-1</code></td>
-<td>IonQ Aria (25 qubits)</td>
-</tr>
-</tbody>
-</table>
-<h3 id="quantinuum">Quantinuum<a class="headerlink" href="#quantinuum" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>quantinuum.sim.h1-1sc</code></td>
-<td>H1-1 syntax checker</td>
-</tr>
-<tr>
-<td><code>quantinuum.sim.h1-1e</code></td>
-<td>H1-1 emulator</td>
-</tr>
-<tr>
-<td><code>quantinuum.qpu.h1-1</code></td>
-<td>H1-1 hardware</td>
-</tr>
-<tr>
-<td><code>quantinuum.qpu.h2-1</code></td>
-<td>H2-1 hardware</td>
-</tr>
-</tbody>
-</table>
-<h3 id="rigetti">Rigetti<a class="headerlink" href="#rigetti" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>rigetti.sim.qvm</code></td>
-<td>QVM simulator</td>
-</tr>
-<tr>
-<td><code>rigetti.qpu.ankaa-9q-3</code></td>
-<td>Ankaa QPU</td>
-</tr>
-</tbody>
-</table>
+<h2 id="discovering-devices">Discovering Devices<a class="headerlink" href="#discovering-devices" title="Permanent link">&para;</a></h2>
+<p>Azure Quantum provides access to multiple hardware providers (IonQ, Quantinuum, Rigetti). Available devices depend on your workspace configuration.</p>
+<p>To see currently available devices:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;azure&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">():</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Or check your workspace in the <a href="https://portal.azure.com">Azure Portal</a> under <strong>Providers</strong>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Available providers depend on your workspace configuration. Enable providers in the Azure Portal.</p>
+<p>Enable providers in your Azure Quantum workspace to access their devices.</p>
 </div>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="dispatch-to-azure-quantum-hardware">Dispatch to Azure Quantum Hardware<a class="headerlink" href="#dispatch-to-azure-quantum-hardware" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>--provider<span class="w"> </span>azure<span class="w"> </span>--device<span class="w"> </span>ionq.qpu.aria-1
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>--provider<span class="w"> </span>azure<span class="w"> </span>--device<span class="w"> </span>ionq.qpu.aria-1
 </code></pre></div>
 <h3 id="dispatch-to-azure-quantum-simulator">Dispatch to Azure Quantum Simulator<a class="headerlink" href="#dispatch-to-azure-quantum-simulator" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>--provider<span class="w"> </span>azure<span class="w"> </span>--device<span class="w"> </span>ionq.simulator
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>--provider<span class="w"> </span>azure<span class="w"> </span>--device<span class="w"> </span>ionq.simulator
 </code></pre></div>
 <h3 id="poll-results">Poll Results<a class="headerlink" href="#poll-results" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
 </code></pre></div>
 <h2 id="pricing">Pricing<a class="headerlink" href="#pricing" title="Permanent link">&para;</a></h2>
 <p>Azure Quantum uses provider-specific pricing:
@@ -1814,21 +1679,23 @@
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="connection-errors">Connection Errors<a class="headerlink" href="#connection-errors" title="Permanent link">&para;</a></h3>
 <p>Verify your connection string:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">azure.quantum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Workspace</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">workspace</span> <span class="o">=</span> <span class="n">Workspace</span><span class="p">(</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">subscription_id</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">resource_group</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">location</span><span class="o">=</span><span class="s2">&quot;...&quot;</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">)</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">workspace</span><span class="o">.</span><span class="n">get_targets</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">azure.quantum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Workspace</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">workspace</span> <span class="o">=</span> <span class="n">Workspace</span><span class="p">(</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">subscription_id</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">resource_group</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">location</span><span class="o">=</span><span class="s2">&quot;...&quot;</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">)</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">workspace</span><span class="o">.</span><span class="n">get_targets</span><span class="p">())</span>
 </code></pre></div>
 <h3 id="provider-not-available">Provider Not Available<a class="headerlink" href="#provider-not-available" title="Permanent link">&para;</a></h3>
-<p>Ensure the provider is:
-1. Enabled in your workspace
-2. Available in your region
-3. Accessible with your subscription tier</p>
+<p>Ensure the provider is:</p>
+<ol>
+<li>Enabled in your workspace</li>
+<li>Available in your region</li>
+<li>Accessible with your subscription tier</li>
+</ol>
 <h3 id="job-failures">Job Failures<a class="headerlink" href="#job-failures" title="Permanent link">&para;</a></h3>
 <p>Check job status in the Azure Portal under your workspace's <strong>Job management</strong> section for detailed error messages.</p>
 

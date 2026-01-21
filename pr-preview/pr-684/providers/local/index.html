@@ -913,27 +913,16 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Available Devices">
+    <nav class="md-nav" aria-label="Discovering Devices">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-simulators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Simulators
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#ibm-noise-model-simulators" class="md-nav__link">
@@ -1509,27 +1498,16 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Available Devices">
+    <nav class="md-nav" aria-label="Discovering Devices">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-simulators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Simulators
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#ibm-noise-model-simulators" class="md-nav__link">
@@ -1816,101 +1794,65 @@
 <p>Run benchmarks locally using Qiskit Aer simulators. This is useful for development, testing, and running benchmarks without cloud access.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>No additional setup required - Qiskit Aer is included with Metriq-Gym.</p>
-<h2 id="available-devices">Available Devices<a class="headerlink" href="#available-devices" title="Permanent link">&para;</a></h2>
-<h3 id="basic-simulators">Basic Simulators<a class="headerlink" href="#basic-simulators" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>aer_simulator</code></td>
-<td>Ideal state vector simulation</td>
-</tr>
-<tr>
-<td><code>aer_simulator_statevector</code></td>
-<td>State vector simulator (explicit)</td>
-</tr>
-<tr>
-<td><code>aer_simulator_density_matrix</code></td>
-<td>Density matrix simulator</td>
-</tr>
-</tbody>
-</table>
+<h2 id="discovering-devices">Discovering Devices<a class="headerlink" href="#discovering-devices" title="Permanent link">&para;</a></h2>
+<p>To see available local simulators:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;local&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">():</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Common simulators include:</p>
+<ul>
+<li><code>aer_simulator</code> - Ideal state vector simulation</li>
+<li><code>aer_simulator_statevector</code> - State vector simulator (explicit)</li>
+<li><code>aer_simulator_density_matrix</code> - Density matrix simulator</li>
+</ul>
 <h3 id="ibm-noise-model-simulators">IBM Noise Model Simulators<a class="headerlink" href="#ibm-noise-model-simulators" title="Permanent link">&para;</a></h3>
-<p>Use any IBM device name to run with its noise model:</p>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>ibm_sherbrooke</code></td>
-<td>127-qubit Eagle noise model</td>
-</tr>
-<tr>
-<td><code>ibm_brisbane</code></td>
-<td>127-qubit Eagle noise model</td>
-</tr>
-<tr>
-<td><code>ibm_fez</code></td>
-<td>156-qubit Heron noise model</td>
-</tr>
-<tr>
-<td><code>ibm_&lt;device&gt;</code></td>
-<td>Any IBM device noise model</td>
-</tr>
-</tbody>
-</table>
+<p>Use any IBM device name (e.g., <code>ibm_sherbrooke</code>, <code>ibm_fez</code>) to run locally with that device's noise model.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Noise model simulators require valid IBM credentials to fetch the noise model, but execution is local.</p>
 </div>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="ideal-simulation">Ideal Simulation<a class="headerlink" href="#ideal-simulation" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span>--provider<span class="w"> </span><span class="nb">local</span><span class="w"> </span>--device<span class="w"> </span>aer_simulator
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--provider<span class="w"> </span><span class="nb">local</span><span class="w"> </span>--device<span class="w"> </span>aer_simulator
 </code></pre></div>
 <h3 id="noisy-simulation">Noisy Simulation<a class="headerlink" href="#noisy-simulation" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--provider<span class="w"> </span><span class="nb">local</span><span class="w"> </span>--device<span class="w"> </span>ibm_sherbrooke
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>--provider<span class="w"> </span><span class="nb">local</span><span class="w"> </span>--device<span class="w"> </span>ibm_sherbrooke
 </code></pre></div>
 <h3 id="poll-results">Poll Results<a class="headerlink" href="#poll-results" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
 </code></pre></div>
 <p>Local jobs complete immediately, so polling returns results instantly.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="cache-directory">Cache Directory<a class="headerlink" href="#cache-directory" title="Permanent link">&para;</a></h3>
 <p>Control where simulator results are cached:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># In .env</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">MGYM_LOCAL_SIMULATOR_CACHE_DIR</span><span class="o">=</span><span class="s2">&quot;/path/to/cache&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># In .env</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">MGYM_LOCAL_SIMULATOR_CACHE_DIR</span><span class="o">=</span><span class="s2">&quot;/path/to/cache&quot;</span>
 </code></pre></div>
 <p>Default: Platform-specific cache directory (e.g., <code>~/Library/Caches/metriq-gym</code> on macOS)</p>
 <h2 id="use-cases">Use Cases<a class="headerlink" href="#use-cases" title="Permanent link">&para;</a></h2>
 <h3 id="development-and-testing">Development and Testing<a class="headerlink" href="#development-and-testing" title="Permanent link">&para;</a></h3>
 <p>Test benchmark configurations before running on hardware:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Quick validation</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>new_config.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>aer_simulator
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>latest
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Quick validation</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>new_config.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>aer_simulator
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>latest
 </code></pre></div>
 <h3 id="benchmarking-simulators">Benchmarking Simulators<a class="headerlink" href="#benchmarking-simulators" title="Permanent link">&para;</a></h3>
 <p>Compare ideal vs. noisy simulation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Ideal</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>wit.example.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>aer_simulator
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># With noise</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>wit.example.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>ibm_sherbrooke
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Ideal</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>wit.example.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>aer_simulator
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># With noise</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>wit.example.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>ibm_sherbrooke
 </code></pre></div>
 <h3 id="large-scale-simulations">Large-Scale Simulations<a class="headerlink" href="#large-scale-simulations" title="Permanent link">&para;</a></h3>
 <p>For benchmarks requiring many qubits:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Use density matrix for mixed states</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>aer_simulator_density_matrix
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Use density matrix for mixed states</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>aer_simulator_density_matrix
 </code></pre></div>
 <h2 id="performance-considerations">Performance Considerations<a class="headerlink" href="#performance-considerations" title="Permanent link">&para;</a></h2>
 <h3 id="memory-usage">Memory Usage<a class="headerlink" href="#memory-usage" title="Permanent link">&para;</a></h3>
@@ -1959,13 +1901,13 @@
 </ol>
 <h3 id="noise-model-caching">Noise Model Caching<a class="headerlink" href="#noise-model-caching" title="Permanent link">&para;</a></h3>
 <p>Noise models are cached to reduce API calls. Clear the cache by deleting:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>rm<span class="w"> </span>-rf<span class="w"> </span><span class="nv">$MGYM_LOCAL_SIMULATOR_CACHE_DIR</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>rm<span class="w"> </span>-rf<span class="w"> </span><span class="nv">$MGYM_LOCAL_SIMULATOR_CACHE_DIR</span>
 </code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="out-of-memory">Out of Memory<a class="headerlink" href="#out-of-memory" title="Permanent link">&para;</a></h3>
 <p>Reduce qubit count or use a more efficient simulation method:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># For specific amplitude calculations</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>aer_simulator_statevector
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># For specific amplitude calculations</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>-p<span class="w"> </span><span class="nb">local</span><span class="w"> </span>-d<span class="w"> </span>aer_simulator_statevector
 </code></pre></div>
 <h3 id="slow-simulation">Slow Simulation<a class="headerlink" href="#slow-simulation" title="Permanent link">&para;</a></h3>
 <p>For deep circuits:

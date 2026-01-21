@@ -907,52 +907,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Devices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hardware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hardware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#emulators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Emulators
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#syntax-checkers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Syntax Checkers
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1525,52 +1486,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Devices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hardware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hardware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#emulators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Emulators
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#syntax-checkers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Syntax Checkers
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1771,86 +1693,34 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>qnx<span class="w"> </span>login
 </code></pre></div>
 <p>Follow the prompts to authenticate and link your account.</p>
-<h2 id="available-devices">Available Devices<a class="headerlink" href="#available-devices" title="Permanent link">&para;</a></h2>
-<h3 id="hardware">Hardware<a class="headerlink" href="#hardware" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Qubits</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>H1-1</code></td>
-<td>20</td>
-<td>H1 generation system</td>
-</tr>
-<tr>
-<td><code>H2-1</code></td>
-<td>56</td>
-<td>H2 generation system</td>
-</tr>
-</tbody>
-</table>
-<h3 id="emulators">Emulators<a class="headerlink" href="#emulators" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>H1-1E</code></td>
-<td>H1-1 emulator with realistic noise</td>
-</tr>
-<tr>
-<td><code>H2-1E</code></td>
-<td>H2-1 emulator with realistic noise</td>
-</tr>
-</tbody>
-</table>
-<h3 id="syntax-checkers">Syntax Checkers<a class="headerlink" href="#syntax-checkers" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>H1-1SC</code></td>
-<td>H1-1 syntax validation (no execution)</td>
-</tr>
-<tr>
-<td><code>H2-1SC</code></td>
-<td>H2-1 syntax validation (no execution)</td>
-</tr>
-</tbody>
-</table>
+<h2 id="discovering-devices">Discovering Devices<a class="headerlink" href="#discovering-devices" title="Permanent link">&para;</a></h2>
+<p>Quantinuum offers H-series hardware, emulators, and syntax checkers. To see currently available devices:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;quantinuum&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">():</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Or check the <a href="https://nexus.quantinuum.com">NEXUS portal</a> for current device availability.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>Use syntax checkers to validate circuits before running on hardware. They're free and instant.</p>
+<p>Use syntax checkers (devices ending in <code>SC</code>) to validate circuits before running on hardware. They're free and instant.</p>
 </div>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="dispatch-to-quantinuum-hardware">Dispatch to Quantinuum Hardware<a class="headerlink" href="#dispatch-to-quantinuum-hardware" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>--provider<span class="w"> </span>quantinuum<span class="w"> </span>--device<span class="w"> </span>H1-1
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>--provider<span class="w"> </span>quantinuum<span class="w"> </span>--device<span class="w"> </span>H1-1
 </code></pre></div>
 <h3 id="dispatch-to-emulator">Dispatch to Emulator<a class="headerlink" href="#dispatch-to-emulator" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>--provider<span class="w"> </span>quantinuum<span class="w"> </span>--device<span class="w"> </span>H1-1E
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>--provider<span class="w"> </span>quantinuum<span class="w"> </span>--device<span class="w"> </span>H1-1E
 </code></pre></div>
 <h3 id="poll-results">Poll Results<a class="headerlink" href="#poll-results" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
 </code></pre></div>
 <h2 id="h-series-quantum-credits-hqcs">H-series Quantum Credits (HQCs)<a class="headerlink" href="#h-series-quantum-credits-hqcs" title="Permanent link">&para;</a></h2>
 <p>Quantinuum uses HQCs for billing. The formula is:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>HQC = 5 + C * (N1 + 10*N2 + 5*Nm) / 5000
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>HQC = 5 + C * (N1 + 10*N2 + 5*Nm) / 5000
 </code></pre></div>
 <p>Where:
 - <code>C</code> = number of shots
@@ -1858,26 +1728,26 @@
 - <code>N2</code> = two-qubit gate count
 - <code>Nm</code> = measurement count</p>
 <h3 id="estimate-hqcs-before-running">Estimate HQCs Before Running<a class="headerlink" href="#estimate-hqcs-before-running" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span>--provider<span class="w"> </span>quantinuum
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span>--provider<span class="w"> </span>quantinuum
 </code></pre></div>
 <p>Example output:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Quantinuum HQC estimate: 52.4
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Quantinuum HQC estimate: 52.4
 </code></pre></div></p>
 <h2 id="nexus-projects">NEXUS Projects<a class="headerlink" href="#nexus-projects" title="Permanent link">&para;</a></h2>
 <p>Jobs are organized into NEXUS projects. Set the project name:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">QUANTINUUM_NEXUS_PROJECT_NAME</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">QUANTINUUM_NEXUS_PROJECT_NAME</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
 </code></pre></div>
 <h2 id="compilation-optimization">Compilation Optimization<a class="headerlink" href="#compilation-optimization" title="Permanent link">&para;</a></h2>
 <p>Control TKET compilation optimization:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Levels: 0 (none), 1 (default), 2 (aggressive)</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">QUANTINUUM_NEXUS_OPT_LEVEL</span><span class="o">=</span><span class="s2">&quot;2&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Levels: 0 (none), 1 (default), 2 (aggressive)</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nv">QUANTINUUM_NEXUS_OPT_LEVEL</span><span class="o">=</span><span class="s2">&quot;2&quot;</span>
 </code></pre></div>
 <p>Higher levels may reduce gate counts but increase compilation time.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="login-required">Login Required<a class="headerlink" href="#login-required" title="Permanent link">&para;</a></h3>
 <p>If you see authentication errors, re-run:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>qnx<span class="w"> </span>login
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>qnx<span class="w"> </span>login
 </code></pre></div>
 <h3 id="hqc-limits">HQC Limits<a class="headerlink" href="#hqc-limits" title="Permanent link">&para;</a></h3>
 <p>Check your HQC balance in the NEXUS portal. Jobs exceeding your balance will fail.</p>

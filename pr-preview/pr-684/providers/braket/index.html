@@ -840,63 +840,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Devices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ionq-via-braket" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IonQ (via Braket)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rigetti" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rigetti
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#iqm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IQM
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#simulators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simulators
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1475,63 +1425,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-devices" class="md-nav__link">
+  <a href="#discovering-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Devices
+        Discovering Devices
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Devices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ionq-via-braket" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IonQ (via Braket)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rigetti" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rigetti
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#iqm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IQM
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#simulators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simulators
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1689,97 +1589,29 @@
 <p>Optionally, set your default region:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span>
 </code></pre></div>
-<h2 id="available-devices">Available Devices<a class="headerlink" href="#available-devices" title="Permanent link">&para;</a></h2>
-<p>AWS Braket provides access to multiple hardware providers:</p>
-<h3 id="ionq-via-braket">IonQ (via Braket)<a class="headerlink" href="#ionq-via-braket" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Qubits</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>arn:aws:braket:us-east-1::device/qpu/ionq/Aria-1</code></td>
-<td>25</td>
-</tr>
-<tr>
-<td><code>arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1</code></td>
-<td>36</td>
-</tr>
-</tbody>
-</table>
-<h3 id="rigetti">Rigetti<a class="headerlink" href="#rigetti" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Qubits</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>arn:aws:braket:us-west-1::device/qpu/rigetti/Ankaa-3</code></td>
-<td>84</td>
-</tr>
-</tbody>
-</table>
-<h3 id="iqm">IQM<a class="headerlink" href="#iqm" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Qubits</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>arn:aws:braket:eu-north-1::device/qpu/iqm/Garnet</code></td>
-<td>20</td>
-</tr>
-</tbody>
-</table>
-<h3 id="simulators">Simulators<a class="headerlink" href="#simulators" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>arn:aws:braket:::device/quantum-simulator/amazon/sv1</code></td>
-<td>State vector simulator</td>
-</tr>
-<tr>
-<td><code>arn:aws:braket:::device/quantum-simulator/amazon/dm1</code></td>
-<td>Density matrix simulator</td>
-</tr>
-<tr>
-<td><code>arn:aws:braket:::device/quantum-simulator/amazon/tn1</code></td>
-<td>Tensor network simulator</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Device ARNs and availability change. Check the <a href="https://console.aws.amazon.com/braket">Braket Console</a> for current devices.</p>
-</div>
+<h2 id="discovering-devices">Discovering Devices<a class="headerlink" href="#discovering-devices" title="Permanent link">&para;</a></h2>
+<p>AWS Braket provides access to multiple hardware providers (IonQ, Rigetti, IQM) and simulators. Device availability changes frequently.</p>
+<p>To see currently available devices:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;braket&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">():</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Or check the <a href="https://console.aws.amazon.com/braket">Braket Console</a> for current devices and their ARNs.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="dispatch-to-braket-hardware">Dispatch to Braket Hardware<a class="headerlink" href="#dispatch-to-braket-hardware" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>--provider<span class="w"> </span>braket<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span>--device<span class="w"> </span><span class="s2">&quot;arn:aws:braket:us-east-1::device/qpu/ionq/Aria-1&quot;</span>
-</code></pre></div>
-<h3 id="dispatch-to-braket-simulator">Dispatch to Braket Simulator<a class="headerlink" href="#dispatch-to-braket-simulator" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>--provider<span class="w"> </span>braket<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>--device<span class="w"> </span><span class="s2">&quot;arn:aws:braket:::device/quantum-simulator/amazon/sv1&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>--device<span class="w"> </span><span class="s2">&quot;arn:aws:braket:us-east-1::device/qpu/ionq/Aria-1&quot;</span>
+</code></pre></div>
+<h3 id="dispatch-to-braket-simulator">Dispatch to Braket Simulator<a class="headerlink" href="#dispatch-to-braket-simulator" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>--provider<span class="w"> </span>braket<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span>--device<span class="w"> </span><span class="s2">&quot;arn:aws:braket:::device/quantum-simulator/amazon/sv1&quot;</span>
 </code></pre></div>
 <h3 id="poll-results">Poll Results<a class="headerlink" href="#poll-results" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
 </code></pre></div>
 <h2 id="pricing">Pricing<a class="headerlink" href="#pricing" title="Permanent link">&para;</a></h2>
 <p>AWS Braket charges:
@@ -1787,15 +1619,15 @@
 - Per-shot fees (varies by device)
 - Simulator fees (per minute of compute time)</p>
 <p>Use resource estimation to plan:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span>braket
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span>braket
 </code></pre></div>
 <p>See <a href="https://aws.amazon.com/braket/pricing/">AWS Braket Pricing</a> for details.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="authentication-errors">Authentication Errors<a class="headerlink" href="#authentication-errors" title="Permanent link">&para;</a></h3>
 <p>Verify credentials:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">boto3</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;braket&#39;</span><span class="p">)</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">search_devices</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="p">[]))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">boto3</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;braket&#39;</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">search_devices</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="p">[]))</span>
 </code></pre></div>
 <h3 id="region-issues">Region Issues<a class="headerlink" href="#region-issues" title="Permanent link">&para;</a></h3>
 <p>Some devices are only available in specific regions. Ensure your <code>AWS_DEFAULT_REGION</code> matches the device location.</p>
