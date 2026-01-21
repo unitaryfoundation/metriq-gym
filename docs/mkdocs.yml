@@ -50,7 +50,7 @@ nav:
     - Local Simulators: providers/local.md
   - Benchmarks: benchmarks/overview.md
   - Uploading Results:
-    - GitHub Integration: uploading/github.md
+    - Contributing to metriq-data: uploading/github.md
   - Development:
     - Developer Guide: development/developer-guide.md
     - Adding New Benchmarks: development/adding-benchmarks.md

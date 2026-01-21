@@ -1,4 +1,4 @@
-# GitHub Integration
+# Contributing to metriq-data
 
 Metriq-Gym uploads benchmark results to GitHub via pull requests, enabling community contribution to the [metriq-data](https://github.com/unitaryfoundation/metriq-data) benchmark database.
 
@@ -121,7 +121,7 @@ A PR is opened with:
 ]
 ```
 
-## Contributing to metriq-data
+## Contribution Workflow
 
 ### First-Time Contributors
 
