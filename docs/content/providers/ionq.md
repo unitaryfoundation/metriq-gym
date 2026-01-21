@@ -71,11 +71,7 @@ IonQ supports debiasing options for error mitigation. Configure via provider set
 
 ### Pricing
 
-IonQ charges per shot and circuit complexity. Use resource estimation to plan costs:
-
-```bash
-mgym job estimate config.json --provider ionq
-```
+See [IonQ Pricing](https://ionq.com/pricing) for current rates.
 
 ## Troubleshooting
 

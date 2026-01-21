@@ -78,21 +78,7 @@ mgym job poll <JOB_ID>
 
 ## Pricing
 
-Azure Quantum uses provider-specific pricing:
-- IonQ: Per-shot pricing
-- Quantinuum: HQC-based pricing
-- Rigetti: Per-shot pricing
-
-Check [Azure Quantum Pricing](https://azure.microsoft.com/pricing/details/azure-quantum/) and individual provider pricing for details.
-
-## Azure Credits
-
-Azure Quantum offers:
-- Free credits for new users
-- Academic programs
-- Research grants
-
-Check eligibility in the Azure Portal.
+See [Azure Quantum Pricing](https://azure.microsoft.com/pricing/details/azure-quantum/) for current rates.
 
 ## Troubleshooting
 

@@ -73,18 +73,7 @@ mgym job poll <JOB_ID>
 
 ## Pricing
 
-AWS Braket charges:
-- Per-task fees (fixed cost per job)
-- Per-shot fees (varies by device)
-- Simulator fees (per minute of compute time)
-
-Use resource estimation to plan:
-
-```bash
-mgym job estimate config.json --provider braket
-```
-
-See [AWS Braket Pricing](https://aws.amazon.com/braket/pricing/) for details.
+See [AWS Braket Pricing](https://aws.amazon.com/braket/pricing/) for current rates.
 
 ## Troubleshooting
 

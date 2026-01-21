@@ -76,30 +76,14 @@ mgym job dispatch metriq_gym/schemas/examples/wit.example.json \
 mgym job poll <JOB_ID>
 ```
 
-## H-series Quantum Credits (HQCs)
+## Pricing
 
-Quantinuum uses HQCs for billing. The formula is:
+Quantinuum uses H-series Quantum Credits (HQCs) for billing. See [Quantinuum's documentation](https://docs.quantinuum.com/) for current pricing details.
 
-```
-HQC = 5 + C * (N1 + 10*N2 + 5*Nm) / 5000
-```
-
-Where:
-- `C` = number of shots
-- `N1` = single-qubit gate count
-- `N2` = two-qubit gate count
-- `Nm` = measurement count
-
-### Estimate HQCs Before Running
+Use `mgym job estimate` to estimate HQCs before running:
 
 ```bash
-mgym job estimate metriq_gym/schemas/examples/wit.example.json \
-    --provider quantinuum
-```
-
-Example output:
-```
-Quantinuum HQC estimate: 52.4
+mgym job estimate config.json --provider quantinuum
 ```
 
 ## NEXUS Projects
