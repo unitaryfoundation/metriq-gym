@@ -105,8 +105,7 @@ export GITHUB_TOKEN="your-token-here"
 ```
 
 !!! tip "Creating a GitHub Token"
-    Create a Personal Access Token at [github.com/settings/tokens](https://github.com/settings/tokens).
-    For fine-grained tokens, grant **Contents** (Read and write) and **Pull requests** (Read and write) permissions.
+    Create a Personal Access Token at [github.com/settings/tokens](https://github.com/settings/tokens) with repository read/write permissions.
 
 ### Upload via Python
 

@@ -15,17 +15,7 @@ The upload workflow:
 
 ### 1. Create a GitHub Token
 
-Create a Personal Access Token at [github.com/settings/tokens](https://github.com/settings/tokens).
-
-**For Classic Tokens:**
-- Select the `repo` scope
-
-**For Fine-Grained Tokens:**
-- Resource owner: Your account
-- Repository access: All repositories (to cover future forks)
-- Permissions:
-  - Contents: Read and write
-  - Pull requests: Read and write
+Create a Personal Access Token at [github.com/settings/tokens](https://github.com/settings/tokens) with repository read/write permissions.
 
 ### 2. Configure Environment
 
@@ -162,9 +152,7 @@ If automatic forking fails:
 
 ### Permission Denied
 
-Verify your token has the required permissions:
-- `repo` scope for classic tokens
-- Contents + Pull requests for fine-grained tokens
+Verify your token has repository read/write permissions.
 
 ### PR Creation Failed
 
