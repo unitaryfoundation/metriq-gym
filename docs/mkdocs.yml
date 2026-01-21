@@ -3,6 +3,7 @@ site_url: https://unitaryfoundation.github.io/metriq-gym/
 site_description: Open-source quantum benchmarking framework
 repo_url: https://github.com/unitaryfoundation/metriq-gym
 repo_name: unitaryfoundation/metriq-gym
+docs_dir: content
 
 theme:
   name: material
