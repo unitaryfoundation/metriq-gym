@@ -37,31 +37,22 @@ qnx login
 
 Follow the prompts to authenticate and link your account.
 
-## Available Devices
+## Discovering Devices
 
-### Hardware
+Quantinuum offers H-series hardware, emulators, and syntax checkers. To see currently available devices:
 
-| Device | Qubits | Description |
-|--------|--------|-------------|
-| `H1-1` | 20 | H1 generation system |
-| `H2-1` | 56 | H2 generation system |
+```python
+from qbraid.runtime import load_provider
 
-### Emulators
+provider = load_provider("quantinuum")
+for device in provider.get_devices():
+    print(f"{device.id}: {device.status}")
+```
 
-| Device | Description |
-|--------|-------------|
-| `H1-1E` | H1-1 emulator with realistic noise |
-| `H2-1E` | H2-1 emulator with realistic noise |
-
-### Syntax Checkers
-
-| Device | Description |
-|--------|-------------|
-| `H1-1SC` | H1-1 syntax validation (no execution) |
-| `H2-1SC` | H2-1 syntax validation (no execution) |
+Or check the [NEXUS portal](https://nexus.quantinuum.com) for current device availability.
 
 !!! tip
-    Use syntax checkers to validate circuits before running on hardware. They're free and instant.
+    Use syntax checkers (devices ending in `SC`) to validate circuits before running on hardware. They're free and instant.
 
 ## Usage
 

@@ -6,26 +6,27 @@ Run benchmarks locally using Qiskit Aer simulators. This is useful for developme
 
 No additional setup required - Qiskit Aer is included with Metriq-Gym.
 
-## Available Devices
+## Discovering Devices
 
-### Basic Simulators
+To see available local simulators:
 
-| Device | Description |
-|--------|-------------|
-| `aer_simulator` | Ideal state vector simulation |
-| `aer_simulator_statevector` | State vector simulator (explicit) |
-| `aer_simulator_density_matrix` | Density matrix simulator |
+```python
+from qbraid.runtime import load_provider
+
+provider = load_provider("local")
+for device in provider.get_devices():
+    print(f"{device.id}")
+```
+
+Common simulators include:
+
+- `aer_simulator` - Ideal state vector simulation
+- `aer_simulator_statevector` - State vector simulator (explicit)
+- `aer_simulator_density_matrix` - Density matrix simulator
 
 ### IBM Noise Model Simulators
 
-Use any IBM device name to run with its noise model:
-
-| Device | Description |
-|--------|-------------|
-| `ibm_sherbrooke` | 127-qubit Eagle noise model |
-| `ibm_brisbane` | 127-qubit Eagle noise model |
-| `ibm_fez` | 156-qubit Heron noise model |
-| `ibm_<device>` | Any IBM device noise model |
+Use any IBM device name (e.g., `ibm_sherbrooke`, `ibm_fez`) to run locally with that device's noise model.
 
 !!! note
     Noise model simulators require valid IBM credentials to fetch the noise model, but execution is local.

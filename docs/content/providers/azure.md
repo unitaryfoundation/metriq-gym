@@ -35,35 +35,24 @@ The connection string format is:
 SubscriptionId=xxx;ResourceGroupName=xxx;WorkspaceName=xxx;Location=xxx
 ```
 
-## Available Devices
+## Discovering Devices
 
-Azure Quantum provides access to multiple hardware providers:
+Azure Quantum provides access to multiple hardware providers (IonQ, Quantinuum, Rigetti). Available devices depend on your workspace configuration.
 
-### IonQ
+To see currently available devices:
 
-| Device | Description |
-|--------|-------------|
-| `ionq.simulator` | IonQ simulator |
-| `ionq.qpu.aria-1` | IonQ Aria (25 qubits) |
+```python
+from qbraid.runtime import load_provider
 
-### Quantinuum
+provider = load_provider("azure")
+for device in provider.get_devices():
+    print(f"{device.id}: {device.status}")
+```
 
-| Device | Description |
-|--------|-------------|
-| `quantinuum.sim.h1-1sc` | H1-1 syntax checker |
-| `quantinuum.sim.h1-1e` | H1-1 emulator |
-| `quantinuum.qpu.h1-1` | H1-1 hardware |
-| `quantinuum.qpu.h2-1` | H2-1 hardware |
-
-### Rigetti
-
-| Device | Description |
-|--------|-------------|
-| `rigetti.sim.qvm` | QVM simulator |
-| `rigetti.qpu.ankaa-9q-3` | Ankaa QPU |
+Or check your workspace in the [Azure Portal](https://portal.azure.com) under **Providers**.
 
 !!! note
-    Available providers depend on your workspace configuration. Enable providers in the Azure Portal.
+    Enable providers in your Azure Quantum workspace to access their devices.
 
 ## Usage
 
@@ -126,6 +115,7 @@ print(workspace.get_targets())
 ### Provider Not Available
 
 Ensure the provider is:
+
 1. Enabled in your workspace
 2. Available in your region
 3. Accessible with your subscription tier

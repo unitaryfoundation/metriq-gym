@@ -23,17 +23,19 @@ Add to your `.env` file:
 IONQ_API_KEY="<your-ionq-api-key>"
 ```
 
-## Available Devices
+## Discovering Devices
 
-| Device | Description |
-|--------|-------------|
-| `ionq_simulator` | IonQ cloud simulator |
-| `ionq_harmony` | 11-qubit trapped-ion system |
-| `ionq_aria` | 25-qubit trapped-ion system |
-| `ionq_forte` | 36-qubit trapped-ion system |
+Device availability changes frequently. To see currently available devices:
 
-!!! note
-    Device availability and qubit counts may change. Check [IonQ's documentation](https://docs.ionq.com) for current specifications.
+```python
+from qbraid.runtime import load_provider
+
+provider = load_provider("ionq")
+for device in provider.get_devices():
+    print(f"{device.id}: {device.num_qubits} qubits - {device.status}")
+```
+
+Or check the [IonQ Cloud dashboard](https://cloud.ionq.com) for current device status.
 
 ## Usage
 

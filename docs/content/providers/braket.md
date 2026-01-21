@@ -31,39 +31,21 @@ Optionally, set your default region:
 AWS_DEFAULT_REGION="us-east-1"
 ```
 
-## Available Devices
+## Discovering Devices
 
-AWS Braket provides access to multiple hardware providers:
+AWS Braket provides access to multiple hardware providers (IonQ, Rigetti, IQM) and simulators. Device availability changes frequently.
 
-### IonQ (via Braket)
+To see currently available devices:
 
-| Device | Qubits |
-|--------|--------|
-| `arn:aws:braket:us-east-1::device/qpu/ionq/Aria-1` | 25 |
-| `arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1` | 36 |
+```python
+from qbraid.runtime import load_provider
 
-### Rigetti
+provider = load_provider("braket")
+for device in provider.get_devices():
+    print(f"{device.id}: {device.status}")
+```
 
-| Device | Qubits |
-|--------|--------|
-| `arn:aws:braket:us-west-1::device/qpu/rigetti/Ankaa-3` | 84 |
-
-### IQM
-
-| Device | Qubits |
-|--------|--------|
-| `arn:aws:braket:eu-north-1::device/qpu/iqm/Garnet` | 20 |
-
-### Simulators
-
-| Device | Description |
-|--------|-------------|
-| `arn:aws:braket:::device/quantum-simulator/amazon/sv1` | State vector simulator |
-| `arn:aws:braket:::device/quantum-simulator/amazon/dm1` | Density matrix simulator |
-| `arn:aws:braket:::device/quantum-simulator/amazon/tn1` | Tensor network simulator |
-
-!!! note
-    Device ARNs and availability change. Check the [Braket Console](https://console.aws.amazon.com/braket) for current devices.
+Or check the [Braket Console](https://console.aws.amazon.com/braket) for current devices and their ARNs.
 
 ## Usage
 

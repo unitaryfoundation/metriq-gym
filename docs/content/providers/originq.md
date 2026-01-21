@@ -34,22 +34,19 @@ brew reinstall libidn2
 
 Install this library **before** running `uv sync` or installing Metriq-Gym to avoid missing symbol errors during the `pyqpanda3` build.
 
-## Available Devices
+## Discovering Devices
 
-### Hardware
+To see currently available devices:
 
-| Device ID | Alias | Description |
-|-----------|-------|-------------|
-| `WK_C102_400` | `origin_wukong` | 102-qubit Wukong hardware |
-| `72` | - | 72-qubit hardware backend |
+```python
+from qbraid.runtime import load_provider
 
-### Simulators
+provider = load_provider("origin")
+for device in provider.get_devices():
+    print(f"{device.id}: {device.status}")
+```
 
-| Device ID | Max Qubits | Description |
-|-----------|------------|-------------|
-| `full_amplitude` | 35 | Full state vector simulation |
-| `partial_amplitude` | 64 | Partial amplitude simulation |
-| `single_amplitude` | 100 | Single amplitude simulation |
+OriginQ offers both hardware (including the Wukong quantum computer) and various simulators.
 
 ## Usage
 
@@ -76,25 +73,6 @@ mgym job dispatch metriq_gym/schemas/examples/wit.example.json \
 
 ```bash
 mgym job poll <JOB_ID>
-```
-
-## Verify Available Devices
-
-List devices accessible with your account:
-
-```bash
-uv run python -c "from metriq_gym.run import load_provider; provider = load_provider('origin'); print([device.id for device in provider.get_devices()])"
-```
-
-Or in Python:
-
-```python
-from metriq_gym.run import load_provider
-
-provider = load_provider('origin')
-devices = provider.get_devices()
-for device in devices:
-    print(device.id)
 ```
 
 ## Troubleshooting
