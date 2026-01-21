@@ -3,7 +3,7 @@
 This page explains how your uploaded results appear on the Metriq platform.
 
 !!! tip
-    For an overview of how Metriq-Gym fits into the Metriq ecosystem, see the [home page](../index.md#the-metriq-ecosystem).
+    For an overview of Metriq-Gym, see the [home page](../index.md).
 
 ## Metriq.info
 

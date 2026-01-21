@@ -13,7 +13,7 @@
 [![Downloads](https://static.pepy.tech/badge/metriq-gym)](https://pepy.tech/project/metriq-gym)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://unitaryfoundation.github.io/metriq-gym/)
 [![Discord Chat](https://img.shields.io/badge/dynamic/json?color=orange&label=Discord&query=approximate_presence_count&suffix=%20online.&url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2FJqVGmpkP96%3Fwith_counts%3Dtrue)](http://discord.unitary.foundation)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](https://github.com/unitaryfoundation/metriq-gym/blob/main/CODE_OF_CONDUCT.md)
 
 
 metriq-gym is a Python framework for implementing and running standard quantum benchmarks on different quantum devices by different providers.
@@ -89,9 +89,9 @@ Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/
 
 ## Contributing
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow checklist, and review the [Developer
+Start with [CONTRIBUTING.md](https://github.com/unitaryfoundation/metriq-gym/blob/main/CONTRIBUTING.md) for the workflow checklist, and review the [Developer
 Guide](https://unitaryfoundation.github.io/metriq-gym/development/developer-guide/). Issues and pull requests are welcome!
 
 ## License
 
-metriq-gym is available under the [Apache License 2.0](LICENSE).
+metriq-gym is available under the [Apache License 2.0](https://github.com/unitaryfoundation/metriq-gym/blob/main/LICENSE).

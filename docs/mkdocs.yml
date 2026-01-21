@@ -74,6 +74,9 @@ markdown_extensions:
   - toc:
       permalink: true
 
+extra_css:
+  - assets/extra.css
+
 extra:
   social:
     - icon: fontawesome/brands/github
