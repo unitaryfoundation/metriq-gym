@@ -1667,18 +1667,16 @@
 <h3 id="debiasing">Debiasing<a class="headerlink" href="#debiasing" title="Permanent link">&para;</a></h3>
 <p>IonQ supports debiasing options for error mitigation. Configure via provider settings if available.</p>
 <h3 id="pricing">Pricing<a class="headerlink" href="#pricing" title="Permanent link">&para;</a></h3>
-<p>IonQ charges per shot and circuit complexity. Use resource estimation to plan costs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span>ionq
-</code></pre></div>
+<p>See <a href="https://ionq.com/pricing">IonQ Pricing</a> for current rates.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="authentication-errors">Authentication Errors<a class="headerlink" href="#authentication-errors" title="Permanent link">&para;</a></h3>
 <p>Verify your API key:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;IONQ_API_KEY&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;your-key&quot;</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;ionq&quot;</span><span class="p">)</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;IONQ_API_KEY&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;your-key&quot;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;ionq&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">())</span>
 </code></pre></div>
 <h3 id="device-unavailable">Device Unavailable<a class="headerlink" href="#device-unavailable" title="Permanent link">&para;</a></h3>
 <p>Check device status on the IonQ Cloud dashboard. Devices may be under maintenance.</p>

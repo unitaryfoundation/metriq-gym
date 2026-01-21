@@ -968,30 +968,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#h-series-quantum-credits-hqcs" class="md-nav__link">
+  <a href="#pricing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        H-series Quantum Credits (HQCs)
+        Pricing
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="H-series Quantum Credits (HQCs)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#estimate-hqcs-before-running" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Estimate HQCs Before Running
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1547,30 +1530,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#h-series-quantum-credits-hqcs" class="md-nav__link">
+  <a href="#pricing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        H-series Quantum Credits (HQCs)
+        Pricing
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="H-series Quantum Credits (HQCs)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#estimate-hqcs-before-running" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Estimate HQCs Before Running
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1718,36 +1684,25 @@
 <h3 id="poll-results">Poll Results<a class="headerlink" href="#poll-results" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
 </code></pre></div>
-<h2 id="h-series-quantum-credits-hqcs">H-series Quantum Credits (HQCs)<a class="headerlink" href="#h-series-quantum-credits-hqcs" title="Permanent link">&para;</a></h2>
-<p>Quantinuum uses HQCs for billing. The formula is:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>HQC = 5 + C * (N1 + 10*N2 + 5*Nm) / 5000
+<h2 id="pricing">Pricing<a class="headerlink" href="#pricing" title="Permanent link">&para;</a></h2>
+<p>Quantinuum uses H-series Quantum Credits (HQCs) for billing. See <a href="https://docs.quantinuum.com/">Quantinuum's documentation</a> for current pricing details.</p>
+<p>Use <code>mgym job estimate</code> to estimate HQCs before running:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span>quantinuum
 </code></pre></div>
-<p>Where:
-- <code>C</code> = number of shots
-- <code>N1</code> = single-qubit gate count
-- <code>N2</code> = two-qubit gate count
-- <code>Nm</code> = measurement count</p>
-<h3 id="estimate-hqcs-before-running">Estimate HQCs Before Running<a class="headerlink" href="#estimate-hqcs-before-running" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span>--provider<span class="w"> </span>quantinuum
-</code></pre></div>
-<p>Example output:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Quantinuum HQC estimate: 52.4
-</code></pre></div></p>
 <h2 id="nexus-projects">NEXUS Projects<a class="headerlink" href="#nexus-projects" title="Permanent link">&para;</a></h2>
 <p>Jobs are organized into NEXUS projects. Set the project name:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">QUANTINUUM_NEXUS_PROJECT_NAME</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">QUANTINUUM_NEXUS_PROJECT_NAME</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
 </code></pre></div>
 <h2 id="compilation-optimization">Compilation Optimization<a class="headerlink" href="#compilation-optimization" title="Permanent link">&para;</a></h2>
 <p>Control TKET compilation optimization:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Levels: 0 (none), 1 (default), 2 (aggressive)</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nv">QUANTINUUM_NEXUS_OPT_LEVEL</span><span class="o">=</span><span class="s2">&quot;2&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Levels: 0 (none), 1 (default), 2 (aggressive)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nv">QUANTINUUM_NEXUS_OPT_LEVEL</span><span class="o">=</span><span class="s2">&quot;2&quot;</span>
 </code></pre></div>
 <p>Higher levels may reduce gate counts but increase compilation time.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="login-required">Login Required<a class="headerlink" href="#login-required" title="Permanent link">&para;</a></h3>
 <p>If you see authentication errors, re-run:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>qnx<span class="w"> </span>login
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>qnx<span class="w"> </span>login
 </code></pre></div>
 <h3 id="hqc-limits">HQC Limits<a class="headerlink" href="#hqc-limits" title="Permanent link">&para;</a></h3>
 <p>Check your HQC balance in the NEXUS portal. Jobs exceeding your balance will fail.</p>

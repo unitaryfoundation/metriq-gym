@@ -1614,20 +1614,13 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>&lt;JOB_ID&gt;
 </code></pre></div>
 <h2 id="pricing">Pricing<a class="headerlink" href="#pricing" title="Permanent link">&para;</a></h2>
-<p>AWS Braket charges:
-- Per-task fees (fixed cost per job)
-- Per-shot fees (varies by device)
-- Simulator fees (per minute of compute time)</p>
-<p>Use resource estimation to plan:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span>braket
-</code></pre></div>
-<p>See <a href="https://aws.amazon.com/braket/pricing/">AWS Braket Pricing</a> for details.</p>
+<p>See <a href="https://aws.amazon.com/braket/pricing/">AWS Braket Pricing</a> for current rates.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="authentication-errors">Authentication Errors<a class="headerlink" href="#authentication-errors" title="Permanent link">&para;</a></h3>
 <p>Verify credentials:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">boto3</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;braket&#39;</span><span class="p">)</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">search_devices</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="p">[]))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">boto3</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;braket&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">search_devices</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="p">[]))</span>
 </code></pre></div>
 <h3 id="region-issues">Region Issues<a class="headerlink" href="#region-issues" title="Permanent link">&para;</a></h3>
 <p>Some devices are only available in specific regions. Ensure your <code>AWS_DEFAULT_REGION</code> matches the device location.</p>
