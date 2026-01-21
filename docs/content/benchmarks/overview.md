@@ -28,8 +28,6 @@ All benchmarks use JSON configuration files:
 
 | Benchmark | Description |
 |-----------|-------------|
-| [Quantum Volume](#metriq_gym.benchmarks.quantum_volume) | Measures effective qubit count via random SU(4) circuits |
-| [CLOPS](#metriq_gym.benchmarks.clops) | Circuit layer operations per second (throughput) |
 | [Mirror Circuits](#metriq_gym.benchmarks.mirror_circuits) | Tests state fidelity via forward/reverse Clifford layers |
 | [EPLG](#metriq_gym.benchmarks.eplg) | Error per layered gate across qubit chains |
 | [BSEQ](#metriq_gym.benchmarks.bseq) | Bell state effective qubits via CHSH violation |
@@ -39,20 +37,6 @@ All benchmarks use JSON configuration files:
 | [QED-C Benchmarks](#metriq_gym.benchmarks.qedc_benchmarks) | Application-oriented benchmarks (BV, QFT, etc.) |
 
 ---
-
-::: metriq_gym.benchmarks.quantum_volume
-    options:
-      show_root_heading: true
-      show_root_full_path: false
-      members: false
-      heading_level: 3
-
-::: metriq_gym.benchmarks.clops
-    options:
-      show_root_heading: true
-      show_root_full_path: false
-      members: false
-      heading_level: 3
 
 ::: metriq_gym.benchmarks.mirror_circuits
     options:
