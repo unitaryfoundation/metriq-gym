@@ -550,6 +550,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#command-structure" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -569,85 +580,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Quick Reference">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#job-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Job Commands
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#suite-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Suite Commands
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#global-options" class="md-nav__link">
+  <a href="#getting-help" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Global Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interactive-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Interactive Mode
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment Variables
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#local-job-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Local Job Database
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
+        Getting Help
       
     </span>
   </a>
@@ -1308,6 +1247,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#command-structure" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1327,85 +1277,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Quick Reference">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#job-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Job Commands
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#suite-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Suite Commands
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#global-options" class="md-nav__link">
+  <a href="#getting-help" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Global Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interactive-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Interactive Mode
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment Variables
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#local-job-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Local Job Database
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
+        Getting Help
       
     </span>
   </a>
@@ -1433,17 +1311,18 @@
 
 
 <h1 id="cli-overview">CLI Overview<a class="headerlink" href="#cli-overview" title="Permanent link">&para;</a></h1>
-<p>Metriq-Gym provides the <code>mgym</code> command-line interface for dispatching, monitoring, and managing benchmark jobs.</p>
-<h2 id="command-structure">Command Structure<a class="headerlink" href="#command-structure" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mgym &lt;resource&gt; &lt;action&gt; [options]
+<p>Metriq-Gym provides a command-line interface (<code>mgym</code>) for dispatching, monitoring, and uploading quantum benchmark results.</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<p>The CLI is installed automatically with metriq-gym:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>metriq-gym
 </code></pre></div>
-<p>Resources:</p>
-<ul>
-<li><code>job</code> - Single benchmark operations</li>
-<li><code>suite</code> - Benchmark suite operations</li>
-</ul>
+<h2 id="command-structure">Command Structure<a class="headerlink" href="#command-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mgym &lt;resource&gt; &lt;action&gt; [arguments] [options]
+</code></pre></div>
+<p>Resources:
+- <code>job</code> - Individual benchmark jobs
+- <code>suite</code> - Collections of benchmark jobs</p>
 <h2 id="quick-reference">Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
-<h3 id="job-commands">Job Commands<a class="headerlink" href="#job-commands" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -1453,138 +1332,61 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="../job-commands/#estimate"><code>mgym job estimate &lt;config&gt;</code></a></td>
-<td>Estimate resource usage</td>
-</tr>
-<tr>
-<td><a href="../job-commands/#dispatch"><code>mgym job dispatch &lt;config&gt;</code></a></td>
+<td><code>mgym job dispatch</code></td>
 <td>Dispatch a benchmark job</td>
 </tr>
 <tr>
-<td><a href="../job-commands/#poll"><code>mgym job poll [job_id]</code></a></td>
-<td>Poll job status and retrieve results</td>
+<td><code>mgym job poll</code></td>
+<td>Poll job status and results</td>
 </tr>
 <tr>
-<td><a href="../job-commands/#view"><code>mgym job view [job_id]</code></a></td>
+<td><code>mgym job view</code></td>
 <td>View job details</td>
 </tr>
 <tr>
-<td><a href="../job-commands/#upload"><code>mgym job upload &lt;job_id&gt;</code></a></td>
+<td><code>mgym job delete</code></td>
+<td>Delete a job</td>
+</tr>
+<tr>
+<td><code>mgym job upload</code></td>
 <td>Upload results to GitHub</td>
 </tr>
 <tr>
-<td><a href="../job-commands/#delete"><code>mgym job delete [job_id]</code></a></td>
-<td>Delete a job from local database</td>
-</tr>
-</tbody>
-</table>
-<h3 id="suite-commands">Suite Commands<a class="headerlink" href="#suite-commands" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Command</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="../suite-commands/#dispatch"><code>mgym suite dispatch &lt;suite.json&gt;</code></a></td>
-<td>Dispatch all benchmarks in a suite</td>
+<td><code>mgym job estimate</code></td>
+<td>Estimate resource requirements</td>
 </tr>
 <tr>
-<td><a href="../suite-commands/#poll"><code>mgym suite poll [suite_id]</code></a></td>
+<td><code>mgym suite dispatch</code></td>
+<td>Dispatch a suite of jobs</td>
+</tr>
+<tr>
+<td><code>mgym suite poll</code></td>
 <td>Poll suite status</td>
 </tr>
 <tr>
-<td><a href="../suite-commands/#view"><code>mgym suite view [suite_id]</code></a></td>
-<td>View all jobs in a suite</td>
+<td><code>mgym suite view</code></td>
+<td>View suite jobs</td>
 </tr>
 <tr>
-<td><a href="../suite-commands/#upload"><code>mgym suite upload &lt;suite_id&gt;</code></a></td>
-<td>Upload all suite results</td>
+<td><code>mgym suite delete</code></td>
+<td>Delete a suite</td>
 </tr>
 <tr>
-<td><a href="../suite-commands/#delete"><code>mgym suite delete [suite_id]</code></a></td>
-<td>Delete all jobs in a suite</td>
+<td><code>mgym suite upload</code></td>
+<td>Upload suite results</td>
 </tr>
 </tbody>
 </table>
-<h2 id="global-options">Global Options<a class="headerlink" href="#global-options" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--provider</code>, <code>-p</code></td>
-<td>Provider name (ibm, ionq, braket, azure, quantinuum, origin, local)</td>
-</tr>
-<tr>
-<td><code>--device</code>, <code>-d</code></td>
-<td>Device identifier</td>
-</tr>
-<tr>
-<td><code>--help</code>, <code>-h</code></td>
-<td>Show help message</td>
-</tr>
-</tbody>
-</table>
-<h2 id="interactive-mode">Interactive Mode<a class="headerlink" href="#interactive-mode" title="Permanent link">&para;</a></h2>
-<p>When job or suite IDs are omitted, commands enter interactive mode:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Lists all jobs and prompts for selection</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Lists all jobs for viewing</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>mgym<span class="w"> </span>job<span class="w"> </span>view
+<h2 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Main help</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mgym<span class="w"> </span>--help
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Job commands help</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>mgym<span class="w"> </span>job<span class="w"> </span>--help
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Specific command help</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>--help
 </code></pre></div>
-<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
-<p>Configure default behavior via environment variables or <code>.env</code> file:</p>
-<table>
-<thead>
-<tr>
-<th>Variable</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>MGYM_LOCAL_DB_DIR</code></td>
-<td>Directory for job database</td>
-</tr>
-<tr>
-<td><code>MGYM_LOCAL_SIMULATOR_CACHE_DIR</code></td>
-<td>Cache directory for simulator results</td>
-</tr>
-<tr>
-<td><code>GITHUB_TOKEN</code></td>
-<td>Token for GitHub uploads</td>
-</tr>
-<tr>
-<td><code>MGYM_UPLOAD_REPO</code></td>
-<td>Default upload repository</td>
-</tr>
-</tbody>
-</table>
-<p>See <a href="../../providers/overview/">Provider Configuration</a> for provider-specific variables.</p>
-<h2 id="local-job-database">Local Job Database<a class="headerlink" href="#local-job-database" title="Permanent link">&para;</a></h2>
-<p>The CLI maintains a local job database (<code>.metriq_gym_jobs.jsonl</code>) to track jobs between dispatch and poll operations.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The local database is meant as a transient queue, not archival storage. Export results regularly or back up the file if you need to retain history.</p>
-</div>
-<p>Database location:</p>
-<ul>
-<li>Custom: Set <code>MGYM_LOCAL_DB_DIR</code></li>
-<li>Default: Platform-specific user data directory (e.g., <code>~/Library/Application Support/metriq-gym</code> on macOS)</li>
-</ul>
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../job-commands/">Job Commands</a> - Detailed job command reference (including resource estimation)</li>
-<li><a href="../suite-commands/">Suite Commands</a> - Working with benchmark suites</li>
-</ul>
 
 
 
