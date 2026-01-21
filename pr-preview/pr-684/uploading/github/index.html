@@ -1878,15 +1878,7 @@
 </ol>
 <h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
 <h3 id="1-create-a-github-token">1. Create a GitHub Token<a class="headerlink" href="#1-create-a-github-token" title="Permanent link">&para;</a></h3>
-<p>Create a Personal Access Token at <a href="https://github.com/settings/tokens">github.com/settings/tokens</a>.</p>
-<p><strong>For Classic Tokens:</strong>
-- Select the <code>repo</code> scope</p>
-<p><strong>For Fine-Grained Tokens:</strong>
-- Resource owner: Your account
-- Repository access: All repositories (to cover future forks)
-- Permissions:
-  - Contents: Read and write
-  - Pull requests: Read and write</p>
+<p>Create a Personal Access Token at <a href="https://github.com/settings/tokens">github.com/settings/tokens</a> with repository read/write permissions.</p>
 <h3 id="2-configure-environment">2. Configure Environment<a class="headerlink" href="#2-configure-environment" title="Permanent link">&para;</a></h3>
 <p>Add to your <code>.env</code> file:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;your-token-here&quot;</span>
@@ -2001,9 +1993,7 @@
 1. Manually fork <a href="https://github.com/unitaryfoundation/metriq-data">unitaryfoundation/metriq-data</a>
 2. Retry the upload command</p>
 <h3 id="permission-denied">Permission Denied<a class="headerlink" href="#permission-denied" title="Permanent link">&para;</a></h3>
-<p>Verify your token has the required permissions:
-- <code>repo</code> scope for classic tokens
-- Contents + Pull requests for fine-grained tokens</p>
+<p>Verify your token has repository read/write permissions.</p>
 <h3 id="pr-creation-failed">PR Creation Failed<a class="headerlink" href="#pr-creation-failed" title="Permanent link">&para;</a></h3>
 <p>If PR creation fails, the command returns a compare URL. Open it in your browser to manually create the PR.</p>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
