@@ -13,7 +13,8 @@ from unittest.mock import patch, MagicMock
 from metriq_gym.cli import app
 
 
-runner = CliRunner(mix_stderr=False)
+# Disable Rich markup/colors for consistent test output across environments
+runner = CliRunner(mix_stderr=False, env={"NO_COLOR": "1", "TERM": "dumb"})
 
 
 class TestMainApp:
