@@ -13,7 +13,7 @@ from unittest.mock import patch, MagicMock
 from metriq_gym.cli import app
 
 
-runner = CliRunner()
+runner = CliRunner(mix_stderr=False)
 
 
 class TestMainApp:
@@ -21,7 +21,7 @@ class TestMainApp:
 
     def test_help_shows_usage(self):
         """Main app --help should show available commands."""
-        result = runner.invoke(app, ["--help"])
+        result = runner.invoke(app, ["--help"], color=False)
         assert result.exit_code == 0
         assert "job" in result.output
         assert "suite" in result.output
@@ -29,7 +29,7 @@ class TestMainApp:
 
     def test_no_args_shows_help(self):
         """Running mgym without args should show help."""
-        result = runner.invoke(app, [])
+        result = runner.invoke(app, [], color=False)
         assert result.exit_code == 0
         assert "job" in result.output
         assert "suite" in result.output
@@ -40,7 +40,7 @@ class TestJobCommands:
 
     def test_job_help(self):
         """mgym job --help should list job commands."""
-        result = runner.invoke(app, ["job", "--help"])
+        result = runner.invoke(app, ["job", "--help"], color=False)
         assert result.exit_code == 0
         assert "dispatch" in result.output
         assert "poll" in result.output
@@ -51,7 +51,7 @@ class TestJobCommands:
 
     def test_job_dispatch_help(self):
         """mgym job dispatch --help should show usage."""
-        result = runner.invoke(app, ["job", "dispatch", "--help"])
+        result = runner.invoke(app, ["job", "dispatch", "--help"], color=False)
         assert result.exit_code == 0
         assert "CONFIG" in result.output
         assert "--provider" in result.output
@@ -59,9 +59,11 @@ class TestJobCommands:
 
     def test_job_dispatch_missing_config_shows_error(self):
         """mgym job dispatch without config should error."""
-        result = runner.invoke(app, ["job", "dispatch"])
+        result = runner.invoke(app, ["job", "dispatch"], color=False)
         assert result.exit_code != 0
-        assert "Missing argument" in result.output or "CONFIG" in result.output
+        # Error may be in stdout or stderr depending on Typer version
+        combined_output = (result.output or "") + (result.stderr or "")
+        assert "Missing argument" in combined_output or "CONFIG" in combined_output
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.dispatch_job")
@@ -85,7 +87,7 @@ class TestJobCommands:
 
     def test_job_poll_help(self):
         """mgym job poll --help should show usage."""
-        result = runner.invoke(app, ["job", "poll", "--help"])
+        result = runner.invoke(app, ["job", "poll", "--help"], color=False)
         assert result.exit_code == 0
         assert "--json" in result.output
         assert "--no-cache" in result.output
@@ -125,7 +127,7 @@ class TestJobCommands:
 
     def test_job_view_help(self):
         """mgym job view --help should show usage."""
-        result = runner.invoke(app, ["job", "view", "--help"])
+        result = runner.invoke(app, ["job", "view", "--help"], color=False)
         assert result.exit_code == 0
         assert "JOB_ID" in result.output
 
@@ -141,7 +143,7 @@ class TestJobCommands:
 
     def test_job_delete_help(self):
         """mgym job delete --help should show usage."""
-        result = runner.invoke(app, ["job", "delete", "--help"])
+        result = runner.invoke(app, ["job", "delete", "--help"], color=False)
         assert result.exit_code == 0
         assert "JOB_ID" in result.output
 
@@ -157,7 +159,7 @@ class TestJobCommands:
 
     def test_job_estimate_help(self):
         """mgym job estimate --help should show usage."""
-        result = runner.invoke(app, ["job", "estimate", "--help"])
+        result = runner.invoke(app, ["job", "estimate", "--help"], color=False)
         assert result.exit_code == 0
         assert "CONFIG" in result.output
         assert "--provider" in result.output
@@ -165,7 +167,7 @@ class TestJobCommands:
 
     def test_job_upload_help(self):
         """mgym job upload --help should show all options."""
-        result = runner.invoke(app, ["job", "upload", "--help"])
+        result = runner.invoke(app, ["job", "upload", "--help"], color=False)
         assert result.exit_code == 0
         assert "--repo" in result.output
         assert "--base" in result.output
@@ -249,7 +251,7 @@ class TestSuiteCommands:
 
     def test_suite_help(self):
         """mgym suite --help should list suite commands."""
-        result = runner.invoke(app, ["suite", "--help"])
+        result = runner.invoke(app, ["suite", "--help"], color=False)
         assert result.exit_code == 0
         assert "dispatch" in result.output
         assert "poll" in result.output
@@ -259,7 +261,7 @@ class TestSuiteCommands:
 
     def test_suite_dispatch_help(self):
         """mgym suite dispatch --help should show usage."""
-        result = runner.invoke(app, ["suite", "dispatch", "--help"])
+        result = runner.invoke(app, ["suite", "dispatch", "--help"], color=False)
         assert result.exit_code == 0
         assert "SUITE_CONFIG" in result.output
         assert "--provider" in result.output
@@ -267,9 +269,11 @@ class TestSuiteCommands:
 
     def test_suite_dispatch_missing_config_shows_error(self):
         """mgym suite dispatch without config should error."""
-        result = runner.invoke(app, ["suite", "dispatch"])
+        result = runner.invoke(app, ["suite", "dispatch"], color=False)
         assert result.exit_code != 0
-        assert "Missing argument" in result.output or "SUITE_CONFIG" in result.output
+        # Error may be in stdout or stderr depending on Typer version
+        combined_output = (result.output or "") + (result.stderr or "")
+        assert "Missing argument" in combined_output or "SUITE_CONFIG" in combined_output
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.dispatch_suite")
@@ -291,7 +295,7 @@ class TestSuiteCommands:
 
     def test_suite_poll_help(self):
         """mgym suite poll --help should show usage."""
-        result = runner.invoke(app, ["suite", "poll", "--help"])
+        result = runner.invoke(app, ["suite", "poll", "--help"], color=False)
         assert result.exit_code == 0
         assert "--json" in result.output
         assert "--no-cache" in result.output
@@ -322,7 +326,7 @@ class TestSuiteCommands:
 
     def test_suite_view_help(self):
         """mgym suite view --help should show usage."""
-        result = runner.invoke(app, ["suite", "view", "--help"])
+        result = runner.invoke(app, ["suite", "view", "--help"], color=False)
         assert result.exit_code == 0
         assert "SUITE_ID" in result.output
 
@@ -338,7 +342,7 @@ class TestSuiteCommands:
 
     def test_suite_delete_help(self):
         """mgym suite delete --help should show usage."""
-        result = runner.invoke(app, ["suite", "delete", "--help"])
+        result = runner.invoke(app, ["suite", "delete", "--help"], color=False)
         assert result.exit_code == 0
         assert "SUITE_ID" in result.output
 
@@ -354,7 +358,7 @@ class TestSuiteCommands:
 
     def test_suite_upload_help(self):
         """mgym suite upload --help should show all options."""
-        result = runner.invoke(app, ["suite", "upload", "--help"])
+        result = runner.invoke(app, ["suite", "upload", "--help"], color=False)
         assert result.exit_code == 0
         assert "--repo" in result.output
         assert "--base" in result.output
