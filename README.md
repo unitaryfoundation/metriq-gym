@@ -1,6 +1,6 @@
 <div align="center">
   <img 
-    src="https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/refs/heads/main/docs/assets/logo.svg" 
+    src="https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/refs/heads/main/docs/content/assets/logo.svg" 
     alt="metriq-gym logo" 
     width="450" 
   />
