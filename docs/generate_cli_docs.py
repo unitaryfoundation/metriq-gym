@@ -16,6 +16,7 @@ from typing import Annotated, get_args, get_origin
 # Add parent directory to path to import metriq_gym
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import typer
 from typer.models import OptionInfo
 
 from metriq_gym.cli import job_app, suite_app
@@ -187,6 +188,23 @@ def generate_app_docs(subapp, app_name: str, title: str, description: str) -> st
     return "\n".join(lines)
 
 
+def generate_quick_reference(apps: list[tuple[str, typer.Typer]]) -> str:
+    """Generate quick reference table from Typer apps."""
+    lines = [
+        "| Command | Description |",
+        "|---------|-------------|",
+    ]
+    for app_name, app in apps:
+        for cmd_info in app.registered_commands:
+            callback = cmd_info.callback
+            name = cmd_info.name
+            # Get first line of docstring as description
+            docstring = callback.__doc__ or ""
+            description = docstring.strip().split("\n")[0].strip() if docstring else ""
+            lines.append(f"| `mgym {app_name} {name}` | {description} |")
+    return "\n".join(lines)
+
+
 def main():
     """Generate CLI documentation files."""
     content_dir = Path(__file__).parent / "content" / "cli"
@@ -212,8 +230,11 @@ def main():
     (content_dir / "suite-commands.md").write_text(suite_docs)
     print(f"Generated {content_dir / 'suite-commands.md'}")
 
+    # Generate quick reference table dynamically
+    quick_ref = generate_quick_reference([("job", job_app), ("suite", suite_app)])
+
     # Generate overview
-    overview = """# CLI Overview
+    overview = f"""# CLI Overview
 
 Metriq-Gym provides a command-line interface (`mgym`) for dispatching, monitoring, and uploading quantum benchmark results.
 
@@ -237,19 +258,7 @@ Resources:
 
 ## Quick Reference
 
-| Command | Description |
-|---------|-------------|
-| `mgym job dispatch` | Dispatch a benchmark job |
-| `mgym job poll` | Poll job status and results |
-| `mgym job view` | View job details |
-| `mgym job delete` | Delete a job |
-| `mgym job upload` | Upload results to GitHub |
-| `mgym job estimate` | Estimate resource requirements |
-| `mgym suite dispatch` | Dispatch a suite of jobs |
-| `mgym suite poll` | Poll suite status |
-| `mgym suite view` | View suite jobs |
-| `mgym suite delete` | Delete a suite |
-| `mgym suite upload` | Upload suite results |
+{quick_ref}
 
 ## Getting Help
 

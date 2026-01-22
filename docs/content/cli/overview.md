@@ -24,17 +24,17 @@ Resources:
 
 | Command | Description |
 |---------|-------------|
-| `mgym job dispatch` | Dispatch a benchmark job |
-| `mgym job poll` | Poll job status and results |
-| `mgym job view` | View job details |
-| `mgym job delete` | Delete a job |
-| `mgym job upload` | Upload results to GitHub |
-| `mgym job estimate` | Estimate resource requirements |
-| `mgym suite dispatch` | Dispatch a suite of jobs |
-| `mgym suite poll` | Poll suite status |
-| `mgym suite view` | View suite jobs |
-| `mgym suite delete` | Delete a suite |
-| `mgym suite upload` | Upload suite results |
+| `mgym job dispatch` | Dispatch a benchmark job to a quantum device or simulator. |
+| `mgym job estimate` | Estimate circuit resource requirements before dispatching jobs. |
+| `mgym job poll` | Poll job status and retrieve results when complete. |
+| `mgym job view` | View job details and metadata. |
+| `mgym job delete` | Delete a job from the local database. |
+| `mgym job upload` | Upload job results to GitHub via pull request. |
+| `mgym suite dispatch` | Dispatch a suite of benchmark jobs to a quantum device. |
+| `mgym suite poll` | Poll suite jobs and retrieve results when complete. |
+| `mgym suite view` | View jobs in a suite. |
+| `mgym suite delete` | Delete all jobs in a suite from the local database. |
+| `mgym suite upload` | Upload suite results to GitHub via pull request. |
 
 ## Getting Help
 
