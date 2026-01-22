@@ -13,10 +13,9 @@ Result interpretation:
         - binary_success: boolean indicating whether polarization exceeded 1/e.
 
 References:
-    - Proctor et al., "Measuring the capabilities of quantum computers", Nature Physics 18, 75-79 (2022).
-      https://www.nature.com/articles/s41567-021-01409-7
-    - Phys. Rev. Lett. 129, 150502 (2022).
-      https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.129.150502
+    - [Proctor et al., "Measuring the capabilities of quantum computers",
+      Nature Physics 18, 75-79 (2022)](https://www.nature.com/articles/s41567-021-01409-7).
+    - [Hines et al., Phys. Rev. Lett. 129, 150502 (2022)](https://doi.org/10.1103/PhysRevLett.129.150502).
 """
 
 from dataclasses import dataclass
@@ -461,8 +460,8 @@ def generate_mirror_circuit(
         forward_layers.append(clifford_layer)
 
     assert_forward_is_clifford(initial_clifford_layer, forward_layers)
-    
-    qc.barrier() 
+
+    qc.barrier()
     middle_pauli = random_paulis(connectivity_graph, random_state)
     qc.compose(middle_pauli, inplace=True)
     qc.barrier()

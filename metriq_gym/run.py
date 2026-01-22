@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from tabulate import tabulate
 from typing import Any, TYPE_CHECKING, Optional
 from metriq_gym import __version__
-from metriq_gym.cli import list_jobs, parse_arguments, prompt_for_job
+from metriq_gym.cli import list_jobs, prompt_for_job, app as typer_app
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.qplatform.job import total_execution_time
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
@@ -314,7 +314,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
 
 def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    metriq_job = prompt_for_job(args, job_manager)
+    metriq_job = prompt_for_job(args.job_id, job_manager)
     if not metriq_job:
         return
     print("Polling job...")
@@ -327,7 +327,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
 def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Upload a job's results to a GitHub repo by opening a Pull Request."""
-    metriq_job = prompt_for_job(args, job_manager)
+    metriq_job = prompt_for_job(args.job_id, job_manager)
     if not metriq_job:
         return
     print("Preparing job upload...")
@@ -624,7 +624,7 @@ def fetch_result(
 
 
 def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    metriq_job = prompt_for_job(args, job_manager)
+    metriq_job = prompt_for_job(args.job_id, job_manager)
     if metriq_job:
         print(metriq_job)
 
@@ -642,7 +642,7 @@ def view_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
 
 def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    metriq_job = prompt_for_job(args, job_manager)
+    metriq_job = prompt_for_job(args.job_id, job_manager)
     if metriq_job:
         try:
             job_manager.delete_job(metriq_job.id)
@@ -721,41 +721,8 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
 
 def main() -> int:
     load_dotenv()
-    args = parse_arguments()
-    job_manager = JobManager()
-
-    # If no resource subcommand is provided, print help and exit 0
-    if getattr(args, "resource", None) is None:
-        from metriq_gym.cli import build_parser
-
-        build_parser().print_help()
-        return 0
-
-    RESOURCE_ACTION_TABLE: dict = {
-        "suite": {
-            "dispatch": dispatch_suite,
-            "poll": poll_suite,
-            "upload": upload_suite,
-            "delete": delete_suite,
-        },
-        "job": {
-            "dispatch": dispatch_job,
-            "poll": poll_job,
-            "view": view_job,
-            "delete": delete_job,
-            "upload": upload_job,
-            "estimate": estimate_job,
-        },
-    }
-
-    resource_table = RESOURCE_ACTION_TABLE.get(args.resource)
-    if resource_table:
-        action_handler = resource_table.get(args.action)
-        if action_handler:
-            action_handler(args, job_manager)
-            return 0
-    logging.error("Invalid command. Run with --help for usage information.")
-    return 1
+    typer_app()
+    return 0
 
 
 if __name__ == "__main__":

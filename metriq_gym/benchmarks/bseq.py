@@ -21,8 +21,9 @@ Result interpretation:
           making it easier to compare devices of different sizes.
 
 References:
-    - Original routines attributed to Paul Nation (Qiskit Device Benchmarking).
-    - J. F. Clauser et al., Phys. Rev. Lett. 23, 880 (1969).
+    - Original routines attributed to Paul Nation
+      ([Qiskit Device Benchmarking](https://github.com/qiskit-community/qiskit-device-benchmarking)).
+    - [Clauser et al., Phys. Rev. Lett. 23, 880 (1969)](https://doi.org/10.1103/PhysRevLett.23.880).
 """
 
 from dataclasses import dataclass

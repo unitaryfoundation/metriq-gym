@@ -1,3 +1,21 @@
+"""CLOPS (Circuit Layer Operations Per Second) benchmark implementation.
+
+Summary:
+    Measures the throughput of a quantum system by timing the execution of parameterized
+    quantum volume-style circuits. CLOPS captures end-to-end performance including
+    compilation, communication, and execution overhead.
+
+Result interpretation:
+    Polling returns ClopsResult with:
+        - clops_score: circuit layer operations per second (higher is better).
+    This metric reflects real-world workload performance rather than isolated gate speeds.
+
+References:
+    - [Wack et al., "Quality, Speed, and Scale: three key attributes to measure the
+      performance of near-term quantum computers", arXiv:2110.14108](https://arxiv.org/abs/2110.14108).
+    - [Qiskit Device Benchmarking CLOPS](https://github.com/qiskit-community/qiskit-device-benchmarking).
+"""
+
 import copy
 from dataclasses import dataclass
 
