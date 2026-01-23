@@ -318,7 +318,7 @@ def random_cliffords(
     two_qubit_gate = CXGate() if gate_type == TwoQubitGateType.CNOT else CZGate()
 
     for u, v in connectivity_graph.edge_list():
-        if random_state.randint(2) == 0:
+        if random_state.choice([True, False]):
             control, target = u, v
         else:
             control, target = v, u
