@@ -1,0 +1,8 @@
+{
+  "benchmark_name": "EPLG",
+  "num_qubits_in_chain": 5,
+  "lengths": [2, 4],
+  "num_samples": 2,
+  "shots": 100,
+  "seed": 12345
+}

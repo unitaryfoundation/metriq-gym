@@ -12,9 +12,9 @@ Result interpretation:
     degrading the teleportation fidelity.
 
 References:
-    - I. Shapoval et al., "Towards Quantum Gravity in the Lab on Quantum Processors", Quantum 7,
-      1138 (2023), arXiv:2205.14081.
-    - Companion script: https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py.
+    - [Shapoval et al., "Towards Quantum Gravity in the Lab on Quantum Processors",
+      Quantum 7, 1138 (2023)](https://arxiv.org/abs/2205.14081).
+    - [Companion script](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py).
     - Implementation lineage credited to Paul Nation (IBM Quantum).
 """
 

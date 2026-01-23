@@ -1,0 +1,48 @@
+name: Deploy Documentation Preview
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'metriq_gym/**'
+      - '.github/workflows/docs-preview.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install mkdocs mkdocs-material mkdocstrings[python]
+
+      - name: Build documentation
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          cd docs
+          # Update site_url for preview deployment
+          sed -i "s|site_url:.*|site_url: https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-${PR_NUMBER}/|" mkdocs.yml
+          mkdocs build
+
+      - name: Deploy preview
+        uses: rossjrw/pr-preview-action@v1.4.8
+        with:
+          source-dir: docs/site
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: deploy

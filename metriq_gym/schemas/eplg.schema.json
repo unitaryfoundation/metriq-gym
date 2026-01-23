@@ -1,0 +1,73 @@
+{
+  "$id": "metriq-gym/eplg.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EPLG",
+  "description": "Error Per Layered Gate (EPLG) benchmark schema. Measures layer fidelity across qubit chains using randomized benchmarking techniques.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "EPLG",
+      "description": "Name of the benchmark. Must be 'EPLG' for this schema."
+    },
+    "num_qubits_in_chain": {
+      "type": "integer",
+      "description": "Number of qubits in the linear chain for layer fidelity measurement.",
+      "minimum": 4,
+      "examples": [10, 20, 50, 100]
+    },
+    "lengths": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "description": "Number of layers (circuit depths) in the randomized benchmarking protocol.",
+      "default": [2, 4, 8, 16],
+      "examples": [[2, 4], [2, 4, 8, 16]]
+    },
+    "num_samples": {
+      "type": "integer",
+      "description": "Number of random circuits sampled per depth in the randomized benchmarking protocol.",
+      "default": 3,
+      "minimum": 1,
+      "examples": [3, 6, 10]
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per circuit.",
+      "default": 100,
+      "minimum": 1,
+      "examples": [100, 1000]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Random seed for reproducibility.",
+      "default": 12345,
+      "examples": [12345, 42]
+    },
+    "two_qubit_gate": {
+      "type": "string",
+      "description": "Two-qubit gate to use. This should be a native entangling gate supported by the device.",
+      "default": "cz",
+      "examples": ["cz", "cx", "ecr"]
+    },
+    "one_qubit_basis_gates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Single-qubit basis gates for LayerFidelity experiment. This should complement the chosen two qubit gate to be a universal gateset",
+      "default": ["rz", "rx", "x"],
+      "examples": [["rz", "rx", "x"]]
+    },
+    "decompose_clifford_ops": {
+      "type": "boolean",
+      "description": "Decompose the parameterized clifford operation types in the circuit to primitive operations; this may be necessary for providers that don't support Qiskit clifford primitives",
+      "default": false,
+      "examples": [true]
+
+    }
+  },
+  "required": ["benchmark_name", "num_qubits_in_chain"]
+}
