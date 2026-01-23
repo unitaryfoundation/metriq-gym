@@ -315,13 +315,18 @@ def random_cliffords(
     qc = QuantumCircuit(num_qubits)
 
     two_qubit_gate = CXGate() if gate_type == TwoQubitGateType.CNOT else CZGate()
-    for edge in connectivity_graph.edge_list():
-        qc.append(two_qubit_gate, [edge[0], edge[1]])
+
+    for u, v in connectivity_graph.edge_list():
+        if random_state.choice([True, False]):
+            control, target = u, v
+        else:
+            control, target = v, u
+        qc.append(two_qubit_gate, [control, target])
 
     nodes_with_edges = set()
-    for edge in connectivity_graph.edge_list():
-        nodes_with_edges.add(edge[0])
-        nodes_with_edges.add(edge[1])
+    for u, v in connectivity_graph.edge_list():
+        nodes_with_edges.add(u)
+        nodes_with_edges.add(v)
 
     isolated_qubits = [
         node for node in connectivity_graph.node_indices() if node not in nodes_with_edges
@@ -348,7 +353,9 @@ def pauli_from_layer(pauli_layer: QuantumCircuit) -> Pauli:
     n = pauli_layer.num_qubits
     per_qubit = ["I"] * n  # default all identity
 
-    for instr, qargs, _ in pauli_layer.data:
+    for instruction in pauli_layer.data:
+        instr = instruction.operation
+        qargs = instruction.qubits
         name = instr.name.lower()
         if name in ("barrier", "delay", "measure"):
             continue  # middle layer shouldn't have these, but be permissive
