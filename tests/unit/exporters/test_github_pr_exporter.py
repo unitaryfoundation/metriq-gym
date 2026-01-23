@@ -13,12 +13,13 @@ def test_urlopen_github_api_passes_timeout(metriq_job, monkeypatch):
     exporter = GitHubPRExporter(metriq_job, BenchmarkResult())
     called = {}
 
-    def fake_urlopen(req, timeout=None):
-        called["url"] = req.full_url
-        called["timeout"] = timeout
-        return object()
+    class FakeOpener:
+        def open(self, req, timeout=None):
+            called["url"] = req.full_url
+            called["timeout"] = timeout
+            return object()
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(urllib.request, "build_opener", lambda: FakeOpener())
 
     req = urllib.request.Request("https://api.github.com/user", method="GET")
     exporter._urlopen_github_api(req)

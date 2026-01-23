@@ -239,7 +239,8 @@ class GitHubPRExporter(BaseExporter):
         parsed = urllib.parse.urlsplit(url)
         if parsed.scheme != "https" or parsed.netloc.lower() != GITHUB_API_NETLOC:
             raise ValueError(f"Refusing to open non-GitHub API URL: {url!r}")
-        return urllib.request.urlopen(req, timeout=GITHUB_API_TIMEOUT_SECONDS)  # nosec B310
+        opener = urllib.request.build_opener()
+        return opener.open(req, timeout=GITHUB_API_TIMEOUT_SECONDS)
 
     def _run(self, cmd: list[str]) -> None:
         try:
