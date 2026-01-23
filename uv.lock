@@ -803,6 +803,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f8/0a/a3871375c7b9727edaeeea994bfff7c63ff7804c9829c19309ba2e058807/greenlet-3.3.0-cp312-cp312-macosx_11_0_universal2.whl", hash = "sha256:b01548f6e0b9e9784a2c99c5651e5dc89ffcbe870bc5fb2e5ef864e9cc6b5dcb", size = 276379, upload-time = "2025-12-04T14:23:30.498Z" },
     { url = "https://files.pythonhosted.org/packages/43/ab/7ebfe34dce8b87be0d11dae91acbf76f7b8246bf9d6b319c741f99fa59c6/greenlet-3.3.0-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:349345b770dc88f81506c6861d22a6ccd422207829d2c854ae2af8025af303e3", size = 597294, upload-time = "2025-12-04T14:50:06.847Z" },
     { url = "https://files.pythonhosted.org/packages/a4/39/f1c8da50024feecd0793dbd5e08f526809b8ab5609224a2da40aad3a7641/greenlet-3.3.0-cp312-cp312-manylinux_2_24_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:e8e18ed6995e9e2c0b4ed264d2cf89260ab3ac7e13555b8032b25a74c6d18655", size = 607742, upload-time = "2025-12-04T14:57:42.349Z" },
+    { url = "https://files.pythonhosted.org/packages/77/cb/43692bcd5f7a0da6ec0ec6d58ee7cddb606d055ce94a62ac9b1aa481e969/greenlet-3.3.0-cp312-cp312-manylinux_2_24_s390x.manylinux_2_28_s390x.whl", hash = "sha256:c024b1e5696626890038e34f76140ed1daf858e37496d33f2af57f06189e70d7", size = 622297, upload-time = "2025-12-04T15:07:13.552Z" },
     { url = "https://files.pythonhosted.org/packages/75/b0/6bde0b1011a60782108c01de5913c588cf51a839174538d266de15e4bf4d/greenlet-3.3.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:047ab3df20ede6a57c35c14bf5200fcf04039d50f908270d3f9a7a82064f543b", size = 609885, upload-time = "2025-12-04T14:26:02.368Z" },
     { url = "https://files.pythonhosted.org/packages/49/0e/49b46ac39f931f59f987b7cd9f34bfec8ef81d2a1e6e00682f55be5de9f4/greenlet-3.3.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:2d9ad37fc657b1102ec880e637cccf20191581f75c64087a549e66c57e1ceb53", size = 1567424, upload-time = "2025-12-04T15:04:23.757Z" },
     { url = "https://files.pythonhosted.org/packages/05/f5/49a9ac2dff7f10091935def9165c90236d8f175afb27cbed38fb1d61ab6b/greenlet-3.3.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:83cd0e36932e0e7f36a64b732a6f60c2fc2df28c351bae79fbaf4f8092fe7614", size = 1636017, upload-time = "2025-12-04T14:27:29.688Z" },
@@ -810,6 +811,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/02/2f/28592176381b9ab2cafa12829ba7b472d177f3acc35d8fbcf3673d966fff/greenlet-3.3.0-cp313-cp313-macosx_11_0_universal2.whl", hash = "sha256:a1e41a81c7e2825822f4e068c48cb2196002362619e2d70b148f20a831c00739", size = 275140, upload-time = "2025-12-04T14:23:01.282Z" },
     { url = "https://files.pythonhosted.org/packages/2c/80/fbe937bf81e9fca98c981fe499e59a3f45df2a04da0baa5c2be0dca0d329/greenlet-3.3.0-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9f515a47d02da4d30caaa85b69474cec77b7929b2e936ff7fb853d42f4bf8808", size = 599219, upload-time = "2025-12-04T14:50:08.309Z" },
     { url = "https://files.pythonhosted.org/packages/c2/ff/7c985128f0514271b8268476af89aee6866df5eec04ac17dcfbc676213df/greenlet-3.3.0-cp313-cp313-manylinux_2_24_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:7d2d9fd66bfadf230b385fdc90426fcd6eb64db54b40c495b72ac0feb5766c54", size = 610211, upload-time = "2025-12-04T14:57:43.968Z" },
+    { url = "https://files.pythonhosted.org/packages/79/07/c47a82d881319ec18a4510bb30463ed6891f2ad2c1901ed5ec23d3de351f/greenlet-3.3.0-cp313-cp313-manylinux_2_24_s390x.manylinux_2_28_s390x.whl", hash = "sha256:30a6e28487a790417d036088b3bcb3f3ac7d8babaa7d0139edbaddebf3af9492", size = 624311, upload-time = "2025-12-04T15:07:14.697Z" },
     { url = "https://files.pythonhosted.org/packages/fd/8e/424b8c6e78bd9837d14ff7df01a9829fc883ba2ab4ea787d4f848435f23f/greenlet-3.3.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:087ea5e004437321508a8d6f20efc4cfec5e3c30118e1417ea96ed1d93950527", size = 612833, upload-time = "2025-12-04T14:26:03.669Z" },
     { url = "https://files.pythonhosted.org/packages/b5/ba/56699ff9b7c76ca12f1cdc27a886d0f81f2189c3455ff9f65246780f713d/greenlet-3.3.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:ab97cf74045343f6c60a39913fa59710e4bd26a536ce7ab2397adf8b27e67c39", size = 1567256, upload-time = "2025-12-04T15:04:25.276Z" },
     { url = "https://files.pythonhosted.org/packages/1e/37/f31136132967982d698c71a281a8901daf1a8fbab935dce7c0cf15f942cc/greenlet-3.3.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:5375d2e23184629112ca1ea89a53389dddbffcf417dad40125713d88eb5f96e8", size = 1636483, upload-time = "2025-12-04T14:27:30.804Z" },
@@ -1485,7 +1487,7 @@ requires-dist = [
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
     { name = "qiskit-experiments", specifier = ">=0.9.0,<0.14.0" },
     { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.46.0" },
-    { name = "qnexus", specifier = ">=0.34.1,<1.0.0" },
+    { name = "qnexus", specifier = ">=0.39.0,<1.0.0" },
     { name = "ruamel-yaml-clib", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = "==0.2.15" },
     { name = "ruamel-yaml-clib", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "==0.2.15" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
@@ -2810,7 +2812,7 @@ wheels = [
 
 [[package]]
 name = "qnexus"
-version = "0.37.1"
+version = "0.39.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -2821,28 +2823,29 @@ dependencies = [
     { name = "pandas" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pyjwt" },
     { name = "pytket" },
     { name = "quantinuum-schemas" },
     { name = "rich" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dc/2a/cf70afe05fc3fcc3b8b877a4434075a562e9618a7355955a57a4f4d1809f/qnexus-0.37.1.tar.gz", hash = "sha256:6b71988b971e637e444ffb6dda1c053c0ac120e3ad935db11f06b6ccf9c2ae3e", size = 431149, upload-time = "2025-11-19T11:38:13.322Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/8b/5dc780860bbf9cf535ac1d221b844f7e82977736a1cecccba501d175a6d4/qnexus-0.39.0.tar.gz", hash = "sha256:fea1cd6a9eec42e163cf3bd4fe3ba3433de2fc4d32a5ebf0a3cdbf9ca9877d4d", size = 433803, upload-time = "2026-01-09T14:04:16.872Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/84/becca04c2c60e08c3b4bdea92a4342bc76ac211e2f985b6eb18c32a78045/qnexus-0.37.1-py3-none-any.whl", hash = "sha256:c9575acef6221c610beeeaf9aa69d61cfeefa46b3554e0b2cf1ad2afc935eecc", size = 70756, upload-time = "2025-11-19T11:38:12.128Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/61/3b3e97b39bc187a7253bc0f74d81f7c5e25e2e16c9190cef8aa6e68c6f80/qnexus-0.39.0-py3-none-any.whl", hash = "sha256:94dfbdb5c36a31e35a94c5996bf0add748e6268ac49d00f280455ed8a617922c", size = 73352, upload-time = "2026-01-09T14:04:15.592Z" },
 ]
 
 [[package]]
 name = "quantinuum-schemas"
-version = "7.3.0"
+version = "7.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "orjson" },
     { name = "pydantic" },
     { name = "pydantic-extra-types" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/35/fa/6eb2d0c0f0224e09b2a88912ae913e3a87d33b82be9f55b3314c1cbc189e/quantinuum_schemas-7.3.0.tar.gz", hash = "sha256:c2f23400345b7d8ac6665b7c73bc5a465f1b6574a416fafa23833d97f9e11470", size = 92698, upload-time = "2025-11-03T12:44:40.334Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9f/68/e93954c963d519bc6c1664457d04ca645b4487927d25d9d530a922283a6d/quantinuum_schemas-7.4.1.tar.gz", hash = "sha256:5b5e8436b0039018db6e49c4eb0bfb9c437ce9f2970c7276bd52a46d19ca45e6", size = 92328, upload-time = "2026-01-09T10:22:45.251Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/41/b4ff81fd12902e44b8e17d8d22ea3055a524cb907af65d69e4f52d94b694/quantinuum_schemas-7.3.0-py3-none-any.whl", hash = "sha256:340f7a54f04bb13cc39d235200cf7491ecd1d2702928ceb442fea9f5927bd865", size = 26731, upload-time = "2025-11-03T12:44:39.08Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/fe/24ff79815c0cff7fb8bd00c411f7f1c7ee26d0d58aa20a75ef2048055380/quantinuum_schemas-7.4.1-py3-none-any.whl", hash = "sha256:00045331abba4d2c6630425541884a4c356e2de6ee9c96d961cd1de453c4a9d4", size = 26196, upload-time = "2026-01-09T10:22:44.013Z" },
 ]
 
 [[package]]

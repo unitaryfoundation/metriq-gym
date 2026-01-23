@@ -15,7 +15,7 @@ class QuantinuumJob(QuantumJob):
         if self._ref_obj is not None:
             return self._ref_obj
         try:
-            self._ref_obj = qnx.jobs.get(self.id)
+            self._ref_obj = qnx.jobs.get(id=self.id)
             return self._ref_obj
         except Exception:
             return self.id
