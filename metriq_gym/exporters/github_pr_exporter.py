@@ -13,6 +13,8 @@ from typing import Optional, Any
 from metriq_gym.exporters.base_exporter import BaseExporter
 
 MAX_BRANCH_SUFFIX_ATTEMPTS = 1000
+GITHUB_API_NETLOC = "api.github.com"
+GITHUB_API_TIMEOUT_SECONDS = 30
 
 
 class GitHubPRExporter(BaseExporter):
@@ -232,6 +234,13 @@ class GitHubPRExporter(BaseExporter):
             headers["Content-Type"] = content_type
         return headers
 
+    def _urlopen_github_api(self, req: urllib.request.Request):
+        url = req.full_url
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme != "https" or parsed.netloc.lower() != GITHUB_API_NETLOC:
+            raise ValueError(f"Refusing to open non-GitHub API URL: {url!r}")
+        return urllib.request.urlopen(req, timeout=GITHUB_API_TIMEOUT_SECONDS)  # nosec B310
+
     def _run(self, cmd: list[str]) -> None:
         try:
             subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -276,7 +285,7 @@ class GitHubPRExporter(BaseExporter):
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req) as resp:
+            with self._urlopen_github_api(req) as resp:
                 resp_data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"GitHub PR creation failed: {e.read().decode('utf-8')}") from e
@@ -300,7 +309,8 @@ class GitHubPRExporter(BaseExporter):
             method="POST",
         )
         try:
-            urllib.request.urlopen(req).read()
+            with self._urlopen_github_api(req) as resp:
+                resp.read()
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"GitHub label add failed: {e.read().decode('utf-8')}") from e
 
@@ -346,7 +356,7 @@ class GitHubPRExporter(BaseExporter):
             method="GET",
         )
         try:
-            with urllib.request.urlopen(req) as resp:
+            with self._urlopen_github_api(req) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             raise RuntimeError(
@@ -370,7 +380,8 @@ class GitHubPRExporter(BaseExporter):
             method="POST",
         )
         try:
-            urllib.request.urlopen(req).read()
+            with self._urlopen_github_api(req) as resp:
+                resp.read()
         except urllib.error.HTTPError as e:
             # If fork already exists or immediate accept, ignore certain errors
             if e.code not in (202, 201):
@@ -396,7 +407,7 @@ class GitHubPRExporter(BaseExporter):
             method="GET",
         )
         try:
-            with urllib.request.urlopen(req) as resp:
+            with self._urlopen_github_api(req) as resp:
                 return resp.getcode() == 200
         except urllib.error.HTTPError as e:
             if e.code == 404:
