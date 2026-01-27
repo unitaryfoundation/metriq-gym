@@ -34,14 +34,6 @@ def _(quantum_job: AzureQuantumJob) -> float:
 
 
 @execution_time.register
-def _(quantum_job: BraketQuantumTask) -> float:
-    # TODO: for speed benchmarking, we need 'execution' metadata instead of 'createdAt' and 'endedAt'
-    return (
-        quantum_job._task.metadata()["endedAt"] - quantum_job._task.metadata()["createdAt"]
-    ).total_seconds()
-
-
-@execution_time.register
 def _(quantum_job: LocalAerJob) -> float:
     if quantum_job._execution_time_s is None:
         raise ValueError("Execution time not available")
