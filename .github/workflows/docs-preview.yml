@@ -40,7 +40,7 @@ jobs:
           mkdocs build
 
       - name: Deploy preview
-        uses: rossjrw/pr-preview-action@v1.4.8
+        uses: rossjrw/pr-preview-action@v1.8.1
         with:
           source-dir: docs/site
           preview-branch: gh-pages
