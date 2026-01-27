@@ -20,6 +20,20 @@ class QuantinuumJob(QuantumJob):
         except Exception:
             return self.id
 
+    def execution_time_s(self) -> float | None:
+        """
+        Returns the time taken for the job to execute on the quantum device in seconds.
+
+        For Quantinuum jobs, this is the completed timestamp minus the running timestamp, and
+        may include wait times, calibration times, and other checks that occur when running the circuit.
+        """
+        ref = self._get_ref()
+        if self.status() != JobStatus.COMPLETED:
+            return None
+        return (
+            ref.last_status_detail.completed_time - ref.last_status_detail.running_time
+        ).total_seconds()
+
     def result(self) -> Result:
         ref = self._get_ref()
         results = qnx.jobs.results(ref)

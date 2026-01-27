@@ -8,6 +8,7 @@ from qbraid.runtime.enums import JobStatus
 from qiskit_ibm_runtime.execution_span import ExecutionSpans
 
 from metriq_gym.local.job import LocalAerJob
+from metriq_gym.quantinuum.job import QuantinuumJob
 
 
 @singledispatch
@@ -45,6 +46,14 @@ def _(quantum_job: LocalAerJob) -> float:
     if quantum_job._execution_time_s is None:
         raise ValueError("Execution time not available")
     return quantum_job._execution_time_s
+
+
+@execution_time.register
+def _(quantum_job: QuantinuumJob) -> float:
+    res = quantum_job.execution_time_s()
+    if res is None:
+        raise ValueError("Execution time not available")
+    return res
 
 
 def total_execution_time(quantum_jobs: Iterable[QuantumJob]) -> float | None:
