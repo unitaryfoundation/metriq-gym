@@ -16,6 +16,9 @@ References:
     - [Qiskit Device Benchmarking CLOPS](https://github.com/qiskit-community/qiskit-device-benchmarking).
 """
 
+# TODO: check if there is a new implemtentation for Clops_h
+# https://www.ibm.com/quantum/blog/quantum-metric-layer-fidelity
+
 import copy
 from dataclasses import dataclass
 
@@ -48,6 +51,7 @@ class ClopsData(BenchmarkData):
 class ClopsResult(BenchmarkResult):
     clops_score: float = Field(...)
 
+    # TODO: add uncertainty/confidence intervals?
     def compute_score(self) -> BenchmarkScore:
         return BenchmarkScore(value=self.clops_score)
 
@@ -142,6 +146,7 @@ def prepare_clops_circuits(
         qc.measure(qubit_map[idx], idx)
 
     # Parameters are instantiated for each circuit with random values
+    # TODO: consider other variation (twirled, parametrized)
     parametrized_circuits = [
         qc.assign_parameters(
             [rng.uniform(0, np.pi * 2) for _ in range(sum([len(param) for param in parameters]))]
@@ -153,11 +158,6 @@ def prepare_clops_circuits(
 
 
 class Clops(Benchmark):
-    """
-    Circuit Layer Operations per Second Benchmark
-    https://arxiv.org/abs/2110.14108
-    """
-
     def _build_circuits(self, device: "QuantumDevice") -> list[QuantumCircuit]:
         """Shared circuit construction logic.
 
@@ -174,6 +174,9 @@ class Clops(Benchmark):
                 "Device must have a known number of qubits to run the CLOPS benchmark."
             )
         basis_gates = set(device.profile.basis_gates or [])
+        # TODO: value of parameters? Does it make sense to have CLOPS_10, CLOPS_20, etc.?
+        # Question 2: does it make sense to calculate all of them in one benchmark run, like EPLG?
+        # Question 3: should the width be defined from QV output?
         circuits = prepare_clops_circuits(
             width=self.params.width,
             layers=self.params.num_layers,
@@ -194,6 +197,8 @@ class Clops(Benchmark):
         result_data: list["GateModelResultData"],
         quantum_jobs: list["QuantumJob"],
     ) -> ClopsResult:
+        # TODO: double-check if the simplification of summing all execution times is valid
+        # (original Qiskit implementation excludes warm-up jobs "filling the pipeline" from timing)
         clops_score = (self.params.num_circuits * self.params.num_layers * self.params.shots) / sum(
             execution_time(quantum_job) for quantum_job in quantum_jobs
         )
