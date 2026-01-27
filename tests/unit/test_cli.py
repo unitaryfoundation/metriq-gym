@@ -127,3 +127,35 @@ def test_list_jobs_no_jobs(capsys):
 
     # Verify the printed output
     assert captured.out == "No jobs found.\n"
+
+
+def test_job_poll_include_raw_flag():
+    """Test that --include-raw flag is passed correctly in job_poll."""
+    from typer.testing import CliRunner
+    from metriq_gym.cli import app
+    from unittest.mock import patch
+
+    runner = CliRunner()
+
+    with patch("metriq_gym.cli.JobManager") as mock_jm_class:
+        with patch("metriq_gym.run.fetch_result") as mock_fetch:
+            # Setup mock job manager
+            mock_jm = MagicMock()
+            mock_jm_class.return_value = mock_jm
+            mock_job = MagicMock()
+            mock_job.id = "test-job"
+            mock_jm.get_latest_job.return_value = mock_job
+
+            # Mock fetch_result to return a valid output
+            mock_result = MagicMock()
+            mock_fetch.return_value = MagicMock(
+                result=mock_result, raw_counts=None, from_cache=False
+            )
+
+            # Run CLI with --include-raw
+            runner.invoke(app, ["job", "poll", "latest", "--include-raw"])
+
+            # Verify fetch_result was called with args that have include_raw=True
+            assert mock_fetch.called
+            args = mock_fetch.call_args[0][1]  # Second positional arg is args
+            assert args.include_raw is True

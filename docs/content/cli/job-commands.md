@@ -68,6 +68,35 @@ mgym job poll [job_id] [OPTIONS]
 |--------|------|-------------|---------|
 | `--json` | STR | Export results to JSON file | `None` |
 | `--no-cache` | BOOL | Ignore locally cached results and refetch | `False` |
+| `--include-raw` | BOOL | Export raw measurement counts to a separate debug file | `False` |
+
+### Debug Output
+
+When `--include-raw` is used with `--json`, a separate debug file is created alongside the results file. For example:
+
+```bash
+mgym job poll latest --json result.json --include-raw
+```
+
+This creates:
+
+- `result.json` - Standard benchmark results
+- `result_debug.json` - Debug data for replay/debugging:
+
+```json
+{
+    "job_id": "...",
+    "job_type": "...",
+    "params": {...},
+    "job_data": {...},
+    "raw_counts": [{"measurement_counts": {"00": 512, "11": 488}}, ...]
+}
+```
+
+This is useful for debugging benchmark results locally without access to the original quantum provider.
+
+!!! note
+    If results are cached, raw counts are not available. Use `--no-cache` to refetch from the provider.
 
 ---
 

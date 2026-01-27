@@ -1,7 +1,7 @@
 """Runtime entrypoints for dispatching and managing metriq-gym benchmarks via the CLI."""
 
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 import os
 import sys
@@ -35,6 +35,15 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
 
 DEFAULT_UPLOAD_PR_LABELS = ["data", "source:metriq-gym"]
+
+
+@dataclass
+class FetchResultOutput:
+    """Container for fetch_result output, including optional raw data for debugging."""
+
+    result: "BenchmarkResult"
+    raw_counts: list[dict[str, Any]] | None = None
+    from_cache: bool = False
 
 
 def load_provider(provider_name: str):
@@ -318,11 +327,17 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not metriq_job:
         return
     print("Polling job...")
-    result = fetch_result(metriq_job, args, job_manager)
-    if result is None:
+    fetch_output = fetch_result(metriq_job, args, job_manager)
+    if fetch_output is None:
         print(f"Job {metriq_job.id} is not yet completed or has no results.")
         return
-    export_job_result(args, metriq_job, result)
+    export_job_result(
+        args,
+        metriq_job,
+        fetch_output.result,
+        raw_counts=fetch_output.raw_counts,
+        from_cache=fetch_output.from_cache,
+    )
 
 
 def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -331,10 +346,11 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not metriq_job:
         return
     print("Preparing job upload...")
-    result = fetch_result(metriq_job, args, job_manager)
-    if result is None:
+    fetch_output = fetch_result(metriq_job, args, job_manager)
+    if fetch_output is None:
         print(f"Job {metriq_job.id} is not yet completed or has no results.")
         return
+    result = fetch_output.result
 
     repo = getattr(args, "repo", None)
     if not repo:
@@ -399,11 +415,11 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         return
     results: list[Any] = []
     for metriq_job in jobs:
-        result = fetch_result(metriq_job, args, job_manager)
-        if result is None:
+        fetch_output = fetch_result(metriq_job, args, job_manager)
+        if fetch_output is None:
             print(f"Job {metriq_job.id} is not yet completed or has no results.")
             return
-        results.append(result)
+        results.append(fetch_output.result)
     export_suite_results(args, jobs, results)
 
 
@@ -461,11 +477,11 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     # Ensure all results are available first
     results: list[Any] = []
     for metriq_job in jobs:
-        result = fetch_result(metriq_job, args, job_manager)
-        if result is None:
+        fetch_output = fetch_result(metriq_job, args, job_manager)
+        if fetch_output is None:
             print(f"Job {metriq_job.id} is not yet completed or has no results.")
             return
-        results.append(result)
+        results.append(fetch_output.result)
 
     # Build array of per-job records (no common header)
     from metriq_gym.exporters.dict_exporter import DictExporter
@@ -558,26 +574,96 @@ def tabulate_job_results(records, sep=" +/- "):
 
 
 def export_job_result(
-    args: argparse.Namespace, metriq_job: MetriqGymJob, result: "BenchmarkResult"
+    args: argparse.Namespace,
+    metriq_job: MetriqGymJob,
+    result: "BenchmarkResult",
+    raw_counts: list[dict[str, Any]] | None = None,
+    from_cache: bool = False,
 ) -> None:
+    """Export job results to JSON or CLI.
+
+    Args:
+        args: CLI arguments.
+        metriq_job: The job being exported.
+        result: The benchmark result.
+        raw_counts: Optional raw measurement counts for debugging.
+        from_cache: Whether result was loaded from cache (raw counts unavailable).
+    """
+    include_raw = getattr(args, "include_raw", False)
+    if include_raw and from_cache:
+        print(
+            "Warning: --include-raw requested but results are from cache. "
+            "Raw counts not available. Use --no-cache to refetch from provider."
+        )
+
     if hasattr(args, "json"):
         from metriq_gym.exporters.json_exporter import JsonExporter
 
         JsonExporter(metriq_job, result).export(args.json)
+
+        # Write raw debug data to separate file if requested
+        if include_raw and raw_counts is not None:
+            _export_raw_debug_data(args.json, metriq_job, raw_counts)
     else:
         from metriq_gym.exporters.cli_exporter import CliExporter
 
         CliExporter(metriq_job, result).export()
 
 
+def _export_raw_debug_data(
+    base_filename: str,
+    metriq_job: MetriqGymJob,
+    raw_counts: list[dict[str, Any]],
+) -> None:
+    """Export raw measurement counts and job data to a separate debug file.
+
+    Args:
+        base_filename: The base JSON filename (e.g., 'result.json').
+        metriq_job: The job being exported.
+        raw_counts: Raw measurement counts from the provider.
+    """
+    import json
+
+    # Generate debug filename: result.json -> result_debug.json
+    if base_filename.endswith(".json"):
+        debug_filename = base_filename[:-5] + "_debug.json"
+    else:
+        debug_filename = base_filename + "_debug.json"
+
+    debug_data = {
+        "job_id": metriq_job.id,
+        "job_type": metriq_job.job_type.value,
+        "params": metriq_job.params,
+        "job_data": metriq_job.data,
+        "raw_counts": raw_counts,
+    }
+
+    with open(debug_filename, "w") as f:
+        json.dump(debug_data, f, indent=4)
+    print(f"Debug data exported to {debug_filename}")
+
+
 def fetch_result(
     metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
-) -> Optional["BenchmarkResult"]:
+) -> Optional[FetchResultOutput]:
+    """Fetch benchmark results, optionally including raw measurement counts.
+
+    Args:
+        metriq_job: The job to fetch results for.
+        args: CLI arguments, may include 'include_raw' flag.
+        job_manager: Job manager for persisting results.
+
+    Returns:
+        FetchResultOutput containing the result, optional raw counts, and cache status.
+        Returns None if job is not yet completed.
+    """
+    include_raw = getattr(args, "include_raw", False)
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
     if metriq_job.result_data is not None and not getattr(args, "no_cache", False):
         print("[Cached result data]")
-        return job_result_type.model_validate(metriq_job.result_data)
+        cached_result = job_result_type.model_validate(metriq_job.result_data)
+        return FetchResultOutput(result=cached_result, raw_counts=None, from_cache=True)
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
     handler: Benchmark = setup_benchmark(
@@ -591,6 +677,13 @@ def fetch_result(
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data = [task.result().data for task in quantum_jobs]
+
+        # Serialize raw counts if requested
+        raw_counts = None
+        if include_raw:
+            from metriq_gym.helpers.task_helpers import serialize_raw_counts
+
+            raw_counts = serialize_raw_counts(result_data)
 
         # Compute total execution time across all jobs, if provided by the backend
         total_time = total_execution_time(quantum_jobs)
@@ -610,7 +703,7 @@ def fetch_result(
             # Some mocks (e.g., SimpleNamespace with model_dump as lambda) may not accept kwargs
             metriq_job.result_data = result.model_dump()
         job_manager.update_job(metriq_job)
-        return result
+        return FetchResultOutput(result=result, raw_counts=raw_counts, from_cache=False)
     else:
         print("Job is not yet completed. Current status of tasks:")
         for task in quantum_jobs:

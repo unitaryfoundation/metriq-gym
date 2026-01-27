@@ -74,7 +74,9 @@ def patch_qnexus(monkeypatch: pytest.MonkeyPatch, device_id: str, backend_info: 
 
 
 class TestVersionQuantinuum:
-    def test_version_returns_backend_info_version(self, monkeypatch: pytest.MonkeyPatch, device_id: str):
+    def test_version_returns_backend_info_version(
+        self, monkeypatch: pytest.MonkeyPatch, device_id: str
+    ):
         backend_info = FakeBackendInfo(version="2.3.4", architecture=FullyConnected(3))
         patch_qnexus(monkeypatch, device_id, backend_info)
         dev = make_device(device_id)
@@ -95,7 +97,9 @@ class TestConnectivityQuantinuum:
         # complete graph edges
         assert g.num_edges() == n * (n - 1) // 2
 
-    def test_connectivity_sparse_explicit_edges(self, monkeypatch: pytest.MonkeyPatch, device_id: str):
+    def test_connectivity_sparse_explicit_edges(
+        self, monkeypatch: pytest.MonkeyPatch, device_id: str
+    ):
         n = 6
         edges = [(0, 1), (1, 2), (3, 4)]  # deliberately sparse
         backend_info = FakeBackendInfo(version="1.0.0", architecture=SimpleArch(n, edges))
