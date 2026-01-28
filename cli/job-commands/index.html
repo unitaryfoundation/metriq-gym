@@ -691,6 +691,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#debug-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Output
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1528,6 +1539,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#debug-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Output
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1794,12 +1816,40 @@
 <td>Ignore locally cached results and refetch</td>
 <td><code>False</code></td>
 </tr>
+<tr>
+<td><code>--include-raw</code></td>
+<td>BOOL</td>
+<td>Export raw measurement counts to a separate debug file</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
+<h3 id="debug-output">Debug Output<a class="headerlink" href="#debug-output" title="Permanent link">&para;</a></h3>
+<p>When <code>--include-raw</code> is used with <code>--json</code>, a separate debug file is created alongside the results file. For example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>latest<span class="w"> </span>--json<span class="w"> </span>result.json<span class="w"> </span>--include-raw
+</code></pre></div>
+<p>This creates:</p>
+<ul>
+<li><code>result.json</code> - Standard benchmark results</li>
+<li><code>result_debug.json</code> - Debug data for replay/debugging:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nt">&quot;job_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;job_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">&quot;params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">&quot;job_data&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">&quot;raw_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;measurement_counts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;00&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">512</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;11&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">488</span><span class="p">},</span><span class="err">...</span><span class="p">},</span><span class="w"> </span><span class="err">...</span><span class="p">]</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+</code></pre></div>
+<p>This is useful for debugging benchmark results locally without access to the original quantum provider.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If results are cached, raw counts are not available. Use <code>--no-cache</code> to refetch from the provider.</p>
+</div>
 <hr />
 <h2 id="view">view<a class="headerlink" href="#view" title="Permanent link">&para;</a></h2>
 <p>View job details and metadata.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>view<span class="w"> </span><span class="o">[</span>job_id<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>view<span class="w"> </span><span class="o">[</span>job_id<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_3">Arguments<a class="headerlink" href="#arguments_3" title="Permanent link">&para;</a></h3>
 <table>
@@ -1823,7 +1873,7 @@
 <hr />
 <h2 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">&para;</a></h2>
 <p>Delete a job from the local database.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>delete<span class="w"> </span><span class="o">[</span>job_id<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>delete<span class="w"> </span><span class="o">[</span>job_id<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_4">Arguments<a class="headerlink" href="#arguments_4" title="Permanent link">&para;</a></h3>
 <table>
@@ -1847,7 +1897,7 @@
 <hr />
 <h2 id="upload">upload<a class="headerlink" href="#upload" title="Permanent link">&para;</a></h2>
 <p>Upload job results to GitHub via pull request.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>upload<span class="w"> </span><span class="o">[</span>job_id<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>upload<span class="w"> </span><span class="o">[</span>job_id<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_5">Arguments<a class="headerlink" href="#arguments_5" title="Permanent link">&para;</a></h3>
 <table>
