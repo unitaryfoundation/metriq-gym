@@ -1,6 +1,6 @@
 {
   "$id": "metriq-gym/clops.schema.json",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "CLOPS",
   "description": "The CLOPS benchmark schema definition, describing parameters for the CLOPS benchmark.",
   "type": "object",
@@ -10,19 +10,19 @@
       "const": "CLOPS",
       "description": "Name of the benchmark. Must be 'CLOPS' for this schema."
     },
-    "width": {
+    "num_qubits": {
       "type": "integer",
-      "description": "Circuit width, i.e., number of qubits or gates in one dimension.",
-      "default": 1000,
+      "description": "Number of qubits (width) in the circuits.",
+      "default": 10,
       "minimum": 1,
-      "examples": [1000]
+      "examples": [10]
     },
     "num_layers": {
       "type": "integer",
       "description": "Number of repeated layers or blocks in the circuit.",
-      "default": 1000,
+      "default": 100,
       "minimum": 1,
-      "examples": [1000]
+      "examples": [100]
     },
     "num_circuits": {
       "type": "integer",
@@ -37,6 +37,19 @@
       "default": 1000,
       "minimum": 1,
       "examples": [1000]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Random seed for reproducibility.",
+      "default": 12345,
+      "examples": [12345, 42]
+    },
+    "two_qubit_gate": {
+      "type": "string",
+      "description": "Two-qubit gate to use. This should be a native entangling gate supported by the device.",
+      "default": "cz",
+      "enum": ["cz", "cx", "ecr"],
+      "examples": ["cz", "cx", "ecr"]
     }
   },
   "required": ["benchmark_name"]
