@@ -161,3 +161,56 @@ mgym job upload [job_id] [OPTIONS]
 | `--dry-run` | BOOL | Do not push or open a PR; print actions only | `False` |
 
 ---
+
+## replay
+
+Replay benchmark computation from a debug file to recompute results locally.
+
+This command allows you to recompute benchmark results without access to the original quantum provider, using the raw measurement data captured with `--include-raw`.
+
+```bash
+mgym job replay <debug_file> [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Type | Description | Required |
+|----------|------|-------------|----------|
+| `DEBUG_FILE` | STR | Path to debug JSON file (created with `--include-raw`) | Yes |
+
+### Options
+
+| Option | Type | Description | Default |
+|--------|------|-------------|----------|
+| `--json` | STR | Export replayed results to JSON file | `None` |
+
+### Example Workflow
+
+1. **Capture raw data during poll:**
+
+    ```bash
+    mgym job poll latest --json result.json --include-raw
+    ```
+
+    This creates `result.json` (results) and `result_debug.json` (debug data).
+
+2. **Share debug file for debugging:**
+
+    Send `result_debug.json` to another user who can replay the computation locally.
+
+3. **Replay to recompute results:**
+
+    ```bash
+    mgym job replay result_debug.json
+    ```
+
+    Or export to JSON:
+
+    ```bash
+    mgym job replay result_debug.json --json replayed.json
+    ```
+
+!!! note
+    The replay command does use provider credentials or network access. All computation happens locally using the captured raw measurement data. Any benchmark metric calculations that rely on job specific data will fail to replay.
+
+---
