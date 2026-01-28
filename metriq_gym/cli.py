@@ -195,6 +195,13 @@ def job_poll(
         bool,
         typer.Option("--no-cache", help="Ignore locally cached results and refetch"),
     ] = False,
+    include_raw: Annotated[
+        bool,
+        typer.Option(
+            "--include-raw",
+            help="Include raw measurement counts in JSON export for debugging/replay",
+        ),
+    ] = False,
 ) -> None:
     """Poll job status and retrieve results when complete."""
     from metriq_gym.run import poll_job as _poll_job
@@ -202,6 +209,7 @@ def job_poll(
     args = argparse.Namespace()
     args.job_id = job_id
     args.no_cache = no_cache
+    args.include_raw = include_raw
     if json_output is not None:
         args.json = json_output
 

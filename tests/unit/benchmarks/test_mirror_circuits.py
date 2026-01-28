@@ -169,13 +169,12 @@ class TestMirrorCircuitGeneration:
 
         assert circuit.num_qubits == 0
 
-
     def test_generate_mirror_circuit(self):
         # 2-node connected graph
         graph = rx.PyGraph()
         graph.add_nodes_from([0, 1])
         graph.add_edges_from([(0, 1, None)])
-    
+
         # Deterministic generation with a seed
         circuit_1, expected_1 = generate_mirror_circuit(
             num_layers=2,
@@ -185,8 +184,10 @@ class TestMirrorCircuitGeneration:
             seed=42,
         )
         assert circuit_1.num_qubits == 2
-        assert isinstance(expected_1, str) and set(expected_1) <= {"0", "1"} and len(expected_1) == 2
-    
+        assert (
+            isinstance(expected_1, str) and set(expected_1) <= {"0", "1"} and len(expected_1) == 2
+        )
+
         # Same seed should give same expected bitstring
         circuit_2, expected_2 = generate_mirror_circuit(
             num_layers=2,
@@ -196,7 +197,7 @@ class TestMirrorCircuitGeneration:
             seed=42,
         )
         assert expected_2 == expected_1
-    
+
         # Also test a 3-qubit subgraph path taken from a larger graph
         big = rx.PyGraph()
         big.add_nodes_from([0, 1, 2, 3, 4])
@@ -204,7 +205,7 @@ class TestMirrorCircuitGeneration:
         subset = select_optimal_qubit_subset(big, 3)
         subgraph_3 = create_subgraph_from_qubits(big, subset)
         assert len(subgraph_3.node_indices()) == 3
-    
+
         circuit_sub, bitstring_sub = generate_mirror_circuit(
             num_layers=1,
             two_qubit_gate_prob=0.5,
@@ -212,7 +213,11 @@ class TestMirrorCircuitGeneration:
             seed=42,
         )
         assert circuit_sub.num_qubits == 3
-        assert isinstance(bitstring_sub, str) and len(bitstring_sub) == 3 and set(bitstring_sub) <= {"0", "1"}
+        assert (
+            isinstance(bitstring_sub, str)
+            and len(bitstring_sub) == 3
+            and set(bitstring_sub) <= {"0", "1"}
+        )
 
     def test_generate_mirror_circuit_invalid_prob(self):
         graph = rx.PyGraph()
@@ -232,20 +237,21 @@ class TestMirrorCircuitGeneration:
                 connectivity_graph=graph,
                 two_qubit_gate_name="INVALID",
             )
-            
+
     def test_generate_mirror_circuit_empty_graph(self):
         graph = rx.PyGraph()  # empty graph
-    
+
         circuit, expected_bitstring = generate_mirror_circuit(
             num_layers=1,
             two_qubit_gate_prob=0.5,
             connectivity_graph=graph,
             seed=99,
         )
-    
+
         # By convention in the benchmark, an empty graph falls back to a single-qubit circuit.
         assert circuit.num_qubits == 1
         assert expected_bitstring == "0"
+
 
 class TestTwoQubitGateType:
     def test_enum_values(self):
