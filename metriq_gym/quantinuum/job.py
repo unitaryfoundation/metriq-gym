@@ -20,6 +20,39 @@ class QuantinuumJob(QuantumJob):
         except Exception:
             return self.id
 
+    def execution_time_s(self) -> float | None:
+        """
+        Return the wall-clock time for the job execution in seconds, as reported by the backend.
+
+        For Quantinuum jobs, this is computed as the backend's
+        ``last_status_detail.completed_time - last_status_detail.running_time``.
+        This duration reflects the total time the job spent in the "running" phase on the service
+        and may include queueing/wait times, calibration operations, and other backend checks,
+        not just the time during which the quantum device was actively executing the circuit.
+
+        A more granular, on-device-only execution time metric is not exposed by the current
+        Quantinuum/qnexus API, so this is the most precise execution-time estimate available.
+
+        Returns:
+            The execution time in seconds, or None if the job is not completed.
+
+        Raises:
+            ValueError: If the job is completed but execution time details are unavailable.
+        """
+        if self.status() != JobStatus.COMPLETED:
+            return None
+        ref = self._get_ref()
+        last_status_detail = getattr(ref, "last_status_detail", None)
+        if last_status_detail is None:
+            raise ValueError("Execution time not available: last_status_detail is missing")
+        completed_time = getattr(last_status_detail, "completed_time", None)
+        running_time = getattr(last_status_detail, "running_time", None)
+        if completed_time is None or running_time is None:
+            raise ValueError(
+                "Execution time not available: completed_time or running_time is missing"
+            )
+        return (completed_time - running_time).total_seconds()
+
     def result(self) -> Result:
         ref = self._get_ref()
         results = qnx.jobs.results(ref)

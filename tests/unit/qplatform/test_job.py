@@ -1,7 +1,8 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 from qbraid.runtime import QuantumJob, QiskitJob, AzureQuantumJob
 from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo, total_execution_time
+from metriq_gym.quantinuum.job import QuantinuumJob
 from qbraid.runtime.enums import JobStatus
 from datetime import datetime, timedelta
 from types import SimpleNamespace
@@ -16,6 +17,61 @@ def test_execution_time_qiskit():
     qiskit_job._job.result().metadata = {"execution": {"execution_spans": execution_spans}}
 
     assert execution_time(qiskit_job) == 10.0
+
+
+def test_execution_time_quantinuum():
+    """Verify execution time is calculated correctly for QuantinuumJob."""
+    start = datetime.now()
+    completed = start + timedelta(seconds=15)
+
+    mock_ref = MagicMock()
+    mock_ref.last_status_detail = SimpleNamespace(
+        running_time=start,
+        completed_time=completed,
+    )
+
+    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref), patch.object(
+        QuantinuumJob, "status", return_value=JobStatus.COMPLETED
+    ):
+        quantinuum_job = QuantinuumJob(job_id="test-job-id")
+        assert execution_time(quantinuum_job) == 15.0
+
+
+def test_execution_time_quantinuum_not_completed():
+    """Verify execution time raises ValueError when job is not completed."""
+    with patch.object(QuantinuumJob, "status", return_value=JobStatus.RUNNING):
+        quantinuum_job = QuantinuumJob(job_id="test-job-id")
+        with pytest.raises(ValueError):
+            execution_time(quantinuum_job)
+
+
+def test_execution_time_quantinuum_missing_status_detail():
+    """Verify execution time raises ValueError when last_status_detail is missing."""
+    mock_ref = MagicMock()
+    mock_ref.last_status_detail = None
+
+    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref), patch.object(
+        QuantinuumJob, "status", return_value=JobStatus.COMPLETED
+    ):
+        quantinuum_job = QuantinuumJob(job_id="test-job-id")
+        with pytest.raises(ValueError, match="last_status_detail is missing"):
+            execution_time(quantinuum_job)
+
+
+def test_execution_time_quantinuum_missing_timestamps():
+    """Verify execution time raises ValueError when timestamps are missing."""
+    mock_ref = MagicMock()
+    mock_ref.last_status_detail = SimpleNamespace(
+        running_time=datetime.now(),
+        completed_time=None,  # missing completed_time
+    )
+
+    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref), patch.object(
+        QuantinuumJob, "status", return_value=JobStatus.COMPLETED
+    ):
+        quantinuum_job = QuantinuumJob(job_id="test-job-id")
+        with pytest.raises(ValueError, match="completed_time or running_time is missing"):
+            execution_time(quantinuum_job)
 
 
 def test_execution_time_unsupported():
