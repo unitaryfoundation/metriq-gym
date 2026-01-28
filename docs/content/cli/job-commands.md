@@ -89,7 +89,7 @@ This creates:
     "job_type": "...",
     "params": {...},
     "job_data": {...},
-    "raw_counts": [{"measurement_counts": {"00": 512, "11": 488}}, ...]
+    "raw_results": [{"measurement_counts": {"00": 512, "11": 488},...}, ...]
 }
 ```
 
