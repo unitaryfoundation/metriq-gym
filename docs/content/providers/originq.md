@@ -53,13 +53,13 @@ OriginQ offers both hardware (including the Wukong quantum computer) and various
 ### Dispatch to Wukong Hardware
 
 ```bash
-# Using alias
+# Wukong 72-qubit device
 mgym job dispatch metriq_gym/schemas/examples/wit.example.json \
-    --provider origin --device origin_wukong
+    --provider origin --device wukong_72
 
-# Using numeric ID
+# Wukong 102-qubit device
 mgym job dispatch metriq_gym/schemas/examples/wit.example.json \
-    --provider origin --device 72
+    --provider origin --device wukong_102
 ```
 
 ### Dispatch to OriginQ Simulator
@@ -121,6 +121,6 @@ Wukong devices use a 2D grid topology. For topology-dependent benchmarks (BSEQ, 
 from metriq_gym.run import load_provider
 
 provider = load_provider('origin')
-device = provider.get_device('origin_wukong')
+device = provider.get_device('wukong_72')
 # Topology available via device.metadata
 ```
