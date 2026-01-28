@@ -30,6 +30,7 @@ from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_file
 
 if TYPE_CHECKING:
     from metriq_gym.benchmarks.benchmark import Benchmark, BenchmarkData, BenchmarkResult
+    from qbraid import GateModelResultData
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
@@ -42,7 +43,7 @@ class FetchResultOutput:
     """Container for fetch_result output, including optional raw data for debugging."""
 
     result: "BenchmarkResult"
-    raw_counts: list[dict[str, Any]] | None = None
+    raw_results: list["GateModelResultData"] | None = None
     from_cache: bool = False
 
 
@@ -335,7 +336,7 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         args,
         metriq_job,
         fetch_output.result,
-        raw_counts=fetch_output.raw_counts,
+        raw_results=fetch_output.raw_results,
         from_cache=fetch_output.from_cache,
     )
 
@@ -577,7 +578,7 @@ def export_job_result(
     args: argparse.Namespace,
     metriq_job: MetriqGymJob,
     result: "BenchmarkResult",
-    raw_counts: list[dict[str, Any]] | None = None,
+    raw_results: list["GateModelResultData"] | None = None,
     from_cache: bool = False,
 ) -> None:
     """Export job results to JSON or CLI.
@@ -586,7 +587,7 @@ def export_job_result(
         args: CLI arguments.
         metriq_job: The job being exported.
         result: The benchmark result.
-        raw_counts: Optional raw measurement counts for debugging.
+        raw_results: Optional raw measurement counts for debugging.
         from_cache: Whether result was loaded from cache (raw counts unavailable).
     """
     include_raw = getattr(args, "include_raw", False)
@@ -602,8 +603,8 @@ def export_job_result(
         JsonExporter(metriq_job, result).export(args.json)
 
         # Write raw debug data to separate file if requested
-        if include_raw and raw_counts is not None:
-            _export_raw_debug_data(args.json, metriq_job, raw_counts)
+        if include_raw and raw_results is not None:
+            _export_raw_debug_data(args.json, metriq_job, raw_results)
     else:
         from metriq_gym.exporters.cli_exporter import CliExporter
 
@@ -613,7 +614,7 @@ def export_job_result(
 def _export_raw_debug_data(
     base_filename: str,
     metriq_job: MetriqGymJob,
-    raw_counts: list[dict[str, Any]],
+    raw_results: list["GateModelResultData"],
 ) -> None:
     """Export raw measurement counts and job data to a separate debug file.
 
@@ -635,7 +636,7 @@ def _export_raw_debug_data(
         "job_type": metriq_job.job_type.value,
         "params": metriq_job.params,
         "job_data": metriq_job.data,
-        "raw_counts": raw_counts,
+        "raw_results": [r.to_dict() for r in raw_results],
     }
 
     with open(debug_filename, "w") as f:
@@ -657,13 +658,12 @@ def fetch_result(
         FetchResultOutput containing the result, optional raw counts, and cache status.
         Returns None if job is not yet completed.
     """
-    include_raw = getattr(args, "include_raw", False)
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
     if metriq_job.result_data is not None and not getattr(args, "no_cache", False):
         print("[Cached result data]")
         cached_result = job_result_type.model_validate(metriq_job.result_data)
-        return FetchResultOutput(result=cached_result, raw_counts=None, from_cache=True)
+        return FetchResultOutput(result=cached_result, raw_results=None, from_cache=True)
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
     handler: Benchmark = setup_benchmark(
@@ -677,13 +677,6 @@ def fetch_result(
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data = [task.result().data for task in quantum_jobs]
-
-        # Serialize raw counts if requested
-        raw_counts = None
-        if include_raw:
-            from metriq_gym.helpers.task_helpers import serialize_raw_counts
-
-            raw_counts = serialize_raw_counts(result_data)
 
         # Compute total execution time across all jobs, if provided by the backend
         total_time = total_execution_time(quantum_jobs)
@@ -703,7 +696,7 @@ def fetch_result(
             # Some mocks (e.g., SimpleNamespace with model_dump as lambda) may not accept kwargs
             metriq_job.result_data = result.model_dump()
         job_manager.update_job(metriq_job)
-        return FetchResultOutput(result=result, raw_counts=raw_counts, from_cache=False)
+        return FetchResultOutput(result=result, raw_results=result_data, from_cache=False)
     else:
         print("Job is not yet completed. Current status of tasks:")
         for task in quantum_jobs:

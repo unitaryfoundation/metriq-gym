@@ -476,9 +476,12 @@ def test_fetch_result_includes_raw_counts_when_flag_set(monkeypatch):
     monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
 
     fetch_output = fetch_result(job, args, jm)
-    assert fetch_output.raw_counts is not None
-    assert len(fetch_output.raw_counts) == 1
-    assert fetch_output.raw_counts[0]["measurement_counts"] == {"00": 512, "11": 488}
+    assert fetch_output.raw_results is not None
+    assert len(fetch_output.raw_results) == 1
+    # Check that the first result is a GateModelResultData and has the expected measurement_counts
+    result = fetch_output.raw_results[0]
+    assert hasattr(result, "measurement_counts")
+    assert dict(result.measurement_counts) == {"00": 512, "11": 488}
     assert fetch_output.from_cache is False
 
 
@@ -499,10 +502,12 @@ def test_export_raw_debug_data_creates_separate_file(tmp_path):
         dispatch_time=datetime.now(),
     )
 
-    raw_counts = [{"measurement_counts": {"00": 512, "11": 488}}]
+    from qbraid.runtime.result_data import GateModelResultData, MeasCount
+
+    raw_results = [GateModelResultData(measurement_counts=MeasCount({"00": 512, "11": 488}))]
     base_file = tmp_path / "result.json"
 
-    _export_raw_debug_data(str(base_file), job, raw_counts)
+    _export_raw_debug_data(str(base_file), job, raw_results)
 
     debug_file = tmp_path / "result_debug.json"
     assert debug_file.exists()
@@ -514,4 +519,7 @@ def test_export_raw_debug_data_creates_separate_file(tmp_path):
     assert data["job_type"] == "WIT"
     assert data["params"] == {"benchmark_name": "WIT", "num_qubits": 4}
     assert data["job_data"]["qubit_chain"] == [0, 1, 2, 3]
-    assert data["raw_counts"] == raw_counts
+    # The raw_results are serialized with to_dict(), so check the dict structure
+    assert "raw_results" in data
+    assert isinstance(data["raw_results"], list)
+    assert data["raw_results"][0]["measurement_counts"] == {"00": 512, "11": 488}
