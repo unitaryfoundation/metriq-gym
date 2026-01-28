@@ -326,6 +326,42 @@ def job_upload(
     _upload_job(args, job_manager)
 
 
+@job_app.command("replay")
+def job_replay(
+    debug_file: Annotated[
+        str,
+        typer.Argument(help="Path to debug JSON file (created with --include-raw)"),
+    ],
+    json_output: Annotated[
+        Optional[str],
+        typer.Option("--json", help="Export replayed results to JSON file"),
+    ] = None,
+) -> None:
+    """Replay benchmark computation from a debug file.
+
+    This allows recomputing benchmark results locally without access to the
+    original quantum provider, using the raw measurement data captured with
+    --include-raw.
+    """
+    from metriq_gym.run import replay_from_debug_file
+
+    result = replay_from_debug_file(debug_file)
+    if result is None:
+        raise typer.Exit(1)
+
+    if json_output:
+        import json
+
+        with open(json_output, "w") as f:
+            json.dump(result.model_dump(), f, indent=4)
+        print(f"Replayed results exported to {json_output}")
+    else:
+        # Print results to CLI
+        print("\n=== Replayed Results ===")
+        for key, value in result.model_dump().items():
+            print(f"{key}: {value}")
+
+
 # -----------------------------------------------------------------------------
 # Suite commands
 # -----------------------------------------------------------------------------

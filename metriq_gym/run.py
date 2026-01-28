@@ -644,6 +644,90 @@ def _export_raw_debug_data(
     print(f"Debug data exported to {debug_filename}")
 
 
+def replay_from_debug_file(debug_file: str) -> Optional["BenchmarkResult"]:
+    """Replay poll_handler from a debug file to recompute results.
+
+    This allows recomputing benchmark results locally without access to the
+    original quantum provider, using the raw measurement data captured with
+    --include-raw.
+
+    Args:
+        debug_file: Path to the debug JSON file.
+
+    Returns:
+        Recomputed BenchmarkResult, or None if replay fails.
+    """
+    import json
+    from pathlib import Path
+    from qbraid.runtime.result_data import GateModelResultData
+
+    # Load debug file
+    debug_path = Path(debug_file)
+    if not debug_path.exists():
+        print(f"Error: Debug file not found: {debug_file}")
+        return None
+
+    try:
+        with open(debug_path) as f:
+            debug_data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in debug file: {e}")
+        return None
+
+    # Validate required fields
+    required_fields = ["job_type", "params", "job_data", "raw_results"]
+    for field in required_fields:
+        if field not in debug_data:
+            print(f"Error: Missing required field '{field}' in debug file")
+            return None
+
+    job_type_str = debug_data["job_type"]
+    params = debug_data["params"]
+    job_data_dict = debug_data["job_data"]
+    raw_results_list = debug_data["raw_results"]
+
+    # Resolve job type
+    try:
+        job_type = JobType(job_type_str)
+    except ValueError:
+        print(f"Error: Unknown job type '{job_type_str}'")
+        return None
+
+    print(f"Replaying {job_type_str} benchmark...")
+
+    # Reconstruct job_data
+    job_data_class = setup_job_data_class(job_type)
+    try:
+        job_data = job_data_class(**job_data_dict)
+    except TypeError as e:
+        print(f"Error: Failed to reconstruct job_data: {e}")
+        return None
+
+    # Reconstruct GateModelResultData from raw_results
+    try:
+        result_data = [GateModelResultData.from_dict(r) for r in raw_results_list]
+    except Exception as e:
+        print(f"Error: Failed to reconstruct result data: {e}")
+        return None
+
+    # Create benchmark handler
+    # We need a minimal args namespace for setup_benchmark
+    args = argparse.Namespace()
+    validated_params = validate_and_create_model(params)
+    handler: Benchmark = setup_benchmark(args, validated_params, job_type)
+
+    # Call poll_handler with empty quantum_jobs list
+    # Note: CLOPS benchmark uses quantum_jobs for timing, which won't work in replay
+    try:
+        result = handler.poll_handler(job_data, result_data, quantum_jobs=[])
+    except Exception as e:
+        print(f"Error: poll_handler failed: {e}")
+        return None
+
+    print("Replay completed successfully.")
+    return result
+
+
 def fetch_result(
     metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
 ) -> Optional[FetchResultOutput]:
