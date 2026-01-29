@@ -37,7 +37,6 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
-    BenchmarkScore,
 )
 from metriq_gym.qplatform.device import connectivity_graph, connectivity_graph_for_gate
 from metriq_gym.resource_estimation import CircuitBatch
@@ -71,57 +70,10 @@ class EPLGResult(BenchmarkResult):
     eplg_50: float | None = None
     eplg_100: float | None = None
 
-    def compute_score(self) -> BenchmarkScore:
-        """Compute average EPLG across reference points (10, 20, 50, 100 qubits)."""
-        picked_vals = [
-            v for v in [self.eplg_10, self.eplg_20, self.eplg_50, self.eplg_100] if v is not None
-        ]
-        if not picked_vals:
-            return BenchmarkScore(value=0.0)
-        # TODO: Propagate uncertainty from ProcessFidelity fits through EPLG calculation
-        return BenchmarkScore(value=sum(picked_vals) / len(picked_vals))
-
 
 # =============================================================================
 # Utility Functions
 # =============================================================================
-
-
-def eplg_score_at_lengths(
-    chain_lens: list[int],
-    chain_eplgs: list[float],
-    targets: list[int] | None = None,
-) -> tuple[float, list[float], list[tuple[int, int]]]:
-    """Compute EPLG score at specific qubit lengths.
-
-    Args:
-        chain_lens: List of chain lengths measured.
-        chain_eplgs: EPLG values at each chain length.
-        targets: Target qubit counts (default: [10, 20, 50, 100]).
-
-    Returns:
-        Tuple of (average_score, picked_values, picks) where picks shows
-        which actual length was used for each target.
-    """
-    if targets is None:
-        targets = [10, 20, 50, 100]
-
-    idx = {length: i for i, length in enumerate(chain_lens)}
-    picked_vals, picks = [], []
-
-    for t in targets:
-        if t in idx:
-            picked_vals.append(chain_eplgs[idx[t]])
-            picks.append((t, t))
-        else:
-            # Nearest-neighbor fallback when target length not available
-            # TODO: Consider interpolation or curve fitting for more accurate estimates
-            nearest = min(chain_lens, key=lambda x: (abs(x - t), x))
-            picked_vals.append(chain_eplgs[idx[nearest]])
-            picks.append((t, nearest))
-
-    score = sum(picked_vals) / len(picked_vals) if picked_vals else 0.0
-    return score, picked_vals, picks
 
 
 def random_chain_from_graph(
@@ -426,16 +378,20 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
                 chain_eplgs=[],
             )
 
-        # Compute EPLG at reference points
-        _, picked_vals, picks = eplg_score_at_lengths(chain_lens, chain_eplgs)
+        # Compute EPLG at reference points (10, 20, 50, 100)
+        lens_to_eplg = dict(zip(chain_lens, chain_eplgs))
+        eplg_10 = lens_to_eplg.get(10, None)
+        eplg_20 = lens_to_eplg.get(20, None)
+        eplg_50 = lens_to_eplg.get(50, None)
+        eplg_100 = lens_to_eplg.get(100, None)
 
         return EPLGResult(
             chain_lengths=chain_lens,
             chain_eplgs=chain_eplgs,
-            eplg_10=picked_vals[0] if len(picked_vals) > 0 else None,
-            eplg_20=picked_vals[1] if len(picked_vals) > 1 else None,
-            eplg_50=picked_vals[2] if len(picked_vals) > 2 else None,
-            eplg_100=picked_vals[3] if len(picked_vals) > 3 else None,
+            eplg_10=eplg_10,
+            eplg_20=eplg_20,
+            eplg_50=eplg_50,
+            eplg_100=eplg_100,
         )
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
