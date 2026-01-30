@@ -1075,6 +1075,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metriq_gym.benchmarks.clops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clops
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1496,6 +1507,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metriq_gym.benchmarks.clops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clops
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1584,6 +1606,10 @@
 <tr>
 <td><a href="#metriq_gym.benchmarks.qedc_benchmarks">QED-C Benchmarks</a></td>
 <td>Application-oriented benchmarks (BV, QFT, etc.)</td>
+</tr>
+<tr>
+<td><a href="#metriq_gym.benchmarks.clops">CLOPS</a></td>
+<td>Circuit layer operations per second to measure device speed</td>
 </tr>
 </tbody>
 </table>
@@ -2035,6 +2061,71 @@ analyser. Inspect the per-circuit entries to understand performance trends.</p>
   repository for algorithm-specific methodology.</li>
 <li><a href="https://arxiv.org/abs/2110.03137">Lubinski et al., "Application-Oriented Performance Benchmarks for Quantum Computing",
   IEEE Trans. Quantum Eng. (2023)</a>.</li>
+</ul>
+</details>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="metriq_gym.benchmarks.clops" class="doc doc-heading">
+            <code>clops</code>
+
+
+<a href="#metriq_gym.benchmarks.clops" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>CLOPS (Circuit Layer Operations Per Second) benchmark implementation.</p>
+
+
+<details class="summary" open>
+  <summary>Summary</summary>
+  <p>Measures the throughput of a quantum system by timing the execution of parameterized
+quantum volume-style circuits. CLOPS captures end-to-end performance including
+compilation, communication, and execution overhead.</p>
+</details>
+
+<details class="result-interpretation" open>
+  <summary>Result interpretation</summary>
+  <p>Polling returns ClopsResult with:
+    - clops_score: circuit layer operations per second (higher is better).
+This metric reflects real-world workload performance rather than isolated gate speeds.</p>
+</details>
+
+<details class="references" open>
+  <summary>References</summary>
+  <ul>
+<li><a href="https://arxiv.org/abs/2110.14108">Wack et al., "Quality, Speed, and Scale: three key attributes to measure the
+  performance of near-term quantum computers", arXiv:2110.14108</a>.</li>
+<li><a href="https://github.com/qiskit-community/qiskit-device-benchmarking">Qiskit Device Benchmarking CLOPS</a>.</li>
 </ul>
 </details>
 
