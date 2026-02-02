@@ -3,7 +3,6 @@ from typing import cast
 
 import networkx as nx
 import rustworkx as rx
-import qnexus as qnx
 from qbraid import QuantumDevice
 from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
 from qiskit.transpiler import CouplingMap
@@ -11,7 +10,7 @@ from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.origin.device import OriginDevice, get_origin_connectivity
-from metriq_gym.quantinuum.device import QuantinuumDevice
+from metriq_gym.quantinuum.device import QuantinuumDevice, _get_quantinuum_backend_info
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
@@ -22,20 +21,7 @@ def version(device: QuantumDevice) -> str:
 
 @version.register
 def _(device: QuantinuumDevice) -> str:
-    device_name = device.profile.device_id
-
-    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    matching_rows = df.loc[df["device_name"] == device_name]
-
-    if matching_rows.empty:
-        available_devices = df["device_name"].tolist()
-        raise ValueError(
-            f"Device '{device_name}' not found in Quantinuum device list. "
-            f"Available devices: {available_devices}"
-        )
-
-    row = matching_rows.iloc[0]
-    backend_info = row["backend_info"]
+    backend_info = _get_quantinuum_backend_info(device.profile.device_id)
     return backend_info.version
 
 
@@ -93,21 +79,8 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: QuantinuumDevice) -> rx.PyGraph:
-    device_name = device.profile.device_id
-
-    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    matching_rows = df.loc[df["device_name"] == device_name]
-
-    if matching_rows.empty:
-        available_devices = df["device_name"].tolist()
-        raise ValueError(
-            f"Device '{device_name}' not found in Quantinuum device list. "
-            f"Available devices: {available_devices}"
-        )
-
-    row = matching_rows.iloc[0]
-
-    arch = row["backend_info"].architecture
+    backend_info = _get_quantinuum_backend_info(device.profile.device_id)
+    arch = backend_info.architecture
     num_qubits = len(arch.nodes)
 
     is_fc = isinstance(arch, FullyConnected)

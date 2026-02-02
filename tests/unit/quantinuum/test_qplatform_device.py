@@ -20,7 +20,7 @@ import qnexus as qnx
 from pytket.architecture import FullyConnected
 
 from metriq_gym.quantinuum.device import QuantinuumDevice
-from metriq_gym.qplatform.device import version, connectivity_graph
+from metriq_gym.qplatform.device import version, connectivity_graph, normalized_metadata
 
 
 @dataclass
@@ -115,3 +115,43 @@ class TestConnectivityQuantinuum:
         edge_list = set(tuple(e) for e in g.edge_list())
         for a, b in edges:
             assert (a, b) in edge_list or (b, a) in edge_list
+
+
+class TestNumQubitsQuantinuum:
+    def test_num_qubits_returns_architecture_node_count(
+        self, monkeypatch: pytest.MonkeyPatch, device_id: str
+    ):
+        n = 20
+        backend_info = FakeBackendInfo(version="2.0.0", architecture=FullyConnected(n))
+        patch_qnexus(monkeypatch, device_id, backend_info)
+        dev = make_device(device_id)
+
+        assert dev.num_qubits == n
+
+    def test_num_qubits_set_in_profile(
+        self, monkeypatch: pytest.MonkeyPatch, device_id: str
+    ):
+        """Verify num_qubits is set in the profile during device initialization."""
+        n = 12
+        backend_info = FakeBackendInfo(version="2.0.0", architecture=FullyConnected(n))
+        patch_qnexus(monkeypatch, device_id, backend_info)
+        dev = make_device(device_id)
+
+        # num_qubits should be accessible from the profile
+        assert dev.profile.num_qubits == n
+        assert dev.num_qubits == n
+
+    def test_normalized_metadata_includes_num_qubits(
+        self, monkeypatch: pytest.MonkeyPatch, device_id: str
+    ):
+        n = 32
+        backend_info = FakeBackendInfo(version="3.1.0", architecture=FullyConnected(n))
+        patch_qnexus(monkeypatch, device_id, backend_info)
+        dev = make_device(device_id)
+
+        meta = normalized_metadata(dev)
+        assert isinstance(meta, dict)
+        assert meta.get("num_qubits") == n
+        assert meta.get("version") == "3.1.0"
+        # device_id contains 'E', so simulator should be True
+        assert meta.get("simulator") is True

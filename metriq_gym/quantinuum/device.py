@@ -18,13 +18,60 @@ from metriq_gym.quantinuum.job import QuantinuumJob
 logger = logging.getLogger(__name__)
 
 
+def _get_quantinuum_backend_info(device_name: str):
+    """Fetch backend_info for a Quantinuum device from the Nexus API.
+
+    Args:
+        device_name: The Quantinuum device name (e.g., 'H2-2').
+
+    Returns:
+        The backend_info object from the Nexus API.
+
+    Raises:
+        ValueError: If the device is not found in the Quantinuum device list.
+    """
+    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
+    matching_rows = df.loc[df["device_name"] == device_name]
+
+    if matching_rows.empty:
+        available_devices = df["device_name"].tolist()
+        raise ValueError(
+            f"Device '{device_name}' not found in Quantinuum device list. "
+            f"Available devices: {available_devices}"
+        )
+
+    row = matching_rows.iloc[0]
+    return row["backend_info"]
+
+
+def _infer_num_qubits(device_id: str) -> int | None:
+    """Infer the number of qubits for a Quantinuum device from the Nexus API.
+
+    Args:
+        device_id: The Quantinuum device ID (e.g., 'H2-2').
+
+    Returns:
+        The number of qubits, or None if it cannot be determined.
+    """
+    try:
+        backend_info = _get_quantinuum_backend_info(device_id)
+        return len(backend_info.architecture.nodes)
+    except Exception:
+        logger.debug(
+            "Unable to determine num_qubits for Quantinuum device %s",
+            device_id,
+            exc_info=True,
+        )
+        return None
+
+
 def _profile(device_id: str) -> TargetProfile:
     return TargetProfile(
         device_id=device_id,
         # TODO: find a property to distinguish real vs. simulator
         simulator="E" in device_id.upper(),
         experiment_type=ExperimentType.GATE_MODEL,
-        num_qubits=None,
+        num_qubits=_infer_num_qubits(device_id),
         program_spec=ProgramSpec(Circuit),
         basis_gates=None,
         provider_name="quantinuum",
