@@ -4,16 +4,19 @@ import logging
 import pytest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-
+import json
 from pydantic import BaseModel
 from qbraid import QbraidError
 from qbraid.runtime import JobStatus
+from qbraid.runtime.result_data import GateModelResultData, MeasCount
 from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, BenchmarkScore
 from metriq_gym.run import (
     setup_device,
     dispatch_job,
     fetch_result,
     estimate_job,
+    _export_raw_debug_data,
+    replay_from_debug_file,
 )
 from metriq_gym.job_manager import MetriqGymJob, JobManager
 from metriq_gym.constants import JobType
@@ -429,7 +432,7 @@ def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
 
 def test_fetch_result_includes_raw_counts_when_flag_set(monkeypatch):
     """Test that raw counts are returned when include_raw=True."""
-    from qbraid.runtime.result_data import GateModelResultData, MeasCount
+    # ...existing code...
 
     EXPECTED_VALUE = 42
     job = _make_cached_job(None)  # No cache, force fresh fetch
@@ -487,9 +490,7 @@ def test_fetch_result_includes_raw_counts_when_flag_set(monkeypatch):
 
 def test_export_raw_debug_data_creates_separate_file(tmp_path):
     """Test that _export_raw_debug_data creates a separate debug JSON file."""
-    import json
-    from metriq_gym.run import _export_raw_debug_data
-    from metriq_gym.constants import JobType
+    # ...existing code...
 
     # Create a mock job
     job = MetriqGymJob(
@@ -527,8 +528,7 @@ def test_export_raw_debug_data_creates_separate_file(tmp_path):
 
 def test_replay_from_debug_file_success(tmp_path):
     """Test successful replay from a debug file."""
-    import json
-    from metriq_gym.run import replay_from_debug_file
+    # ...existing code...
 
     # Create a debug file for QML Kernel benchmark
     debug_data = {
@@ -572,7 +572,7 @@ def test_replay_from_debug_file_missing_file():
 
 def test_replay_from_debug_file_invalid_json(tmp_path):
     """Test replay with invalid JSON file."""
-    from metriq_gym.run import replay_from_debug_file
+    # ...existing code...
 
     debug_file = tmp_path / "invalid.json"
     with open(debug_file, "w") as f:
@@ -584,8 +584,7 @@ def test_replay_from_debug_file_invalid_json(tmp_path):
 
 def test_replay_from_debug_file_missing_fields(tmp_path):
     """Test replay with missing required fields."""
-    import json
-    from metriq_gym.run import replay_from_debug_file
+    # ...existing code...
 
     # Missing raw_results field
     debug_data = {
@@ -605,8 +604,7 @@ def test_replay_from_debug_file_missing_fields(tmp_path):
 
 def test_replay_from_debug_file_unknown_job_type(tmp_path):
     """Test replay with unknown job type."""
-    import json
-    from metriq_gym.run import replay_from_debug_file
+    # ...existing code...
 
     debug_data = {
         "job_id": "test-job",
