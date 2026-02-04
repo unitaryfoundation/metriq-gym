@@ -802,6 +802,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        replay
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="replay">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arguments_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arguments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example Workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1650,6 +1700,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        replay
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="replay">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arguments_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arguments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example Workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1985,6 +2085,75 @@
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="replay">replay<a class="headerlink" href="#replay" title="Permanent link">&para;</a></h2>
+<p>Replay benchmark computation from a debug file to recompute results locally.</p>
+<p>This command allows you to recompute benchmark results without access to the original quantum provider, using the raw measurement data captured with <code>--include-raw</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>&lt;debug_file&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</code></pre></div>
+<h3 id="arguments_6">Arguments<a class="headerlink" href="#arguments_6" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DEBUG_FILE</code></td>
+<td>STR</td>
+<td>Path to debug JSON file (created with <code>--include-raw</code>)</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="options_4">Options<a class="headerlink" href="#options_4" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--json</code></td>
+<td>STR</td>
+<td>Export replayed results to JSON file</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-workflow">Example Workflow<a class="headerlink" href="#example-workflow" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Capture raw data during poll:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>latest<span class="w"> </span>--json<span class="w"> </span>result.json<span class="w"> </span>--include-raw
+</code></pre></div>
+<p>This creates <code>result.json</code> (results) and <code>result_debug.json</code> (debug data).</p>
+</li>
+<li>
+<p><strong>Share debug file for debugging:</strong></p>
+<p>Send <code>result_debug.json</code> to another user who can replay the computation locally.</p>
+</li>
+<li>
+<p><strong>Replay to recompute results:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>result_debug.json
+</code></pre></div>
+<p>Or export to JSON:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>result_debug.json<span class="w"> </span>--json<span class="w"> </span>replayed.json
+</code></pre></div>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The replay command does use provider credentials or network access. All computation happens locally using the captured raw measurement data. Any benchmark metric calculations that rely on job specific data will fail to replay.</p>
+</div>
 <hr />
 
 
