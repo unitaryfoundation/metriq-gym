@@ -10,7 +10,7 @@ from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.origin.device import OriginDevice, get_origin_connectivity
-from metriq_gym.quantinuum.device import QuantinuumDevice, _get_quantinuum_backend_info
+from metriq_gym.quantinuum.device import QuantinuumDevice
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
@@ -21,8 +21,7 @@ def version(device: QuantumDevice) -> str:
 
 @version.register
 def _(device: QuantinuumDevice) -> str:
-    backend_info = _get_quantinuum_backend_info(device.profile.device_id)
-    return backend_info.version
+    return device._backend_info.version
 
 
 @version.register
@@ -79,8 +78,7 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: QuantinuumDevice) -> rx.PyGraph:
-    backend_info = _get_quantinuum_backend_info(device.profile.device_id)
-    arch = backend_info.architecture
+    arch = device._backend_info.architecture
     num_qubits = len(arch.nodes)
 
     is_fc = isinstance(arch, FullyConnected)

@@ -6,9 +6,12 @@ from datetime import datetime, timezone
 
 import qnexus as qnx
 from qnexus.models.language import Language
+from qnexus.client.devices import DeviceStateEnum
 from pytket import Circuit
 from pytket.extensions.qiskit import qiskit_to_tk
+from pytket.backends.backendinfo import BackendInfo
 from qiskit import QuantumCircuit
+
 
 from qbraid import QPROGRAM
 from qbraid.runtime import DeviceStatus, QuantumDevice, TargetProfile
@@ -18,7 +21,7 @@ from metriq_gym.quantinuum.job import QuantinuumJob
 logger = logging.getLogger(__name__)
 
 
-def _get_quantinuum_backend_info(device_name: str):
+def _get_quantinuum_backend_info(device_name: str) -> BackendInfo:
     """Fetch backend_info for a Quantinuum device from the Nexus API.
 
     Args:
@@ -44,34 +47,13 @@ def _get_quantinuum_backend_info(device_name: str):
     return row["backend_info"]
 
 
-def _infer_num_qubits(device_id: str) -> int | None:
-    """Infer the number of qubits for a Quantinuum device from the Nexus API.
-
-    Args:
-        device_id: The Quantinuum device ID (e.g., 'H2-2').
-
-    Returns:
-        The number of qubits, or None if it cannot be determined.
-    """
-    try:
-        backend_info = _get_quantinuum_backend_info(device_id)
-        return len(backend_info.architecture.nodes)
-    except Exception:
-        logger.debug(
-            "Unable to determine num_qubits for Quantinuum device %s",
-            device_id,
-            exc_info=True,
-        )
-        return None
-
-
-def _profile(device_id: str) -> TargetProfile:
+def _profile(device_id: str, backend_info: BackendInfo) -> TargetProfile:
     return TargetProfile(
         device_id=device_id,
         # TODO: find a property to distinguish real vs. simulator
         simulator="E" in device_id.upper(),
         experiment_type=ExperimentType.GATE_MODEL,
-        num_qubits=_infer_num_qubits(device_id),
+        num_qubits=len(backend_info.architecture.nodes),
         program_spec=ProgramSpec(Circuit),
         basis_gates=None,
         provider_name="quantinuum",
@@ -81,11 +63,20 @@ def _profile(device_id: str) -> TargetProfile:
 
 class QuantinuumDevice(QuantumDevice):
     def __init__(self, *, provider, device_id: str) -> None:
-        super().__init__(_profile(device_id))
+        self._backend_info = _get_quantinuum_backend_info(device_id)
+        super().__init__(_profile(device_id, self._backend_info))
         self._provider = provider
 
     def status(self) -> DeviceStatus:
-        return DeviceStatus.ONLINE
+        # Query this each time to get the most up-to-date status"""
+        cfg = qnx.models.QuantinuumConfig(device_name=self.profile.device_id)
+        status = qnx.devices.status(cfg)
+        if status in (DeviceStateEnum.ONLINE, DeviceStateEnum.RESERVED_ONLINE):
+            return DeviceStatus.ONLINE
+        elif status in (DeviceStateEnum.MAINTENANCE, DeviceStateEnum.RESERVED_MAINTENANCE):
+            return DeviceStatus.UNAVAILABLE
+        else:
+            return DeviceStatus.OFFLINE
 
     def run(self, run_input: QPROGRAM, *args, **kwargs):
         # Override base run to avoid iterating single circuits as sequences
