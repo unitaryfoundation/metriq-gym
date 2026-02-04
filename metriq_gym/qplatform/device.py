@@ -3,7 +3,6 @@ from typing import cast
 
 import networkx as nx
 import rustworkx as rx
-import qnexus as qnx
 from qbraid import QuantumDevice
 from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
 from qiskit.transpiler import CouplingMap
@@ -22,21 +21,7 @@ def version(device: QuantumDevice) -> str:
 
 @version.register
 def _(device: QuantinuumDevice) -> str:
-    device_name = device.profile.device_id
-
-    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    matching_rows = df.loc[df["device_name"] == device_name]
-
-    if matching_rows.empty:
-        available_devices = df["device_name"].tolist()
-        raise ValueError(
-            f"Device '{device_name}' not found in Quantinuum device list. "
-            f"Available devices: {available_devices}"
-        )
-
-    row = matching_rows.iloc[0]
-    backend_info = row["backend_info"]
-    return backend_info.version
+    return device._backend_info.version
 
 
 @version.register
@@ -93,21 +78,7 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: QuantinuumDevice) -> rx.PyGraph:
-    device_name = device.profile.device_id
-
-    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    matching_rows = df.loc[df["device_name"] == device_name]
-
-    if matching_rows.empty:
-        available_devices = df["device_name"].tolist()
-        raise ValueError(
-            f"Device '{device_name}' not found in Quantinuum device list. "
-            f"Available devices: {available_devices}"
-        )
-
-    row = matching_rows.iloc[0]
-
-    arch = row["backend_info"].architecture
+    arch = device._backend_info.architecture
     num_qubits = len(arch.nodes)
 
     is_fc = isinstance(arch, FullyConnected)
