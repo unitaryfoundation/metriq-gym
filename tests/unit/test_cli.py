@@ -1,10 +1,14 @@
 from datetime import datetime
 from tabulate import tabulate
 import pytest
+import json
 from unittest.mock import MagicMock
 from metriq_gym.cli import LIST_JOBS_HEADERS, list_jobs
 from metriq_gym.constants import JobType
 from metriq_gym.job_manager import JobManager, MetriqGymJob
+from typer.testing import CliRunner
+from metriq_gym.cli import app
+from unittest.mock import patch
 
 
 @pytest.fixture
@@ -131,9 +135,6 @@ def test_list_jobs_no_jobs(capsys):
 
 def test_job_poll_include_raw_flag():
     """Test that --include-raw flag is passed correctly in job_poll."""
-    from typer.testing import CliRunner
-    from metriq_gym.cli import app
-    from unittest.mock import patch
 
     runner = CliRunner()
 
@@ -159,3 +160,71 @@ def test_job_poll_include_raw_flag():
             assert mock_fetch.called
             args = mock_fetch.call_args[0][1]  # Second positional arg is args
             assert args.include_raw is True
+
+
+REPLAY_DEBUG_DATA = {
+    "job_id": "test-replay-job",
+    "job_type": "QML Kernel",
+    "params": {
+        "benchmark_name": "QML Kernel",
+        "num_qubits": 4,
+        "shots": 10,
+    },
+    "job_data": {
+        "provider_job_ids": ["prov-123"],
+    },
+    "raw_results": [
+        {
+            "measurement_counts": {"0000": 10},
+            "shots": 10,
+            "num_measured_qubits": 4,
+        }
+    ],
+}
+
+
+def test_job_replay_command(tmp_path):
+    """Test that job replay command works with a valid debug file."""
+    runner = CliRunner()
+
+    debug_file = tmp_path / "debug.json"
+    with open(debug_file, "w") as f:
+        json.dump(REPLAY_DEBUG_DATA, f)
+
+    result = runner.invoke(app, ["job", "replay", str(debug_file)])
+
+    assert result.exit_code == 0
+    assert "Replaying QML Kernel benchmark" in result.stdout
+    assert "Replay completed successfully" in result.stdout
+    assert "accuracy_score" in result.stdout
+
+
+def test_job_replay_command_with_json_output(tmp_path):
+    """Test that job replay command can output to JSON file."""
+    runner = CliRunner()
+
+    debug_file = tmp_path / "debug.json"
+    output_file = tmp_path / "output.json"
+    with open(debug_file, "w") as f:
+        json.dump(REPLAY_DEBUG_DATA, f)
+
+    result = runner.invoke(app, ["job", "replay", str(debug_file), "--json", str(output_file)])
+
+    assert result.exit_code == 0
+    assert output_file.exists()
+
+    with open(output_file) as f:
+        output_data = json.load(f)
+    assert "accuracy_score" in output_data
+
+
+def test_job_replay_command_missing_file():
+    """Test that job replay command fails gracefully with missing file."""
+    from typer.testing import CliRunner
+    from metriq_gym.cli import app
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["job", "replay", "/nonexistent/file.json"])
+
+    assert result.exit_code == 1
+    assert "Debug file not found" in result.stdout

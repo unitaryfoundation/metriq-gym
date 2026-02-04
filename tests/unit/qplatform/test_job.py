@@ -30,8 +30,9 @@ def test_execution_time_quantinuum():
         completed_time=completed,
     )
 
-    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref), patch.object(
-        QuantinuumJob, "status", return_value=JobStatus.COMPLETED
+    with (
+        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
         assert execution_time(quantinuum_job) == 15.0
@@ -50,8 +51,9 @@ def test_execution_time_quantinuum_missing_status_detail():
     mock_ref = MagicMock()
     mock_ref.last_status_detail = None
 
-    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref), patch.object(
-        QuantinuumJob, "status", return_value=JobStatus.COMPLETED
+    with (
+        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
         with pytest.raises(ValueError, match="last_status_detail is missing"):
@@ -66,8 +68,9 @@ def test_execution_time_quantinuum_missing_timestamps():
         completed_time=None,  # missing completed_time
     )
 
-    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref), patch.object(
-        QuantinuumJob, "status", return_value=JobStatus.COMPLETED
+    with (
+        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
         with pytest.raises(ValueError, match="completed_time or running_time is missing"):
