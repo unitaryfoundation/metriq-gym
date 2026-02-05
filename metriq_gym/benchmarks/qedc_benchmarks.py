@@ -29,6 +29,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
+    CircuitPackage,
 )
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
@@ -274,6 +275,8 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, floa
 class QEDCBenchmark(Benchmark):
     """Benchmark class for QED-C experiments."""
 
+    supports_qem = True
+
     def _build_circuits(
         self, device: "QuantumDevice"
     ) -> tuple[list[QuantumCircuit], QEDC_Metrics, list[tuple[str, str]]]:
@@ -291,6 +294,24 @@ class QEDCBenchmark(Benchmark):
             params=self.params.model_dump(exclude={"benchmark_name"}),
         )
         return circuits, circuit_metrics, circuit_identifiers
+
+    def build_circuits(self, device: "QuantumDevice") -> CircuitPackage:
+        circuits, circuit_metrics, circuit_identifiers = self._build_circuits(device)
+        return CircuitPackage(
+            circuits=circuits,
+            shots=self.params.shots,
+            metadata={
+                "circuit_metrics": circuit_metrics,
+                "circuit_identifiers": circuit_identifiers,
+            },
+        )
+
+    def create_job_data(self, package: CircuitPackage, quantum_job) -> QEDCData:
+        return QEDCData.from_quantum_job(
+            quantum_job=quantum_job,
+            circuit_metrics=package.metadata["circuit_metrics"],
+            circuit_identifiers=package.metadata["circuit_identifiers"],
+        )
 
     def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
         # For more information on the parameters, view the schema for this benchmark.

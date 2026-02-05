@@ -1,7 +1,19 @@
 from pprint import pprint
+from typing import Any
 
 from metriq_gym.benchmarks.benchmark import BenchmarkScore
 from metriq_gym.exporters.base_exporter import BaseExporter
+
+
+def _format_result_line(key: str, value: Any, uncertainties: dict) -> str:
+    """Format a single result metric for display."""
+    if isinstance(value, dict) and "value" in value and "uncertainty" in value:
+        if value["uncertainty"] is None or value["uncertainty"] == "":
+            return f"  {key}: {value['value']}"
+        return f"  {key}: {value['value']} ± {value['uncertainty']}"
+    elif key in uncertainties and uncertainties[key] is not None:
+        return f"  {key}: {value} ± {uncertainties[key]}"
+    return f"  {key}: {value}"
 
 
 class CliExporter(BaseExporter):
@@ -10,8 +22,19 @@ class CliExporter(BaseExporter):
         record = self.as_dict()
         pprint(record)
 
+        # Check if QEM was applied
+        result_data = self.metriq_gym_job.result_data or {}
+        qem_applied = result_data.get("_qem_applied", False)
+        raw_result = result_data.get("_raw_result")
+        qem_config = result_data.get("_qem_config", [])
+
         # Surface the full result object, formatting uncertainties inline when available
-        print("\nResults:")
+        if qem_applied:
+            techniques = ", ".join(c.get("technique", "?") for c in qem_config)
+            print(f"\nResults (mitigated via {techniques}):")
+        else:
+            print("\nResults:")
+
         payload = self.result.model_dump()
         result_uncertainties = self.result.uncertainties or {}
         score_val = getattr(self.result, "score", None)
@@ -22,15 +45,13 @@ class CliExporter(BaseExporter):
         for key in sorted(payload.keys()):
             if key == "uncertainties":
                 continue
-            value = payload[key]
-            # If payload already carries value/uncertainty (e.g., BenchmarkScore), format inline
-            if isinstance(value, dict) and "value" in value and "uncertainty" in value:
-                if value["uncertainty"] is None or value["uncertainty"] == "":
-                    print(f"  {key}: {value['value']}")
-                else:
-                    print(f"  {key}: {value['value']} ± {value['uncertainty']}")
-            # Otherwise, if we have a separate uncertainty entry, format it
-            elif key in result_uncertainties and result_uncertainties[key] is not None:
-                print(f"  {key}: {value} ± {result_uncertainties[key]}")
-            else:
-                print(f"  {key}: {value}")
+            print(_format_result_line(key, payload[key], result_uncertainties))
+
+        # If QEM was applied, also print the raw (unmitigated) results for comparison
+        if qem_applied and raw_result:
+            print(f"\nRaw (unmitigated) results:")
+            for key in sorted(raw_result.keys()):
+                if key in ("uncertainties", "score"):
+                    continue
+                value = raw_result[key]
+                print(_format_result_line(key, value, {}))

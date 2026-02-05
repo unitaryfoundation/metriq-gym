@@ -28,6 +28,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
+    CircuitPackage,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.resource_estimation import CircuitBatch
@@ -105,6 +106,8 @@ def calculate_accuracy_score(num_qubits: int, count_results: "MeasCount") -> lis
 
 
 class QMLKernel(Benchmark):
+    supports_qem = True
+
     def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
         """Shared circuit construction logic.
 
@@ -115,6 +118,13 @@ class QMLKernel(Benchmark):
             The QML kernel inner product circuit.
         """
         return create_inner_product_circuit(self.params.num_qubits)
+
+    def build_circuits(self, device: "QuantumDevice") -> CircuitPackage:
+        circuit = self._build_circuits(device)
+        return CircuitPackage(circuits=[circuit], shots=self.params.shots)
+
+    def create_job_data(self, package: CircuitPackage, quantum_job) -> QMLKernelData:
+        return QMLKernelData.from_quantum_job(quantum_job)
 
     def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
         circuit = self._build_circuits(device)

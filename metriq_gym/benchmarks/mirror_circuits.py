@@ -37,6 +37,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
+    CircuitPackage,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
@@ -495,6 +496,8 @@ def generate_mirror_circuit(
 
 
 class MirrorCircuits(Benchmark):
+    supports_qem = True
+
     def _build_circuits(
         self, device: "QuantumDevice"
     ) -> tuple[list[QuantumCircuit], list[str], int]:
@@ -554,6 +557,30 @@ class MirrorCircuits(Benchmark):
             expected_bitstrings.append(expected_bitstring)
 
         return circuits, expected_bitstrings, actual_width
+
+    def build_circuits(self, device: "QuantumDevice") -> CircuitPackage:
+        circuits, expected_bitstrings, actual_width = self._build_circuits(device)
+        return CircuitPackage(
+            circuits=circuits,
+            shots=self.params.shots,
+            metadata={
+                "expected_bitstrings": expected_bitstrings,
+                "actual_width": actual_width,
+            },
+        )
+
+    def create_job_data(self, package: CircuitPackage, quantum_job) -> MirrorCircuitsData:
+        return MirrorCircuitsData.from_quantum_job(
+            quantum_job=quantum_job,
+            num_layers=self.params.num_layers,
+            two_qubit_gate_prob=self.params.two_qubit_gate_prob,
+            two_qubit_gate_name=self.params.two_qubit_gate_name,
+            shots=self.params.shots,
+            num_qubits=package.metadata["actual_width"],
+            num_circuits=self.params.num_circuits,
+            seed=self.params.seed,
+            expected_bitstrings=package.metadata["expected_bitstrings"],
+        )
 
     def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
         circuits, expected_bitstrings, actual_width = self._build_circuits(device)

@@ -65,6 +65,11 @@
       "default": false,
       "examples": [true]
 
+    },
+    "error_mitigation": {
+      "type": "array",
+      "description": "Optional list of error mitigation techniques to apply, in order. Each item is an object with a 'technique' key and technique-specific parameters.",
+      "default": []
     }
   },
   "required": ["benchmark_name"],

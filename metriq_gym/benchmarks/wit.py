@@ -29,6 +29,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
+    CircuitPackage,
 )
 from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
@@ -247,6 +248,8 @@ class WITData(BenchmarkData):
 
 
 class WIT(Benchmark):
+    supports_qem = True
+
     def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
         """Shared circuit construction logic.
 
@@ -257,6 +260,13 @@ class WIT(Benchmark):
             The WIT quantum circuit.
         """
         return wit_circuit(self.params.num_qubits)
+
+    def build_circuits(self, device: "QuantumDevice") -> CircuitPackage:
+        circuit = self._build_circuits(device)
+        return CircuitPackage(circuits=[circuit], shots=self.params.shots)
+
+    def create_job_data(self, package: CircuitPackage, quantum_job) -> WITData:
+        return WITData.from_quantum_job(quantum_job)
 
     def dispatch_handler(self, device: "QuantumDevice") -> WITData:
         circuit = self._build_circuits(device)

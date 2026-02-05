@@ -1,12 +1,13 @@
 import argparse
-from typing import Iterable, TYPE_CHECKING, Protocol
+from typing import Any, Iterable, TYPE_CHECKING, Protocol
 from abc import ABC
 
 from pydantic import BaseModel, computed_field
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 if TYPE_CHECKING:
+    from qiskit.circuit import QuantumCircuit
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
     from metriq_gym.resource_estimation import CircuitBatch
 
@@ -32,6 +33,20 @@ class BenchmarkData:
     def from_quantum_job(cls, quantum_job, **kwargs):
         """Populate the provider job IDs from a QuantumJob or iterable of QuantumJobs."""
         return cls(provider_job_ids=flatten_job_ids(quantum_job), **kwargs)
+
+
+@dataclass
+class CircuitPackage:
+    """Standardized container for circuits produced by build_circuits().
+
+    The circuits and shots fields are used by the QEM pipeline.
+    The metadata field carries benchmark-specific opaque data that is passed
+    through to create_job_data() untouched.
+    """
+
+    circuits: list["QuantumCircuit"]
+    shots: int
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class BenchmarkScore(BaseModel):
@@ -90,6 +105,8 @@ class BenchmarkResult(BaseModel, ABC):
 
 
 class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
+    supports_qem: bool = False
+
     def __init__(
         self,
         args: argparse.Namespace,
@@ -97,6 +114,22 @@ class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
     ):
         self.args = args
         self.params: BaseModel = params
+
+    def build_circuits(self, device: "QuantumDevice") -> CircuitPackage:
+        """Build circuits for this benchmark, returning a standardized CircuitPackage.
+
+        Used by the QEM pipeline to access circuits before submission.
+        Benchmarks that set supports_qem = True must implement this method.
+        """
+        raise NotImplementedError
+
+    def create_job_data(self, package: CircuitPackage, quantum_job) -> BD:
+        """Create BenchmarkData from a CircuitPackage and submitted quantum job.
+
+        Used by the QEM pipeline after circuit transformation and submission.
+        Benchmarks that set supports_qem = True must implement this method.
+        """
+        raise NotImplementedError
 
     def dispatch_handler(self, device: "QuantumDevice") -> BD:
         raise NotImplementedError

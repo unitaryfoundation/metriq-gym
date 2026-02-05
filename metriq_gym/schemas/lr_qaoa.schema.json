@@ -80,6 +80,11 @@
       "description": "Seed to create the random weights of the weighted maxcut problem. This problem is solve using LR-QAOA",
       "default": 123,
       "examples": [0, 1, 123]
+    },
+    "error_mitigation": {
+      "type": "array",
+      "description": "Optional list of error mitigation techniques to apply, in order. Each item is an object with a 'technique' key and technique-specific parameters.",
+      "default": []
     }
   },
   "required": ["benchmark_name","graph_type", "num_qubits"]

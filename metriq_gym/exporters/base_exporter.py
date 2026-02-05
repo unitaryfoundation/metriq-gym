@@ -84,6 +84,20 @@ class BaseExporter(ABC):
 
         record["platform"] = platform_info
 
+        # Include QEM information if error mitigation was applied
+        qem_meta = (
+            self.metriq_gym_job.data.get("_qem") if self.metriq_gym_job.data else None
+        )
+        if qem_meta:
+            record["error_mitigation"] = {
+                "techniques": qem_meta["config"],
+            }
+            # Include raw (unmitigated) results for comparison
+            result_data = self.metriq_gym_job.result_data or {}
+            raw_result = result_data.get("_raw_result")
+            if raw_result:
+                record["error_mitigation"]["raw_results"] = raw_result
+
         return record
 
     @abstractmethod

@@ -40,6 +40,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
+    CircuitPackage,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
@@ -359,6 +360,8 @@ def calc_stats(data: LinearRampQAOAData, samples: list["MeasCount"]) -> Aggregat
 
 
 class LinearRampQAOA(Benchmark):
+    supports_qem = True
+
     def _build_circuits(
         self, device: "QuantumDevice"
     ) -> tuple[list[QuantumCircuit], list[tuple[int, int, float]], str, EncodingType]:
@@ -432,6 +435,47 @@ class LinearRampQAOA(Benchmark):
                 circuits_with_params.append(circuit.assign_parameters(betas + gammas))
 
         return circuits_with_params, graph_info, optimal_sol, circuit_encoding
+
+    def build_circuits(self, device: "QuantumDevice") -> CircuitPackage:
+        circuits_with_params, graph_info, optimal_sol, circuit_encoding = self._build_circuits(
+            device
+        )
+        return CircuitPackage(
+            circuits=circuits_with_params,
+            shots=self.params.shots,
+            metadata={
+                "graph_info": graph_info,
+                "optimal_sol": optimal_sol,
+                "circuit_encoding": circuit_encoding,
+            },
+        )
+
+    def create_job_data(self, package: CircuitPackage, quantum_job) -> LinearRampQAOAData:
+        approx_ratio_random_mean, approx_ratio_random_std = calc_random_stats(
+            self.params.num_qubits,
+            package.metadata["graph_info"],
+            self.params.shots,
+            self.params.num_random_trials,
+            package.metadata["optimal_sol"],
+        )
+        return LinearRampQAOAData.from_quantum_job(
+            quantum_job=quantum_job,
+            num_qubits=self.params.num_qubits,
+            graph_info=package.metadata["graph_info"],
+            optimal_sol=package.metadata["optimal_sol"],
+            shots=self.params.shots,
+            confidence_level=self.params.confidence_level,
+            trials=self.params.trials,
+            num_random_trials=self.params.num_random_trials,
+            seed=self.params.seed,
+            qaoa_layers=self.params.qaoa_layers,
+            delta_beta=self.params.delta_beta,
+            delta_gamma=self.params.delta_gamma,
+            graph_type=self.params.graph_type,
+            circuit_encoding=package.metadata["circuit_encoding"],
+            approx_ratio_random_mean=approx_ratio_random_mean,
+            approx_ratio_random_std=approx_ratio_random_std,
+        )
 
     def dispatch_handler(self, device: "QuantumDevice") -> LinearRampQAOAData:
         circuits_with_params, graph_info, optimal_sol, circuit_encoding = self._build_circuits(

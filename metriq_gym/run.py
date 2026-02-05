@@ -201,17 +201,40 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"Dispatching {params.benchmark_name}...")
 
     handler: Benchmark = setup_benchmark(args, params, job_type)
-    job_data: BenchmarkData = handler.dispatch_handler(device)
+
+    # Check for QEM configuration
+    qem_config = getattr(params, "error_mitigation", None) or []
+    qem_data = None
+
+    if qem_config and not handler.supports_qem:
+        print(
+            f"Warning: {params.benchmark_name} does not support error mitigation. "
+            "Running without QEM."
+        )
+        qem_config = []
+
+    if qem_config:
+        from metriq_gym.qem.dispatch import dispatch_with_qem
+
+        techniques = ", ".join(c.get("technique", "?") for c in qem_config)
+        print(f"  Applying QEM techniques: {techniques}")
+        job_data, qem_data = dispatch_with_qem(handler, device, qem_config)
+    else:
+        job_data: BenchmarkData = handler.dispatch_handler(device)
 
     # Lazy import to avoid heavy modules during CLI cold start
     from metriq_gym.qplatform.device import normalized_metadata
+
+    data_dict = asdict(job_data)
+    if qem_data is not None:
+        data_dict["_qem"] = qem_data
 
     job_id = job_manager.add_job(
         MetriqGymJob(
             id=str(uuid.uuid4()),
             job_type=job_type,
             params=params.model_dump(exclude_none=True),
-            data=asdict(job_data),
+            data=data_dict,
             provider_name=args.provider,
             device_name=args.device,
             platform={
@@ -746,10 +769,18 @@ def fetch_result(
     job_result_type = setup_benchmark_result_class(job_type)
     if metriq_job.result_data is not None and not getattr(args, "no_cache", False):
         print("[Cached result data]")
-        cached_result = job_result_type.model_validate(metriq_job.result_data)
+        # Filter out QEM metadata keys (prefixed with _) before validating
+        result_dict = {
+            k: v for k, v in metriq_job.result_data.items() if not k.startswith("_")
+        }
+        cached_result = job_result_type.model_validate(result_dict)
         return FetchResultOutput(result=cached_result, raw_results=None, from_cache=True)
 
-    job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
+    # Filter out QEM metadata when reconstructing benchmark data
+    benchmark_data_dict = {k: v for k, v in metriq_job.data.items() if not k.startswith("_")}
+    qem_data = metriq_job.data.get("_qem")
+
+    job_data: "BenchmarkData" = setup_job_data_class(job_type)(**benchmark_data_dict)
     handler: Benchmark = setup_benchmark(
         args, validate_and_create_model(metriq_job.params), job_type
     )
@@ -770,15 +801,37 @@ def fetch_result(
             logger.debug("Failed to compute benchmark runtime.", exc_info=True)
         metriq_job.runtime_seconds = total_time
 
-        result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
-        # Cache result_data in metriq_job, excluding computed fields like 'score'
-        # to keep cached payload minimal and compatible with older tests/consumers.
-        # Fallback to calling model_dump() without kwargs for simple stand-ins used in tests.
-        try:
-            metriq_job.result_data = result.model_dump(exclude={"score"})
-        except TypeError:
-            # Some mocks (e.g., SimpleNamespace with model_dump as lambda) may not accept kwargs
-            metriq_job.result_data = result.model_dump()
+        if qem_data:
+            from metriq_gym.qem.poll import poll_with_qem
+
+            techniques = ", ".join(c.get("technique", "?") for c in qem_data["config"])
+            print(f"Applying QEM post-processing: {techniques}")
+            result, raw_result = poll_with_qem(
+                handler, job_data, result_data, quantum_jobs, qem_data
+            )
+            # Cache both mitigated and raw results
+            try:
+                result_cache = result.model_dump(exclude={"score"})
+            except TypeError:
+                result_cache = result.model_dump()
+            result_cache["_qem_applied"] = True
+            try:
+                result_cache["_raw_result"] = raw_result.model_dump(exclude={"score"})
+            except TypeError:
+                result_cache["_raw_result"] = raw_result.model_dump()
+            result_cache["_qem_config"] = qem_data["config"]
+            metriq_job.result_data = result_cache
+        else:
+            result: "BenchmarkResult" = handler.poll_handler(job_data, result_data, quantum_jobs)
+            # Cache result_data in metriq_job, excluding computed fields like 'score'
+            # to keep cached payload minimal and compatible with older tests/consumers.
+            # Fallback to calling model_dump() without kwargs for simple stand-ins used in tests.
+            try:
+                metriq_job.result_data = result.model_dump(exclude={"score"})
+            except TypeError:
+                # Some mocks (e.g., SimpleNamespace with model_dump as lambda) may not accept kwargs
+                metriq_job.result_data = result.model_dump()
+
         job_manager.update_job(metriq_job)
         return FetchResultOutput(result=result, raw_results=result_data, from_cache=False)
     else:

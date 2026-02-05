@@ -32,6 +32,7 @@ from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
+    CircuitPackage,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.resource_estimation import CircuitBatch
@@ -221,6 +222,8 @@ def calc_stats(data: QuantumVolumeData, counts: list["MeasCount"]) -> AggregateS
 
 
 class QuantumVolume(Benchmark):
+    supports_qem = True
+
     def _build_circuits(
         self, device: "QuantumDevice"
     ) -> tuple[list[QuantumCircuit], list[list[float]]]:
@@ -236,6 +239,25 @@ class QuantumVolume(Benchmark):
         trials = self.params.trials
         circuits, ideal_probs = prepare_qv_circuits(n=num_qubits, num_trials=trials)
         return circuits, ideal_probs
+
+    def build_circuits(self, device: "QuantumDevice") -> CircuitPackage:
+        circuits, ideal_probs = self._build_circuits(device)
+        return CircuitPackage(
+            circuits=circuits,
+            shots=self.params.shots,
+            metadata={"ideal_probs": ideal_probs},
+        )
+
+    def create_job_data(self, package: CircuitPackage, quantum_job) -> QuantumVolumeData:
+        return QuantumVolumeData.from_quantum_job(
+            quantum_job=quantum_job,
+            num_qubits=self.params.num_qubits,
+            shots=self.params.shots,
+            depth=self.params.num_qubits,
+            confidence_level=self.params.confidence_level,
+            ideal_probs=package.metadata["ideal_probs"],
+            trials=self.params.trials,
+        )
 
     def dispatch_handler(self, device: "QuantumDevice") -> QuantumVolumeData:
         circuits, ideal_probs = self._build_circuits(device)

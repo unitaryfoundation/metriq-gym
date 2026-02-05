@@ -50,6 +50,7 @@ dependencies = [
     "qnexus>=0.39.0,<1.0.0",
     "pytket-qiskit>=0.71.0,<0.78.0",
     "pyqpanda3>=0.3.2",
+    "mitiq>=0.48.0,<1.0.0",
 ]
 
 [project.scripts]
