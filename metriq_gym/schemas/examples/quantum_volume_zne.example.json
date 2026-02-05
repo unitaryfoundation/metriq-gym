@@ -1,0 +1,15 @@
+{
+    "benchmark_name": "Quantum Volume",
+    "num_qubits": 4,
+    "shots": 1000,
+    "trials": 5,
+    "confidence_level": 0.95,
+    "error_mitigation": [
+        {
+            "technique": "zne",
+            "scale_factors": [1.0, 2.0, 3.0],
+            "factory": "linear",
+            "fold_method": "global"
+        }
+    ]
+}

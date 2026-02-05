@@ -1,0 +1,21 @@
+{
+    "benchmark_name": "Mirror Circuits",
+    "width": 4,
+    "num_layers": 8,
+    "two_qubit_gate_prob": 0.5,
+    "shots": 1000,
+    "num_circuits": 10,
+    "seed": 42,
+    "error_mitigation": [
+        {
+            "technique": "ddd",
+            "rule": "xyxy"
+        },
+        {
+            "technique": "zne",
+            "scale_factors": [1.0, 2.0, 3.0],
+            "factory": "linear",
+            "fold_method": "global"
+        }
+    ]
+}

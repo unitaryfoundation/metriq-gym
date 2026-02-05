@@ -1,6 +1,9 @@
 # Metriq
 .metriq_gym_jobs.jsonl
 metriq_gym/_version.py
+*.bak
+*.jsonl
+jobs/
 
 # Sphinx
 _build

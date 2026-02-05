@@ -1,0 +1,13 @@
+{
+    "benchmark_name": "WIT",
+    "num_qubits": 7,
+    "shots": 1000,
+    "error_mitigation": [
+        {
+            "technique": "zne",
+            "scale_factors": [1.0, 2.0, 3.0],
+            "factory": "linear",
+            "fold_method": "global"
+        }
+    ]
+}

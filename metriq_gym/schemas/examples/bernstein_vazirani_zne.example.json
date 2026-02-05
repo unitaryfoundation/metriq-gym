@@ -1,0 +1,17 @@
+{
+    "benchmark_name": "Bernstein-Vazirani",
+    "shots": 1000,
+    "min_qubits": 4,
+    "max_qubits": 4,
+    "skip_qubits": 1,
+    "max_circuits": 5,
+    "method": 1,
+    "error_mitigation": [
+        {
+            "technique": "zne",
+            "scale_factors": [1.0, 2.0, 3.0],
+            "factory": "linear",
+            "fold_method": "global"
+        }
+    ]
+}

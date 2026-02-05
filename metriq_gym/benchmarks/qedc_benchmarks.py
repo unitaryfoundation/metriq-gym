@@ -214,10 +214,12 @@ def get_circuits_and_metrics(
     benchmark = import_benchmark_module(benchmark_name)
 
     # Call the QED-C submodule to get the circuits and creation information.
-    # Conver to QED-C parameter naming conventions.
+    # Convert to QED-C parameter naming conventions.
     qedc_params = params.copy()
     if "shots" in qedc_params:
         qedc_params["num_shots"] = qedc_params.pop("shots")
+    # Remove error_mitigation - that's handled by the QEM pipeline, not QEDC
+    qedc_params.pop("error_mitigation", None)
     circuits, circuit_metrics = benchmark.run(
         **qedc_params,
         api="qiskit",
