@@ -7,23 +7,24 @@ Summary:
 
 Result interpretation:
     Polling returns ClopsResult with:
-        - clops_score: circuit layer operations per second (higher is better).
+         - clops_score: circuit layer operations per second (higher is better).
+
     This metric reflects real-world workload performance rather than isolated gate speeds.
 
 References:
-    - [Wack et al., "Quality, Speed, and Scale: three key attributes to measure the
-      performance of near-term quantum computers", arXiv:2110.14108](https://arxiv.org/abs/2110.14108).
+    - [Wack et al., "Quality, Speed, and Scale: three key attributes to measure the performance of near-term quantum computers", arXiv:2110.14108](https://arxiv.org/abs/2110.14108).
     - [Qiskit Device Benchmarking CLOPS](https://github.com/qiskit-community/qiskit-device-benchmarking).
 """
 
-import copy
+from collections import deque
 from dataclasses import dataclass
 
 import rustworkx as rx
 import numpy as np
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 from qiskit import QuantumCircuit
-from qiskit_device_benchmarking.clops.clops_benchmark import append_1q_layer
+from qiskit.circuit import ParameterVector
+from qiskit.circuit.library import RZGate, SXGate
 
 from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
@@ -33,7 +34,11 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkScore,
 )
 from metriq_gym.qplatform.job import execution_time
-from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.qplatform.device import (
+    connectivity_graph,
+    connectivity_graph_for_gate,
+    pruned_connectivity_graph,
+)
 from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
@@ -52,49 +57,86 @@ class ClopsResult(BenchmarkResult):
         return BenchmarkScore(value=self.clops_score)
 
 
-# adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::create_qubit_map
-# As opposed to the original version of this function, this takes a topology graph as an argument instead of an IBM's coupling map object.
-def create_qubit_map(width: int, topology_graph: rx.PyGraph, total_qubits: int) -> list[int]:
+def create_qubit_list(width: int, topology_graph: rx.PyGraph) -> list[int]:
     """
-    Returns a list of  'width' qubits that are connected based on a coupling map that has
-    bad edges already removed and a list of faulty qubits.  If there is not
-    such a map, raises ValueError
+    Returns a list of 'width' connected qubits from the topology_graph.
+
+    Args:
+        width: Number of connected qubits to find.
+        topology_graph: The device topology as a rustworkx PyGraph.
+
+    Note: Adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::create_qubit_map
+        But assumes the faulty qubits/edges were already pruned from the graph.
     """
-    qubit_map = []
-
-    # make coupling map bidirectional so we can find all neighbors
-    cm = copy.deepcopy(topology_graph)
-    for edge in topology_graph.edge_list():
-        cm.add_edge(edge[1], edge[0], None)
-
-    for starting_qubit in range(total_qubits):
-        qubit_map = [starting_qubit]
-        new_neighbors = []
-        prospective_neighbors = list(cm.neighbors(starting_qubit))
-        while prospective_neighbors:
-            for pn in prospective_neighbors:
-                if pn not in qubit_map:
-                    new_neighbors.append(pn)
-            qubit_map = qubit_map + new_neighbors
-            prospective_neighbors = []
-            for nn in new_neighbors:
-                potential_neighbors = list(cm.neighbors(nn))
-                for pn in potential_neighbors:
-                    if pn not in prospective_neighbors:
-                        prospective_neighbors.append(pn)
-            new_neighbors = []
-            if len(qubit_map) >= width:
-                return qubit_map[:width]
+    total_qubits = topology_graph.num_nodes()
+    if total_qubits < width:
+        raise ValueError(f"Device has only {total_qubits} qubits, cannot create set of {width}")
+    for starting_qubit in topology_graph.node_indices():
+        visited: set[int] = set()
+        queue = deque([starting_qubit])
+        while queue and len(visited) < width:
+            node = queue.popleft()
+            if node in visited:
+                continue
+            visited.add(node)
+            for neighbor in topology_graph.neighbors(node):
+                if neighbor not in visited:
+                    queue.append(neighbor)
+        if len(visited) >= width:
+            return list(visited)[:width]
     raise ValueError(f"Insufficient connected qubits to create set of {width} qubits")
 
 
-# adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::prepare_clops_circuits
-# As opposed to the original version of this function, this takes a topology graph as an argument instead of an IBM's coupling map object.
+def append_1q_layer(
+    circuit, qubits: List[int], parameterized: bool = True, parameter_prefix="θ"
+) -> List[ParameterVector]:
+    """Append a layer of parameterized 1-qubit gates on specified qubits.
+
+    Args:
+        circuit: The QuantumCircuit to append gates to.
+        qubits: List of qubit indices to apply the gates on.
+        parameterized: If True, append parameterized gates; if False, append fixed gates.
+        parameter_prefix: Prefix for parameter names if parameterized is True.
+
+    Note: Adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::append_1q_layer
+    and submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::_append_1q_layer_rzsx
+
+    The current version of the qiskit-device-benchmarking code uses the default RZSX basis for these gates, so for
+    easy of understanding the code, we explicitly inline that function here.
+    """
+    size = len(qubits)
+    pars0 = ParameterVector(f"{parameter_prefix}_0", size)
+    pars1 = ParameterVector(f"{parameter_prefix}_1", size)
+    pars2 = ParameterVector(f"{parameter_prefix}_2", size)
+
+    for i, q in enumerate(qubits):
+        if parameterized:
+            circuit._append(RZGate(pars0[i]), [q], [])
+            circuit._append(SXGate(), [q], [])
+            circuit._append(RZGate(pars1[i]), [q], [])
+            circuit._append(SXGate(), [q], [])
+            circuit._append(RZGate(pars2[i]), [q], [])
+        else:
+            circuit._append(SXGate(), [q], [])
+
+    return [pars0, pars1, pars2]
+
+
 def append_2q_layer(
-    qc: QuantumCircuit, topology_graph: rx.PyGraph, basis_gates: set[str], rng: np.random.Generator
+    qc: QuantumCircuit, topology_graph: rx.PyGraph, two_qubit_gate: str, rng: np.random.Generator
 ) -> None:
     """
     Add a layer of random 2q gates.
+
+    Args:
+        qc: The quantum circuit to append to.
+        topology_graph: The device topology as a rustworkx PyGraph.
+        two_qubit_gate: The type of 2q gate to use ('ecr', 'cz', 'cx').
+        rng: Random number generator
+
+    Note: Adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::append_2q_layer
+    This version takes in the cross-platform PyGraph instead of a Qiskit CouplingMap, and also
+    takes an explicit two_qubit_gate versus an available set.
     """
     available_edges = set(topology_graph.edge_list())
     while len(available_edges) > 0:
@@ -105,12 +147,14 @@ def append_2q_layer(
             if (edge[0] in ce) or (edge[1] in ce):
                 edges_to_delete.add(ce)
         available_edges.difference_update(edges_to_delete)
-        if "ecr" in basis_gates:
+        if "ecr" == two_qubit_gate:
             qc.ecr(*edge)
-        elif "cz" in basis_gates:
+        elif "cz" == two_qubit_gate:
             qc.cz(*edge)
-        else:
+        elif "cx" == two_qubit_gate:
             qc.cx(*edge)
+        else:
+            raise ValueError(f"Unsupported two qubit gate: {two_qubit_gate}")
 
 
 # adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::prepare_clops_circuits
@@ -118,13 +162,13 @@ def prepare_clops_circuits(
     width: int,
     layers: int,
     num_circuits: int,
-    basis_gates: set[str],
+    two_qubit_gate: str,
     topology_graph: rx.PyGraph,
-    total_qubits: int,
     seed: int = 0,
 ) -> list[QuantumCircuit]:
-    qubit_map = create_qubit_map(width, topology_graph, total_qubits=total_qubits)
+    qubit_map = create_qubit_list(width, topology_graph)
 
+    # remove edges beyond the width of the circuit we are trying to generate
     for edge in topology_graph.edge_list():
         if edge[0] not in qubit_map or edge[1] not in qubit_map:
             topology_graph.remove_edge(*edge)
@@ -135,9 +179,14 @@ def prepare_clops_circuits(
     parameters = []
     rng = np.random.default_rng(seed)
     for d in range(layers):
-        append_2q_layer(qc, topology_graph, basis_gates, rng)
+        append_2q_layer(qc, topology_graph, two_qubit_gate, rng)
+
+        # add barrier to form "twirling box" to inform primitve where layers are for twirled gates
+        qc.barrier(qubits)
+
         parameters += append_1q_layer(qc, qubits, parameterized=True, parameter_prefix=f"L{d}")
 
+    qc.barrier(qubits)
     for idx in range(width):
         qc.measure(qubit_map[idx], idx)
 
@@ -167,20 +216,21 @@ class Clops(Benchmark):
         Returns:
             List of CLOPS circuits.
         """
-        topology_graph = connectivity_graph(device)
-        num_qubits = device.num_qubits
-        if num_qubits is None:
-            raise ValueError(
-                "Device must have a known number of qubits to run the CLOPS benchmark."
-            )
-        basis_gates = set(device.profile.basis_gates or [])
+        # If the device has restricted connectivity for the two-qubit gate, use
+        # that restricted topology to create the chain
+        graph = connectivity_graph_for_gate(device, self.params.two_qubit_gate)
+        if graph is None:
+            graph = connectivity_graph(device)
+
+        graph = pruned_connectivity_graph(device, graph)
+
         circuits = prepare_clops_circuits(
-            width=self.params.width,
+            width=self.params.num_qubits,
             layers=self.params.num_layers,
             num_circuits=self.params.num_circuits,
-            basis_gates=basis_gates,
-            topology_graph=topology_graph,
-            total_qubits=num_qubits,
+            two_qubit_gate=self.params.two_qubit_gate,
+            seed=self.params.seed,
+            topology_graph=graph,
         )
         return circuits
 
