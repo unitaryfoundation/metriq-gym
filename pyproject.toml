@@ -138,8 +138,10 @@ fallback_version = "0.0.0"
 local = "metriq_gym.local.provider:LocalProvider"
 quantinuum = "metriq_gym.quantinuum.provider:QuantinuumProvider"
 origin = "metriq_gym.origin.provider:OriginProvider"
+ibm_sampler = "metriq_gym.ibm_sampler.provider:IBMSamplerProvider"
 
 [project.entry-points."qbraid.jobs"]
 local = "metriq_gym.local.job:LocalAerJob"
 quantinuum = "metriq_gym.quantinuum.job:QuantinuumJob"
 origin = "metriq_gym.origin.job:OriginJob"
+ibm_sampler = "qbraid.runtime.ibm.job:QiskitJob"
