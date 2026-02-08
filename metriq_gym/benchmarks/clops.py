@@ -5,9 +5,14 @@ Summary:
     quantum volume-style circuits. CLOPS captures end-to-end performance including
     compilation, communication, and execution overhead.
 
+
 Result interpretation:
     Polling returns ClopsResult with:
-         - clops_score: circuit layer operations per second (higher is better).
+         - clops_score: circuit layer operations per second (higher is better) as measured from
+           time of submission to job completion as reported by the cloud platform.
+        - steady_state_clops: circuit layer operations per second (higher is better), ignorning the
+            first execution span to exclude pipeline startup costs, measuring sustained throughput.
+            Only works for cloud platforms that provide execution span metadata (currently only IBM Runtime), and is None when spans are unavailable or there are fewer than two spans.
 
     This metric reflects real-world workload performance rather than isolated gate speeds.
 
@@ -26,13 +31,14 @@ from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 from qiskit.circuit.library import RZGate, SXGate
 
-from pydantic import Field
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
     BenchmarkResult,
     BenchmarkScore,
 )
+import logging
+
 from metriq_gym.qplatform.job import execution_time
 from metriq_gym.qplatform.device import (
     connectivity_graph,
@@ -43,6 +49,9 @@ from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from metriq_gym.ibm_sampler.device import IBMSamplerDevice
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -51,7 +60,8 @@ class ClopsData(BenchmarkData):
 
 
 class ClopsResult(BenchmarkResult):
-    clops_score: float = Field(...)
+    clops_score: float
+    steady_state_clops: float | None = None
 
     def compute_score(self) -> BenchmarkScore:
         return BenchmarkScore(value=self.clops_score)
@@ -89,7 +99,7 @@ def create_qubit_list(width: int, topology_graph: rx.PyGraph) -> list[int]:
 
 def append_1q_layer(
     circuit, qubits: List[int], parameterized: bool = True, parameter_prefix="θ"
-) -> List[ParameterVector]:
+) -> List[ParameterVector] | None:
     """Append a layer of parameterized 1-qubit gates on specified qubits.
 
     Args:
@@ -97,6 +107,10 @@ def append_1q_layer(
         qubits: List of qubit indices to apply the gates on.
         parameterized: If True, append parameterized gates; if False, append fixed gates.
         parameter_prefix: Prefix for parameter names if parameterized is True.
+
+    Returns:
+        If parameterized is True, returns a list of ParameterVector objects for the parameters used.
+        If parameterized is False, returns None.
 
     Note: Adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::append_1q_layer
     and submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::_append_1q_layer_rzsx
@@ -119,14 +133,16 @@ def append_1q_layer(
         else:
             circuit._append(SXGate(), [q], [])
 
-    return [pars0, pars1, pars2]
+    if parameterized:
+        return [pars0, pars1, pars2]
+    return None
 
 
 def append_2q_layer(
     qc: QuantumCircuit, topology_graph: rx.PyGraph, two_qubit_gate: str, rng: np.random.Generator
 ) -> None:
     """
-    Add a layer of random 2q gates.
+    Add a layer of random 2q gates, where
 
     Args:
         qc: The quantum circuit to append to.
@@ -157,7 +173,6 @@ def append_2q_layer(
             raise ValueError(f"Unsupported two qubit gate: {two_qubit_gate}")
 
 
-# adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::prepare_clops_circuits
 def prepare_clops_template(
     width: int,
     layers: int,
@@ -182,6 +197,7 @@ def prepare_clops_template(
         A tuple of (template_circuit, parameters) where *parameters* is a
         flat list of ``ParameterVector`` objects (empty when
         ``parameterized=False``).
+    Note: Adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::prepare_clops_circuits
     """
     qubit_map = create_qubit_list(width, topology_graph)
 
@@ -201,9 +217,9 @@ def prepare_clops_template(
         # add barrier to form "twirling box" to inform primitive where layers are for twirled gates
         qc.barrier(qubits)
 
-        parameters += append_1q_layer(
-            qc, qubits, parameterized=parameterized, parameter_prefix=f"L{d}"
-        )
+        params = append_1q_layer(qc, qubits, parameterized=parameterized, parameter_prefix=f"L{d}")
+        if params is not None:
+            parameters += params
 
     qc.barrier(qubits)
     for idx in range(width):
@@ -222,11 +238,57 @@ def instantiate_circuits(
     rng = np.random.default_rng(seed)
     num_params = sum(len(p) for p in parameters)
     return [
-        template.assign_parameters(
-            [rng.uniform(0, np.pi * 2) for _ in range(num_params)]
-        )
+        template.assign_parameters([rng.uniform(0, np.pi * 2) for _ in range(num_params)])
         for _ in range(num_circuits)
     ]
+
+
+def _compute_steady_state_clops(quantum_jobs: list["QuantumJob"], num_layers: int) -> float | None:
+    """Compute steady-state CLOPS from IBM Runtime ExecutionSpan metadata.
+
+    Skips the first execution span to exclude pipeline startup costs,
+    measuring sustained throughput from the end of the first sub-job
+    to the end of the last sub-job.
+
+    Adapted from qiskit-device-benchmarking ``_clops_throughput_sampler``.
+
+    Returns:
+        Steady-state CLOPS value, or *None* if execution span data is
+        unavailable or there are fewer than two spans.
+    """
+    from qbraid.runtime import QiskitJob
+    from qiskit_ibm_runtime.execution_span import ExecutionSpans
+
+    for quantum_job in quantum_jobs:
+        if not isinstance(quantum_job, QiskitJob):
+            continue
+
+        try:
+            result = quantum_job._job.result()
+            execution_spans: ExecutionSpans = result.metadata["execution"]["execution_spans"]
+        except (AttributeError, KeyError, TypeError):
+            logger.debug("No execution spans available for job %s", quantum_job.id)
+            continue
+
+        spans = execution_spans.sort()
+        if len(spans) < 2:
+            logger.debug(
+                "Only %d execution span(s); need ≥2 for steady-state CLOPS.",
+                len(spans),
+            )
+            return None
+
+        total_size = sum(span.size for span in spans)
+        first_span_stop = spans[0].stop
+        last_span_stop = spans.stop
+
+        elapsed = (last_span_stop - first_span_stop).total_seconds()
+        if elapsed <= 0:
+            return None
+
+        return round(((total_size - spans[0].size) * num_layers) / elapsed)
+
+    return None
 
 
 class Clops(Benchmark):
@@ -266,7 +328,9 @@ class Clops(Benchmark):
         circuits = instantiate_circuits(
             template, parameters, self.params.num_circuits, seed=self.params.seed
         )
-        return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
+        return ClopsData.from_quantum_job(
+            device.run(circuits, shots=self.params.shots, use_session=True)
+        )
 
     def _dispatch_parameterized(self, device: "IBMSamplerDevice") -> ClopsData:
         """Send a single parameterized circuit with parameter arrays (ibm_sampler).
@@ -284,7 +348,7 @@ class Clops(Benchmark):
         ]
 
         pub = (template, param_values, self.params.shots)
-        return ClopsData.from_quantum_job(device.submit(pubs=[pub]))
+        return ClopsData.from_quantum_job(device.submit(pubs=[pub], use_session=True))
 
     def _dispatch_twirled(self, device: "IBMSamplerDevice") -> ClopsData:
         """Send a fixed circuit and delegate randomization to the Sampler twirler (ibm_sampler).
@@ -306,6 +370,7 @@ class Clops(Benchmark):
                 pubs=[template],
                 shots=self.params.shots * self.params.num_circuits,
                 twirling_options=twirling_opts,
+                use_session=True,
             )
         )
 
@@ -343,12 +408,23 @@ class Clops(Benchmark):
         clops_score = (self.params.num_circuits * self.params.num_layers * self.params.shots) / sum(
             execution_time(quantum_job) for quantum_job in quantum_jobs
         )
-        return ClopsResult(clops_score=clops_score)
+        steady_state = _compute_steady_state_clops(quantum_jobs, self.params.num_layers)
+        return ClopsResult(clops_score=clops_score, steady_state_clops=steady_state)
 
     def estimate_resources_handler(
         self,
         device: "QuantumDevice",
     ) -> list["CircuitBatch"]:
+        """
+        Estimates resources needed for the instantiated mode only, as the
+        parameterized and twirled modes require features specific to the
+        cloud platform that are not yet supported.
+        """
+        if self.params.mode != "instantiated":
+            raise NotImplementedError(
+                f"Resource estimation for mode '{self.params.mode}' is not implemented."
+            )
+
         template, parameters = self._build_template(device, parameterized=True)
         circuits = instantiate_circuits(
             template, parameters, self.params.num_circuits, seed=self.params.seed

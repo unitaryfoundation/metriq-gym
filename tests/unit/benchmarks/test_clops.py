@@ -3,7 +3,6 @@
 import argparse
 from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 import rustworkx as rx
 from qiskit import QuantumCircuit
@@ -13,7 +12,6 @@ from metriq_gym.benchmarks.clops import (
     ClopsData,
     ClopsResult,
     append_1q_layer,
-    append_2q_layer,
     create_qubit_list,
     instantiate_circuits,
     prepare_clops_template,
@@ -23,6 +21,7 @@ from metriq_gym.benchmarks.clops import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _linear_graph(n: int) -> rx.PyGraph:
     """Return a linear graph 0-1-2-..-(n-1)."""
@@ -62,6 +61,7 @@ def _make_clops(**param_overrides) -> Clops:
 # create_qubit_list
 # ---------------------------------------------------------------------------
 
+
 def test_create_qubit_list_linear():
     g = _linear_graph(6)
     qubits = create_qubit_list(4, g)
@@ -80,6 +80,7 @@ def test_create_qubit_list_too_few_qubits():
 # append_1q_layer
 # ---------------------------------------------------------------------------
 
+
 def test_append_1q_layer_parameterized():
     qc = QuantumCircuit(4)
     qubits = list(qc.qubits)
@@ -91,7 +92,7 @@ def test_append_1q_layer_parameterized():
 def test_append_1q_layer_fixed():
     qc = QuantumCircuit(4)
     qubits = list(qc.qubits)
-    params = append_1q_layer(qc, qubits, parameterized=False)
+    append_1q_layer(qc, qubits, parameterized=False)
     # Still returns parameter vectors but they aren't in the circuit
     assert len(qc.parameters) == 0
 
@@ -99,6 +100,7 @@ def test_append_1q_layer_fixed():
 # ---------------------------------------------------------------------------
 # prepare_clops_template
 # ---------------------------------------------------------------------------
+
 
 def test_prepare_clops_template_parameterized():
     g = _linear_graph(6)
@@ -125,6 +127,7 @@ def test_prepare_clops_template_fixed():
 # instantiate_circuits
 # ---------------------------------------------------------------------------
 
+
 def test_instantiate_circuits():
     g = _linear_graph(6)
     template, params = prepare_clops_template(
@@ -141,6 +144,7 @@ def test_instantiate_circuits():
 # Dispatch: instantiated mode
 # ---------------------------------------------------------------------------
 
+
 def test_dispatch_instantiated_calls_device_run():
     clops = _make_clops(mode="instantiated")
     device = MagicMock()
@@ -152,9 +156,11 @@ def test_dispatch_instantiated_calls_device_run():
     mock_job.id = "job-123"
     device.run.return_value = mock_job
 
-    with patch("metriq_gym.benchmarks.clops.connectivity_graph_for_gate", return_value=graph), \
-         patch("metriq_gym.benchmarks.clops.connectivity_graph", return_value=graph), \
-         patch("metriq_gym.benchmarks.clops.pruned_connectivity_graph", return_value=graph):
+    with (
+        patch("metriq_gym.benchmarks.clops.connectivity_graph_for_gate", return_value=graph),
+        patch("metriq_gym.benchmarks.clops.connectivity_graph", return_value=graph),
+        patch("metriq_gym.benchmarks.clops.pruned_connectivity_graph", return_value=graph),
+    ):
         result = clops.dispatch_handler(device)
 
     assert isinstance(result, ClopsData)
@@ -168,6 +174,7 @@ def test_dispatch_instantiated_calls_device_run():
 # ---------------------------------------------------------------------------
 # Dispatch: parameterized mode requires IBMSamplerDevice
 # ---------------------------------------------------------------------------
+
 
 def test_dispatch_parameterized_rejects_non_ibm_device():
     clops = _make_clops(mode="parameterized")
@@ -189,9 +196,11 @@ def test_dispatch_parameterized_calls_submit_with_pub():
     mock_job.id = "job-456"
     device.submit.return_value = mock_job
 
-    with patch("metriq_gym.benchmarks.clops.connectivity_graph_for_gate", return_value=graph), \
-         patch("metriq_gym.benchmarks.clops.connectivity_graph", return_value=graph), \
-         patch("metriq_gym.benchmarks.clops.pruned_connectivity_graph", return_value=graph):
+    with (
+        patch("metriq_gym.benchmarks.clops.connectivity_graph_for_gate", return_value=graph),
+        patch("metriq_gym.benchmarks.clops.connectivity_graph", return_value=graph),
+        patch("metriq_gym.benchmarks.clops.pruned_connectivity_graph", return_value=graph),
+    ):
         result = clops.dispatch_handler(device)
 
     assert isinstance(result, ClopsData)
@@ -209,6 +218,7 @@ def test_dispatch_parameterized_calls_submit_with_pub():
 # ---------------------------------------------------------------------------
 # Dispatch: twirled mode requires IBMSamplerDevice
 # ---------------------------------------------------------------------------
+
 
 def test_dispatch_twirled_rejects_non_ibm_device():
     clops = _make_clops(mode="twirled")
@@ -231,9 +241,11 @@ def test_dispatch_twirled_calls_submit_with_twirling_opts():
     mock_job.id = "job-789"
     device.submit.return_value = mock_job
 
-    with patch("metriq_gym.benchmarks.clops.connectivity_graph_for_gate", return_value=graph), \
-         patch("metriq_gym.benchmarks.clops.connectivity_graph", return_value=graph), \
-         patch("metriq_gym.benchmarks.clops.pruned_connectivity_graph", return_value=graph):
+    with (
+        patch("metriq_gym.benchmarks.clops.connectivity_graph_for_gate", return_value=graph),
+        patch("metriq_gym.benchmarks.clops.connectivity_graph", return_value=graph),
+        patch("metriq_gym.benchmarks.clops.pruned_connectivity_graph", return_value=graph),
+    ):
         result = clops.dispatch_handler(device)
 
     assert isinstance(result, ClopsData)
@@ -260,6 +272,7 @@ def test_dispatch_twirled_calls_submit_with_twirling_opts():
 # Dispatch: unknown mode
 # ---------------------------------------------------------------------------
 
+
 def test_dispatch_unknown_mode_raises():
     clops = _make_clops(mode="bogus")
     device = MagicMock()
@@ -271,6 +284,123 @@ def test_dispatch_unknown_mode_raises():
 # ClopsResult
 # ---------------------------------------------------------------------------
 
+
 def test_clops_result_score():
     r = ClopsResult(clops_score=42.5)
     assert r.compute_score().value == pytest.approx(42.5)
+
+
+def test_clops_result_steady_state_defaults_to_none():
+    r = ClopsResult(clops_score=100.0)
+    assert r.steady_state_clops is None
+
+
+def test_clops_result_steady_state_included_when_set():
+    r = ClopsResult(clops_score=100.0, steady_state_clops=200.0)
+    assert r.steady_state_clops == pytest.approx(200.0)
+    # steady_state_clops should appear in values
+    assert "steady_state_clops" in r.values
+
+
+# ---------------------------------------------------------------------------
+# _compute_steady_state_clops
+# ---------------------------------------------------------------------------
+
+
+def test_steady_state_clops_with_multiple_spans():
+    """Verify the steady-state formula with two mock execution spans."""
+    from datetime import datetime, timedelta, timezone
+    from metriq_gym.benchmarks.clops import _compute_steady_state_clops
+    from qbraid.runtime import QiskitJob
+
+    # Build mock spans: span0 (size=100, 0s-1s), span1 (size=400, 1s-3s)
+    t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    span0 = MagicMock()
+    span0.size = 100
+    span0.start = t0
+    span0.stop = t0 + timedelta(seconds=1)
+
+    span1 = MagicMock()
+    span1.size = 400
+    span1.start = t0 + timedelta(seconds=1)
+    span1.stop = t0 + timedelta(seconds=3)
+
+    sorted_spans = MagicMock()
+    sorted_spans.__iter__ = MagicMock(return_value=iter([span0, span1]))
+    sorted_spans.__len__ = MagicMock(return_value=2)
+    sorted_spans.__getitem__ = MagicMock(side_effect=lambda i: [span0, span1][i])
+    sorted_spans.stop = t0 + timedelta(seconds=3)  # last span stop
+
+    execution_spans = MagicMock()
+    execution_spans.sort.return_value = sorted_spans
+
+    mock_result = MagicMock()
+    mock_result.metadata = {"execution": {"execution_spans": execution_spans}}
+
+    mock_runtime_job = MagicMock()
+    mock_runtime_job.result.return_value = mock_result
+
+    qiskit_job = MagicMock(spec=QiskitJob)
+    qiskit_job._job = mock_runtime_job
+    qiskit_job.id = "test-job"
+
+    num_layers = 10
+    # Formula: ((500 - 100) * 10) / (3s - 1s) = 4000 / 2 = 2000
+    result = _compute_steady_state_clops([qiskit_job], num_layers)
+    assert result == 2000
+
+
+def test_steady_state_clops_single_span_returns_none():
+    """With only one span, can't exclude startup — should return None."""
+    from datetime import datetime, timedelta, timezone
+    from metriq_gym.benchmarks.clops import _compute_steady_state_clops
+    from qbraid.runtime import QiskitJob
+
+    t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    span0 = MagicMock()
+    span0.size = 100
+    span0.stop = t0 + timedelta(seconds=1)
+
+    sorted_spans = MagicMock()
+    sorted_spans.__len__ = MagicMock(return_value=1)
+
+    execution_spans = MagicMock()
+    execution_spans.sort.return_value = sorted_spans
+
+    mock_result = MagicMock()
+    mock_result.metadata = {"execution": {"execution_spans": execution_spans}}
+
+    mock_runtime_job = MagicMock()
+    mock_runtime_job.result.return_value = mock_result
+
+    qiskit_job = MagicMock(spec=QiskitJob)
+    qiskit_job._job = mock_runtime_job
+    qiskit_job.id = "test-job"
+
+    assert _compute_steady_state_clops([qiskit_job], num_layers=10) is None
+
+
+def test_steady_state_clops_non_qiskit_job_returns_none():
+    """Non-QiskitJob should be skipped, returning None."""
+    from metriq_gym.benchmarks.clops import _compute_steady_state_clops
+
+    generic_job = MagicMock()  # not a QiskitJob
+    assert _compute_steady_state_clops([generic_job], num_layers=10) is None
+
+
+def test_steady_state_clops_missing_metadata_returns_none():
+    """If metadata is missing execution_spans, should return None gracefully."""
+    from metriq_gym.benchmarks.clops import _compute_steady_state_clops
+    from qbraid.runtime import QiskitJob
+
+    mock_result = MagicMock()
+    mock_result.metadata = {}  # no "execution" key
+
+    mock_runtime_job = MagicMock()
+    mock_runtime_job.result.return_value = mock_result
+
+    qiskit_job = MagicMock(spec=QiskitJob)
+    qiskit_job._job = mock_runtime_job
+    qiskit_job.id = "test-job"
+
+    assert _compute_steady_state_clops([qiskit_job], num_layers=10) is None
