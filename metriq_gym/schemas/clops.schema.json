@@ -50,6 +50,13 @@
       "default": "cz",
       "enum": ["cz", "cx", "ecr"],
       "examples": ["cz", "cx", "ecr"]
+    },
+    "mode": {
+      "type": "string",
+      "description": "How circuits are submitted. 'instantiated' binds parameters locally and sends concrete circuits (works with any provider). 'parameterized' sends a single parameterized circuit with parameter arrays via SamplerV2 PUBs (requires ibm_sampler provider). 'twirled' sends a fixed circuit and delegates randomization to the Sampler's gate twirler (requires ibm_sampler provider).",
+      "default": "instantiated",
+      "enum": ["instantiated", "parameterized", "twirled"],
+      "examples": ["instantiated", "parameterized", "twirled"]
     }
   },
   "required": ["benchmark_name"]
