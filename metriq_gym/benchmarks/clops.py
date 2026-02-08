@@ -158,14 +158,31 @@ def append_2q_layer(
 
 
 # adapted from submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::prepare_clops_circuits
-def prepare_clops_circuits(
+def prepare_clops_template(
     width: int,
     layers: int,
-    num_circuits: int,
     two_qubit_gate: str,
     topology_graph: rx.PyGraph,
+    parameterized: bool = True,
     seed: int = 0,
-) -> list[QuantumCircuit]:
+) -> tuple[QuantumCircuit, list[ParameterVector]]:
+    """Build a single CLOPS template circuit.
+
+    Args:
+        width: Number of qubits.
+        layers: Number of 2Q+1Q layer repetitions.
+        two_qubit_gate: Native two-qubit gate name.
+        topology_graph: Device connectivity (will be pruned in-place).
+        parameterized: If True, 1Q gates are parameterized; if False, fixed SX
+            gates are used (appropriate for twirled mode where the Sampler
+            randomizes the gates).
+        seed: RNG seed for reproducible 2Q gate placement.
+
+    Returns:
+        A tuple of (template_circuit, parameters) where *parameters* is a
+        flat list of ``ParameterVector`` objects (empty when
+        ``parameterized=False``).
+    """
     qubit_map = create_qubit_list(width, topology_graph)
 
     # remove edges beyond the width of the circuit we are trying to generate
@@ -176,29 +193,40 @@ def prepare_clops_circuits(
     qc = QuantumCircuit(max(qubit_map) + 1, max(qubit_map) + 1)
     qubits = [qc.qubits[i] for i in qubit_map]
 
-    parameters = []
+    parameters: list[ParameterVector] = []
     rng = np.random.default_rng(seed)
     for d in range(layers):
         append_2q_layer(qc, topology_graph, two_qubit_gate, rng)
 
-        # add barrier to form "twirling box" to inform primitve where layers are for twirled gates
+        # add barrier to form "twirling box" to inform primitive where layers are for twirled gates
         qc.barrier(qubits)
 
-        parameters += append_1q_layer(qc, qubits, parameterized=True, parameter_prefix=f"L{d}")
+        parameters += append_1q_layer(
+            qc, qubits, parameterized=parameterized, parameter_prefix=f"L{d}"
+        )
 
     qc.barrier(qubits)
     for idx in range(width):
         qc.measure(qubit_map[idx], idx)
 
-    # Parameters are instantiated for each circuit with random values
-    parametrized_circuits = [
-        qc.assign_parameters(
-            [rng.uniform(0, np.pi * 2) for _ in range(sum([len(param) for param in parameters]))]
+    return qc, parameters
+
+
+def instantiate_circuits(
+    template: QuantumCircuit,
+    parameters: list[ParameterVector],
+    num_circuits: int,
+    seed: int = 0,
+) -> list[QuantumCircuit]:
+    """Bind random parameter values to produce *num_circuits* concrete circuits."""
+    rng = np.random.default_rng(seed)
+    num_params = sum(len(p) for p in parameters)
+    return [
+        template.assign_parameters(
+            [rng.uniform(0, np.pi * 2) for _ in range(num_params)]
         )
         for _ in range(num_circuits)
     ]
-
-    return parametrized_circuits
 
 
 class Clops(Benchmark):
@@ -207,36 +235,104 @@ class Clops(Benchmark):
     https://arxiv.org/abs/2110.14108
     """
 
-    def _build_circuits(self, device: "QuantumDevice") -> list[QuantumCircuit]:
-        """Shared circuit construction logic.
-
-        Args:
-            device: The quantum device to build circuits for.
-
-        Returns:
-            List of CLOPS circuits.
-        """
-        # If the device has restricted connectivity for the two-qubit gate, use
-        # that restricted topology to create the chain
+    def _get_topology(self, device: "QuantumDevice") -> rx.PyGraph:
+        """Return the (possibly pruned) device topology for the configured 2Q gate."""
         graph = connectivity_graph_for_gate(device, self.params.two_qubit_gate)
         if graph is None:
             graph = connectivity_graph(device)
+        return pruned_connectivity_graph(device, graph)
 
-        graph = pruned_connectivity_graph(device, graph)
-
-        circuits = prepare_clops_circuits(
+    def _build_template(
+        self, device: "QuantumDevice", parameterized: bool = True
+    ) -> tuple[QuantumCircuit, list[ParameterVector]]:
+        """Build the CLOPS template circuit from device topology."""
+        graph = self._get_topology(device)
+        return prepare_clops_template(
             width=self.params.num_qubits,
             layers=self.params.num_layers,
-            num_circuits=self.params.num_circuits,
             two_qubit_gate=self.params.two_qubit_gate,
-            seed=self.params.seed,
             topology_graph=graph,
+            parameterized=parameterized,
+            seed=self.params.seed,
         )
-        return circuits
+
+    # ------------------------------------------------------------------
+    # Mode-specific dispatch helpers
+    # ------------------------------------------------------------------
+
+    def _dispatch_instantiated(self, device: "QuantumDevice") -> ClopsData:
+        """Bind parameters locally and send concrete circuits (any provider)."""
+        template, parameters = self._build_template(device, parameterized=True)
+        circuits = instantiate_circuits(
+            template, parameters, self.params.num_circuits, seed=self.params.seed
+        )
+        return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
+
+    def _dispatch_parameterized(self, device: "IBMSamplerDevice") -> ClopsData:
+        """Send a single parameterized circuit with parameter arrays (ibm_sampler).
+
+        Follows the SamplerV2 PUB format: ``(circuit, parameter_values, shots)``.
+        See: https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/sampler-v2
+        """
+        template, parameters = self._build_template(device, parameterized=True)
+
+        num_params = sum(len(p) for p in parameters)
+        rng = np.random.default_rng(self.params.seed)
+        param_values = [
+            [rng.uniform(0, np.pi * 2) for _ in range(num_params)]
+            for _ in range(self.params.num_circuits)
+        ]
+
+        pub = (template, param_values, self.params.shots)
+        return ClopsData.from_quantum_job(device.submit(pubs=[pub]))
+
+    def _dispatch_twirled(self, device: "IBMSamplerDevice") -> ClopsData:
+        """Send a fixed circuit and delegate randomization to the Sampler twirler (ibm_sampler).
+
+        The Sampler applies gate twirling to produce ``num_circuits``
+        randomized variants, each run for ``shots`` shots.
+        """
+        from qiskit_ibm_runtime.options import TwirlingOptions
+
+        template, _parameters = self._build_template(device, parameterized=False)
+
+        twirling_opts = TwirlingOptions(
+            num_randomizations=self.params.num_circuits,
+            shots_per_randomization=self.params.shots,
+            enable_gates=True,
+        )
+        return ClopsData.from_quantum_job(
+            device.submit(
+                pubs=[template],
+                shots=self.params.shots * self.params.num_circuits,
+                twirling_options=twirling_opts,
+            )
+        )
+
+    # ------------------------------------------------------------------
+    # Public interface
+    # ------------------------------------------------------------------
 
     def dispatch_handler(self, device: "QuantumDevice") -> ClopsData:
-        circuits = self._build_circuits(device)
-        return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
+        from metriq_gym.ibm_sampler.device import IBMSamplerDevice
+
+        mode = getattr(self.params, "mode", "instantiated") or "instantiated"
+
+        if mode in ("parameterized", "twirled"):
+            if not isinstance(device, IBMSamplerDevice):
+                raise ValueError(
+                    f"CLOPS mode '{mode}' requires the ibm_sampler provider "
+                    f"(IBMSamplerDevice), but got {type(device).__name__}."
+                )
+
+        if mode == "instantiated":
+            return self._dispatch_instantiated(device)
+        elif mode == "parameterized":
+            return self._dispatch_parameterized(device)
+        elif mode == "twirled":
+            return self._dispatch_twirled(device)
+        else:
+            raise ValueError(f"Unknown CLOPS mode: '{mode}'")
 
     def poll_handler(
         self,
@@ -253,5 +349,8 @@ class Clops(Benchmark):
         self,
         device: "QuantumDevice",
     ) -> list["CircuitBatch"]:
-        circuits = self._build_circuits(device)
+        template, parameters = self._build_template(device, parameterized=True)
+        circuits = instantiate_circuits(
+            template, parameters, self.params.num_circuits, seed=self.params.seed
+        )
         return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
