@@ -33,7 +33,11 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
     BenchmarkScore,
 )
+import logging
+
 from metriq_gym.qplatform.job import execution_time
+
+logger = logging.getLogger(__name__)
 from metriq_gym.qplatform.device import (
     connectivity_graph,
     connectivity_graph_for_gate,
@@ -52,6 +56,15 @@ class ClopsData(BenchmarkData):
 
 class ClopsResult(BenchmarkResult):
     clops_score: float = Field(...)
+    steady_state_clops: float | None = Field(
+        default=None,
+        description=(
+            "Steady-state CLOPS derived from IBM Runtime ExecutionSpan metadata. "
+            "Excludes the first sub-job to skip pipeline startup costs, measuring "
+            "sustained throughput. None when spans are unavailable (non-IBM provider) "
+            "or there is only a single execution span."
+        ),
+    )
 
     def compute_score(self) -> BenchmarkScore:
         return BenchmarkScore(value=self.clops_score)
@@ -229,6 +242,60 @@ def instantiate_circuits(
     ]
 
 
+def _compute_steady_state_clops(
+    quantum_jobs: list["QuantumJob"], num_layers: int
+) -> float | None:
+    """Compute steady-state CLOPS from IBM Runtime ExecutionSpan metadata.
+
+    Skips the first execution span to exclude pipeline startup costs,
+    measuring sustained throughput from the end of the first sub-job
+    to the end of the last sub-job.
+
+    Adapted from qiskit-device-benchmarking ``_clops_throughput_sampler``.
+
+    Returns:
+        Steady-state CLOPS value, or *None* if execution span data is
+        unavailable or there are fewer than two spans.
+    """
+    from qbraid.runtime import QiskitJob
+    from qiskit_ibm_runtime.execution_span import ExecutionSpans
+
+    for quantum_job in quantum_jobs:
+        if not isinstance(quantum_job, QiskitJob):
+            continue
+
+        try:
+            result = quantum_job._job.result()
+            execution_spans: ExecutionSpans = result.metadata["execution"][
+                "execution_spans"
+            ]
+        except (AttributeError, KeyError, TypeError):
+            logger.debug("No execution spans available for job %s", quantum_job.id)
+            continue
+
+        spans = execution_spans.sort()
+        if len(spans) < 2:
+            logger.debug(
+                "Only %d execution span(s); need ≥2 for steady-state CLOPS.",
+                len(spans),
+            )
+            return None
+
+        total_size = sum(span.size for span in spans)
+        first_span_stop = spans[0].stop
+        last_span_stop = spans.stop
+
+        elapsed = (last_span_stop - first_span_stop).total_seconds()
+        if elapsed <= 0:
+            return None
+
+        return round(
+            ((total_size - spans[0].size) * num_layers) / elapsed
+        )
+
+    return None
+
+
 class Clops(Benchmark):
     """
     Circuit Layer Operations per Second Benchmark
@@ -343,7 +410,8 @@ class Clops(Benchmark):
         clops_score = (self.params.num_circuits * self.params.num_layers * self.params.shots) / sum(
             execution_time(quantum_job) for quantum_job in quantum_jobs
         )
-        return ClopsResult(clops_score=clops_score)
+        steady_state = _compute_steady_state_clops(quantum_jobs, self.params.num_layers)
+        return ClopsResult(clops_score=clops_score, steady_state_clops=steady_state)
 
     def estimate_resources_handler(
         self,
