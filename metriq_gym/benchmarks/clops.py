@@ -116,7 +116,7 @@ def append_1q_layer(
     and submodules/qiskit-device-benchmarking/qiskit_device_benchmarking/clops/clops_benchmark.py::_append_1q_layer_rzsx
 
     The current version of the qiskit-device-benchmarking code uses the default RZSX basis for these gates, so for
-    easy of understanding the code, we explicitly inline that function here.
+    ease of understanding the code, we explicitly inline that function here.
     """
     size = len(qubits)
     pars0 = ParameterVector(f"{parameter_prefix}_0", size)
