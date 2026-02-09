@@ -94,6 +94,27 @@ mgym job estimate metriq_gym/schemas/examples/bseq.example.json \
     --provider ibm --device ibm_fez
 ```
 
+## IBM Sampler Provider
+
+For benchmarks that benefit from IBM Runtime's SamplerV2 features — such as **sessions**, **parameterized circuits**, and **gate twirling** — use the `ibm_sampler` provider instead of `ibm`.
+
+The `ibm_sampler` provider uses the same credentials and devices as `ibm`, but submits jobs through `SamplerV2` rather than the default `backend.run()` path. This enables:
+
+- **Sessions**: Keeps the backend allocated across multiple circuit submissions for lower latency (enabled by default, can be disabled).
+- **Parameterized circuits**: Sends a single template circuit with parameter arrays, letting the runtime bind parameters server-side for higher throughput.
+- **Gate twirling**: Delegates circuit randomization to the Sampler's built-in twirler, useful for error-mitigated workloads.
+
+As of this writing, only the CLOPS benchmark benefits from these extra features.
+
+### Usage
+
+```bash
+# Dispatch with SamplerV2 features
+mgym job dispatch config.json --provider ibm_sampler --device ibm_brisbane
+```
+
+
+
 ## Troubleshooting
 
 ### Authentication Errors
