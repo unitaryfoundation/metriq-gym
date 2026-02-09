@@ -2116,7 +2116,11 @@ compilation, communication, and execution overhead.</p>
 <details class="result-interpretation" open>
   <summary>Result interpretation</summary>
   <p>Polling returns ClopsResult with:
-     - clops_score: circuit layer operations per second (higher is better).</p>
+     - clops_score: circuit layer operations per second (higher is better) as measured from
+       time of submission to job completion as reported by the cloud platform.
+    - steady_state_clops: circuit layer operations per second (higher is better), ignorning the
+        first execution span to exclude pipeline startup costs, measuring sustained throughput.
+        Only works for cloud platforms that provide execution span metadata (currently only IBM Runtime), and is None when spans are unavailable or there are fewer than two spans.</p>
 <p>This metric reflects real-world workload performance rather than isolated gate speeds.</p>
 </details>
 
