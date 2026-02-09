@@ -2,7 +2,7 @@
 
 This module defines ``IBMSamplerDevice``, a subclass of qBraid's
 ``QiskitBackend`` that overrides ``submit()`` to optionally run inside
-an IBM Runtime Session and apply twirling or execute paramaterized cirucits.
+an IBM Runtime Session and apply twirling or execute parameterized circuits.
 It accepts SamplerV2 PUBs directly, matching the ``SamplerV2.run()`` interface.
 """
 
@@ -57,7 +57,7 @@ class IBMSamplerDevice(QiskitBackend):
         See: https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/sampler-v2#run
 
         Args:
-            pubs: An iterable of SamplerV2 Primitive Unified Blocs.
+            pubs: An iterable of SamplerV2 Primitive Unified Blocks.
             shots: Number of shots per PUB.  If *None* the sampler default
                 is used.  Per-PUB shots in the PUB tuple take precedence.
             twirling_options: Optional ``TwirlingOptions`` forwarded to the

@@ -13,7 +13,7 @@ from .device import IBMSamplerDevice
 
 
 class IBMSamplerProvider(QiskitRuntimeProvider):
-    """IBM provider whose devices always submit via a Session."""
+    """IBM provider whose devices support parameterized and twirling via an optional  Session."""
 
     def __init__(
         self,
