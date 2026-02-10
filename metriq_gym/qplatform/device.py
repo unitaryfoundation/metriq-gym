@@ -126,7 +126,7 @@ def connectivity_graph_for_gate(device: QuantumDevice, gate: str) -> rx.PyGraph 
 @connectivity_graph_for_gate.register
 def _(device: QiskitBackend, gate: str) -> rx.PyGraph | None:
     if gate in device._backend.target:
-        return device._backend.target[gate].graph.to_undirected(multigraph=False)
+        return coupling_map_to_graph(device._backend.target.build_coupling_map(two_q_gate=gate))
     return None
 
 
