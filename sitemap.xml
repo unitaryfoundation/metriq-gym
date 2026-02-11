@@ -2,82 +2,82 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/benchmarks/overview/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/cli/job-commands/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/cli/overview/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/cli/suite-commands/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/development/adding-benchmarks/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/development/api-reference/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/development/developer-guide/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/getting-started/metriq-platform/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/getting-started/quickstart/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/getting-started/tutorial/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/providers/azure/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/providers/braket/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/providers/ibm/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/providers/ionq/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/providers/local/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/providers/originq/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/providers/overview/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/providers/quantinuum/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://unitaryfoundation.github.io/metriq-gym/uploading/github/</loc>
-         <lastmod>2026-02-10</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
 </urlset>
