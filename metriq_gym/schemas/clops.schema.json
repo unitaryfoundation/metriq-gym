@@ -57,6 +57,12 @@
       "default": "instantiated",
       "enum": ["instantiated", "parameterized", "twirled"],
       "examples": ["instantiated", "parameterized", "twirled"]
+    },
+    "use_session": {
+      "type": "boolean",
+      "description": "Whether to use a session for running circuits. Currently, only supported by ibm_sampler provider",
+      "default": false,
+      "examples": [true, false]
     }
   },
   "required": ["benchmark_name"]
