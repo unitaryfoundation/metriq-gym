@@ -146,7 +146,7 @@ def test_instantiate_circuits():
 
 
 def test_dispatch_instantiated_calls_device_run():
-    clops = _make_clops(mode="instantiated")
+    clops = _make_clops(mode="instantiated", use_session=False)
     device = MagicMock()
     device.profile.basis_gates = ["cz", "sx", "rz"]
 
@@ -274,7 +274,7 @@ def test_dispatch_twirled_calls_submit_with_twirling_opts():
 
 
 def test_dispatch_unknown_mode_raises():
-    clops = _make_clops(mode="bogus")
+    clops = _make_clops(mode="bogus", use_session=False)
     device = MagicMock()
     with pytest.raises(ValueError, match="Unknown CLOPS mode"):
         clops.dispatch_handler(device)

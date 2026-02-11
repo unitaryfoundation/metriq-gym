@@ -329,7 +329,7 @@ class Clops(Benchmark):
             template, parameters, self.params.num_circuits, seed=self.params.seed
         )
         return ClopsData.from_quantum_job(
-            device.run(circuits, shots=self.params.shots, use_session=True)
+            device.run(circuits, shots=self.params.shots, use_session=self.params.use_session)
         )
 
     def _dispatch_parameterized(self, device: "IBMSamplerDevice") -> ClopsData:
@@ -348,7 +348,9 @@ class Clops(Benchmark):
         ]
 
         pub = (template, param_values, self.params.shots)
-        return ClopsData.from_quantum_job(device.submit(pubs=[pub], use_session=True))
+        return ClopsData.from_quantum_job(
+            device.submit(pubs=[pub], use_session=self.params.use_session)
+        )
 
     def _dispatch_twirled(self, device: "IBMSamplerDevice") -> ClopsData:
         """Send a fixed circuit and delegate randomization to the Sampler twirler (ibm_sampler).
@@ -370,7 +372,7 @@ class Clops(Benchmark):
                 pubs=[template],
                 shots=self.params.shots * self.params.num_circuits,
                 twirling_options=twirling_opts,
-                use_session=True,
+                use_session=self.params.use_session,
             )
         )
 
@@ -389,6 +391,11 @@ class Clops(Benchmark):
                     f"CLOPS mode '{mode}' requires the ibm_sampler provider "
                     f"(IBMSamplerDevice), but got {type(device).__name__}."
                 )
+        if self.params.use_session and not isinstance(device, IBMSamplerDevice):
+            raise ValueError(
+                f"CLOPS parameter 'use_session=True' requires the ibm_sampler provider "
+                f"(IBMSamplerDevice), but got {type(device).__name__}."
+            )
 
         if mode == "instantiated":
             return self._dispatch_instantiated(device)
