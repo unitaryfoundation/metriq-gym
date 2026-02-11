@@ -130,6 +130,43 @@ def _(device: QiskitBackend, gate: str) -> rx.PyGraph | None:
     return None
 
 
+@singledispatch
+def pruned_connectivity_graph(device: QuantumDevice, graph: rx.PyGraph) -> rx.PyGraph:
+    """Return a new graph with faulty qubits and edges removed.
+
+    For devices that don't support faulty qubit/edge reporting, returns
+    a copy of the input graph unchanged.
+
+    Args:
+        device: The quantum device to check for faulty components.
+        graph: The connectivity graph to filter.
+
+    Returns:
+        A new PyGraph with faulty qubits (nodes) and faulty gate edges removed.
+        Node indices are preserved - removed nodes leave gaps in the index space.
+    """
+    return graph.copy()
+
+
+@pruned_connectivity_graph.register
+def _(device: QiskitBackend, graph: rx.PyGraph) -> rx.PyGraph:
+    backend = device._backend
+
+    if not hasattr(backend, "properties") or backend.properties() is None:
+        return graph.copy()
+
+    props = backend.properties()
+
+    faulty_gates = backend.properties().faulty_gates()
+    faulty_edges = [tuple(gate.qubits) for gate in faulty_gates if len(gate.qubits) > 1]
+
+    new_graph = graph.copy()
+    new_graph.remove_edges_from(faulty_edges)
+    new_graph.remove_nodes_from(props.faulty_qubits())
+
+    return new_graph
+
+
 def normalized_metadata(device: QuantumDevice) -> dict:
     """Return a minimal, normalized subset of device metadata.
 
