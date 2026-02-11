@@ -5,7 +5,8 @@ Summary:
     results against classical optima to estimate approximation ratios and optimal sampling
     probabilities.
 
-    For a deeper dive into LR-QAOA results across various graph types, see protocol [authors' dashboard](https://qpu-benchmarking.streamlit.app/).
+    For a deeper dive into results across various graph types,
+    see the authors' benchmarking [dashboard](https://qpu-benchmarking.streamlit.app/).
 
 Result interpretation:
     Polling returns LinearRampQAOAResult with metrics including:
@@ -15,7 +16,8 @@ Result interpretation:
     Higher approximation ratios and optimal probabilities reflect better QAOA performance.
 
 References:
-    - [J. A. Montanez-Barrera, Kristel Michielsen, David E. Bernal Neira, arXiv:2502.06471](https://arxiv.org/abs/2502.06471).
+    - Montanez-Barrera et al., "Evaluating the performance of quantum processing units at large width and depth",
+    [arXiv:2502.06471](https://arxiv.org/abs/2502.06471).
 """
 
 import math
