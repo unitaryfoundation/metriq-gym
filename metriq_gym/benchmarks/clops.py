@@ -46,10 +46,10 @@ from metriq_gym.qplatform.device import (
     pruned_connectivity_graph,
 )
 from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.ibm_sampler.device import IBMSamplerDevice
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-    from metriq_gym.ibm_sampler.device import IBMSamplerDevice
 
 logger = logging.getLogger(__name__)
 
@@ -328,9 +328,11 @@ class Clops(Benchmark):
         circuits = instantiate_circuits(
             template, parameters, self.params.num_circuits, seed=self.params.seed
         )
-        return ClopsData.from_quantum_job(
-            device.run(circuits, shots=self.params.shots, use_session=self.params.use_session)
-        )
+        if isinstance(device, IBMSamplerDevice):
+            return ClopsData.from_quantum_job(
+                device.run(circuits, shots=self.params.shots, use_session=self.params.use_session)
+            )
+        return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
 
     def _dispatch_parameterized(self, device: "IBMSamplerDevice") -> ClopsData:
         """Send a single parameterized circuit with parameter arrays (ibm_sampler).
@@ -381,8 +383,6 @@ class Clops(Benchmark):
     # ------------------------------------------------------------------
 
     def dispatch_handler(self, device: "QuantumDevice") -> ClopsData:
-        from metriq_gym.ibm_sampler.device import IBMSamplerDevice
-
         mode = getattr(self.params, "mode", "instantiated") or "instantiated"
 
         if mode in ("parameterized", "twirled"):
