@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -1708,7 +1708,7 @@
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span>--provider<span class="w"> </span>ibm<span class="w"> </span>--device<span class="w"> </span>ibm_fez
 </code></pre></div>
 <h2 id="ibm-sampler-provider">IBM Sampler Provider<a class="headerlink" href="#ibm-sampler-provider" title="Permanent link">&para;</a></h2>
-<p>For benchmarks that benefit from IBM Runtime's SamplerV2 features — such as <strong>sessions</strong>, <strong>parameterized circuits</strong>, and <strong>gate twirling</strong> — use the <code>ibm_sampler</code> provider instead of <code>ibm</code>.</p>
+<p>For benchmarks that benefit from IBM Runtime's <a href="https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/sampler-v2">SamplerV2</a> features — such as <strong>sessions</strong>, <strong>parameterized circuits</strong>, and <strong>gate twirling</strong> — use the <code>ibm_sampler</code> provider instead of <code>ibm</code>.</p>
 <p>The <code>ibm_sampler</code> provider uses the same credentials and devices as <code>ibm</code>, but submits jobs through <code>SamplerV2</code> rather than the default <code>backend.run()</code> path. This enables:</p>
 <ul>
 <li><strong>Sessions</strong>: Keeps the backend allocated across multiple circuit submissions for lower latency (enabled by default, can be disabled).</li>
