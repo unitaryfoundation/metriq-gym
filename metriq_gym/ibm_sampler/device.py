@@ -9,16 +9,12 @@ It accepts SamplerV2 PUBs directly, matching the ``SamplerV2.run()`` interface.
 from typing import Iterable
 
 from qiskit.primitives.containers.sampler_pub import SamplerPubLike
-from qiskit_ibm_runtime import Session
-from qiskit_ibm_runtime import SamplerV2 as Sampler
-from qiskit_ibm_runtime import SamplerOptions
+from qiskit_ibm_runtime import Session, SamplerV2 as Sampler, SamplerOptions, QiskitRuntimeService
 from qiskit_ibm_runtime.options import TwirlingOptions
 
 from qbraid.runtime.ibm.device import QiskitBackend
 from qbraid.runtime.ibm.job import QiskitJob
 import qbraid.runtime
-
-import qiskit_ibm_runtime
 
 
 class IBMSamplerDevice(QiskitBackend):
@@ -31,7 +27,7 @@ class IBMSamplerDevice(QiskitBackend):
     def __init__(
         self,
         profile: qbraid.runtime.TargetProfile,
-        service: qiskit_ibm_runtime.QiskitRuntimeService | None = None,
+        service: QiskitRuntimeService | None = None,
     ):
         super().__init__(profile=profile, service=service)
 
