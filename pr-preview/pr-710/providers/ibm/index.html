@@ -869,34 +869,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ibm-sampler-provider" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IBM Sampler Provider
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="IBM Sampler Provider">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1549,34 +1521,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ibm-sampler-provider" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IBM Sampler Provider
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="IBM Sampler Provider">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1707,25 +1651,12 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>metriq_gym/schemas/examples/bseq.example.json<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span>--provider<span class="w"> </span>ibm<span class="w"> </span>--device<span class="w"> </span>ibm_fez
 </code></pre></div>
-<h2 id="ibm-sampler-provider">IBM Sampler Provider<a class="headerlink" href="#ibm-sampler-provider" title="Permanent link">&para;</a></h2>
-<p>For benchmarks that benefit from IBM Runtime's <a href="https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/sampler-v2">SamplerV2</a> features — such as <strong>sessions</strong>, <strong>parameterized circuits</strong>, and <strong>gate twirling</strong> — use the <code>ibm_sampler</code> provider instead of <code>ibm</code>.</p>
-<p>The <code>ibm_sampler</code> provider uses the same credentials and devices as <code>ibm</code>, but submits jobs through <code>SamplerV2</code> rather than the default <code>backend.run()</code> path. This enables:</p>
-<ul>
-<li><strong>Sessions</strong>: Keeps the backend allocated across multiple circuit submissions for lower latency (enabled by default, can be disabled).</li>
-<li><strong>Parameterized circuits</strong>: Sends a single template circuit with parameter arrays, letting the runtime bind parameters server-side for higher throughput.</li>
-<li><strong>Gate twirling</strong>: Delegates circuit randomization to the Sampler's built-in twirler, useful for error-mitigated workloads.</li>
-</ul>
-<p>As of this writing, only the CLOPS benchmark benefits from these extra features.</p>
-<h3 id="usage_1">Usage<a class="headerlink" href="#usage_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Dispatch with SamplerV2 features</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span>ibm_sampler<span class="w"> </span>--device<span class="w"> </span>ibm_brisbane
-</code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="authentication-errors">Authentication Errors<a class="headerlink" href="#authentication-errors" title="Permanent link">&para;</a></h3>
 <p>Ensure your API key is valid and has appropriate permissions:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qiskit_ibm_runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">QiskitRuntimeService</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">service</span> <span class="o">=</span> <span class="n">QiskitRuntimeService</span><span class="p">(</span><span class="n">channel</span><span class="o">=</span><span class="s2">&quot;ibm_quantum_platform&quot;</span><span class="p">)</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">service</span><span class="o">.</span><span class="n">backends</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qiskit_ibm_runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">QiskitRuntimeService</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">service</span> <span class="o">=</span> <span class="n">QiskitRuntimeService</span><span class="p">(</span><span class="n">channel</span><span class="o">=</span><span class="s2">&quot;ibm_quantum_platform&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">service</span><span class="o">.</span><span class="n">backends</span><span class="p">())</span>
 </code></pre></div>
 <h3 id="device-unavailable">Device Unavailable<a class="headerlink" href="#device-unavailable" title="Permanent link">&para;</a></h3>
 <p>Check device status on the IBM Quantum Platform. Devices may be:
