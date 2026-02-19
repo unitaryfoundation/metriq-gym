@@ -4,6 +4,7 @@ import argparse
 from unittest.mock import MagicMock, patch
 
 import pytest
+from qbraid.runtime import QiskitBackend
 import rustworkx as rx
 from qiskit import QuantumCircuit
 
@@ -180,21 +181,19 @@ def test_dispatch_parameterized_rejects_non_ibm_device():
     clops = _make_clops(mode="parameterized")
     device = MagicMock()  # not an IBMSamplerDevice
 
-    with pytest.raises(ValueError, match="requires the ibm_sampler provider"):
+    with pytest.raises(ValueError, match="requires the ibm provider"):
         clops.dispatch_handler(device)
 
 
 def test_dispatch_parameterized_calls_submit_with_pub():
-    from metriq_gym.ibm_sampler.device import IBMSamplerDevice
-
     clops = _make_clops(mode="parameterized")
-    device = MagicMock(spec=IBMSamplerDevice)
+    device = MagicMock(spec=QiskitBackend)
     device.profile.basis_gates = ["cz", "sx", "rz"]
 
     graph = _linear_graph(6)
     mock_job = MagicMock()
     mock_job.id = "job-456"
-    device.submit.return_value = mock_job
+    clops._submit_ibm_with_options = MagicMock(return_value=mock_job)
 
     with (
         patch("metriq_gym.benchmarks.clops.connectivity_graph_for_gate", return_value=graph),
@@ -204,8 +203,8 @@ def test_dispatch_parameterized_calls_submit_with_pub():
         result = clops.dispatch_handler(device)
 
     assert isinstance(result, ClopsData)
-    device.submit.assert_called_once()
-    kwargs = device.submit.call_args
+    clops._submit_ibm_with_options.assert_called_once()
+    kwargs = clops._submit_ibm_with_options.call_args
     pubs = kwargs.kwargs["pubs"]
     assert len(pubs) == 1
     pub = pubs[0]
@@ -224,22 +223,21 @@ def test_dispatch_twirled_rejects_non_ibm_device():
     clops = _make_clops(mode="twirled")
     device = MagicMock()
 
-    with pytest.raises(ValueError, match="requires the ibm_sampler provider"):
+    with pytest.raises(ValueError, match="requires the ibm provider"):
         clops.dispatch_handler(device)
 
 
 def test_dispatch_twirled_calls_submit_with_twirling_opts():
-    from metriq_gym.ibm_sampler.device import IBMSamplerDevice
     from qiskit_ibm_runtime.options import TwirlingOptions
 
     clops = _make_clops(mode="twirled")
-    device = MagicMock(spec=IBMSamplerDevice)
+    device = MagicMock(spec=QiskitBackend)
     device.profile.basis_gates = ["cz", "sx", "rz"]
 
     graph = _linear_graph(6)
     mock_job = MagicMock()
     mock_job.id = "job-789"
-    device.submit.return_value = mock_job
+    clops._submit_ibm_with_options = MagicMock(return_value=mock_job)
 
     with (
         patch("metriq_gym.benchmarks.clops.connectivity_graph_for_gate", return_value=graph),
@@ -249,8 +247,8 @@ def test_dispatch_twirled_calls_submit_with_twirling_opts():
         result = clops.dispatch_handler(device)
 
     assert isinstance(result, ClopsData)
-    device.submit.assert_called_once()
-    kwargs = device.submit.call_args.kwargs
+    clops._submit_ibm_with_options.assert_called_once()
+    kwargs = clops._submit_ibm_with_options.call_args.kwargs
     # Should have a single fixed circuit (no parameters)
     pubs = kwargs["pubs"]
     assert len(pubs) == 1

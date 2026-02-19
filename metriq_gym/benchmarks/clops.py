@@ -21,12 +21,14 @@ References:
     - [Qiskit Device Benchmarking CLOPS](https://github.com/qiskit-community/qiskit-device-benchmarking).
 """
 
+from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 
+from qbraid.runtime import QiskitBackend
 import rustworkx as rx
 import numpy as np
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Iterable, List
 from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 from qiskit.circuit.library import RZGate, SXGate
@@ -46,10 +48,13 @@ from metriq_gym.qplatform.device import (
     pruned_connectivity_graph,
 )
 from metriq_gym.resource_estimation import CircuitBatch
-from metriq_gym.ibm_sampler.device import IBMSamplerDevice
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from qiskit.primitives.containers.sampler_pub import SamplerPubLike
+    from qiskit_ibm_runtime.options import TwirlingOptions
+    from qbraid.runtime.ibm.job import QiskitJob
+
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +248,7 @@ def instantiate_circuits(
     ]
 
 
-def _compute_steady_state_clops(quantum_jobs: list["QuantumJob"], num_layers: int) -> float | None:
+def _compute_steady_state_clops(quantum_jobs: list[QuantumJob], num_layers: int) -> float | None:
     """Compute steady-state CLOPS from IBM Runtime ExecutionSpan metadata.
 
     Skips the first execution span to exclude pipeline startup costs,
@@ -297,7 +302,7 @@ class Clops(Benchmark):
     https://arxiv.org/abs/2110.14108
     """
 
-    def _get_topology(self, device: "QuantumDevice") -> rx.PyGraph:
+    def _get_topology(self, device: QuantumDevice) -> rx.PyGraph:
         """Return the (possibly pruned) device topology for the configured 2Q gate."""
         graph = connectivity_graph_for_gate(device, self.params.two_qubit_gate)
         if graph is None:
@@ -305,7 +310,7 @@ class Clops(Benchmark):
         return pruned_connectivity_graph(device, graph)
 
     def _build_template(
-        self, device: "QuantumDevice", parameterized: bool = True
+        self, device: QuantumDevice, parameterized: bool = True
     ) -> tuple[QuantumCircuit, list[ParameterVector]]:
         """Build the CLOPS template circuit from device topology."""
         graph = self._get_topology(device)
@@ -322,19 +327,78 @@ class Clops(Benchmark):
     # Mode-specific dispatch helpers
     # ------------------------------------------------------------------
 
-    def _dispatch_instantiated(self, device: "QuantumDevice") -> ClopsData:
+    def _submit_ibm_with_options(
+        self,
+        device: QiskitBackend,
+        pubs: Iterable[SamplerPubLike],
+        *,
+        shots: int | None = None,
+        twirling_options: TwirlingOptions | None = None,
+        use_session: bool = False,
+    ) -> QiskitJob:
+        """Submit PUBs via SamplerV2 with optional session and twirling.
+
+        This is a special path to use this extra capabilities from IBM platform,
+        as the qbraid QiskitBackend doesn't currently support them.
+
+        Mirrors the ``SamplerV2.run()`` interface.  Each PUB can be a bare
+        ``QuantumCircuit`` or a tuple of ``(circuit,)``,
+        ``(circuit, parameter_values)``, or
+        ``(circuit, parameter_values, shots)``.
+
+        For benchmarks that don't need these extended submission options, this
+        also works with the existing `submit(circuit, shots)` interface.
+
+        See: https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/sampler-v2#run
+
+        Args:
+            pubs: An iterable of SamplerV2 Primitive Unified Blocks.
+            shots: Number of shots per PUB.  If *None* the sampler default
+                is used.  Per-PUB shots in the PUB tuple take precedence.
+            twirling_options: Optional ``TwirlingOptions`` forwarded to the
+                ``SamplerOptions``.  Useful for gate-twirled CLOPS runs.
+            use_session: If *True*, submits inside an IBM Runtime
+                Session for lower latency on iterative workloads.  Set to
+                *False* (default) to use a plain backend, which avoids session
+                overhead and works on IBM Cloud accounts that do not support sessions.
+
+        Returns:
+            A ``QiskitJob`` wrapping the underlying IBM Runtime job.
+        """
+        from qbraid.runtime.ibm.job import QiskitJob
+        from qiskit_ibm_runtime import Session, SamplerV2 as Sampler, SamplerOptions
+
+        options = SamplerOptions(
+            experimental={"execution": {"fast_parametric_update": True}},
+        )
+        if twirling_options is not None:
+            options.twirling = twirling_options
+
+        if use_session:
+            with Session(backend=device._backend) as session:
+                sampler = Sampler(mode=session, options=options)
+                job = sampler.run(pubs, shots=shots)
+        else:
+            sampler = Sampler(mode=device._backend, options=options)
+            job = sampler.run(pubs, shots=shots)
+
+        return QiskitJob(job.job_id(), job=job, device=device)
+
+    def _dispatch_instantiated(self, device: QuantumDevice) -> ClopsData:
         """Bind parameters locally and send concrete circuits (any provider)."""
         template, parameters = self._build_template(device, parameterized=True)
         circuits = instantiate_circuits(
             template, parameters, self.params.num_circuits, seed=self.params.seed
         )
-        if isinstance(device, IBMSamplerDevice):
+        if isinstance(device, QiskitBackend) and self.params.use_session:
             return ClopsData.from_quantum_job(
-                device.run(circuits, shots=self.params.shots, use_session=self.params.use_session)
+                self._submit_ibm_with_options(
+                    device, circuits, shots=self.params.shots, use_session=self.params.use_session
+                )
             )
         return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
 
-    def _dispatch_parameterized(self, device: "IBMSamplerDevice") -> ClopsData:
+    def _dispatch_parameterized(self, device: QiskitBackend) -> ClopsData:
         """Send a single parameterized circuit with parameter arrays (ibm_sampler).
 
         Follows the SamplerV2 PUB format: ``(circuit, parameter_values, shots)``.
@@ -351,10 +415,10 @@ class Clops(Benchmark):
 
         pub = (template, param_values, self.params.shots)
         return ClopsData.from_quantum_job(
-            device.submit(pubs=[pub], use_session=self.params.use_session)
+            self._submit_ibm_with_options(device, pubs=[pub], use_session=self.params.use_session)
         )
 
-    def _dispatch_twirled(self, device: "IBMSamplerDevice") -> ClopsData:
+    def _dispatch_twirled(self, device: QiskitBackend) -> ClopsData:
         """Send a fixed circuit and delegate randomization to the Sampler twirler (ibm_sampler).
 
         The Sampler applies gate twirling to produce ``num_circuits``
@@ -370,7 +434,8 @@ class Clops(Benchmark):
             enable_gates=True,
         )
         return ClopsData.from_quantum_job(
-            device.submit(
+            self._submit_ibm_with_options(
+                device,
                 pubs=[template],
                 shots=self.params.shots * self.params.num_circuits,
                 twirling_options=twirling_opts,
@@ -382,19 +447,18 @@ class Clops(Benchmark):
     # Public interface
     # ------------------------------------------------------------------
 
-    def dispatch_handler(self, device: "QuantumDevice") -> ClopsData:
+    def dispatch_handler(self, device: QuantumDevice) -> ClopsData:
         mode = getattr(self.params, "mode", "instantiated") or "instantiated"
 
         if mode in ("parameterized", "twirled"):
-            if not isinstance(device, IBMSamplerDevice):
+            if not isinstance(device, QiskitBackend):
                 raise ValueError(
-                    f"CLOPS mode '{mode}' requires the ibm_sampler provider "
-                    f"(IBMSamplerDevice), but got {type(device).__name__}."
+                    f"CLOPS mode '{mode}' requires the ibm provider, but got {type(device).__name__}."
                 )
-        if self.params.use_session and not isinstance(device, IBMSamplerDevice):
+        if self.params.use_session and not isinstance(device, QiskitBackend):
             raise ValueError(
-                f"CLOPS parameter 'use_session=True' requires the ibm_sampler provider "
-                f"(IBMSamplerDevice), but got {type(device).__name__}."
+                f"CLOPS parameter 'use_session=True' requires the ibm provider "
+                f"(QiskitBackend), but got {type(device).__name__}."
             )
 
         if mode == "instantiated":
@@ -409,8 +473,8 @@ class Clops(Benchmark):
     def poll_handler(
         self,
         job_data: ClopsData,
-        result_data: list["GateModelResultData"],
-        quantum_jobs: list["QuantumJob"],
+        result_data: list[GateModelResultData],
+        quantum_jobs: list[QuantumJob],
     ) -> ClopsResult:
         clops_score = (self.params.num_circuits * self.params.num_layers * self.params.shots) / sum(
             execution_time(quantum_job) for quantum_job in quantum_jobs
@@ -420,8 +484,8 @@ class Clops(Benchmark):
 
     def estimate_resources_handler(
         self,
-        device: "QuantumDevice",
-    ) -> list["CircuitBatch"]:
+        device: QuantumDevice,
+    ) -> list[CircuitBatch]:
         """
         Estimates resources needed for the instantiated mode only, as the
         parameterized and twirled modes require features specific to the
