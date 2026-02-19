@@ -17,7 +17,6 @@ Note that benchmarks executed through qBraid may differ slightly from those run 
 | Provider | Provider ID | Description |
 |----------|-------------|-------------|
 | [IBM Quantum](ibm.md) | `ibm` | IBM's quantum computers and simulators |
-| [IBM Sampler](ibm.md#ibm-sampler-provider) | `ibm_sampler` | IBM SamplerV2 with sessions and twirling support |
 | [IonQ](ionq.md) | `ionq` | IonQ trapped-ion quantum computers |
 | [AWS Braket](braket.md) | `braket` | Amazon Braket quantum computing service |
 | [Azure Quantum](azure.md) | `azure` | Microsoft Azure Quantum |

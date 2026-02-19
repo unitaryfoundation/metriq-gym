@@ -173,13 +173,13 @@ def test_dispatch_instantiated_calls_device_run():
 
 
 # ---------------------------------------------------------------------------
-# Dispatch: parameterized mode requires IBMSamplerDevice
+# Dispatch: parameterized mode requires IBM device
 # ---------------------------------------------------------------------------
 
 
 def test_dispatch_parameterized_rejects_non_ibm_device():
     clops = _make_clops(mode="parameterized")
-    device = MagicMock()  # not an IBMSamplerDevice
+    device = MagicMock()  # not an IBM device
 
     with pytest.raises(ValueError, match="requires the ibm provider"):
         clops.dispatch_handler(device)
@@ -215,7 +215,7 @@ def test_dispatch_parameterized_calls_submit_with_pub():
 
 
 # ---------------------------------------------------------------------------
-# Dispatch: twirled mode requires IBMSamplerDevice
+# Dispatch: twirled mode requires IBM Device
 # ---------------------------------------------------------------------------
 
 

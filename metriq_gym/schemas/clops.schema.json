@@ -53,14 +53,14 @@
     },
     "mode": {
       "type": "string",
-      "description": "How circuits are submitted. 'instantiated' binds parameters locally and sends concrete circuits (works with any provider). 'parameterized' sends a single parameterized circuit with parameter arrays via SamplerV2 PUBs (requires ibm_sampler provider). 'twirled' sends a fixed circuit and delegates randomization to the Sampler's gate twirler (requires ibm_sampler provider).",
+      "description": "How circuits are submitted. 'instantiated' binds parameters locally and sends concrete circuits (works with any provider). 'parameterized' sends a single parameterized circuit with parameter arrays via SamplerV2 PUBs (requires ibm provider). 'twirled' sends a fixed circuit and delegates randomization to the Sampler's gate twirler (requires ibm provider).",
       "default": "instantiated",
       "enum": ["instantiated", "parameterized", "twirled"],
       "examples": ["instantiated", "parameterized", "twirled"]
     },
     "use_session": {
       "type": "boolean",
-      "description": "Whether to use a session for running circuits. Currently, only supported by ibm_sampler provider",
+      "description": "Whether to use a session for running circuits. Currently, only supported by ibm provider",
       "default": false,
       "examples": [true, false]
     }

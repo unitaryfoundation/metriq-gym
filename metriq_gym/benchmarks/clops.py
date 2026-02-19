@@ -399,7 +399,7 @@ class Clops(Benchmark):
         return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
 
     def _dispatch_parameterized(self, device: QiskitBackend) -> ClopsData:
-        """Send a single parameterized circuit with parameter arrays (ibm_sampler).
+        """Send a single parameterized circuit with parameter arrays.
 
         Follows the SamplerV2 PUB format: ``(circuit, parameter_values, shots)``.
         See: https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/sampler-v2
@@ -419,7 +419,7 @@ class Clops(Benchmark):
         )
 
     def _dispatch_twirled(self, device: QiskitBackend) -> ClopsData:
-        """Send a fixed circuit and delegate randomization to the Sampler twirler (ibm_sampler).
+        """Send a fixed circuit and delegate randomization to the Sampler twirler.
 
         The Sampler applies gate twirling to produce ``num_circuits``
         randomized variants, each run for ``shots`` shots.
