@@ -144,6 +144,62 @@ def random_chain_from_graph(
 # Analysis Functions
 # =============================================================================
 
+def tune_quantinuum_layer_fidelity_fits_soft(
+    lfexp: LayerFidelity,
+    b_half_width: float = 0.05,
+) -> LayerFidelity:
+    """Soft-constrain the RB offset parameter ``b`` inside LayerFidelity analysis.
+
+    This is intended for slow-decay devices (e.g., trapped-ion) when the RB depth
+    schedule is truncated and the tail/asymptote is poorly resolved. We stabilize
+    the fit by bounding ``b`` near its expected baseline value ``1/2**n``, where
+    ``n`` is the number of qubits in the RB survival probability outcome.
+
+    Args:
+        lfexp: A qiskit-experiments LayerFidelity instance.
+        b_half_width: Half-width for the interval around ``1/2**n`` used to bound ``b``.
+
+    Returns:
+        The same LayerFidelity instance, with updated analysis options.
+    """
+    # Defensive: if analysis tree is not available for any reason, do nothing.
+    try:
+        analysis = getattr(lfexp, "analysis", None)
+        if analysis is None:
+            return lfexp
+
+        # LayerFidelityAnalysis -> SingleLayerFidelityAnalysis -> RBAnalysis
+        for single_layer_analysis in analysis.component_analysis():
+            for rb_analysis in single_layer_analysis.component_analysis():
+                # In Qiskit RBAnalysis, "outcome" is the bitstring we treat as "survival"
+                outcome = getattr(getattr(rb_analysis, "options", None), "outcome", None)
+                if outcome is None:
+                    continue
+
+                n = len(outcome)
+                b0 = 1.0 / (2**n)
+                lo = max(0.0, b0 - b_half_width)
+                hi = min(1.0, b0 + b_half_width)
+
+                # Merge bounds/p0 so we don't clobber other options set elsewhere.
+                opts = rb_analysis.options
+
+                bounds = dict(getattr(opts, "bounds", {}) or {})
+                bounds["b"] = (lo, hi)
+
+                p0 = dict(getattr(opts, "p0", {}) or {})
+                p0.setdefault("b", b0)
+
+                rb_analysis.set_options(bounds=bounds, p0=p0)
+
+    except Exception as exc:
+        warnings.warn(
+            f"Failed to apply soft b-constraint to LayerFidelity analysis: {exc}",
+            category=RuntimeWarning,
+            stacklevel=2,
+        )
+
+    return lfexp
 
 def analyze_eplg_results(
     exp_data: ExperimentData,
@@ -337,6 +393,11 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             one_qubit_basis_gates=job_data.one_qubit_basis_gates,
         )
         lfexp.experiment_options.max_circuits = 2 * job_data.num_samples * len(job_data.lengths)
+    
+        # Optional: bound the RB offset parameter b to stabilize fits on slow-decay devices.
+        if getattr(self.params, "constrain_rb_offset_b", False):
+            lfexp = tune_quantinuum_layer_fidelity_fits_soft(lfexp, b_half_width=0.05)
+
         original_circuits = lfexp.circuits()
 
         counts_list = flatten_counts(result_data)
