@@ -144,7 +144,7 @@ def random_chain_from_graph(
 # Analysis Functions
 # =============================================================================
 
-def tune_quantinuum_layer_fidelity_fits_soft(
+def tune_layer_fidelity_fits_soft(
     lfexp: LayerFidelity,
     b_half_width: float = 0.05,
 ) -> LayerFidelity:
@@ -396,7 +396,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
     
         # Optional: bound the RB offset parameter b to stabilize fits on slow-decay devices.
         if getattr(self.params, "constrain_rb_offset_b", False):
-            lfexp = tune_quantinuum_layer_fidelity_fits_soft(lfexp, b_half_width=0.05)
+            lfexp = tune_layer_fidelity_fits_soft(lfexp, b_half_width=0.05)
 
         original_circuits = lfexp.circuits()
 
