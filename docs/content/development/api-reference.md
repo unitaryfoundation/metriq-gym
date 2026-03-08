@@ -176,7 +176,6 @@ Enum of supported benchmark types.
 ```python
 from metriq_gym.constants import JobType
 
-JobType.QUANTUM_VOLUME  # "Quantum Volume"
 JobType.CLOPS           # "CLOPS"
 JobType.BSEQ            # "BSEQ"
 JobType.WIT             # "WIT"

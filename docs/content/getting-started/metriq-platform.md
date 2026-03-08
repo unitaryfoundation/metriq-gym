@@ -45,30 +45,34 @@ The platform tracks results over time, allowing you to see:
 Results in metriq-data follow a standardized format:
 
 ```json
-{
-  "app_version": "0.3.1",
-  "timestamp": "2025-01-15T12:00:00.000000",
-  "platform": {
-    "provider": "ibm",
-    "device": "ibm_sherbrooke"
-  },
-  "job_type": "Quantum Volume",
-  "results": {
-    "values": {
-      "quantum_volume": 32,
-      "heavy_output_probability": 0.68
+[
+  {
+    "app_version": "0.5.1",
+    "timestamp": "2026-01-07T09:55:41.096477",
+    "suite_id": null,
+    "job_type": "BSEQ",
+    "results": {
+      "largest_connected_size": 42,
+      "fraction_connected": 0.1,
+      "score": {
+        "value": 1.0,
+        "uncertainty": null
+      }
     },
-    "uncertainties": {
-      "heavy_output_probability": 0.02
+    "platform": {
+      "device": "Quantum Computer",
+      "device_metadata": {
+        "num_qubits": 420,
+        "simulator": false
+      },
+      "provider": "dulwich"
+    },
+    "params": {
+      "benchmark_name": "BSEQ",
+      "shots": 1000
     }
-  },
-  "params": {
-    "benchmark_name": "Quantum Volume",
-    "num_qubits": 5,
-    "shots": 1000,
-    "trials": 100
   }
-}
+]
 ```
 
 ### Key Fields
@@ -158,3 +162,5 @@ export METRIQ_CLIENT_API_KEY="your-key"
 - [Metriq Platform](https://metriq.info)
 - [metriq-data Repository](https://github.com/unitaryfoundation/metriq-data)
 - [Unitary Foundation](https://unitary.foundation)
+
+
