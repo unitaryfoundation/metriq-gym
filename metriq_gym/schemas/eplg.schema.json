@@ -66,7 +66,12 @@
       "description": "Decompose the parameterized clifford operation types in the circuit to primitive operations; this may be necessary for providers that don't support Qiskit clifford primitives",
       "default": false,
       "examples": [true]
-
+    },
+    "constrain_rb_offset_b": {
+      "type": "boolean",
+      "description": "If true, constrain the RB fit offset parameter b (around its expected baseline) to stabilize LayerFidelity fits when using a truncated RB depth schedule.",
+      "default": false,
+      "examples": [true]
     }
   },
   "required": ["benchmark_name", "num_qubits_in_chain"]
