@@ -149,15 +149,6 @@ Browse or clone the repository:
 git clone https://github.com/unitaryfoundation/metriq-data.git
 ```
 
-### Via Metriq API
-
-The Metriq platform provides an API for programmatic access:
-
-```bash
-# Get your API key at https://metriq.info/Token
-export METRIQ_CLIENT_API_KEY="your-key"
-```
-
 ## Community and Support
 
 - **Report issues**: [metriq-gym issues](https://github.com/unitaryfoundation/metriq-gym/issues)
