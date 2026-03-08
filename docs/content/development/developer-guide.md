@@ -149,7 +149,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 feat: add support for new benchmark type
-fix: correct quantum volume calculation
+fix: correct BSEQ calculation
 docs: update provider setup guide
 refactor: simplify job manager interface
 ```

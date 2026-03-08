@@ -29,7 +29,7 @@ Results are displayed with:
 
 - Device and provider information
 - Benchmark type and parameters
-- Metric values with uncertainties
+- Metric values and, when available, uncertainties
 - Timestamp and software version
 
 ### Historical Tracking
@@ -42,47 +42,58 @@ The platform tracks results over time, allowing you to see:
 
 ## Data Format
 
-Results in metriq-data follow a standardized format:
+Each uploaded file in metriq-data is a JSON array of result records. A single-job upload
+usually contains one record; suite uploads contain several.
 
 ```json
-{
-  "app_version": "0.3.1",
-  "timestamp": "2025-01-15T12:00:00.000000",
-  "platform": {
-    "provider": "ibm",
-    "device": "ibm_sherbrooke"
-  },
-  "job_type": "Quantum Volume",
-  "results": {
-    "values": {
-      "quantum_volume": 32,
-      "heavy_output_probability": 0.68
+[
+  {
+    "app_version": "0.6.0",
+    "timestamp": "2026-01-16T15:42:18.173736",
+    "suite_id": null,
+    "job_type": "BSEQ",
+    "results": {
+      "largest_connected_size": 31,
+      "fraction_connected": 1.0,
+      "score": {
+        "value": 31.0,
+        "uncertainty": null
+      }
     },
-    "uncertainties": {
-      "heavy_output_probability": 0.02
+    "platform": {
+      "provider": "dulwich",
+      "device": "dulwich_31q",
+      "device_metadata": {
+        "num_qubits": 31,
+        "simulator": true,
+        "version": "0.17.2"
+      }
+    },
+    "params": {
+      "benchmark_name": "BSEQ",
+      "shots": 1000
     }
-  },
-  "params": {
-    "benchmark_name": "Quantum Volume",
-    "num_qubits": 5,
-    "shots": 1000,
-    "trials": 100
   }
-}
+]
 ```
+
+In this example, `largest_connected_size` and `fraction_connected` are plain numeric
+metrics, while `score` is stored as a `{value, uncertainty}` object. Benchmarks that
+report uncertainty on a metric use that same object shape for the metric itself.
 
 ### Key Fields
 
 | Field | Description |
 |-------|-------------|
-| `app_version` | Metriq-Gym version used |
-| `timestamp` | When the benchmark was run |
-| `platform.provider` | Hardware provider |
-| `platform.device` | Specific device |
-| `job_type` | Benchmark type |
-| `results.values` | Metric values |
-| `results.uncertainties` | Statistical uncertainties |
-| `params` | Benchmark configuration |
+| `app_version` | `metriq-gym` version that generated the record |
+| `timestamp` | ISO 8601 dispatch timestamp recorded by `metriq-gym` |
+| `suite_id` | Nullable suite identifier; `null` for single-job uploads |
+| `job_type` | Benchmark name, such as `BSEQ` or `WIT` |
+| `results` | Benchmark outputs. Metrics may be plain numbers or `{value, uncertainty}` objects; `results.score` is the summary score when the benchmark defines one |
+| `platform.provider` | Provider identifier used for the run |
+| `platform.device` | Device or backend identifier used for the run |
+| `platform.device_metadata` | Optional normalized metadata such as `num_qubits`, `simulator`, and backend `version` |
+| `params` | Validated benchmark configuration used to run the job |
 
 ## Contributing Quality Data
 
@@ -138,15 +149,6 @@ Browse or clone the repository:
 git clone https://github.com/unitaryfoundation/metriq-data.git
 ```
 
-### Via Metriq API
-
-The Metriq platform provides an API for programmatic access:
-
-```bash
-# Get your API key at https://metriq.info/Token
-export METRIQ_CLIENT_API_KEY="your-key"
-```
-
 ## Community and Support
 
 - **Report issues**: [metriq-gym issues](https://github.com/unitaryfoundation/metriq-gym/issues)
@@ -158,3 +160,4 @@ export METRIQ_CLIENT_API_KEY="your-key"
 - [Metriq Platform](https://metriq.info)
 - [metriq-data Repository](https://github.com/unitaryfoundation/metriq-data)
 - [Unitary Foundation](https://unitary.foundation)
+

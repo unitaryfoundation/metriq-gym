@@ -6,7 +6,6 @@ class JobType(StrEnum):
     CLOPS = "CLOPS"
     EPLG = "EPLG"
     QML_KERNEL = "QML Kernel"
-    QUANTUM_VOLUME = "Quantum Volume"
     MIRROR_CIRCUITS = "Mirror Circuits"
     WIT = "WIT"
     BERNSTEIN_VAZIRANI = "Bernstein-Vazirani"
@@ -21,7 +20,6 @@ SCHEMA_MAPPING = {
     JobType.CLOPS: "clops.schema.json",
     JobType.EPLG: "eplg.schema.json",
     JobType.QML_KERNEL: "qml_kernel.schema.json",
-    JobType.QUANTUM_VOLUME: "quantum_volume.schema.json",
     JobType.MIRROR_CIRCUITS: "mirror_circuits.schema.json",
     JobType.WIT: "wit.schema.json",
     JobType.BERNSTEIN_VAZIRANI: "bernstein_vazirani.schema.json",
