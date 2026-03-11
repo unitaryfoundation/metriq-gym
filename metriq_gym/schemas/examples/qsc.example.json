@@ -1,0 +1,12 @@
+{
+    "benchmark_name": "QSC",
+    "num_qubits": 5,
+    "delta": 0.25,
+    "j_coupling": 0.23,
+    "hx": 0.5,
+    "trotter_order": 2,
+    "trotter_steps": 1,
+    "evolution_time": 2.0,
+    "pauli_basis": "X",
+    "shots": 1000
+}

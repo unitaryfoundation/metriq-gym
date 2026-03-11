@@ -1,0 +1,75 @@
+{
+    "$id": "metriq-gym/qsc.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Quantum Simulation Circuits (QSC)",
+    "description": "QSC benchmark schema: Hamiltonian time-evolution simulation using Trotter decomposition with ground-state preparation and Pauli-basis measurement.",
+    "type": "object",
+    "properties": {
+      "benchmark_name": {
+        "type": "string",
+        "const": "QSC",
+        "description": "Name of the benchmark. Must be 'QSC' for this schema."
+      },
+      "num_qubits": {
+        "type": "integer",
+        "description": "Number of qubits (lattice sites) in the Hamiltonian.",
+        "minimum": 2,
+        "default": 5,
+        "examples": [3, 5, 8]
+      },
+      "delta": {
+        "type": "number",
+        "description": "Anisotropy parameter (Delta) for the ZZ coupling term in the Hamiltonian.",
+        "default": 0.25,
+        "examples": [0.25, 0.5, 1.0]
+      },
+      "j_coupling": {
+        "type": "number",
+        "description": "Exchange coupling strength (J) for XX, YY, and ZZ interactions.",
+        "default": 0.23,
+        "examples": [0.23, 1.0]
+      },
+      "hx": {
+        "type": "number",
+        "description": "Transverse field strength applied to each qubit.",
+        "default": 0.5,
+        "examples": [0.5, 1.0]
+      },
+      "trotter_order": {
+        "type": "integer",
+        "description": "Order of the Suzuki-Trotter decomposition.",
+        "minimum": 1,
+        "default": 2,
+        "examples": [1, 2, 4]
+      },
+      "trotter_steps": {
+        "type": "integer",
+        "description": "Number of Trotter repetitions (steps).",
+        "minimum": 1,
+        "default": 1,
+        "examples": [1, 2, 5]
+      },
+      "evolution_time": {
+        "type": "number",
+        "description": "Duration of Hamiltonian time evolution (T).",
+        "minimum": 0,
+        "default": 2.0,
+        "examples": [0.5, 1.0, 2.0, 3.0]
+      },
+      "pauli_basis": {
+        "type": "string",
+        "description": "Pauli basis for perturbation and measurement. One of 'X', 'Y', or 'Z'.",
+        "enum": ["X", "Y", "Z"],
+        "default": "X",
+        "examples": ["X", "Y", "Z"]
+      },
+      "shots": {
+        "type": "integer",
+        "description": "Number of measurement shots (repetitions).",
+        "default": 1000,
+        "minimum": 1,
+        "examples": [1000, 8192]
+      }
+    },
+    "required": ["benchmark_name"]
+  }
