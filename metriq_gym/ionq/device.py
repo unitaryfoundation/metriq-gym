@@ -10,9 +10,8 @@ to QASM2 strings before submission, using qBraid's standard conversion path
 which correctly preserves the circuit's qubit count.
 """
 
-from __future__ import annotations
-
 import importlib
+import importlib.util
 import logging
 from typing import TYPE_CHECKING, Union
 
