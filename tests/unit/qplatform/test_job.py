@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 import pytest
-from qbraid.runtime import QuantumJob, QiskitJob, AzureQuantumJob
+from qbraid.runtime import QuantumJob, QiskitJob, AzureQuantumJob, IonQJob
 from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo, total_execution_time
 from metriq_gym.quantinuum.job import QuantinuumJob
 from qbraid.runtime.enums import JobStatus
@@ -167,3 +167,52 @@ def test_total_execution_time_skips_unreported():
     result = total_execution_time([job_not_impl, job_value_error, job_valid])
 
     assert result == pytest.approx(4.2)
+
+
+def _make_ionq_job_with_metadata(metadata: dict) -> IonQJob:
+    """Create a mock IonQJob that returns given metadata."""
+    job = MagicMock(spec=IonQJob)
+    job.metadata.return_value = metadata
+    return job
+
+
+def test_execution_time_ionq_with_execution_time():
+    """IonQ job with execution_time field in metadata (milliseconds)."""
+    job = _make_ionq_job_with_metadata({"execution_time": 5200})
+    assert execution_time(job) == pytest.approx(5.2)
+
+
+def test_execution_time_ionq_with_predicted_execution_time():
+    """IonQ job falls back to predicted_execution_time."""
+    job = _make_ionq_job_with_metadata({"predicted_execution_time": 3000})
+    assert execution_time(job) == pytest.approx(3.0)
+
+
+def test_execution_time_ionq_prefers_execution_time_over_predicted():
+    """IonQ job prefers execution_time over predicted_execution_time."""
+    job = _make_ionq_job_with_metadata(
+        {"execution_time": 5200, "predicted_execution_time": 3000}
+    )
+    assert execution_time(job) == pytest.approx(5.2)
+
+
+def test_execution_time_ionq_no_timing():
+    """IonQ job raises ValueError when no timing info is available."""
+    job = _make_ionq_job_with_metadata({})
+    with pytest.raises(ValueError, match="Execution time not available"):
+        execution_time(job)
+
+
+def test_job_status_ionq():
+    """IonQ job status extraction works."""
+    status_obj = MagicMock()
+    status_obj.name = "COMPLETED"
+
+    ionq_job = MagicMock(spec=IonQJob)
+    ionq_job.status.return_value = status_obj
+
+    info = job_status(ionq_job)
+
+    assert isinstance(info, JobStatusInfo)
+    assert info.status == JobStatus.COMPLETED
+    assert info.queue_position is None

@@ -11,7 +11,7 @@ from unittest.mock import Mock
 import pytest
 import rustworkx as rx
 import networkx as nx
-from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
+from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice, IonQDevice
 
 from metriq_gym.local.provider import LocalProvider
 from metriq_gym.origin.device import OriginDevice
@@ -555,3 +555,73 @@ class TestPrunedConnectivityGraph:
 
         assert result.num_nodes() == 0
         assert result.num_edges() == 0
+
+
+def _make_mock_ionq_device(num_qubits=25, characterization=None, simulator=False):
+    """Create a mock IonQDevice with given parameters."""
+    device = Mock(spec=IonQDevice)
+    device.num_qubits = num_qubits
+
+    mock_profile = Mock()
+    mock_profile.characterization = characterization
+    mock_profile.simulator = simulator
+    device.profile = mock_profile
+
+    return device
+
+
+class TestIonQVersion:
+    """Test cases for IonQ device version extraction."""
+
+    def test_ionq_version_from_characterization_date(self):
+        charact = {"date": "2026-01-15T12:00:00Z", "fidelities": {}}
+        device = _make_mock_ionq_device(characterization=charact)
+        result = version(device)
+        assert result == "2026-01-15T12:00:00Z"
+
+    def test_ionq_version_no_characterization(self):
+        device = _make_mock_ionq_device(characterization=None)
+        result = version(device)
+        assert result == "unknown"
+
+    def test_ionq_version_characterization_without_date(self):
+        device = _make_mock_ionq_device(characterization={"fidelities": {}})
+        result = version(device)
+        assert result == "unknown"
+
+
+class TestIonQConnectivityGraph:
+    """Test cases for IonQ device connectivity graph (all-to-all)."""
+
+    @pytest.mark.parametrize("num_qubits", [11, 25, 36])
+    def test_ionq_complete_graph(self, num_qubits):
+        device = _make_mock_ionq_device(num_qubits=num_qubits)
+        graph = connectivity_graph(device)
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == num_qubits
+        expected_edges = num_qubits * (num_qubits - 1) // 2
+        assert graph.num_edges() == expected_edges
+
+    def test_ionq_simulator_complete_graph(self):
+        device = _make_mock_ionq_device(num_qubits=29, simulator=True)
+        graph = connectivity_graph(device)
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == 29
+
+
+class TestIonQNormalizedMetadata:
+    """Test cases for IonQ device normalized metadata."""
+
+    def test_ionq_metadata_with_characterization(self):
+        charact = {"date": "2026-01-15T12:00:00Z"}
+        device = _make_mock_ionq_device(num_qubits=25, characterization=charact, simulator=False)
+        meta = normalized_metadata(device)
+        assert meta["num_qubits"] == 25
+        assert meta["version"] == "2026-01-15T12:00:00Z"
+        assert meta["simulator"] is False
+
+    def test_ionq_simulator_metadata(self):
+        device = _make_mock_ionq_device(num_qubits=29, simulator=True)
+        meta = normalized_metadata(device)
+        assert meta["num_qubits"] == 29
+        assert meta["simulator"] is True
