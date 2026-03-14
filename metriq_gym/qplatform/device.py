@@ -4,7 +4,7 @@ from typing import cast
 import networkx as nx
 import rustworkx as rx
 from qbraid import QuantumDevice
-from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
+from qbraid.runtime import AzureQuantumDevice, BraketDevice, IonQDevice, QiskitBackend
 from qiskit.transpiler import CouplingMap
 from pytket.architecture import FullyConnected
 
@@ -32,6 +32,14 @@ def _(device: QiskitBackend) -> str:
 @version.register
 def _(device: LocalAerDevice) -> str:
     return device._backend.configuration().backend_version
+
+
+@version.register
+def _(device: IonQDevice) -> str:
+    charact = device.profile.characterization
+    if charact and "date" in charact:
+        return charact["date"]
+    return "unknown"
 
 
 def coupling_map_to_graph(coupling_map: CouplingMap) -> rx.PyGraph:
@@ -96,6 +104,12 @@ def _(device: QuantinuumDevice) -> rx.PyGraph:
         node_index = {node: i for i, node in enumerate(arch.nodes)}
         g.add_edges_from([(node_index[a], node_index[b], None) for (a, b) in arch.edges])
         return g
+
+
+@connectivity_graph.register
+def _(device: IonQDevice) -> rx.PyGraph:
+    # IonQ trapped-ion devices have all-to-all connectivity.
+    return rx.generators.complete_graph(device.num_qubits)
 
 
 @connectivity_graph.register
