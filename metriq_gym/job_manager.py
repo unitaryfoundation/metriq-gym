@@ -9,7 +9,7 @@ import json
 import os
 import pprint
 import logging
-from typing import Any
+from typing import Any, Sequence
 
 from tabulate import tabulate
 from metriq_gym.constants import JobType
@@ -52,7 +52,23 @@ class MetriqGymJob:
                 plat["device"] = self.device_name
         self.platform = plat
 
-    def to_table_row(self, show_suite_id: bool) -> list[str | None]:
+    def num_qubits(self) -> int | None:
+        preferred_keys = ("num_qubits", "qubits", "width", "max_qubits")
+        value: Any | None = None
+        for key in preferred_keys:
+            if key in self.params:
+                value = self.params.get(key)
+                break
+
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        return None
+
+    def to_table_row(self, show_suite_id: bool) -> Sequence[str | int | None]:
         return (
             [
                 self.suite_id,
@@ -64,6 +80,7 @@ class MetriqGymJob:
             self.provider_name,
             self.device_name,
             self.job_type,
+            self.num_qubits(),
             self.dispatch_time.isoformat(),
         ]
 
