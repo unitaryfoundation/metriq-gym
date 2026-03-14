@@ -10,8 +10,9 @@ Result interpretation:
         - uncertainty: binomial standard deviation from the sample counts.
     Higher accuracy suggests better kernel reproducibility on the selected hardware.
 
-Reference:
-    - Inspired by ZZ-feature map approaches, e.g., arXiv:2405.09724.
+References:
+    - Inspired by ZZ-feature map approaches, e.g.,
+      [Bowles et al., arXiv:2405.09724](https://arxiv.org/abs/2405.09724).
 """
 
 import numpy as np

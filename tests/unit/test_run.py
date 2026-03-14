@@ -4,16 +4,19 @@ import logging
 import pytest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-
+import json
 from pydantic import BaseModel
 from qbraid import QbraidError
 from qbraid.runtime import JobStatus
+from qbraid.runtime.result_data import GateModelResultData, MeasCount
 from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, BenchmarkScore
 from metriq_gym.run import (
     setup_device,
     dispatch_job,
     fetch_result,
     estimate_job,
+    _export_raw_debug_data,
+    replay_from_debug_file,
 )
 from metriq_gym.job_manager import MetriqGymJob, JobManager
 from metriq_gym.constants import JobType
@@ -376,6 +379,7 @@ def test_fetch_result_uses_cache_when_no_flag(monkeypatch):
     jm.jobs.append(job)
     args = MagicMock()
     args.no_cache = False
+    args.include_raw = False
 
     import metriq_gym.run as run_mod
 
@@ -389,8 +393,9 @@ def test_fetch_result_uses_cache_when_no_flag(monkeypatch):
     )
     monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
 
-    result = fetch_result(job, args, jm)
-    assert result.value == EXPECTED_CACHED_VALUE
+    fetch_output = fetch_result(job, args, jm)
+    assert fetch_output.result.value == EXPECTED_CACHED_VALUE
+    assert fetch_output.from_cache is True
 
 
 def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
@@ -401,6 +406,7 @@ def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
     jm.jobs.append(job)
     args = MagicMock()
     args.no_cache = True
+    args.include_raw = False
 
     import metriq_gym.run as run_mod
 
@@ -414,10 +420,203 @@ def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
     )
     monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
 
-    result = fetch_result(job, args, jm)
-    assert result.value == EXPECTED_FRESH_VALUE, (
+    fetch_output = fetch_result(job, args, jm)
+    assert fetch_output.result.value == EXPECTED_FRESH_VALUE, (
         "Should fetch fresh value when --no-cache specified"
     )
+    assert fetch_output.from_cache is False
     assert job.result_data == {"value": EXPECTED_FRESH_VALUE}, (
         "Cached result_data should be updated"
     )
+
+
+def test_fetch_result_includes_raw_counts_when_flag_set(monkeypatch):
+    """Test that raw counts are returned when include_raw=True."""
+    # ...existing code...
+
+    EXPECTED_VALUE = 42
+    job = _make_cached_job(None)  # No cache, force fresh fetch
+    job.result_data = None
+    jm = JobManager()
+    jm.jobs.append(job)
+    args = MagicMock()
+    args.no_cache = False
+    args.include_raw = True
+
+    # Create a fake quantum job that returns real GateModelResultData
+    class FakeQuantumJobWithRealData:
+        def __init__(self, job_id, value):
+            self.id = job_id
+            self._value = value
+
+        def status(self):
+            from qbraid.runtime import JobStatus
+
+            return JobStatus.COMPLETED
+
+        def result(self):
+            from types import SimpleNamespace
+
+            # Return real GateModelResultData with measurement counts
+            data = GateModelResultData(measurement_counts=MeasCount({"00": 512, "11": 488}))
+            return SimpleNamespace(data=data)
+
+    # Custom benchmark that handles GateModelResultData
+    class DummyBenchmarkWithRealData:
+        def poll_handler(self, job_data, result_data, quantum_jobs):
+            return DummyResult(value=EXPECTED_VALUE)
+
+    import metriq_gym.run as run_mod
+
+    monkeypatch.setattr(run_mod, "setup_benchmark_result_class", lambda *_: DummyResult)
+    monkeypatch.setattr(run_mod, "setup_job_data_class", lambda *_: DummyJobData)
+    monkeypatch.setattr(run_mod, "setup_benchmark", lambda *_, **__: DummyBenchmarkWithRealData())
+    monkeypatch.setattr(
+        run_mod,
+        "load_job",
+        lambda *_, **__: FakeQuantumJobWithRealData("provider-job-1", EXPECTED_VALUE),
+    )
+    monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
+
+    fetch_output = fetch_result(job, args, jm)
+    assert fetch_output.raw_results is not None
+    assert len(fetch_output.raw_results) == 1
+    # Check that the first result is a GateModelResultData and has the expected measurement_counts
+    result = fetch_output.raw_results[0]
+    assert hasattr(result, "measurement_counts")
+    assert dict(result.measurement_counts) == {"00": 512, "11": 488}
+    assert fetch_output.from_cache is False
+
+
+def test_export_raw_debug_data_creates_separate_file(tmp_path):
+    """Test that _export_raw_debug_data creates a separate debug JSON file."""
+    # ...existing code...
+
+    # Create a mock job
+    job = MetriqGymJob(
+        id="test-job-123",
+        job_type=JobType.WIT,
+        params={"benchmark_name": "WIT", "num_qubits": 4},
+        data={"provider_job_ids": ["prov-123"], "qubit_chain": [0, 1, 2, 3]},
+        provider_name="local",
+        device_name="aer_simulator",
+        dispatch_time=datetime.now(),
+    )
+
+    from qbraid.runtime.result_data import GateModelResultData, MeasCount
+
+    raw_results = [GateModelResultData(measurement_counts=MeasCount({"00": 512, "11": 488}))]
+    base_file = tmp_path / "result.json"
+
+    _export_raw_debug_data(str(base_file), job, raw_results)
+
+    debug_file = tmp_path / "result_debug.json"
+    assert debug_file.exists()
+
+    with open(debug_file) as f:
+        data = json.load(f)
+
+    assert data["job_id"] == "test-job-123"
+    assert data["job_type"] == "WIT"
+    assert data["params"] == {"benchmark_name": "WIT", "num_qubits": 4}
+    assert data["job_data"]["qubit_chain"] == [0, 1, 2, 3]
+    # The raw_results are serialized with to_dict(), so check the dict structure
+    assert "raw_results" in data
+    assert isinstance(data["raw_results"], list)
+    assert data["raw_results"][0]["measurement_counts"] == {"00": 512, "11": 488}
+
+
+def test_replay_from_debug_file_success(tmp_path):
+    """Test successful replay from a debug file."""
+    # ...existing code...
+
+    # Create a debug file for QML Kernel benchmark
+    debug_data = {
+        "job_id": "test-replay-job",
+        "job_type": "QML Kernel",
+        "params": {
+            "benchmark_name": "QML Kernel",
+            "num_qubits": 4,
+            "shots": 10,
+        },
+        "job_data": {
+            "provider_job_ids": ["prov-123"],
+        },
+        "raw_results": [
+            {
+                "measurement_counts": {"0000": 10},
+                "shots": 10,
+                "num_measured_qubits": 4,
+            }
+        ],
+    }
+
+    debug_file = tmp_path / "debug.json"
+    with open(debug_file, "w") as f:
+        json.dump(debug_data, f)
+
+    result = replay_from_debug_file(str(debug_file))
+
+    assert result is not None
+    # QML Kernel should return accuracy_score
+    assert hasattr(result, "accuracy_score")
+
+
+def test_replay_from_debug_file_missing_file():
+    """Test replay with non-existent file."""
+    from metriq_gym.run import replay_from_debug_file
+
+    result = replay_from_debug_file("/nonexistent/path/debug.json")
+    assert result is None
+
+
+def test_replay_from_debug_file_invalid_json(tmp_path):
+    """Test replay with invalid JSON file."""
+    # ...existing code...
+
+    debug_file = tmp_path / "invalid.json"
+    with open(debug_file, "w") as f:
+        f.write("not valid json {{{")
+
+    result = replay_from_debug_file(str(debug_file))
+    assert result is None
+
+
+def test_replay_from_debug_file_missing_fields(tmp_path):
+    """Test replay with missing required fields."""
+    # ...existing code...
+
+    # Missing raw_results field
+    debug_data = {
+        "job_id": "test-job",
+        "job_type": "QML Kernel",
+        "params": {"benchmark_name": "QML Kernel"},
+        "job_data": {},
+    }
+
+    debug_file = tmp_path / "incomplete.json"
+    with open(debug_file, "w") as f:
+        json.dump(debug_data, f)
+
+    result = replay_from_debug_file(str(debug_file))
+    assert result is None
+
+
+def test_replay_from_debug_file_unknown_job_type(tmp_path):
+    """Test replay with unknown job type."""
+    # ...existing code...
+
+    debug_data = {
+        "job_id": "test-job",
+        "job_type": "Unknown Benchmark Type",
+        "params": {},
+        "job_data": {},
+        "raw_results": [],
+    }
+
+    debug_file = tmp_path / "unknown_type.json"
+    with open(debug_file, "w") as f:
+        json.dump(debug_data, f)
+
+    result = replay_from_debug_file(str(debug_file))
+    assert result is None

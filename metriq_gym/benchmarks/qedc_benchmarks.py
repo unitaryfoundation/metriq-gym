@@ -10,9 +10,11 @@ Result interpretation:
     circuit identifier, populated with the fidelity or related metrics computed by the QED-C
     analyser. Inspect the per-circuit entries to understand performance trends.
 
-Reference:
-    - QED-C QC-App-Oriented-Benchmarks repository for algorithm-specific methodology.
-      https://github.com/SRI-International/QC-App-Oriented-Benchmarks
+References:
+    - [QED-C QC-App-Oriented-Benchmarks](https://github.com/SRI-International/QC-App-Oriented-Benchmarks)
+      repository for algorithm-specific methodology.
+    - [Lubinski et al., "Application-Oriented Performance Benchmarks for Quantum Computing",
+      IEEE Trans. Quantum Eng. (2023)](https://arxiv.org/abs/2110.03137).
 """
 
 from dataclasses import dataclass

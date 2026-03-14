@@ -13,10 +13,9 @@ Result interpretation:
         - binary_success: boolean indicating whether polarization exceeded 1/e.
 
 References:
-    - Proctor et al., "Measuring the capabilities of quantum computers", Nature Physics 18, 75-79 (2022).
-      https://www.nature.com/articles/s41567-021-01409-7
-    - Phys. Rev. Lett. 129, 150502 (2022).
-      https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.129.150502
+    - [Proctor et al., "Measuring the capabilities of quantum computers",
+      Nature Physics 18, 75-79 (2022)](https://www.nature.com/articles/s41567-021-01409-7).
+    - [Hines et al., Phys. Rev. Lett. 129, 150502 (2022)](https://doi.org/10.1103/PhysRevLett.129.150502).
 """
 
 from dataclasses import dataclass
@@ -316,13 +315,18 @@ def random_cliffords(
     qc = QuantumCircuit(num_qubits)
 
     two_qubit_gate = CXGate() if gate_type == TwoQubitGateType.CNOT else CZGate()
-    for edge in connectivity_graph.edge_list():
-        qc.append(two_qubit_gate, [edge[0], edge[1]])
+
+    for u, v in connectivity_graph.edge_list():
+        if random_state.choice([True, False]):
+            control, target = u, v
+        else:
+            control, target = v, u
+        qc.append(two_qubit_gate, [control, target])
 
     nodes_with_edges = set()
-    for edge in connectivity_graph.edge_list():
-        nodes_with_edges.add(edge[0])
-        nodes_with_edges.add(edge[1])
+    for u, v in connectivity_graph.edge_list():
+        nodes_with_edges.add(u)
+        nodes_with_edges.add(v)
 
     isolated_qubits = [
         node for node in connectivity_graph.node_indices() if node not in nodes_with_edges
@@ -349,7 +353,9 @@ def pauli_from_layer(pauli_layer: QuantumCircuit) -> Pauli:
     n = pauli_layer.num_qubits
     per_qubit = ["I"] * n  # default all identity
 
-    for instr, qargs, _ in pauli_layer.data:
+    for instruction in pauli_layer.data:
+        instr = instruction.operation
+        qargs = instruction.qubits
         name = instr.name.lower()
         if name in ("barrier", "delay", "measure"):
             continue  # middle layer shouldn't have these, but be permissive
@@ -461,8 +467,8 @@ def generate_mirror_circuit(
         forward_layers.append(clifford_layer)
 
     assert_forward_is_clifford(initial_clifford_layer, forward_layers)
-    
-    qc.barrier() 
+
+    qc.barrier()
     middle_pauli = random_paulis(connectivity_graph, random_state)
     qc.compose(middle_pauli, inplace=True)
     qc.barrier()

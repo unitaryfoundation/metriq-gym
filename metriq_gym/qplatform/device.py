@@ -3,7 +3,6 @@ from typing import cast
 
 import networkx as nx
 import rustworkx as rx
-import qnexus as qnx
 from qbraid import QuantumDevice
 from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
 from qiskit.transpiler import CouplingMap
@@ -22,21 +21,7 @@ def version(device: QuantumDevice) -> str:
 
 @version.register
 def _(device: QuantinuumDevice) -> str:
-    device_name = device.profile.device_id
-
-    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    matching_rows = df.loc[df["device_name"] == device_name]
-
-    if matching_rows.empty:
-        available_devices = df["device_name"].tolist()
-        raise ValueError(
-            f"Device '{device_name}' not found in Quantinuum device list. "
-            f"Available devices: {available_devices}"
-        )
-
-    row = matching_rows.iloc[0]
-    backend_info = row["backend_info"]
-    return backend_info.version
+    return device._backend_info.version
 
 
 @version.register
@@ -93,21 +78,7 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: QuantinuumDevice) -> rx.PyGraph:
-    device_name = device.profile.device_id
-
-    df = qnx.devices.get_all(issuers=[qnx.devices.IssuerEnum.QUANTINUUM]).df()
-    matching_rows = df.loc[df["device_name"] == device_name]
-
-    if matching_rows.empty:
-        available_devices = df["device_name"].tolist()
-        raise ValueError(
-            f"Device '{device_name}' not found in Quantinuum device list. "
-            f"Available devices: {available_devices}"
-        )
-
-    row = matching_rows.iloc[0]
-
-    arch = row["backend_info"].architecture
+    arch = device._backend_info.architecture
     num_qubits = len(arch.nodes)
 
     is_fc = isinstance(arch, FullyConnected)
@@ -144,6 +115,56 @@ def _(device: OriginDevice) -> rx.PyGraph:
     node_index = {node: i for i, node in enumerate(available_qubits)}
     graph.add_edges_from([(node_index[a], node_index[b], None) for (a, b) in edges])
     return graph
+
+
+@singledispatch
+def connectivity_graph_for_gate(device: QuantumDevice, gate: str) -> rx.PyGraph | None:
+    """Return connectivity graph that works for the given gate, if available for the device."""
+    return None
+
+
+@connectivity_graph_for_gate.register
+def _(device: QiskitBackend, gate: str) -> rx.PyGraph | None:
+    if gate in device._backend.target:
+        return coupling_map_to_graph(device._backend.target.build_coupling_map(two_q_gate=gate))
+    return None
+
+
+@singledispatch
+def pruned_connectivity_graph(device: QuantumDevice, graph: rx.PyGraph) -> rx.PyGraph:
+    """Return a new graph with faulty qubits and edges removed.
+
+    For devices that don't support faulty qubit/edge reporting, returns
+    a copy of the input graph unchanged.
+
+    Args:
+        device: The quantum device to check for faulty components.
+        graph: The connectivity graph to filter.
+
+    Returns:
+        A new PyGraph with faulty qubits (nodes) and faulty gate edges removed.
+        Node indices are preserved - removed nodes leave gaps in the index space.
+    """
+    return graph.copy()
+
+
+@pruned_connectivity_graph.register
+def _(device: QiskitBackend, graph: rx.PyGraph) -> rx.PyGraph:
+    backend = device._backend
+
+    if not hasattr(backend, "properties") or backend.properties() is None:
+        return graph.copy()
+
+    props = backend.properties()
+
+    faulty_gates = backend.properties().faulty_gates()
+    faulty_edges = [tuple(gate.qubits) for gate in faulty_gates if len(gate.qubits) > 1]
+
+    new_graph = graph.copy()
+    new_graph.remove_edges_from(faulty_edges)
+    new_graph.remove_nodes_from(props.faulty_qubits())
+
+    return new_graph
 
 
 def normalized_metadata(device: QuantumDevice) -> dict:
