@@ -13,7 +13,7 @@ which correctly preserves the circuit's qubit count.
 import importlib
 import importlib.util
 import logging
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from qbraid.runtime import IonQDevice, IonQJob
@@ -60,7 +60,7 @@ def patch_ionq_device(device: "IonQDevice") -> None:
         run_input,
         *args,
         **kwargs,
-    ) -> Union["IonQJob", list["IonQJob"]]:
+    ) -> "IonQJob | list[IonQJob]":
         # Remove qiskit_ionq-specific kwargs that don't apply to QASM path
         kwargs.pop("gateset", None)
         kwargs.pop("ionq_compiler_synthesis", None)
