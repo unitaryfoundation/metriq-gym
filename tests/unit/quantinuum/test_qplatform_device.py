@@ -128,9 +128,7 @@ class TestNumQubitsQuantinuum:
 
         assert dev.num_qubits == n
 
-    def test_num_qubits_set_in_profile(
-        self, monkeypatch: pytest.MonkeyPatch, device_id: str
-    ):
+    def test_num_qubits_set_in_profile(self, monkeypatch: pytest.MonkeyPatch, device_id: str):
         """Verify num_qubits is set in the profile during device initialization."""
         n = 12
         backend_info = FakeBackendInfo(version="2.0.0", architecture=FullyConnected(n))

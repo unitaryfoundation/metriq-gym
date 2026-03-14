@@ -144,6 +144,7 @@ def random_chain_from_graph(
 # Analysis Functions
 # =============================================================================
 
+
 def tune_layer_fidelity_fits_soft(
     lfexp: LayerFidelity,
     b_half_width: float = 0.05,
@@ -219,6 +220,7 @@ def tune_layer_fidelity_fits_soft(
                     warned = True
 
     return lfexp
+
 
 def analyze_eplg_results(
     exp_data: ExperimentData,
