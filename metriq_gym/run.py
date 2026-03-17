@@ -146,10 +146,9 @@ def setup_device(provider_name: str, device_name: str):
         logger.error(f"Devices available: {devices}")
         raise QBraidSetupError("Device not found")
 
-    if provider_name == "ionq":
-        from metriq_gym.ionq.device import patch_ionq_device
+    from metriq_gym.provider_hooks import apply_device_hook
 
-        patch_ionq_device(device)
+    apply_device_hook(provider_name, device)
 
     return device
 
@@ -761,11 +760,11 @@ def fetch_result(
     )
     from qbraid.runtime import JobStatus
 
+    from metriq_gym.provider_hooks import apply_load_kwargs_hook, apply_poll_hooks
+
     load_kwargs = asdict(job_data)
-    # IonQ's API doesn't return shots in job details; pass from params so
-    # qBraid's IonQJob._get_counts can reconstruct measurement counts.
-    if metriq_job.provider_name == "ionq" and "shots" not in load_kwargs:
-        load_kwargs["shots"] = metriq_job.params.get("shots")
+    apply_poll_hooks(metriq_job.provider_name)
+    apply_load_kwargs_hook(metriq_job.provider_name, load_kwargs, metriq_job.params)
 
     quantum_jobs = [
         (load_job(job_id, provider=metriq_job.provider_name, **load_kwargs))

@@ -20,11 +20,10 @@ formatted measurement counts without benchmark-specific workarounds:
    classical register at poll time.
 """
 
-from __future__ import annotations
-
+import json
 import logging
 import types
-from typing import TYPE_CHECKING, Any, Union
+from typing import Any
 
 from qiskit import QuantumCircuit, qasm2
 from qbraid.runtime import IonQDevice
@@ -32,9 +31,6 @@ from qbraid.runtime.ionq.job import IonQJob, IonQJobError
 from qbraid.runtime.postprocess import distribute_counts, normalize_data
 from qbraid.runtime.result import Result
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -104,10 +100,10 @@ def _marginalize_to_clbits(
 
 
 def _apply_counts(
-    counts: Union[MeasCount, list[MeasCount]],
+    counts: MeasCount | list[MeasCount],
     fn,
     *args,
-) -> Union[MeasCount, list[MeasCount]]:
+) -> MeasCount | list[MeasCount]:
     """Apply *fn* to a single counts dict or to each element of a batch."""
     if isinstance(counts, list):
         return [fn(c, *args) for c in counts]
@@ -137,8 +133,8 @@ def patch_ionq_device(device: IonQDevice) -> None:
             if run_input.num_clbits < run_input.num_qubits:
                 meas_map = _extract_measurement_map(run_input)
                 metadata = kwargs.get("metadata") or {}
-                metadata[_META_MEAS_MAP] = meas_map
-                metadata[_META_NUM_CLBITS] = run_input.num_clbits
+                metadata[_META_MEAS_MAP] = json.dumps(meas_map)
+                metadata[_META_NUM_CLBITS] = str(run_input.num_clbits)
                 kwargs["metadata"] = metadata
 
         return original_run(self, _circuits_to_qasm2(run_input), *args, **kwargs)
@@ -158,7 +154,7 @@ def patch_ionq_job() -> None:
         return
     _ionq_job_patched = True
 
-    def _get_counts_padded(result: dict[str, Any]) -> Union[MeasCount, list[MeasCount]]:
+    def _get_counts_padded(result: dict[str, Any]) -> MeasCount | list[MeasCount]:
         """Replacement for IonQJob._get_counts that pads bitstrings."""
         shots = result.get("shots")
         probabilities = result.get("probabilities")
@@ -200,9 +196,11 @@ def patch_ionq_job() -> None:
 
         # Marginalize if measurement metadata was injected at dispatch time.
         metadata = job_data.get("metadata") or {}
-        meas_map = metadata.get(_META_MEAS_MAP)
-        num_clbits = metadata.get(_META_NUM_CLBITS)
-        if meas_map is not None and num_clbits is not None:
+        meas_map_raw = metadata.get(_META_MEAS_MAP)
+        num_clbits_raw = metadata.get(_META_NUM_CLBITS)
+        if meas_map_raw is not None and num_clbits_raw is not None:
+            meas_map = json.loads(meas_map_raw) if isinstance(meas_map_raw, str) else meas_map_raw
+            num_clbits = int(num_clbits_raw)
             measurement_counts = _apply_counts(
                 measurement_counts, _marginalize_to_clbits, meas_map, num_clbits
             )
