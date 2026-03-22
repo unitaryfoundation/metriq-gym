@@ -1434,7 +1434,7 @@ dependencies = [
     { name = "pyqrack" },
     { name = "python-dotenv" },
     { name = "pytket-qiskit" },
-    { name = "qbraid", extra = ["azure", "braket", "cirq", "ionq", "qiskit"] },
+    { name = "qbraid", extra = ["azure", "braket", "cirq", "qiskit"] },
     { name = "qiskit" },
     { name = "qiskit-aer" },
     { name = "qiskit-experiments" },
@@ -1482,7 +1482,7 @@ requires-dist = [
     { name = "pyqrack", specifier = ">=1.69.0,<2.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.78.0" },
-    { name = "qbraid", extras = ["azure", "braket", "cirq", "ionq", "qiskit"], specifier = ">=0.10.0,<0.11.2" },
+    { name = "qbraid", extras = ["azure", "braket", "cirq", "qiskit"], specifier = ">=0.10.0,<0.11.2" },
     { name = "qiskit", specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
     { name = "qiskit-experiments", specifier = ">=0.9.0,<0.14.0" },
@@ -2641,9 +2641,6 @@ cirq = [
     { name = "cirq-ionq" },
     { name = "ply" },
 ]
-ionq = [
-    { name = "qiskit-ionq" },
-]
 qiskit = [
     { name = "packaging" },
     { name = "qiskit" },
@@ -2779,22 +2776,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/32/c9/3ac506ad9d157d2ec3f3c548cee61645d6cf8d73d404cf7a2db18534dd4c/qiskit_ibm_runtime-0.41.1.tar.gz", hash = "sha256:e9831956d316a7bd589f4a7a1a0da1e76c95083fbc38746884c3598443babacb", size = 1472381, upload-time = "2025-08-19T18:59:28.776Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ed/33/fb0ef7140d15f28cc3246a26e8c9d0c9016c3c7c6f400b1579fd41e2ec35/qiskit_ibm_runtime-0.41.1-py3-none-any.whl", hash = "sha256:30673c532324b343924e860b2b67ea39f2cf26bff15a552ac5ff6cc3fdb5f296", size = 1418753, upload-time = "2025-08-19T18:59:26.489Z" },
-]
-
-[[package]]
-name = "qiskit-ionq"
-version = "1.0.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "decorator" },
-    { name = "importlib-metadata" },
-    { name = "python-dotenv" },
-    { name = "qiskit" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/c9/af1e60d1f76fb3e94c20a4918a16f18a92c5ffc0255828bcc9fbec9e77e8/qiskit_ionq-1.0.2.tar.gz", hash = "sha256:3565916b9e02c71960eef42e0691a62d357a7f1b5a427c8f77c490600746733a", size = 46333, upload-time = "2025-08-30T02:08:42.499Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/21/a0/08be5d4aec05fb2ebbaa68ae18c2da8c1029dc048578ee0cf00ae3998d0e/qiskit_ionq-1.0.2-py3-none-any.whl", hash = "sha256:1ee8598444d05cb197d762adb7ed264cb704cc57801a4c43be54ec80c5d0d3d8", size = 53015, upload-time = "2025-08-30T02:08:40.925Z" },
 ]
 
 [[package]]

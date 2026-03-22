@@ -1,23 +1,22 @@
 """Patches for qBraid's IonQ provider.
 
-Addresses three qBraid/IonQ issues so that every benchmark receives correctly
+Addresses two qBraid/IonQ issues so that every benchmark receives correctly
 formatted measurement counts without benchmark-specific workarounds:
 
-1. **qiskit_ionq qubit-count bug** — When qiskit_ionq is installed, qBraid's
-   IonQDevice.run() uses qiskit_ionq's transpilation path which inflates the
-   circuit qubit count to the device total (e.g. 29).  We bypass this by
-   converting Qiskit circuits to QASM2 before submission.
-
-2. **Bitstring padding** — IonQJob._get_counts() uses normalize_data() which
+1. **Bitstring padding** — IonQJob._get_counts() uses normalize_data() which
    can return truncated bitstrings (e.g. "0" instead of "0000000") when only
    a single computational basis state is observed.  We pad every key to the
    circuit's qubit count, which is available in the IonQ job response.
 
-3. **All-qubit measurement** — IonQ measures every qubit regardless of the
+2. **All-qubit measurement** — IonQ measures every qubit regardless of the
    circuit's measurement gates (qBraid's QASM→IonQ conversion discards them).
    We extract the measurement mapping at dispatch time, persist it in IonQ's
    job metadata field, and marginalize the all-qubit counts back to the
    classical register at poll time.
+
+Note: The qiskit_ionq qubit-count bug (see qBraid/qBraid#1141) is resolved
+by uninstalling qiskit-ionq, which forces qBraid to use its native
+qiskit → qasm3 → ionq conversion path.
 """
 
 import json
@@ -25,7 +24,7 @@ import logging
 import types
 from typing import Any
 
-from qiskit import QuantumCircuit, qasm2
+from qiskit import QuantumCircuit
 from qbraid.runtime import IonQDevice
 from qbraid.runtime.ionq.job import IonQJob, IonQJobError
 from qbraid.runtime.postprocess import distribute_counts, normalize_data
@@ -43,15 +42,6 @@ _META_NUM_CLBITS = "_metriq_num_clbits"
 
 
 # ── Helpers ────────────────────────────────────────────────────────────
-
-
-def _circuits_to_qasm2(run_input):
-    """Convert Qiskit QuantumCircuit(s) to QASM2 strings."""
-    if isinstance(run_input, QuantumCircuit):
-        return qasm2.dumps(run_input)
-    if isinstance(run_input, list) and all(isinstance(p, QuantumCircuit) for p in run_input):
-        return [qasm2.dumps(p) for p in run_input]
-    return run_input
 
 
 def _extract_measurement_map(circuit: QuantumCircuit) -> dict[str, int]:
@@ -90,10 +80,13 @@ def _marginalize_to_clbits(
     clbit_indices = [meas_map[str(q)] for q in qubit_indices]
 
     marginal: dict[str, int] = {}
+    num_qubits = len(next(iter(counts)))
     for bitstring, count in counts.items():
         clbits = ["0"] * num_clbits
         for q_idx, c_idx in zip(qubit_indices, clbit_indices):
-            clbits[c_idx] = bitstring[q_idx]
+            # IonQ/qBraid bitstrings are big-endian (MSB first via bin()),
+            # so qubit q is at string index (n - 1 - q).
+            clbits[c_idx] = bitstring[num_qubits - 1 - q_idx]
         key = "".join(clbits)
         marginal[key] = marginal.get(key, 0) + count
     return marginal
@@ -116,18 +109,14 @@ def _apply_counts(
 def patch_ionq_device(device: IonQDevice) -> None:
     """Patch an IonQDevice instance.
 
-    * Converts Qiskit circuits to QASM2 before submission (issue 1).
-    * Injects measurement-mapping metadata into the IonQ job (issue 3).
-    * Ensures the class-level IonQJob patches are applied (issues 2 & 3).
+    * Injects measurement-mapping metadata into the IonQ job (issue 2).
+    * Ensures the class-level IonQJob patches are applied (issues 1 & 2).
     """
     patch_ionq_job()  # idempotent
 
     original_run = IonQDevice.run
 
     def run_with_patches(self, run_input, *args, **kwargs):
-        kwargs.pop("gateset", None)
-        kwargs.pop("ionq_compiler_synthesis", None)
-
         # Inject measurement metadata for partial-measurement circuits.
         if isinstance(run_input, QuantumCircuit):
             if run_input.num_clbits < run_input.num_qubits:
@@ -137,7 +126,7 @@ def patch_ionq_device(device: IonQDevice) -> None:
                 metadata[_META_NUM_CLBITS] = str(run_input.num_clbits)
                 kwargs["metadata"] = metadata
 
-        return original_run(self, _circuits_to_qasm2(run_input), *args, **kwargs)
+        return original_run(self, run_input, *args, **kwargs)
 
     device.run = types.MethodType(run_with_patches, device)
 
