@@ -1,0 +1,48 @@
+{
+  "$id": "metriq-gym/ghz.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GHZ",
+  "description": "GHZ state preparation and verification benchmark. Constructs a GHZ state on the device using a BFS spanning tree of the device connectivity, then estimates fidelity via direct fidelity estimation (DFE) or parity oscillation.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "GHZ",
+      "description": "Name of the benchmark. Must be 'GHZ' for this schema."
+    },
+    "num_qubits": {
+      "type": "integer",
+      "description": "Number of data qubits for the GHZ state.",
+      "minimum": 2,
+      "examples": [4, 10, 20]
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000, 10000]
+    },
+    "method": {
+      "type": "string",
+      "description": "Verification method: 'dfe' (2 circuits, fast) or 'parity_oscillation' (many circuits, rigorous).",
+      "enum": ["dfe", "parity_oscillation"],
+      "default": "dfe"
+    },
+    "num_phases": {
+      "type": "integer",
+      "description": "Number of phase points for parity oscillation method. Ignored for DFE.",
+      "default": 20,
+      "minimum": 5,
+      "examples": [20, 50]
+    },
+    "num_flag_qubits": {
+      "type": "integer",
+      "description": "Number of flag qubits for error detection via ZZ stabilizer checks. Set to 0 to disable.",
+      "default": 0,
+      "minimum": 0,
+      "examples": [0, 2]
+    }
+  },
+  "required": ["benchmark_name", "num_qubits"]
+}
