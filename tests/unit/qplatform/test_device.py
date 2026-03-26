@@ -5,7 +5,6 @@ Tests the version and connectivity_graph functions for different device types
 using mocked qBraid device objects.
 """
 
-import types
 from unittest.mock import Mock
 
 import pytest
