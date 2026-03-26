@@ -14,7 +14,7 @@ import networkx as nx
 from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
 
 from metriq_gym.local.provider import LocalProvider
-from metriq_gym.origin.device import OriginDevice
+from qbraid.runtime.origin import OriginDevice
 from metriq_gym.qplatform.device import (
     version,
     connectivity_graph,
@@ -97,9 +97,9 @@ def _make_origin_device(
             return self._chip_info
 
     backend = StubBackend()
+    profile = OriginDevice.build_profile(backend, "WK_C102_400", "WK_C102_400")
     device = OriginDevice(
-        provider=types.SimpleNamespace(),
-        device_id="WK_C102_400",
+        profile=profile,
         backend=backend,
         backend_name="WK_C102_400",
     )
@@ -111,10 +111,11 @@ def _make_origin_simulator_device(backend_name: str = "full_amplitude"):
         def chip_info(self):
             raise RuntimeError("chip_info only available on hardware backends")
 
+    sim_backend = SimulatorBackend()
+    profile = OriginDevice.build_profile(sim_backend, backend_name, backend_name)
     device = OriginDevice(
-        provider=types.SimpleNamespace(),
-        device_id=backend_name,
-        backend=SimulatorBackend(),
+        profile=profile,
+        backend=sim_backend,
         backend_name=backend_name,
     )
     return device
