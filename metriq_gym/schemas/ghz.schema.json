@@ -2,7 +2,7 @@
   "$id": "metriq-gym/ghz.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "GHZ",
-  "description": "GHZ state preparation and verification benchmark. Constructs a GHZ state on the device using a BFS spanning tree of the device connectivity, then estimates fidelity via direct fidelity estimation (DFE) or parity oscillation.",
+  "description": "GHZ state preparation and verification benchmark. Constructs a GHZ state on the device using a BFS spanning tree of the device connectivity, then estimates a fidelity lower bound via direct fidelity estimation (DFE) or parity oscillation.",
   "type": "object",
   "properties": {
     "benchmark_name": {
