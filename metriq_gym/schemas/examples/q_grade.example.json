@@ -1,0 +1,5 @@
+{
+  "benchmark_name": "Q-Grade",
+  "ring_sizes": [4, 6, 8, 10, 12],
+  "shots": 1000
+}
