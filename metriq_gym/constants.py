@@ -13,6 +13,7 @@ class JobType(StrEnum):
     HIDDEN_SHIFT = "Hidden Shift"
     QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
     LR_QAOA = "Linear Ramp QAOA"
+    GHZ = "GHZ"
 
 
 SCHEMA_MAPPING = {
@@ -27,4 +28,5 @@ SCHEMA_MAPPING = {
     JobType.HIDDEN_SHIFT: "hidden_shift.schema.json",
     JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.schema.json",
     JobType.LR_QAOA: "lr_qaoa.schema.json",
+    JobType.GHZ: "ghz.schema.json",
 }
