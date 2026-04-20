@@ -1361,7 +1361,7 @@ requires-dist = [
     { name = "pyqpanda3", specifier = ">=0.3.2" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.78.0" },
-    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit"], git = "https://github.com/vprusso/qBraid.git?rev=add-originq-provider" },
+    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit"], git = "https://github.com/vprusso/qBraid.git?rev=f1344eaccf0cba2a0f28abb01eafd2faf4cc66eb" },
     { name = "qbraid-core", specifier = ">=0.1.45,<0.3.0" },
     { name = "qiskit", specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
@@ -2371,7 +2371,7 @@ wheels = [
 [[package]]
 name = "qbraid"
 version = "0.11.2.dev0"
-source = { git = "https://github.com/vprusso/qBraid.git?rev=add-originq-provider#f1344eaccf0cba2a0f28abb01eafd2faf4cc66eb" }
+source = { git = "https://github.com/vprusso/qBraid.git?rev=f1344eaccf0cba2a0f28abb01eafd2faf4cc66eb#f1344eaccf0cba2a0f28abb01eafd2faf4cc66eb" }
 dependencies = [
     { name = "numpy" },
     { name = "openqasm3", extra = ["parser"] },

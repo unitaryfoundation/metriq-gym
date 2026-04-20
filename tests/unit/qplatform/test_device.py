@@ -258,6 +258,25 @@ class TestConnectivityGraphFunction:
         assert isinstance(graph, rx.PyGraph)
         assert graph.num_nodes() == 4
         assert graph.num_edges() == 0
+        # Physical qubit ids should be preserved as node payloads so callers
+        # can map graph indices back to the device's actual qubit labels.
+        assert set(graph.nodes()) == {7, 9, 11, 15}
+
+    def test_origin_device_connectivity_preserves_qubit_ids_with_edges(self):
+        device = _make_origin_device(
+            high=[7, 9], available=[7, 9, 11], edges=[(7, 9), (9, 11)], num_qubits=12
+        )
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        # Non-contiguous physical qubit ids should be mapped to contiguous 0..N-1 indices,
+        # but the original qubit ids must remain accessible via node payloads.
+        assert set(graph.node_indices()) == {0, 1, 2}
+        assert set(graph.nodes()) == {7, 9, 11}
+        # Edges use the reindexed positions (0-based), not the physical ids.
+        edges = {tuple(sorted(e)) for e in graph.edge_list()}
+        assert edges == {(0, 1), (1, 2)}
 
     def test_unsupported_device_connectivity_raises(self, mock_unsupported_device):
         with pytest.raises(NotImplementedError) as exc_info:
