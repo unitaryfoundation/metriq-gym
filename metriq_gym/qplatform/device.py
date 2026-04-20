@@ -10,7 +10,7 @@ from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.origin.device import OriginDevice, get_origin_connectivity
-from metriq_gym.quantinuum.device import QuantinuumDevice
+from qbraid.runtime.quantinuum import QuantinuumDevice
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
