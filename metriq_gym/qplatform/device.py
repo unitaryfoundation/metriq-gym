@@ -1,3 +1,4 @@
+import logging
 from functools import singledispatch
 from typing import cast
 
@@ -9,8 +10,10 @@ from qiskit.transpiler import CouplingMap
 from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
-from metriq_gym.origin.device import OriginDevice, get_origin_connectivity
+from qbraid.runtime.origin import OriginDevice
 from metriq_gym.quantinuum.device import QuantinuumDevice
+
+logger = logging.getLogger(__name__)
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
@@ -109,7 +112,13 @@ def _(device: OriginDevice) -> rx.PyGraph:
     if getattr(device.profile, "simulator", False):
         return rx.generators.complete_graph(num_qubits)
 
-    available_qubits, edges = get_origin_connectivity(device)
+    try:
+        chip_info = device.backend.chip_info()
+        available_qubits = chip_info.available_qubits()
+        edges = chip_info.get_chip_topology(available_qubits)
+    except (AttributeError, RuntimeError) as exc:
+        logger.debug("Failed to retrieve Origin chip info: %s", exc)
+        available_qubits, edges = [], []
     graph = rx.PyGraph()
     graph.add_nodes_from(available_qubits)
     node_index = {node: i for i, node in enumerate(available_qubits)}
