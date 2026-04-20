@@ -10,7 +10,8 @@ from unittest.mock import Mock
 import pytest
 import rustworkx as rx
 import networkx as nx
-from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
+from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice, TargetProfile
+from qbraid.programs import ExperimentType, ProgramSpec
 
 from metriq_gym.local.provider import LocalProvider
 from qbraid.runtime.origin import OriginDevice
@@ -96,11 +97,18 @@ def _make_origin_device(
             return self._chip_info
 
     backend = StubBackend()
-    profile = OriginDevice.build_profile(backend, "WK_C102_400", "WK_C102_400")
+    profile = TargetProfile(
+        device_id="WK_C102_400",
+        simulator=False,
+        experiment_type=ExperimentType.GATE_MODEL,
+        num_qubits=num_qubits,
+        program_spec=ProgramSpec(str, alias="qasm2"),
+        provider_name="origin",
+    )
     device = OriginDevice(
         profile=profile,
+        service=Mock(),
         backend=backend,
-        backend_name="WK_C102_400",
     )
     return device
 
@@ -111,11 +119,24 @@ def _make_origin_simulator_device(backend_name: str = "full_amplitude"):
             raise RuntimeError("chip_info only available on hardware backends")
 
     sim_backend = SimulatorBackend()
-    profile = OriginDevice.build_profile(sim_backend, backend_name, backend_name)
+    # Simulator qubit counts are hardcoded in qbraid.runtime.origin.provider.SIMULATOR_BACKENDS
+    simulator_qubit_counts = {
+        "full_amplitude": 35,
+        "partial_amplitude": 68,
+        "single_amplitude": 200,
+    }
+    profile = TargetProfile(
+        device_id=backend_name,
+        simulator=True,
+        experiment_type=ExperimentType.GATE_MODEL,
+        num_qubits=simulator_qubit_counts[backend_name],
+        program_spec=ProgramSpec(str, alias="qasm2"),
+        provider_name="origin",
+    )
     device = OriginDevice(
         profile=profile,
+        service=Mock(),
         backend=sim_backend,
-        backend_name=backend_name,
     )
     return device
 
