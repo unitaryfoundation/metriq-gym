@@ -49,7 +49,7 @@ jobs:
       - name: Install dependencies
         if: ${{ github.event.action != 'closed' }}
         run: |
-          pip install mkdocs mkdocs-material mkdocstrings[python]
+          pip install .[docs]
 
       - name: Build documentation
         if: ${{ github.event.action != 'closed' }}
