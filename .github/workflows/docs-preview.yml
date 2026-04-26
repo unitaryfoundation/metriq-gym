@@ -1,36 +1,58 @@
-name: Deploy Documentation Preview
+name: Build Documentation Preview
 
 on:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
     paths:
       - 'docs/**'
       - 'metriq_gym/**'
       - '.github/workflows/docs-preview.yml'
+      - '.github/workflows/docs-preview-deploy.yml'
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
-  group: preview-${{ github.ref }}
+  group: preview-build-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  preview:
+  build:
     runs-on: ubuntu-latest
     steps:
+      - name: Write preview metadata
+        run: |
+          mkdir -p preview-metadata
+          printf '%s\n' "${{ github.event.pull_request.number }}" > preview-metadata/pr-number.txt
+          printf '%s\n' "${{ github.event.action }}" > preview-metadata/pr-action.txt
+
+      - name: Upload preview metadata
+        uses: actions/upload-artifact@v6
+        with:
+          name: docs-preview-metadata
+          path: preview-metadata/
+          retention-days: 3
+
       - uses: actions/checkout@v6
+        if: ${{ github.event.action != 'closed' }}
 
       - name: Set up Python
+        if: ${{ github.event.action != 'closed' }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
       - name: Install dependencies
+        if: ${{ github.event.action != 'closed' }}
         run: |
           pip install mkdocs mkdocs-material mkdocstrings[python]
 
       - name: Build documentation
+        if: ${{ github.event.action != 'closed' }}
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -39,10 +61,10 @@ jobs:
           sed -i "s|site_url:.*|site_url: https://unitaryfoundation.github.io/metriq-gym/pr-preview/pr-${PR_NUMBER}/|" mkdocs.yml
           mkdocs build
 
-      - name: Deploy preview
-        uses: rossjrw/pr-preview-action@v1.8.1
+      - name: Upload built documentation
+        if: ${{ github.event.action != 'closed' }}
+        uses: actions/upload-artifact@v6
         with:
-          source-dir: docs/site
-          preview-branch: gh-pages
-          umbrella-dir: pr-preview
-          action: deploy
+          name: docs-preview-site
+          path: docs/site/
+          retention-days: 3
