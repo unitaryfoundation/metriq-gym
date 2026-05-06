@@ -1,0 +1,53 @@
+{
+    "$id": "metriq-gym/q_grade.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Many-body coherence grade (Q-Grade)",
+    "description": "The Q-Grade benchmark schema definition, describing the many-body quantum coherence grade via anyon interference in a Trotterised Ising ring with twisted boundary conditions (Teng et al., arXiv:2503.12573, 2025). For each ring size two circuits are submitted (with and without a vison) and the contrast R_gamma is measured. The Q-grade is the largest ring size for which R_gamma meets the threshold.",
+    "type": "object",
+    "properties": {
+      "benchmark_name": {
+        "type": "string",
+        "const": "Q-Grade",
+        "description": "Name of the benchmark. Must be 'Q-Grade' for this schema."
+      },
+      "ring_sizes": {
+        "type": "array",
+        "description": "Even ring sizes (at least 4) to test. Two circuits are submitted per ring size: one with a vison on the ring, one without.",
+        "items": {
+          "type": "integer",
+          "minimum": 4,
+          "multipleOf": 2
+        },
+        "minItems": 1,
+        "uniqueItems": true,
+        "default": [4, 6, 8, 10, 12],
+        "examples": [[4, 6, 8, 10, 12]]
+      },
+      "shots": {
+        "type": "integer",
+        "description": "Number of measurement shots (repetitions) to use per circuit.",
+        "default": 1000,
+        "minimum": 1,
+        "examples": [1000]
+      },
+      "j_coupling": {
+        "type": "number",
+        "description": "Ising coupling strength J (reference energy). Fixed to 1.0 in the paper.",
+        "default": 1.0
+      },
+      "gamma_hopping": {
+        "type": "number",
+        "description": "Transverse-field strength Gamma, setting the spinon hopping rate. The paper uses 0.1 (<< J).",
+        "default": 0.1,
+        "exclusiveMinimum": 0.0
+      },
+      "threshold": {
+        "type": "number",
+        "description": "R_gamma threshold used to define the Q-grade. The paper uses 0.2.",
+        "default": 0.2,
+        "minimum": 0.0,
+        "maximum": 1.0
+      }
+    },
+    "required": ["benchmark_name"]
+  }
