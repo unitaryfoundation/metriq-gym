@@ -64,7 +64,7 @@ docs = [
 
 [dependency-groups]
 dev = [
-    "mypy>=1.18.2,<2.0.0",
+    "mypy>=1.18.2,<3.0.0",
     "pre-commit>=4.3.0,<5.0.0",
     "pytest>=8.4.2,<10.0.0",
     "ruff>=0.13.2,<0.16.0",
