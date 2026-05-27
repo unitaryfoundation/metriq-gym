@@ -1,0 +1,34 @@
+{
+  "$id": "metriq-gym/mermin.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mermin",
+  "description": "The Mermin / Belinskii-Klyshko benchmark schema. Tests the multipartite Mermin-Klyshko polynomial M_N on connected N-vertex paths of the device coupling graph for N in [min_n, max_n].",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Mermin",
+      "description": "Name of the benchmark. Must be 'Mermin' for this schema."
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "min_n": {
+      "type": "integer",
+      "description": "Smallest N for which to evaluate M_N. Must be >= 2 (N=2 recovers CHSH).",
+      "default": 2,
+      "minimum": 2
+    },
+    "max_n": {
+      "type": "integer",
+      "description": "Largest N for which to evaluate M_N. Sweep stops early if no connected path of length N exists on the device coupling graph.",
+      "default": 5,
+      "minimum": 2
+    }
+  },
+  "required": ["benchmark_name"]
+}
