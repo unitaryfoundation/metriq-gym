@@ -1,0 +1,30 @@
+{
+  "$id": "metriq-gym/semi_brukner.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Semi-Brukner",
+  "description": "Schema for the semi-Brukner / Local Friendliness benchmark. Evaluates the semi-Brukner inequality on a singlet shared between a chosen pair of qubits.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Semi-Brukner",
+      "description": "Name of the benchmark. Must be 'Semi-Brukner' for this schema."
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "qubits": {
+      "type": "array",
+      "description": "Two physical qubit indices (Alice, Bob) on which to prepare the singlet and run the benchmark.",
+      "items": {"type": "integer", "minimum": 0},
+      "minItems": 2,
+      "maxItems": 2,
+      "default": [0, 1]
+    }
+  },
+  "required": ["benchmark_name"]
+}

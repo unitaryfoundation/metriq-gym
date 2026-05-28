@@ -15,6 +15,7 @@ from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData, QEDCR
 from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData, LinearRampQAOAResult
 from metriq_gym.benchmarks.eplg import EPLG, EPLGData, EPLGResult
 from metriq_gym.benchmarks.mermin import Mermin, MerminData, MerminResult
+from metriq_gym.benchmarks.semi_brukner import SemiBrukner, SemiBruknerData, SemiBruknerResult
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,
@@ -29,6 +30,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCBenchmark,
     JobType.LR_QAOA: LinearRampQAOA,
     JobType.MERMIN: Mermin,
+    JobType.SEMI_BRUKNER: SemiBrukner,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -44,6 +46,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCData,
     JobType.LR_QAOA: LinearRampQAOAData,
     JobType.MERMIN: MerminData,
+    JobType.SEMI_BRUKNER: SemiBruknerData,
 }
 
 BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
@@ -59,6 +62,7 @@ BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCResult,
     JobType.LR_QAOA: LinearRampQAOAResult,
     JobType.MERMIN: MerminResult,
+    JobType.SEMI_BRUKNER: SemiBruknerResult,
 }
 
 

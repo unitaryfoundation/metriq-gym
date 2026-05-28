@@ -14,6 +14,7 @@ class JobType(StrEnum):
     QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
     LR_QAOA = "Linear Ramp QAOA"
     MERMIN = "Mermin"
+    SEMI_BRUKNER = "Semi-Brukner"
 
 
 SCHEMA_MAPPING = {
@@ -29,4 +30,5 @@ SCHEMA_MAPPING = {
     JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.schema.json",
     JobType.LR_QAOA: "lr_qaoa.schema.json",
     JobType.MERMIN: "mermin.schema.json",
+    JobType.SEMI_BRUKNER: "semi_brukner.schema.json",
 }
