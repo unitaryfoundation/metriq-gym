@@ -1,0 +1,36 @@
+{
+  "$id": "metriq-gym/cglmp.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CGLMP",
+  "description": "Schema for the CGLMP-d Bell-inequality benchmark on d-level qudits encoded in qubits. Supported d in {2, 4}.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "CGLMP",
+      "description": "Name of the benchmark. Must be 'CGLMP' for this schema."
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "d": {
+      "type": "integer",
+      "description": "Qudit dimension. Must be 2 or 4 (binary encoding). d=2 recovers CHSH; d=4 uses 2 qubits per party.",
+      "enum": [2, 4],
+      "default": 2
+    },
+    "qubits": {
+      "type": "array",
+      "description": "Distinct physical qubit indices: the first log2(d) are Alice's register, the remaining log2(d) are Bob's. Length must be 2*log2(d).",
+      "items": {"type": "integer", "minimum": 0},
+      "minItems": 2,
+      "maxItems": 4,
+      "default": [0, 1]
+    }
+  },
+  "required": ["benchmark_name"]
+}

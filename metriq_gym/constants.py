@@ -16,6 +16,7 @@ class JobType(StrEnum):
     MERMIN = "Mermin"
     SEMI_BRUKNER = "Semi-Brukner"
     SVETLICHNY = "Svetlichny"
+    CGLMP = "CGLMP"
 
 
 SCHEMA_MAPPING = {
@@ -33,4 +34,5 @@ SCHEMA_MAPPING = {
     JobType.MERMIN: "mermin.schema.json",
     JobType.SEMI_BRUKNER: "semi_brukner.schema.json",
     JobType.SVETLICHNY: "svetlichny.schema.json",
+    JobType.CGLMP: "cglmp.schema.json",
 }
