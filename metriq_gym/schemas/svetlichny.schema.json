@@ -1,0 +1,30 @@
+{
+  "$id": "metriq-gym/svetlichny.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Svetlichny",
+  "description": "Schema for the (three-party) Svetlichny benchmark. Evaluates the canonical Svetlichny inequality S_3 on a GHZ_3 state shared between a chosen triple of qubits.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Svetlichny",
+      "description": "Name of the benchmark. Must be 'Svetlichny' for this schema."
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "qubits": {
+      "type": "array",
+      "description": "Three distinct physical qubit indices on which to prepare GHZ_3 and run the benchmark.",
+      "items": {"type": "integer", "minimum": 0},
+      "minItems": 3,
+      "maxItems": 3,
+      "default": [0, 1, 2]
+    }
+  },
+  "required": ["benchmark_name"]
+}

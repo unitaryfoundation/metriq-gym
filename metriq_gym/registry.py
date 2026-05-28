@@ -16,6 +16,7 @@ from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData, Li
 from metriq_gym.benchmarks.eplg import EPLG, EPLGData, EPLGResult
 from metriq_gym.benchmarks.mermin import Mermin, MerminData, MerminResult
 from metriq_gym.benchmarks.semi_brukner import SemiBrukner, SemiBruknerData, SemiBruknerResult
+from metriq_gym.benchmarks.svetlichny import Svetlichny, SvetlichnyData, SvetlichnyResult
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,
@@ -31,6 +32,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.LR_QAOA: LinearRampQAOA,
     JobType.MERMIN: Mermin,
     JobType.SEMI_BRUKNER: SemiBrukner,
+    JobType.SVETLICHNY: Svetlichny,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -47,6 +49,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.LR_QAOA: LinearRampQAOAData,
     JobType.MERMIN: MerminData,
     JobType.SEMI_BRUKNER: SemiBruknerData,
+    JobType.SVETLICHNY: SvetlichnyData,
 }
 
 BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
@@ -63,6 +66,7 @@ BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.LR_QAOA: LinearRampQAOAResult,
     JobType.MERMIN: MerminResult,
     JobType.SEMI_BRUKNER: SemiBruknerResult,
+    JobType.SVETLICHNY: SvetlichnyResult,
 }
 
 

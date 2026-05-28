@@ -15,6 +15,7 @@ class JobType(StrEnum):
     LR_QAOA = "Linear Ramp QAOA"
     MERMIN = "Mermin"
     SEMI_BRUKNER = "Semi-Brukner"
+    SVETLICHNY = "Svetlichny"
 
 
 SCHEMA_MAPPING = {
@@ -31,4 +32,5 @@ SCHEMA_MAPPING = {
     JobType.LR_QAOA: "lr_qaoa.schema.json",
     JobType.MERMIN: "mermin.schema.json",
     JobType.SEMI_BRUKNER: "semi_brukner.schema.json",
+    JobType.SVETLICHNY: "svetlichny.schema.json",
 }

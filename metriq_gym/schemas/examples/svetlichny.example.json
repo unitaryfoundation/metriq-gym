@@ -1,0 +1,5 @@
+{
+    "benchmark_name": "Svetlichny",
+    "shots": 1000,
+    "qubits": [0, 1, 2]
+}
