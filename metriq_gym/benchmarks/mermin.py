@@ -31,14 +31,12 @@ References:
     - Gisin & Bechmann-Pasquinucci, *Phys. Lett. A* 246 (1998) [biseparable bound].
 """
 
-from __future__ import annotations
-
 import math
 from collections import deque
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 import rustworkx as rx
+from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qiskit import QuantumCircuit
 
 from metriq_gym.benchmarks.benchmark import (
@@ -50,9 +48,6 @@ from metriq_gym.benchmarks.benchmark import (
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
 from metriq_gym.resource_estimation import CircuitBatch
-
-if TYPE_CHECKING:
-    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
 def mermin_polynomial(n: int) -> dict[tuple[int, ...], float]:
@@ -254,7 +249,7 @@ class Mermin(Benchmark):
             )
         return paths
 
-    def dispatch_handler(self, device: "QuantumDevice") -> MerminData:
+    def dispatch_handler(self, device: QuantumDevice) -> MerminData:
         shots = self.params.shots
         topology_graph = connectivity_graph(device)
         paths = self._eligible_ns(topology_graph)
@@ -287,8 +282,8 @@ class Mermin(Benchmark):
     def poll_handler(
         self,
         job_data: MerminData,
-        result_data: list["GateModelResultData"],
-        quantum_jobs: list["QuantumJob"],
+        result_data: list[GateModelResultData],
+        quantum_jobs: list[QuantumJob],
     ) -> MerminResult:
         counts_flat = flatten_counts(result_data)
         idx = 0
@@ -324,7 +319,7 @@ class Mermin(Benchmark):
 
     def estimate_resources_handler(
         self,
-        device: "QuantumDevice",
+        device: QuantumDevice,
     ) -> list[CircuitBatch]:
         topology_graph = connectivity_graph(device)
         paths = self._eligible_ns(topology_graph)

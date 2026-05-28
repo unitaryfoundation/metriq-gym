@@ -34,12 +34,10 @@ References:
       quantum computers", arXiv:2409.15302.
 """
 
-from __future__ import annotations
-
 import math
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
+from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qiskit import QuantumCircuit
 
 from metriq_gym.benchmarks.benchmark import (
@@ -50,9 +48,6 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.resource_estimation import CircuitBatch
-
-if TYPE_CHECKING:
-    from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
 
 # The four (Alice, Bob) setting pairs in
@@ -174,7 +169,7 @@ class SemiBrukner(Benchmark):
             raise ValueError(f"semi-Brukner requires two distinct qubits, got {qs}")
         return (qs[0], qs[1])
 
-    def dispatch_handler(self, device: "QuantumDevice") -> SemiBruknerData:
+    def dispatch_handler(self, device: QuantumDevice) -> SemiBruknerData:
         shots = self.params.shots
         qubits = self._qubits()
         num_qubits = device.num_qubits
@@ -189,8 +184,8 @@ class SemiBrukner(Benchmark):
     def poll_handler(
         self,
         job_data: SemiBruknerData,
-        result_data: list["GateModelResultData"],
-        quantum_jobs: list["QuantumJob"],
+        result_data: list[GateModelResultData],
+        quantum_jobs: list[QuantumJob],
     ) -> SemiBruknerResult:
         counts = flatten_counts(result_data)
         if len(counts) != len(SEMI_BRUKNER_TERMS):
@@ -211,7 +206,7 @@ class SemiBrukner(Benchmark):
 
     def estimate_resources_handler(
         self,
-        device: "QuantumDevice",
+        device: QuantumDevice,
     ) -> list[CircuitBatch]:
         qubits = self._qubits()
         circuits = build_semi_brukner_circuits(qubits, device.num_qubits)
