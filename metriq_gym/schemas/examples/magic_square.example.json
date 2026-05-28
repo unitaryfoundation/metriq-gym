@@ -1,0 +1,6 @@
+{
+    "benchmark_name": "Magic Square",
+    "shots": 1000,
+    "alice_qubits": [0, 1],
+    "bob_qubits": [2, 3]
+}

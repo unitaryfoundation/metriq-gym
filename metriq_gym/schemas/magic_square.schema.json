@@ -1,0 +1,38 @@
+{
+  "$id": "metriq-gym/magic_square.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Magic Square",
+  "description": "Schema for the Mermin-Peres magic square game benchmark. Uses four qubits in two shared Bell pairs; Alice's two qubits implement the row measurements and Bob's two qubits implement the column measurements.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Magic Square",
+      "description": "Name of the benchmark. Must be 'Magic Square' for this schema."
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per (r, c) circuit. The reported win probability averages over the nine (r, c) inputs.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "alice_qubits": {
+      "type": "array",
+      "description": "Two physical qubit indices for Alice's register.",
+      "items": {"type": "integer", "minimum": 0},
+      "minItems": 2,
+      "maxItems": 2,
+      "default": [0, 1]
+    },
+    "bob_qubits": {
+      "type": "array",
+      "description": "Two physical qubit indices for Bob's register. Must be disjoint from alice_qubits.",
+      "items": {"type": "integer", "minimum": 0},
+      "minItems": 2,
+      "maxItems": 2,
+      "default": [2, 3]
+    }
+  },
+  "required": ["benchmark_name"]
+}

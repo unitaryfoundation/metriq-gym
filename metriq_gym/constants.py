@@ -17,6 +17,7 @@ class JobType(StrEnum):
     SEMI_BRUKNER = "Semi-Brukner"
     SVETLICHNY = "Svetlichny"
     CGLMP = "CGLMP"
+    MAGIC_SQUARE = "Magic Square"
 
 
 SCHEMA_MAPPING = {
@@ -35,4 +36,5 @@ SCHEMA_MAPPING = {
     JobType.SEMI_BRUKNER: "semi_brukner.schema.json",
     JobType.SVETLICHNY: "svetlichny.schema.json",
     JobType.CGLMP: "cglmp.schema.json",
+    JobType.MAGIC_SQUARE: "magic_square.schema.json",
 }

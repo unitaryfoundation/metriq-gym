@@ -18,6 +18,7 @@ from metriq_gym.benchmarks.mermin import Mermin, MerminData, MerminResult
 from metriq_gym.benchmarks.semi_brukner import SemiBrukner, SemiBruknerData, SemiBruknerResult
 from metriq_gym.benchmarks.svetlichny import Svetlichny, SvetlichnyData, SvetlichnyResult
 from metriq_gym.benchmarks.cglmp import CGLMP, CGLMPData, CGLMPResult
+from metriq_gym.benchmarks.magic_square import MagicSquare, MagicSquareData, MagicSquareResult
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,
@@ -35,6 +36,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.SEMI_BRUKNER: SemiBrukner,
     JobType.SVETLICHNY: Svetlichny,
     JobType.CGLMP: CGLMP,
+    JobType.MAGIC_SQUARE: MagicSquare,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -53,6 +55,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.SEMI_BRUKNER: SemiBruknerData,
     JobType.SVETLICHNY: SvetlichnyData,
     JobType.CGLMP: CGLMPData,
+    JobType.MAGIC_SQUARE: MagicSquareData,
 }
 
 BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
@@ -71,6 +74,7 @@ BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.SEMI_BRUKNER: SemiBruknerResult,
     JobType.SVETLICHNY: SvetlichnyResult,
     JobType.CGLMP: CGLMPResult,
+    JobType.MAGIC_SQUARE: MagicSquareResult,
 }
 
 
