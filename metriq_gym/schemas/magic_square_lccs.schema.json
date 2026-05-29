@@ -1,0 +1,29 @@
+{
+  "$id": "metriq-gym/magic_square_lccs.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Magic Square LCCS",
+  "description": "Device-level LCCS aggregation of the magic-square game across every 4-cycle of the device coupling graph.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "Magic Square LCCS",
+      "description": "Name of the benchmark. Must be 'Magic Square LCCS' for this schema."
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per (r, c) circuit, per 4-cycle.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000]
+    },
+    "win_threshold": {
+      "type": "number",
+      "description": "Win-probability threshold above which a 4-cycle is considered passing. Defaults to the classical bound 8/9.",
+      "default": 0.8888888888888888,
+      "minimum": 0.0,
+      "maximum": 1.0
+    }
+  },
+  "required": ["benchmark_name"]
+}

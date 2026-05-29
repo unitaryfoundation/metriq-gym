@@ -18,6 +18,7 @@ class JobType(StrEnum):
     SVETLICHNY = "Svetlichny"
     CGLMP = "CGLMP"
     MAGIC_SQUARE = "Magic Square"
+    MAGIC_SQUARE_LCCS = "Magic Square LCCS"
 
 
 SCHEMA_MAPPING = {
@@ -37,4 +38,5 @@ SCHEMA_MAPPING = {
     JobType.SVETLICHNY: "svetlichny.schema.json",
     JobType.CGLMP: "cglmp.schema.json",
     JobType.MAGIC_SQUARE: "magic_square.schema.json",
+    JobType.MAGIC_SQUARE_LCCS: "magic_square_lccs.schema.json",
 }

@@ -1,0 +1,5 @@
+{
+    "benchmark_name": "Magic Square LCCS",
+    "shots": 1000,
+    "win_threshold": 0.8888888888888888
+}
