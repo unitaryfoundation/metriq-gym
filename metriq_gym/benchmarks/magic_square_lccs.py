@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 import rustworkx as rx
 from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 from qiskit import QuantumCircuit
+from qiskit.result import marginal_counts
 
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
@@ -51,7 +52,9 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.benchmarks.magic_square import (
     CLASSICAL_BOUND,
-    build_magic_square_circuits,
+    alice_row_basis_change,
+    bob_col_basis_change,
+    prepare_two_bell_pairs,
     win_probability_from_counts,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
@@ -93,6 +96,80 @@ def enumerate_4cycles(graph: rx.PyGraph) -> list[tuple[int, int, int, int]]:
                     alice, bob = bob, alice
                 cycles.append((alice[0], alice[1], bob[0], bob[1]))
     return cycles
+
+
+def color_plaquettes(
+    plaquettes: list[tuple[int, int, int, int]],
+) -> list[list[tuple[int, int, int, int]]]:
+    """Partition plaquettes into vertex-disjoint color groups (greedy).
+
+    Returns a list of color groups; within each group, no two plaquettes
+    share any qubit, so all plaquettes in a group can run in parallel
+    inside a single circuit. On a square lattice the greedy heuristic
+    finds the optimal 4-coloring (the 2x2 block coloring by parity of
+    plaquette coordinates), so the total batched circuit count is
+    9 * 4 = 36 regardless of lattice size.
+    """
+    color_of: dict[int, int] = {}
+    qubits_in_color: dict[int, set[int]] = {}
+    for i, plaq in enumerate(plaquettes):
+        plaq_qubits = set(plaq)
+        chosen: int | None = None
+        c = 0
+        while True:
+            if c not in qubits_in_color or qubits_in_color[c].isdisjoint(plaq_qubits):
+                chosen = c
+                break
+            c += 1
+        color_of[i] = chosen
+        qubits_in_color.setdefault(chosen, set()).update(plaq_qubits)
+    n_colors = (max(color_of.values()) + 1) if color_of else 0
+    groups: list[list[tuple[int, int, int, int]]] = [[] for _ in range(n_colors)]
+    for i, plaq in enumerate(plaquettes):
+        groups[color_of[i]].append(plaq)
+    return groups
+
+
+def build_batched_circuits(
+    groups: list[list[tuple[int, int, int, int]]],
+    num_qubits: int,
+) -> list[QuantumCircuit]:
+    """Build 9 batched magic-square circuits per color group.
+
+    For each color group of vertex-disjoint plaquettes, builds the nine
+    (r, c) measurement circuits in parallel: every plaquette in the
+    group is set up on its own four qubits and measured into its own
+    block of four classical bits.
+
+    Circuit order is (group_0, (1,1)), (group_0, (1,2)), ...,
+    (group_0, (3,3)), (group_1, (1,1)), ..., a flat list of length
+    ``9 * len(groups)``. Each circuit on group ``g`` uses
+    ``4 * len(groups[g])`` classical bits.
+    """
+    circuits: list[QuantumCircuit] = []
+    for group in groups:
+        n_bits = 4 * len(group)
+        for r in (1, 2, 3):
+            for c in (1, 2, 3):
+                qc = QuantumCircuit(num_qubits, n_bits)
+                for plaq_idx, (a1, a2, b1, b2) in enumerate(group):
+                    qc.compose(
+                        prepare_two_bell_pairs(
+                            num_qubits,
+                            alice_qubits=(a1, a2),
+                            bob_qubits=(b1, b2),
+                        ),
+                        inplace=True,
+                    )
+                    alice_row_basis_change(qc, r, a1, a2)
+                    bob_col_basis_change(qc, c, b1, b2)
+                    bit_offset = 4 * plaq_idx
+                    qc.measure(a1, bit_offset)
+                    qc.measure(a2, bit_offset + 1)
+                    qc.measure(b1, bit_offset + 2)
+                    qc.measure(b2, bit_offset + 3)
+                circuits.append(qc)
+    return circuits
 
 
 def compute_lccs(
@@ -142,7 +219,7 @@ class MagicSquareLCCSResult(BenchmarkResult):
 @dataclass
 class MagicSquareLCCSData(BenchmarkData):
     shots: int = 0
-    cycles: list[list[int]] = field(default_factory=list)
+    color_groups: list[list[list[int]]] = field(default_factory=list)
     edge_list: list[list[int]] = field(default_factory=list)
     win_threshold: float = CLASSICAL_BOUND
     num_qubits: int = 0
@@ -166,19 +243,12 @@ class MagicSquareLCCS(Benchmark):
             )
         num_qubits = device.num_qubits
         edge_list = [list(e) for e in graph.edge_list()]
-        all_circuits: list[QuantumCircuit] = []
-        for a1, a2, b1, b2 in cycles:
-            all_circuits.extend(
-                build_magic_square_circuits(
-                    alice_qubits=(a1, a2),
-                    bob_qubits=(b1, b2),
-                    num_qubits=num_qubits,
-                )
-            )
+        groups = color_plaquettes(cycles)
+        batched_circuits = build_batched_circuits(groups, num_qubits)
         return MagicSquareLCCSData.from_quantum_job(
-            device.run(all_circuits, shots=shots),
+            device.run(batched_circuits, shots=shots),
             shots=shots,
-            cycles=[list(c) for c in cycles],
+            color_groups=[[list(p) for p in group] for group in groups],
             edge_list=edge_list,
             win_threshold=self._win_threshold(),
             num_qubits=num_qubits,
@@ -191,28 +261,48 @@ class MagicSquareLCCS(Benchmark):
         quantum_jobs: list[QuantumJob],
     ) -> MagicSquareLCCSResult:
         counts_list = flatten_counts(result_data)
-        cycles = [tuple(c) for c in job_data.cycles]
-        if len(counts_list) != 9 * len(cycles):
+        groups: list[list[tuple[int, int, int, int]]] = [
+            [(p[0], p[1], p[2], p[3]) for p in group]
+            for group in job_data.color_groups
+        ]
+        expected = 9 * len(groups)
+        if len(counts_list) != expected:
             raise ValueError(
-                f"expected {9 * len(cycles)} count dicts, got {len(counts_list)}"
+                f"expected {expected} count dicts, got {len(counts_list)}"
             )
-        passing: list[tuple[int, int, int, int]] = []
-        for i, cycle in enumerate(cycles):
-            cycle_counts = counts_list[9 * i : 9 * (i + 1)]
-            wins = []
+        # For each plaquette, accumulate its 9 win probabilities across
+        # the 9 (r, c) batched circuits for its color group.
+        per_plaquette_wins: dict[tuple[int, int, int, int], list[float]] = {}
+        for group_idx, group in enumerate(groups):
+            group_counts = counts_list[9 * group_idx : 9 * (group_idx + 1)]
             idx = 0
             for r in (1, 2, 3):
                 for c in (1, 2, 3):
-                    wins.append(win_probability_from_counts(cycle_counts[idx], r, c))
+                    batched = group_counts[idx]
+                    for plaq_idx, plaq in enumerate(group):
+                        bits = [
+                            4 * plaq_idx,
+                            4 * plaq_idx + 1,
+                            4 * plaq_idx + 2,
+                            4 * plaq_idx + 3,
+                        ]
+                        sub_counts = marginal_counts(batched, bits)
+                        wp = win_probability_from_counts(sub_counts, r, c)
+                        per_plaquette_wins.setdefault(plaq, []).append(wp)
                     idx += 1
-            avg = sum(wins) / 9.0
-            if avg > job_data.win_threshold:
-                passing.append(cycle)  # type: ignore[arg-type]
+        passing: list[tuple[int, int, int, int]] = []
+        all_cycles: list[tuple[int, int, int, int]] = []
+        for group in groups:
+            for plaq in group:
+                all_cycles.append(plaq)  # type: ignore[arg-type]
+                wins = per_plaquette_wins[plaq]
+                if sum(wins) / 9.0 > job_data.win_threshold:
+                    passing.append(plaq)  # type: ignore[arg-type]
         graph = _graph_from_edge_list(job_data.num_qubits, job_data.edge_list)
         lccs = compute_lccs(passing, graph)
         return MagicSquareLCCSResult(
             lccs=lccs,
-            num_cycles_tested=len(cycles),
+            num_cycles_tested=len(all_cycles),
             num_passing=len(passing),
             win_threshold=job_data.win_threshold,
         )
@@ -224,13 +314,6 @@ class MagicSquareLCCS(Benchmark):
         graph = connectivity_graph(device)
         cycles = enumerate_4cycles(graph)
         num_qubits = device.num_qubits
-        all_circuits: list[QuantumCircuit] = []
-        for a1, a2, b1, b2 in cycles:
-            all_circuits.extend(
-                build_magic_square_circuits(
-                    alice_qubits=(a1, a2),
-                    bob_qubits=(b1, b2),
-                    num_qubits=num_qubits,
-                )
-            )
-        return [CircuitBatch(circuits=all_circuits, shots=self.params.shots)]
+        groups = color_plaquettes(cycles)
+        batched_circuits = build_batched_circuits(groups, num_qubits)
+        return [CircuitBatch(circuits=batched_circuits, shots=self.params.shots)]

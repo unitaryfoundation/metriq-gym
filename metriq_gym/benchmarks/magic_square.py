@@ -136,7 +136,7 @@ def _row3_basis_change(qc: QuantumCircuit, q_first: int, q_second: int) -> None:
     _bell_basis_change(qc, q_first, q_second)
 
 
-def _alice_row_basis_change(qc: QuantumCircuit, r: int, a1: int, a2: int) -> None:
+def alice_row_basis_change(qc: QuantumCircuit, r: int, a1: int, a2: int) -> None:
     if r == 1:
         _x_basis_change(qc, a1)
         _x_basis_change(qc, a2)
@@ -149,7 +149,7 @@ def _alice_row_basis_change(qc: QuantumCircuit, r: int, a1: int, a2: int) -> Non
         raise ValueError(f"row r must be in {{1, 2, 3}}, got {r}")
 
 
-def _bob_col_basis_change(qc: QuantumCircuit, c: int, b1: int, b2: int) -> None:
+def bob_col_basis_change(qc: QuantumCircuit, c: int, b1: int, b2: int) -> None:
     if c == 1:
         # Col 1 ops: I (x) X (X on q_second), Y (x) I (Y on q_first), Y (x) X
         _y_basis_change(qc, b1)
@@ -230,8 +230,8 @@ def build_magic_square_circuits(
             qc.compose(
                 prepare_two_bell_pairs(num_qubits, alice_qubits, bob_qubits), inplace=True
             )
-            _alice_row_basis_change(qc, r, a1, a2)
-            _bob_col_basis_change(qc, c, b1, b2)
+            alice_row_basis_change(qc, r, a1, a2)
+            bob_col_basis_change(qc, c, b1, b2)
             qc.measure(a1, 0)
             qc.measure(a2, 1)
             qc.measure(b1, 2)
