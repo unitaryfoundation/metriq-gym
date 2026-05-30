@@ -5,7 +5,7 @@ Summary:
     benchmark prepares an N-qubit GHZ state on a connected N-vertex subgraph
     of the device, measures the Belinskii-Klyshko polynomial M_N, and reports
     the estimated <M_N>. The single-scalar device summary is the
-    ``mermin_depth``: the largest N for which the device's measured score
+    ``depth``: the largest N for which the device's measured score
     still exceeds the LHV bound 2. A stricter ``gme_depth`` reports the
     largest N exceeding the biseparable bound 2^(N/2), certifying genuine
     multipartite entanglement.
@@ -22,7 +22,7 @@ Result interpretation:
         - achievement_ratio_per_n: dict of N -> (score - 2) / (2^((N+1)/2) - 2).
           Positive values indicate a Mermin-Klyshko violation.
         - gme_certified_per_n: dict of N -> bool, true iff |score| > 2^(N/2).
-        - mermin_depth: largest N for which achievement_ratio_per_n[N] > 0.
+        - depth: largest N for which achievement_ratio_per_n[N] > 0.
         - gme_depth: largest N for which gme_certified_per_n[N] is true.
 
 References:
@@ -191,7 +191,7 @@ class MerminResult(BenchmarkResult):
     score_per_n: dict[int, float]
     achievement_ratio_per_n: dict[int, float]
     gme_certified_per_n: dict[int, bool]
-    mermin_depth: int
+    depth: int
     gme_depth: int
 
     def _iter_metric_items(self):
@@ -202,11 +202,11 @@ class MerminResult(BenchmarkResult):
             yield f"score_n{n}", float(score), None
         for n, ratio in self.achievement_ratio_per_n.items():
             yield f"achievement_ratio_n{n}", float(ratio), None
-        yield "mermin_depth", float(self.mermin_depth), None
+        yield "depth", float(self.depth), None
         yield "gme_depth", float(self.gme_depth), None
 
     def compute_score(self) -> BenchmarkScore:
-        return BenchmarkScore(value=float(self.mermin_depth))
+        return BenchmarkScore(value=float(self.depth))
 
 
 @dataclass
@@ -306,14 +306,14 @@ class Mermin(Benchmark):
 
         violating = [n for n, r in achievement_ratio_per_n.items() if r > 0]
         certifying = [n for n, c in gme_certified_per_n.items() if c]
-        mermin_depth = max(violating) if violating else 1
+        depth = max(violating) if violating else 1
         gme_depth = max(certifying) if certifying else 1
 
         return MerminResult(
             score_per_n=score_per_n,
             achievement_ratio_per_n=achievement_ratio_per_n,
             gme_certified_per_n=gme_certified_per_n,
-            mermin_depth=mermin_depth,
+            depth=depth,
             gme_depth=gme_depth,
         )
 
