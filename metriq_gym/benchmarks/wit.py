@@ -34,7 +34,7 @@ from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
     binary_expectation_value,
 )
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, _count_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -242,8 +242,12 @@ class WITResult(BenchmarkResult):
 
 
 @dataclass
+@dataclass
+@dataclass
 class WITData(BenchmarkData):
-    pass
+    provider_job_ids: list[str] | None = None
+    input_two_qubit_gate_counts: list[int] | None = None
+    transpiled_two_qubit_gate_counts: list[int] | None = None
 
 
 class WIT(Benchmark):
@@ -260,7 +264,12 @@ class WIT(Benchmark):
 
     def dispatch_handler(self, device: "QuantumDevice") -> WITData:
         circuit = self._build_circuits(device)
-        return WITData.from_quantum_job(device.run(circuit, shots=self.params.shots))
+        input_two_qubit_gate_counts = [_count_gates(circuit).two_qubit]
+        return WITData.from_quantum_job(
+            device.run(circuit, shots=self.params.shots),
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=input_two_qubit_gate_counts,
+        )
 
     def poll_handler(
         self,

@@ -39,7 +39,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
 )
 from metriq_gym.qplatform.device import connectivity_graph, connectivity_graph_for_gate
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, _count_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -58,6 +58,9 @@ class EPLGData(BenchmarkData):
     seed: int
     two_qubit_gate: str
     one_qubit_basis_gates: list[str]
+    input_two_qubit_gate_counts: list[int] | None = None
+    transpiled_two_qubit_gate_counts: list[int] | None = None
+    provider_job_ids: list[str] | None = None
 
 
 class EPLGResult(BenchmarkResult):
@@ -356,24 +359,33 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         )
 
         lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
+        input_circuits = lfexp.circuits()
         if self.params.decompose_clifford_ops:
-            circuits = lfexp._transpiled_circuits()
+            transpiled_circuits = lfexp._transpiled_circuits()
         else:
-            circuits = lfexp.circuits()
+            transpiled_circuits = input_circuits
 
-        return circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates
+        return input_circuits, transpiled_circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates
 
     def dispatch_handler(self, device: "QuantumDevice") -> EPLGData:
         """Generate circuits, submit to device, return EPLGData."""
-        circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates = (
+        input_circuits, transpiled_circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates = (
             self._build_circuits(device)
         )
 
         shots = self.params.shots
-        quantum_job = device.run(circuits, shots=shots)
+        quantum_job = device.run(transpiled_circuits, shots=shots)
 
         # Serialize the two_disjoint_layers as nested lists
         serialized_layers = [[list(edge) for edge in layer] for layer in two_disjoint_layers]
+
+        # Count 2Q gates
+        input_two_qubit_gate_counts = [
+            _count_gates(c).two_qubit for c in input_circuits
+        ]
+        transpiled_two_qubit_gate_counts = [
+            _count_gates(c).two_qubit for c in transpiled_circuits
+        ]
 
         return EPLGData.from_quantum_job(
             quantum_job,
@@ -386,6 +398,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             seed=self.params.seed,
             two_qubit_gate=two_qubit_gate,
             one_qubit_basis_gates=one_qubit_basis_gates,
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=transpiled_two_qubit_gate_counts,
         )
 
     def poll_handler(
@@ -478,5 +492,5 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
         """Return circuit batches for resource estimation."""
-        circuits, _, _, _, _ = self._build_circuits(device)
-        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
+        _, transpiled_circuits, _, _, _, _ = self._build_circuits(device)
+        return [CircuitBatch(circuits=transpiled_circuits, shots=self.params.shots)]

@@ -43,7 +43,7 @@ from metriq_gym.qplatform.device import connectivity_graph
 
 from typing import TYPE_CHECKING
 
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, _count_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -71,8 +71,11 @@ class MirrorCircuitsData(BenchmarkData):
     shots: int
     num_qubits: int
     num_circuits: int
-    seed: int | None
     expected_bitstrings: list[str]
+    seed: int | None = None
+    input_two_qubit_gate_counts: list[int] | None = None
+    transpiled_two_qubit_gate_counts: list[int] | None = None
+    provider_job_ids: list[str] | None = None
 
 
 POLARIZATION_THRESHOLD = 1 / np.e
@@ -558,6 +561,8 @@ class MirrorCircuits(Benchmark):
     def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
         circuits, expected_bitstrings, actual_width = self._build_circuits(device)
 
+        input_two_qubit_gate_counts = [_count_gates(c).two_qubit for c in circuits]
+
         return MirrorCircuitsData.from_quantum_job(
             quantum_job=device.run(circuits, shots=self.params.shots),
             num_layers=self.params.num_layers,
@@ -568,6 +573,8 @@ class MirrorCircuits(Benchmark):
             num_circuits=self.params.num_circuits,
             seed=self.params.seed,
             expected_bitstrings=expected_bitstrings,
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=input_two_qubit_gate_counts,
         )
 
     def poll_handler(

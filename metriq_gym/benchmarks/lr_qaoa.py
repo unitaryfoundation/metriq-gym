@@ -45,7 +45,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, _count_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -170,7 +170,6 @@ def calc_random_stats(num_qubits, graph_info, shots, num_random_trials, optimal_
 
 @dataclass
 class LinearRampQAOAData(BenchmarkData):
-    provider_job_ids: list[str]
     num_qubits: int
     graph_info: list[list]
     graph_type: GraphType
@@ -186,6 +185,9 @@ class LinearRampQAOAData(BenchmarkData):
     approx_ratio_random_mean: float
     approx_ratio_random_std: float
     circuit_encoding: EncodingType
+    input_two_qubit_gate_counts: list[int] | None = None
+    transpiled_two_qubit_gate_counts: list[int] | None = None
+    provider_job_ids: list[str] | None = None
 
 
 class LinearRampQAOAResult(BenchmarkResult):
@@ -448,6 +450,8 @@ class LinearRampQAOA(Benchmark):
             optimal_sol,
         )
 
+        input_two_qubit_gate_counts = [_count_gates(c).two_qubit for c in circuits_with_params]
+
         return LinearRampQAOAData.from_quantum_job(
             quantum_job=device.run(circuits_with_params, shots=self.params.shots),
             num_qubits=self.params.num_qubits,
@@ -465,6 +469,8 @@ class LinearRampQAOA(Benchmark):
             circuit_encoding=circuit_encoding,
             approx_ratio_random_mean=approx_ratio_random_mean,
             approx_ratio_random_std=approx_ratio_random_std,
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=input_two_qubit_gate_counts,
         )
 
     def poll_handler(

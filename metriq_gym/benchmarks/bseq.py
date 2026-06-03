@@ -50,7 +50,7 @@ from metriq_gym.helpers.graph_helpers import (
     largest_connected_size,
 )
 from metriq_gym.qplatform.device import connectivity_graph
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, _count_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -80,6 +80,9 @@ class BSEQData(BenchmarkData):
     num_qubits: int
     topology_graph: nx.Graph | None = None
     coloring: GraphColoring | dict | None = None
+    input_two_qubit_gate_counts: list[int] | None = None
+    transpiled_two_qubit_gate_counts: list[int] | None = None
+    provider_job_ids: list[str] | None = None
 
 
 def generate_chsh_circuit_sets(coloring: GraphColoring) -> list[QuantumCircuit]:
@@ -213,6 +216,12 @@ class BSEQ(Benchmark):
             for job in (quantum_job_set if isinstance(quantum_job_set, list) else [quantum_job_set])
         ]
 
+        # Count 2Q gates per circuit set (one entry per color group)
+        input_two_qubit_gate_counts = [
+            sum(_count_gates(c).two_qubit for c in circ_set)
+            for circ_set in circuit_sets
+        ]
+
         return BSEQData(
             provider_job_ids=provider_job_ids,
             shots=shots,
@@ -223,6 +232,8 @@ class BSEQ(Benchmark):
                 "edge_color_map": dict(coloring.edge_color_map),
                 "edge_index_map": dict(coloring.edge_index_map),
             },
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=input_two_qubit_gate_counts,
         )
 
     def poll_handler(

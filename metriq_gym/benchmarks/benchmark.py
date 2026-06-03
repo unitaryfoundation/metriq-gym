@@ -1,5 +1,5 @@
 import argparse
-from typing import Iterable, TYPE_CHECKING, Protocol
+from typing import Iterable, TYPE_CHECKING, Protocol, runtime_checkable
 from abc import ABC
 
 from pydantic import BaseModel, computed_field
@@ -11,27 +11,42 @@ if TYPE_CHECKING:
     from metriq_gym.resource_estimation import CircuitBatch
 
 
+@runtime_checkable
 class SupportsId(Protocol):
     id: str
 
 
 def flatten_job_ids(job: SupportsId | Iterable[SupportsId]) -> list[str]:
     """Return provider job IDs from a single job or an iterable of jobs."""
+    if isinstance(job, SupportsId):
+        return [job.id]
     if isinstance(job, Iterable) and not isinstance(job, (str, bytes)):
-        return [job.id for job in job]
-    return [job.id]
+        return [j.id for j in job]
+    return []
 
 
-@dataclass
 class BenchmarkData:
     """Stores intermediate data from pre-processing and dispatching"""
 
+    input_two_qubit_gate_counts: list[int] | None
+    transpiled_two_qubit_gate_counts: list[int] | None
     provider_job_ids: list[str]
+
+    def __init__(
+        self,
+        input_two_qubit_gate_counts: list[int] | None = None,
+        transpiled_two_qubit_gate_counts: list[int] | None = None,
+    ):
+        self.provider_job_ids: list[str] | None = None
+        self.input_two_qubit_gate_counts = input_two_qubit_gate_counts
+        self.transpiled_two_qubit_gate_counts = transpiled_two_qubit_gate_counts
 
     @classmethod
     def from_quantum_job(cls, quantum_job, **kwargs):
         """Populate the provider job IDs from a QuantumJob or iterable of QuantumJobs."""
-        return cls(provider_job_ids=flatten_job_ids(quantum_job), **kwargs)
+        obj = cls(**kwargs)
+        obj.provider_job_ids = flatten_job_ids(quantum_job)
+        return obj
 
 
 class BenchmarkScore(BaseModel):
