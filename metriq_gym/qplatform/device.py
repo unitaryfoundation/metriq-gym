@@ -107,6 +107,30 @@ def _extend_fidelity_errors(errors: list[float], fidelities) -> None:
             errors.append(error)
 
 
+def _fidelity_type_name(fidelity) -> str | None:
+    fidelity_type = _field(fidelity, "fidelityType")
+    name = _field(fidelity_type, "name")
+    if name is None:
+        return None
+    return str(name).upper()
+
+
+def _extend_one_qubit_standardized_errors(
+    *,
+    readout_errors: list[float],
+    one_qubit_gate_errors: list[float],
+    fidelities,
+) -> None:
+    for fidelity in fidelities or []:
+        error = _error_from_fidelity(_field(fidelity, "fidelity"))
+        if error is None:
+            continue
+        if _fidelity_type_name(fidelity) == "READOUT":
+            readout_errors.append(error)
+        else:
+            one_qubit_gate_errors.append(error)
+
+
 def _set_if_present(metadata: dict, key: str, value: float | str | None) -> None:
     if value is not None:
         metadata[key] = value
@@ -218,7 +242,18 @@ def _braket_standardized_calibration(standardized) -> dict:
 
     one_qubit_properties = _field(standardized, "oneQubitProperties") or {}
     for qubit_properties in one_qubit_properties.values():
-        _extend_fidelity_errors(one_qubit_gate_errors, _field(qubit_properties, "oneQubitFidelity"))
+        _extend_one_qubit_standardized_errors(
+            readout_errors=readout_errors,
+            one_qubit_gate_errors=one_qubit_gate_errors,
+            fidelities=_field(qubit_properties, "oneQubitFidelity"),
+        )
+
+    two_qubit_properties = _field(standardized, "twoQubitProperties") or {}
+    for edge_properties in two_qubit_properties.values():
+        _extend_fidelity_errors(
+            two_qubit_gate_errors,
+            _field(edge_properties, "twoQubitGateFidelity"),
+        )
 
     return _summary_metadata(
         t1_values=t1_values,

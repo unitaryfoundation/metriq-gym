@@ -423,16 +423,38 @@ class TestNormalizedMetadata:
         standardized = types.SimpleNamespace(
             T1=types.SimpleNamespace(value=120, unit="us"),
             T2=types.SimpleNamespace(value=90, unit="us"),
-            readoutFidelity=[types.SimpleNamespace(fidelity=0.98)],
-            singleQubitFidelity=[types.SimpleNamespace(fidelity=0.997)],
-            twoQubitGateFidelity=[types.SimpleNamespace(fidelity=0.96)],
             oneQubitProperties={
                 "0": types.SimpleNamespace(
-                    oneQubitFidelity=[types.SimpleNamespace(fidelity=0.995)]
+                    oneQubitFidelity=[
+                        types.SimpleNamespace(
+                            fidelityType=types.SimpleNamespace(name="READOUT"),
+                            fidelity=0.98,
+                        ),
+                        types.SimpleNamespace(
+                            fidelityType=types.SimpleNamespace(name="RANDOMIZED_BENCHMARKING"),
+                            fidelity=0.995,
+                        ),
+                    ]
                 ),
                 "1": types.SimpleNamespace(
-                    oneQubitFidelity=[types.SimpleNamespace(fidelity=0.993)]
+                    oneQubitFidelity=[
+                        types.SimpleNamespace(
+                            fidelityType=types.SimpleNamespace(name="READOUT"),
+                            fidelity=0.96,
+                        ),
+                        types.SimpleNamespace(
+                            fidelityType=types.SimpleNamespace(
+                                name="SIMULTANEOUS_RANDOMIZED_BENCHMARKING"
+                            ),
+                            fidelity=0.993,
+                        ),
+                    ]
                 ),
+            },
+            twoQubitProperties={
+                "0-1": types.SimpleNamespace(
+                    twoQubitGateFidelity=[types.SimpleNamespace(gateName="cz", fidelity=0.96)]
+                )
             },
             updatedAt=datetime(2026, 1, 16, 15, 30, tzinfo=timezone.utc),
         )
@@ -445,8 +467,8 @@ class TestNormalizedMetadata:
 
         assert calibration["avg_t1_s"] == pytest.approx(120e-6)
         assert calibration["avg_t2_s"] == pytest.approx(90e-6)
-        assert calibration["avg_readout_error"] == pytest.approx(0.02)
-        assert calibration["avg_1q_gate_error"] == pytest.approx(0.005)
+        assert calibration["avg_readout_error"] == pytest.approx(0.03)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.006)
         assert calibration["avg_2q_gate_error"] == pytest.approx(0.04)
         assert calibration["last_update_date"] == "2026-01-16T15:30:00+00:00"
 
