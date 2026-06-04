@@ -56,18 +56,49 @@ def test_get_device_with_valid_id():
 
 def test_get_device_with_invalid_id_raises():
     provider = LocalProvider()
-    with pytest.raises(ValueError, match="Unknown device identifier"):
+    with (
+        patch("metriq_gym.local.provider.FakeProviderForBackendV2") as mock_fake_provider,
+        patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
+        pytest.raises(ValueError, match="Unknown device identifier"),
+    ):
+        mock_fake_provider.return_value.backends.return_value = []
+        mock_service.return_value.backend.side_effect = Exception("Not configured")
         provider.get_device("invalid_id")
+
+
+def test_get_device_with_ibm_alias_uses_local_fake_backend_without_runtime_service():
+    provider = LocalProvider()
+    fake_backend = MagicMock()
+    fake_backend.name = "fake_torino"
+
+    with (
+        patch("metriq_gym.local.provider.FakeProviderForBackendV2") as mock_fake_provider,
+        patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
+        patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
+    ):
+        mock_fake_provider.return_value.backends.return_value = [fake_backend]
+        aer_backend = MagicMock()
+        mock_aer.from_backend.return_value = aer_backend
+
+        device = provider.get_device("ibm_torino")
+
+        assert isinstance(device, LocalAerDevice)
+        assert device.id == "ibm_torino"
+        mock_service.assert_not_called()
+        mock_aer.from_backend.assert_called_once_with(fake_backend)
+        assert provider.get_device("ibm_torino") is device
 
 
 def test_get_device_with_noise_model():
     provider = LocalProvider()
     with (
+        patch("metriq_gym.local.provider.FakeProviderForBackendV2") as mock_fake_provider,
         patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
         patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
     ):
         backend = MagicMock()
         backend.name = "fake_backend"
+        mock_fake_provider.return_value.backends.return_value = []
         mock_service.return_value.backend.return_value = backend
         aer_backend = MagicMock()
         mock_aer.from_backend.return_value = aer_backend
