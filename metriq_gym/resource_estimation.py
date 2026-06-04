@@ -77,6 +77,21 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
     return counts
 
 
+def count_gates(circuit: QuantumCircuit) -> GateCounts:
+    """Count the number of gates in a quantum circuit by qubit count.
+
+    This is the public wrapper around the internal _count_gates function.
+
+    Args:
+        circuit: The quantum circuit to analyze.
+
+    Returns:
+        A GateCounts namedtuple with one_qubit, two_qubit, multi_qubit,
+        measurements, and resets counts.
+    """
+    return _count_gates(circuit)
+
+
 HQCFunction = Callable[[GateCounts, int, int], float]
 
 

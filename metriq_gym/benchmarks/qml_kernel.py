@@ -30,7 +30,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkScore,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, count_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -118,7 +118,12 @@ class QMLKernel(Benchmark):
 
     def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
         circuit = self._build_circuits(device)
-        return QMLKernelData.from_quantum_job(device.run(circuit, shots=self.params.shots))
+        input_two_qubit_gate_counts = [count_gates(circuit).two_qubit]
+        return QMLKernelData.from_quantum_job(
+            device.run(circuit, shots=self.params.shots),
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=input_two_qubit_gate_counts,
+        )
 
     def poll_handler(
         self,

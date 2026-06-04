@@ -32,7 +32,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, count_gates
 
 from _common import metrics
 
@@ -295,11 +295,14 @@ class QEDCBenchmark(Benchmark):
     def dispatch_handler(self, device: "QuantumDevice") -> QEDCData:
         # For more information on the parameters, view the schema for this benchmark.
         circuits, circuit_metrics, circuit_identifiers = self._build_circuits(device)
+        input_two_qubit_gate_counts = [count_gates(c).two_qubit for c in circuits]
 
         return QEDCData.from_quantum_job(
             quantum_job=device.run(circuits, shots=self.params.shots),
             circuit_metrics=circuit_metrics,
             circuit_identifiers=circuit_identifiers,
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=input_two_qubit_gate_counts,
         )
 
     def poll_handler(

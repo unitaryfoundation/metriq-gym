@@ -45,7 +45,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, count_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -170,7 +170,6 @@ def calc_random_stats(num_qubits, graph_info, shots, num_random_trials, optimal_
 
 @dataclass
 class LinearRampQAOAData(BenchmarkData):
-    provider_job_ids: list[str]
     num_qubits: int
     graph_info: list[list]
     graph_type: GraphType
@@ -439,6 +438,7 @@ class LinearRampQAOA(Benchmark):
         circuits_with_params, graph_info, optimal_sol, circuit_encoding = self._build_circuits(
             device
         )
+        input_two_qubit_gate_counts = [count_gates(c).two_qubit for c in circuits_with_params]
 
         approx_ratio_random_mean, approx_ratio_random_std = calc_random_stats(
             self.params.num_qubits,
@@ -465,6 +465,8 @@ class LinearRampQAOA(Benchmark):
             circuit_encoding=circuit_encoding,
             approx_ratio_random_mean=approx_ratio_random_mean,
             approx_ratio_random_std=approx_ratio_random_std,
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=input_two_qubit_gate_counts,
         )
 
     def poll_handler(

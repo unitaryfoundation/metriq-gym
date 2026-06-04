@@ -1,9 +1,9 @@
 import argparse
-from typing import Iterable, TYPE_CHECKING, Protocol
+from dataclasses import dataclass
+from typing import Iterable, TYPE_CHECKING, Protocol, runtime_checkable
 from abc import ABC
 
 from pydantic import BaseModel, computed_field
-from dataclasses import dataclass
 
 
 if TYPE_CHECKING:
@@ -11,22 +11,37 @@ if TYPE_CHECKING:
     from metriq_gym.resource_estimation import CircuitBatch
 
 
+@runtime_checkable
 class SupportsId(Protocol):
+    """Protocol for objects that have an `id` attribute (e.g., QuantumJob)."""
+
     id: str
 
 
 def flatten_job_ids(job: SupportsId | Iterable[SupportsId]) -> list[str]:
-    """Return provider job IDs from a single job or an iterable of jobs."""
+    """Return provider job IDs from a single job or an iterable of jobs.
+
+    Raises:
+        TypeError: If the job is neither a SupportsId nor an iterable of SupportsId.
+    """
+    if isinstance(job, SupportsId):
+        return [job.id]
     if isinstance(job, Iterable) and not isinstance(job, (str, bytes)):
-        return [job.id for job in job]
-    return [job.id]
+        return [j.id for j in job]
+    raise TypeError(f"flatten_job_ids: unsupported job type {type(job).__name__}")
 
 
-@dataclass
+@dataclass(kw_only=True)
 class BenchmarkData:
-    """Stores intermediate data from pre-processing and dispatching"""
+    """Stores intermediate data from pre-processing and dispatching.
 
-    provider_job_ids: list[str]
+    Subclasses declare their own required fields first. The three inherited fields
+    below are keyword-only with default None when not provided.
+    """
+
+    input_two_qubit_gate_counts: list[int] | None = None
+    transpiled_two_qubit_gate_counts: list[int] | None = None
+    provider_job_ids: list[str] | None = None
 
     @classmethod
     def from_quantum_job(cls, quantum_job, **kwargs):

@@ -757,7 +757,7 @@ def fetch_result(
 
     quantum_jobs = [
         (load_job(job_id, provider=metriq_job.provider_name, **asdict(job_data)))
-        for job_id in job_data.provider_job_ids
+        for job_id in (job_data.provider_job_ids or [])
     ]
     if all(task.status() == JobStatus.COMPLETED for task in quantum_jobs):
         result_data = [task.result().data for task in quantum_jobs]
