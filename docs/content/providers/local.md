@@ -29,7 +29,7 @@ Common simulators include:
 Use any IBM device name (e.g., `ibm_sherbrooke`, `ibm_fez`) to run locally with that device's noise model.
 
 !!! note
-    Noise model simulators require valid IBM credentials to fetch the noise model, but execution is local.
+    Metriq-Gym first uses Qiskit's built-in fake IBM backend snapshots when one is available, so common noisy simulators do not require IBM credentials. If a device is not included in the local fake provider, valid IBM credentials are still required to fetch that backend.
 
 ## Usage
 
@@ -126,14 +126,15 @@ For benchmarks with multiple circuits, Aer parallelizes across available CPU cor
 
 When using `ibm_<device>` noise models:
 
-1. Metriq-Gym fetches the current noise model from IBM Quantum
-2. The model includes:
+1. Metriq-Gym uses a matching built-in fake backend snapshot when available
+2. If no local snapshot is available, Metriq-Gym fetches the current backend from IBM Quantum
+3. The model includes:
    - Single-qubit gate errors
    - Two-qubit gate errors
    - Readout errors
    - T1/T2 decoherence
-3. Circuits are transpiled to the device's basis gates
-4. Simulation runs locally with the noise model applied
+4. Circuits are transpiled to the device's basis gates
+5. Simulation runs locally with the noise model applied
 
 ### Noise Model Caching
 
