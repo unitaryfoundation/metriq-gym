@@ -66,7 +66,15 @@ usually contains one record; suite uploads contain several.
       "device_metadata": {
         "num_qubits": 31,
         "simulator": true,
-        "version": "0.17.2"
+        "version": "0.17.2",
+        "calibration": {
+          "avg_t1_s": 0.000121,
+          "avg_t2_s": 0.000096,
+          "avg_readout_error": 0.021,
+          "avg_1q_gate_error": 0.0004,
+          "avg_2q_gate_error": 0.008,
+          "last_update_date": "2026-01-16T15:30:00+00:00"
+        }
       }
     },
     "params": {
@@ -92,7 +100,7 @@ report uncertainty on a metric use that same object shape for the metric itself.
 | `results` | Benchmark outputs. Metrics may be plain numbers or `{value, uncertainty}` objects; `results.score` is the summary score when the benchmark defines one |
 | `platform.provider` | Provider identifier used for the run |
 | `platform.device` | Device or backend identifier used for the run |
-| `platform.device_metadata` | Optional normalized metadata such as `num_qubits`, `simulator`, and backend `version` |
+| `platform.device_metadata` | Optional normalized metadata such as `num_qubits`, `simulator`, backend `version`, and vendor calibration summaries when available |
 | `params` | Validated benchmark configuration used to run the job |
 
 ## Contributing Quality Data

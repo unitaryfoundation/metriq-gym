@@ -5,12 +5,15 @@ Tests the version and connectivity_graph functions for different device types
 using mocked qBraid device objects.
 """
 
+from datetime import datetime, timezone
+from decimal import Decimal
 import types
 from unittest.mock import Mock
 
 import pytest
 import rustworkx as rx
 import networkx as nx
+import numpy as np
 from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
 
 from metriq_gym.local.provider import LocalProvider
@@ -126,6 +129,7 @@ def mock_qiskit_backend():
     mock_backend = Mock()
     mock_backend.backend_version = "1.6.73"
     mock_backend.coupling_map = MockCouplingMap(num_qubits=5)
+    mock_backend.properties.return_value = None
     device._backend = mock_backend
     return device
 
@@ -135,6 +139,7 @@ def mock_braket_device():
     device = Mock(spec=BraketDevice)
     mock_internal_device = Mock()
     mock_internal_device.topology_graph = MockTopologyGraph(num_qubits=8)
+    mock_internal_device.properties = None
     device._device = mock_internal_device
     device._provider_name = "Rigetti"
     device.num_qubits = 8
@@ -313,6 +318,87 @@ class TestNormalizedMetadata:
         assert meta.get("version") == "1.6.73"
         assert "num_qubits" not in meta
         assert "simulator" not in meta
+        assert "calibration" not in meta
+
+    def test_qiskit_backend_metadata_includes_calibration_summary(self):
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.backend_version = "1.6.73"
+        mock_backend.properties.return_value = types.SimpleNamespace(
+            qubits=[
+                [
+                    types.SimpleNamespace(name="T1", value=10e-6),
+                    types.SimpleNamespace(name="T2", value=np.float64(20e-6)),
+                    types.SimpleNamespace(name="readout_error", value=Decimal("0.02")),
+                ],
+                [
+                    types.SimpleNamespace(name="T1", value=30e-6),
+                    types.SimpleNamespace(name="T2", value=40e-6),
+                    types.SimpleNamespace(name="readout_error", value=0.04),
+                ],
+            ],
+            gates=[
+                types.SimpleNamespace(
+                    qubits=[0],
+                    parameters=[types.SimpleNamespace(name="gate_error", value=0.001)],
+                ),
+                types.SimpleNamespace(
+                    qubits=[1],
+                    parameters=[types.SimpleNamespace(name="gate_error", value=0.003)],
+                ),
+                types.SimpleNamespace(
+                    qubits=[0, 1],
+                    parameters=[types.SimpleNamespace(name="gate_error", value=0.02)],
+                ),
+            ],
+            last_update_date=datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+        )
+        device._backend = mock_backend
+
+        meta = normalized_metadata(device)
+
+        calibration = meta["calibration"]
+        assert meta["version"] == "1.6.73"
+        assert calibration["avg_t1_s"] == pytest.approx(20e-6)
+        assert calibration["avg_t2_s"] == pytest.approx(30e-6)
+        assert calibration["avg_readout_error"] == pytest.approx(0.03)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.002)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.02)
+        assert calibration["last_update_date"] == "2026-01-02T03:04:05+00:00"
+
+    def test_qiskit_backend_metadata_preserves_zero_calibration_values(self):
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.backend_version = "1.6.73"
+        mock_backend.properties.return_value = types.SimpleNamespace(
+            qubits=[
+                [
+                    types.SimpleNamespace(name="T1", value=0.0),
+                    types.SimpleNamespace(name="T2", value=0.0),
+                    types.SimpleNamespace(name="readout_error", value=0.0),
+                ]
+            ],
+            gates=[
+                types.SimpleNamespace(
+                    qubits=[0],
+                    parameters=[types.SimpleNamespace(name="gate_error", value=0.0)],
+                ),
+                types.SimpleNamespace(
+                    qubits=[0, 1],
+                    parameters=[types.SimpleNamespace(name="gate_error", value=0.0)],
+                ),
+            ],
+            last_update_date=None,
+        )
+        device._backend = mock_backend
+
+        calibration = normalized_metadata(device)["calibration"]
+
+        assert calibration["avg_t1_s"] == 0.0
+        assert calibration["avg_t2_s"] == 0.0
+        assert calibration["avg_readout_error"] == 0.0
+        assert calibration["avg_1q_gate_error"] == 0.0
+        assert calibration["avg_2q_gate_error"] == 0.0
 
     def test_local_aer_device_metadata(self):
         provider = LocalProvider()
@@ -331,6 +417,82 @@ class TestNormalizedMetadata:
         assert meta.get("num_qubits") == 8
         assert "version" not in meta
         assert "simulator" not in meta
+
+    def test_braket_device_metadata_includes_standardized_calibration(self):
+        device = Mock(spec=BraketDevice)
+        standardized = types.SimpleNamespace(
+            T1=types.SimpleNamespace(value=120, unit="us"),
+            T2=types.SimpleNamespace(value=90, unit="us"),
+            readoutFidelity=[types.SimpleNamespace(fidelity=0.98)],
+            singleQubitFidelity=[types.SimpleNamespace(fidelity=0.997)],
+            twoQubitGateFidelity=[types.SimpleNamespace(fidelity=0.96)],
+            oneQubitProperties={
+                "0": types.SimpleNamespace(
+                    oneQubitFidelity=[types.SimpleNamespace(fidelity=0.995)]
+                ),
+                "1": types.SimpleNamespace(
+                    oneQubitFidelity=[types.SimpleNamespace(fidelity=0.993)]
+                ),
+            },
+            updatedAt=datetime(2026, 1, 16, 15, 30, tzinfo=timezone.utc),
+        )
+        device._device = types.SimpleNamespace(
+            properties=types.SimpleNamespace(standardized=standardized)
+        )
+        device.num_qubits = 2
+
+        calibration = normalized_metadata(device)["calibration"]
+
+        assert calibration["avg_t1_s"] == pytest.approx(120e-6)
+        assert calibration["avg_t2_s"] == pytest.approx(90e-6)
+        assert calibration["avg_readout_error"] == pytest.approx(0.02)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.005)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.04)
+        assert calibration["last_update_date"] == "2026-01-16T15:30:00+00:00"
+
+    def test_braket_device_metadata_includes_rigetti_provider_calibration(self):
+        class RigettiProviderProperties:
+            specs = {
+                "1Q": {
+                    "0": {"T1": 10e-6, "T2": 20e-6, "fRO": 0.91, "f1QRB": 0.991},
+                    "1": {"T1": 30e-6, "T2": 40e-6, "fRO": 0.93, "f1QRB": 0.993},
+                },
+                "2Q": {"0-1": {"fCZ": 0.96}},
+            }
+
+        device = Mock(spec=BraketDevice)
+        device._device = types.SimpleNamespace(
+            properties=types.SimpleNamespace(provider=RigettiProviderProperties())
+        )
+        device.num_qubits = 2
+
+        calibration = normalized_metadata(device)["calibration"]
+
+        assert calibration["avg_t1_s"] == pytest.approx(20e-6)
+        assert calibration["avg_t2_s"] == pytest.approx(30e-6)
+        assert calibration["avg_readout_error"] == pytest.approx(0.08)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.008)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.04)
+
+    def test_braket_device_metadata_includes_ionq_provider_calibration(self):
+        class IonqProviderProperties:
+            fidelity = {
+                "1Q": {"mean": 0.997},
+                "2Q": {"mean": 0.969},
+                "spam": {"mean": 0.996},
+            }
+
+        device = Mock(spec=BraketDevice)
+        device._device = types.SimpleNamespace(
+            properties=types.SimpleNamespace(provider=IonqProviderProperties())
+        )
+        device.num_qubits = 2
+
+        calibration = normalized_metadata(device)["calibration"]
+
+        assert calibration["avg_readout_error"] == pytest.approx(0.004)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.003)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.031)
 
     def test_unsupported_device_metadata(self):
         class Unsupported:
