@@ -2,7 +2,7 @@
   "$id": "metriq-gym/qat_ole.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "QAT OLE",
-  "description": "Quantum Advantage Tracker Operator Loschmidt Echo (OLE) benchmark. Loads a pre-compiled circuit from the QAT repository and estimates ⟨Z_52 Z_59 Z_72⟩, where a value close to 1.0 indicates low decoherence.",
+  "description": "Quantum Advantage Tracker Operator Loschmidt Echo (OLE) benchmark. Loads an OLE circuit and estimates the Pauli-Z product expectation value ⟨Z_{q_0} ... Z_{q_k}⟩. A value close to 1.0 indicates low decoherence. The benchmark score equals the reported OLE observable value.",
   "type": "object",
   "properties": {
     "benchmark_name": {
@@ -12,17 +12,31 @@
     },
     "circuit": {
       "type": "string",
-      "description": "Which QAT OLE circuit to run. '49Q_L3' and '49Q_L6' use a 49-qubit Ising lattice with L=3 or L=6 Trotter steps. '70Q_L6' uses a 70-qubit lattice with L=6 steps. All circuits are transpiled to 156 physical qubits and require a large-scale quantum device.",
+      "description": "Named QAT OLE circuit to fetch from the Quantum Advantage Tracker repository. Mutually exclusive with qasm_path. Uses the known observable qubits [52, 59, 72] for all named circuits.",
       "enum": ["49Q_L3", "49Q_L6", "70Q_L6"],
-      "default": "49Q_L3",
       "examples": ["49Q_L3", "49Q_L6", "70Q_L6"]
+    },
+    "qasm_path": {
+      "type": "string",
+      "description": "Path to a local OpenQASM 3.0 circuit file. Mutually exclusive with circuit. Requires observable_qubits to be set explicitly.",
+      "examples": ["metriq_gym/schemas/examples/qat_ole_small.qasm"]
+    },
+    "observable_qubits": {
+      "type": "array",
+      "description": "Qubit indices to measure for the Pauli-Z product observable. Required when using qasm_path. Defaults to [52, 59, 72] for named QAT circuits.",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "minItems": 1,
+      "examples": [[0, 1, 2], [52, 59, 72]]
     },
     "shots": {
       "type": "integer",
       "description": "Number of measurement shots per circuit execution.",
       "default": 1000,
       "minimum": 1,
-      "examples": [1000, 4096]
+      "examples": [100, 1000, 4096]
     }
   },
   "required": ["benchmark_name"]

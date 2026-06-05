@@ -29,6 +29,16 @@ def _build_metriq_job() -> MetriqGymJob:
     )
 
 
+def _make_result(value: float = 0.85, uncertainty: float = 0.02) -> QATOLEResult:
+    return QATOLEResult(
+        observable_value=BenchmarkScore(value=value, uncertainty=uncertainty),
+        shots=1000,
+        circuit_id="49Q_L3",
+        num_qubits=156,
+        num_gates=2048,
+    )
+
+
 # --- Pauli-Z product expectation ---
 
 
@@ -83,30 +93,43 @@ def test_pauli_z_product_expectation_ghz_two_qubit():
 
 
 def test_qat_ole_result_score_properties():
-    result = QATOLEResult(expectation_value=BenchmarkScore(value=0.85, uncertainty=0.02))
+    result = _make_result(0.85, 0.02)
     assert result.score.value == pytest.approx(0.85)
     assert result.score.uncertainty == pytest.approx(0.02)
 
 
+def test_qat_ole_result_extra_fields():
+    result = _make_result(0.72, 0.03)
+    assert result.shots == 1000
+    assert result.circuit_id == "49Q_L3"
+    assert result.num_qubits == 156
+    assert result.num_gates == 2048
+
+
 def test_qat_ole_result_values_and_uncertainties():
-    result = QATOLEResult(expectation_value=BenchmarkScore(value=0.72, uncertainty=0.03))
-    assert result.values == pytest.approx({"expectation_value": 0.72})
-    assert result.uncertainties == pytest.approx({"expectation_value": 0.03})
+    result = _make_result(0.72, 0.03)
+    # observable_value is a BenchmarkScore; shots/num_qubits/num_gates are bare ints
+    assert result.values["observable_value"] == pytest.approx(0.72)
+    assert result.uncertainties["observable_value"] == pytest.approx(0.03)
+    assert result.values["shots"] == pytest.approx(1000)
+    assert result.values["num_qubits"] == pytest.approx(156)
+    assert result.values["num_gates"] == pytest.approx(2048)
 
 
 def test_qat_ole_result_exporter_payload():
     job = _build_metriq_job()
-    result = QATOLEResult(expectation_value=BenchmarkScore(value=0.91, uncertainty=0.01))
+    result = _make_result(0.91, 0.01)
     exporter = _DummyExporter(job, result)
 
     payload = exporter.as_dict()
-    assert payload["results"]["expectation_value"]["value"] == pytest.approx(0.91)
-    assert payload["results"]["expectation_value"]["uncertainty"] == pytest.approx(0.01)
+    assert payload["results"]["observable_value"]["value"] == pytest.approx(0.91)
+    assert payload["results"]["observable_value"]["uncertainty"] == pytest.approx(0.01)
     assert payload["results"]["score"]["value"] == pytest.approx(0.91)
     assert payload["platform"] == {"provider": "provider", "device": "device"}
 
 
 def test_qat_ole_result_score_keys_match():
-    result = QATOLEResult(expectation_value=BenchmarkScore(value=0.5, uncertainty=0.05))
-    assert set(result.values.keys()) == {"expectation_value"}
-    assert set(result.uncertainties.keys()) == {"expectation_value"}
+    result = _make_result(0.5, 0.05)
+    assert "observable_value" in result.values
+    assert "circuit_id" not in result.values  # string field, not a metric
+    assert result.uncertainties.get("observable_value") is not None
