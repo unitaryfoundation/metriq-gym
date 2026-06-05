@@ -30,6 +30,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
     BenchmarkScore,
 )
+from metriq_gym.circuits import two_qubit_gate_counts
 from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
     binary_expectation_value,
@@ -260,7 +261,13 @@ class WIT(Benchmark):
 
     def dispatch_handler(self, device: "QuantumDevice") -> WITData:
         circuit = self._build_circuits(device)
-        return WITData.from_quantum_job(device.run(circuit, shots=self.params.shots))
+        # WIT submits the circuit as built, so transpiled counts mirror input counts.
+        gate_counts = two_qubit_gate_counts(circuit)
+        return WITData.from_quantum_job(
+            device.run(circuit, shots=self.params.shots),
+            input_two_qubit_gate_counts=gate_counts,
+            transpiled_two_qubit_gate_counts=gate_counts,
+        )
 
     def poll_handler(
         self,

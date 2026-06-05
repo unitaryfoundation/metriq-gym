@@ -38,6 +38,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkData,
     BenchmarkResult,
 )
+from metriq_gym.circuits import two_qubit_gate_counts
 from metriq_gym.qplatform.device import connectivity_graph, connectivity_graph_for_gate
 from metriq_gym.resource_estimation import CircuitBatch
 
@@ -313,12 +314,14 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
     def _build_circuits(
         self, device: "QuantumDevice"
-    ) -> tuple[list, list[int], list[list[tuple[int, int]]], str, list[str]]:
+    ) -> tuple[list, list, list[int], list[list[tuple[int, int]]], str, list[str]]:
         """Build LayerFidelity circuits.
 
         Returns:
-            Tuple of (circuits, qubit_chain, two_disjoint_layers,
-                      two_qubit_gate, one_qubit_basis_gates).
+            Tuple of (circuits, input_circuits, qubit_chain, two_disjoint_layers,
+                      two_qubit_gate, one_qubit_basis_gates). ``circuits`` are the
+            circuits actually submitted (transpiled when ``decompose_clifford_ops``
+            is set); ``input_circuits`` are always the pre-transpilation circuits.
         """
         num_qubits_in_chain = self.params.num_qubits_in_chain
         two_qubit_gate = self.params.two_qubit_gate
@@ -356,18 +359,31 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         )
 
         lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
+        input_circuits = lfexp.circuits()
         if self.params.decompose_clifford_ops:
             circuits = lfexp._transpiled_circuits()
         else:
-            circuits = lfexp.circuits()
+            circuits = input_circuits
 
-        return circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates
+        return (
+            circuits,
+            input_circuits,
+            qubit_chain,
+            two_disjoint_layers,
+            two_qubit_gate,
+            one_qubit_basis_gates,
+        )
 
     def dispatch_handler(self, device: "QuantumDevice") -> EPLGData:
         """Generate circuits, submit to device, return EPLGData."""
-        circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates = (
-            self._build_circuits(device)
-        )
+        (
+            circuits,
+            input_circuits,
+            qubit_chain,
+            two_disjoint_layers,
+            two_qubit_gate,
+            one_qubit_basis_gates,
+        ) = self._build_circuits(device)
 
         shots = self.params.shots
         quantum_job = device.run(circuits, shots=shots)
@@ -377,6 +393,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
         return EPLGData.from_quantum_job(
             quantum_job,
+            input_two_qubit_gate_counts=two_qubit_gate_counts(input_circuits),
+            transpiled_two_qubit_gate_counts=two_qubit_gate_counts(circuits),
             num_qubits_in_chain=self.params.num_qubits_in_chain,
             qubit_chain=qubit_chain,
             two_disjoint_layers=serialized_layers,
@@ -478,5 +496,5 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
         """Return circuit batches for resource estimation."""
-        circuits, _, _, _, _ = self._build_circuits(device)
+        circuits, _, _, _, _, _ = self._build_circuits(device)
         return [CircuitBatch(circuits=circuits, shots=self.params.shots)]

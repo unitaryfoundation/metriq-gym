@@ -29,6 +29,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
     BenchmarkScore,
 )
+from metriq_gym.circuits import two_qubit_gate_counts
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.resource_estimation import CircuitBatch
 
@@ -118,7 +119,13 @@ class QMLKernel(Benchmark):
 
     def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
         circuit = self._build_circuits(device)
-        return QMLKernelData.from_quantum_job(device.run(circuit, shots=self.params.shots))
+        # QML kernel submits the circuit as built, so transpiled counts mirror input counts.
+        gate_counts = two_qubit_gate_counts(circuit)
+        return QMLKernelData.from_quantum_job(
+            device.run(circuit, shots=self.params.shots),
+            input_two_qubit_gate_counts=gate_counts,
+            transpiled_two_qubit_gate_counts=gate_counts,
+        )
 
     def poll_handler(
         self,

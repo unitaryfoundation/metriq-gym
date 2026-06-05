@@ -47,8 +47,18 @@ class MyBenchmarkData(BenchmarkData):
     # Data needed between dispatch and poll
     expected_outputs: list[str]
     num_circuits: int
+```
 
+`BenchmarkData` also provides two inherited fields,
+`input_two_qubit_gate_counts` and `transpiled_two_qubit_gate_counts`
+(one entry per circuit, in dispatch order). Populate them in
+`dispatch_handler` using `two_qubit_gate_counts` from `metriq_gym.circuits`:
+pass the pre-transpilation circuits for the input counts and the circuits
+actually submitted for the transpiled counts. If the benchmark performs no
+transpilation, set both to the same list. These counts are surfaced in the
+exported results under `circuit_stats`.
 
+```python
 class MyBenchmark(Benchmark):
     """Benchmark implementation for My Benchmark."""
 

@@ -39,6 +39,18 @@ class BaseExporter(ABC):
         if runtime_seconds is not None:
             record["runtime_seconds"] = runtime_seconds
 
+        # Surface the per-circuit two-qubit gate counts collected at dispatch time.
+        # These live on the BenchmarkData (job.data), which is otherwise not exported.
+        job_data = getattr(self.metriq_gym_job, "data", None)
+        if isinstance(job_data, dict):
+            circuit_stats = {
+                key: job_data[key]
+                for key in ("input_two_qubit_gate_counts", "transpiled_two_qubit_gate_counts")
+                if job_data.get(key)
+            }
+            if circuit_stats:
+                record["circuit_stats"] = circuit_stats
+
         # Richer suite metadata for downstream aggregation (e.g., metriq-data)
         suite_meta: dict[str, Any] = {}
         if self.metriq_gym_job.suite_id:

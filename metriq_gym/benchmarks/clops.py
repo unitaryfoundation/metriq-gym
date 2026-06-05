@@ -41,6 +41,8 @@ from metriq_gym.benchmarks.benchmark import (
 )
 import logging
 
+from metriq_gym.circuits import two_qubit_gate_counts
+
 from metriq_gym.qplatform.job import execution_time
 from metriq_gym.qplatform.device import (
     connectivity_graph,
@@ -390,13 +392,21 @@ class Clops(Benchmark):
         circuits = instantiate_circuits(
             template, parameters, self.params.num_circuits, seed=self.params.seed
         )
+        # CLOPS submits circuits as built, so the transpiled counts mirror the input counts.
+        gate_counts = two_qubit_gate_counts(circuits)
         if isinstance(device, QiskitBackend) and self.params.use_session:
             return ClopsData.from_quantum_job(
                 self._submit_ibm_with_options(
                     device, circuits, shots=self.params.shots, use_session=self.params.use_session
-                )
+                ),
+                input_two_qubit_gate_counts=gate_counts,
+                transpiled_two_qubit_gate_counts=gate_counts,
             )
-        return ClopsData.from_quantum_job(device.run(circuits, shots=self.params.shots))
+        return ClopsData.from_quantum_job(
+            device.run(circuits, shots=self.params.shots),
+            input_two_qubit_gate_counts=gate_counts,
+            transpiled_two_qubit_gate_counts=gate_counts,
+        )
 
     def _dispatch_parameterized(self, device: QiskitBackend) -> ClopsData:
         """Send a single parameterized circuit with parameter arrays.
@@ -414,8 +424,11 @@ class Clops(Benchmark):
         ]
 
         pub = (template, param_values, self.params.shots)
+        gate_counts = two_qubit_gate_counts(template)
         return ClopsData.from_quantum_job(
-            self._submit_ibm_with_options(device, pubs=[pub], use_session=self.params.use_session)
+            self._submit_ibm_with_options(device, pubs=[pub], use_session=self.params.use_session),
+            input_two_qubit_gate_counts=gate_counts,
+            transpiled_two_qubit_gate_counts=gate_counts,
         )
 
     def _dispatch_twirled(self, device: QiskitBackend) -> ClopsData:
@@ -433,6 +446,7 @@ class Clops(Benchmark):
             shots_per_randomization=self.params.shots,
             enable_gates=True,
         )
+        gate_counts = two_qubit_gate_counts(template)
         return ClopsData.from_quantum_job(
             self._submit_ibm_with_options(
                 device,
@@ -440,7 +454,9 @@ class Clops(Benchmark):
                 shots=self.params.shots * self.params.num_circuits,
                 twirling_options=twirling_opts,
                 use_session=self.params.use_session,
-            )
+            ),
+            input_two_qubit_gate_counts=gate_counts,
+            transpiled_two_qubit_gate_counts=gate_counts,
         )
 
     # ------------------------------------------------------------------

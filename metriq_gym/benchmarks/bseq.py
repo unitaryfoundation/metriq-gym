@@ -42,6 +42,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
     BenchmarkScore,
 )
+from metriq_gym.circuits import two_qubit_gate_counts
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.helpers.graph_helpers import (
     GraphColoring,
@@ -213,8 +214,18 @@ class BSEQ(Benchmark):
             for job in (quantum_job_set if isinstance(quantum_job_set, list) else [quantum_job_set])
         ]
 
+        # One count per circuit, flattened across the color sets in dispatch order.
+        # (Job IDs are per submitted set, so this list may be longer than
+        # provider_job_ids.) BSEQ submits circuits as built, so transpiled counts
+        # mirror input counts.
+        gate_counts = [
+            count for circ_set in circuit_sets for count in two_qubit_gate_counts(circ_set)
+        ]
+
         return BSEQData(
             provider_job_ids=provider_job_ids,
+            input_two_qubit_gate_counts=gate_counts,
+            transpiled_two_qubit_gate_counts=gate_counts,
             shots=shots,
             num_qubits=device.num_qubits,
             topology_graph=topology_graph,

@@ -38,6 +38,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
     BenchmarkScore,
 )
+from metriq_gym.circuits import two_qubit_gate_counts
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
 
@@ -558,8 +559,12 @@ class MirrorCircuits(Benchmark):
     def dispatch_handler(self, device: "QuantumDevice") -> MirrorCircuitsData:
         circuits, expected_bitstrings, actual_width = self._build_circuits(device)
 
+        # Mirror circuits submit as built, so transpiled counts mirror input counts.
+        gate_counts = two_qubit_gate_counts(circuits)
         return MirrorCircuitsData.from_quantum_job(
             quantum_job=device.run(circuits, shots=self.params.shots),
+            input_two_qubit_gate_counts=gate_counts,
+            transpiled_two_qubit_gate_counts=gate_counts,
             num_layers=self.params.num_layers,
             two_qubit_gate_prob=self.params.two_qubit_gate_prob,
             two_qubit_gate_name=self.params.two_qubit_gate_name,

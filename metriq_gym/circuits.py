@@ -2,11 +2,39 @@
 
 import math
 import random
+from collections.abc import Iterable
 from qiskit import QuantumCircuit
-from qiskit.circuit import Parameter, ParameterVector
+from qiskit.circuit import Gate, Parameter, ParameterVector
 import networkx as nx
 import numpy as np
 from typing import Literal, List, Tuple
+
+
+def two_qubit_gate_count(circuit: QuantumCircuit) -> int:
+    """Count the two-qubit gates in a circuit.
+
+    Only unitary gate operations acting on exactly two qubits are counted;
+    non-gate directives (``barrier``, ``measure``, ``reset``) and gates on
+    other widths are ignored, so a three-qubit gate is not miscounted as a
+    two-qubit gate.
+    """
+    return sum(
+        1
+        for instruction in circuit.data
+        if isinstance(instruction.operation, Gate) and instruction.operation.num_qubits == 2
+    )
+
+
+def two_qubit_gate_counts(circuits: QuantumCircuit | Iterable[QuantumCircuit]) -> list[int]:
+    """Return the per-circuit two-qubit gate counts, in order.
+
+    Accepts either a single circuit or an iterable of circuits and always
+    returns a flat ``list[int]`` with one entry per circuit.
+    """
+    if isinstance(circuits, QuantumCircuit):
+        circuits = [circuits]
+    return [two_qubit_gate_count(circuit) for circuit in circuits]
+
 
 GraphType = Literal[
     "1D", "NL", "FC"
