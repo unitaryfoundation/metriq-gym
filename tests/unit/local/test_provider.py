@@ -14,7 +14,7 @@ def test_get_devices_returns_list_with_device():
     """Test that get_devices returns at least the default aer_simulator when no IBM account is configured."""
     provider = LocalProvider()
     with (
-        patch("metriq_gym.local.provider._local_fake_backends", return_value={}),
+        patch.object(provider, "_get_fake_local_backends", return_value={}),
         patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
     ):
         # Simulate QiskitRuntimeService not configured
@@ -29,7 +29,7 @@ def test_get_devices_includes_ibm_backends_when_available():
     """Test that get_devices includes IBM backends when QiskitRuntimeService is configured."""
     provider = LocalProvider()
     with (
-        patch("metriq_gym.local.provider._local_fake_backends", return_value={}),
+        patch.object(provider, "_get_fake_local_backends", return_value={}),
         patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
         patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
     ):
@@ -65,7 +65,7 @@ def test_get_devices_includes_local_fake_backends_without_ibm_auth():
     aer_backend = MagicMock()
 
     with (
-        patch("metriq_gym.local.provider._local_fake_backends", return_value={"fake_torino": backend}),
+        patch.object(provider, "_get_fake_local_backends", return_value={"fake_torino": backend}),
         patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
         patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
     ):
@@ -74,7 +74,7 @@ def test_get_devices_includes_local_fake_backends_without_ibm_auth():
 
         devices = provider.get_devices()
 
-    assert [device.id for device in devices] == ["aer_simulator", "fake_torino"]
+    assert {device.id for device in devices} == {"aer_simulator", "fake_torino"}
     mock_service.assert_called_once()
     mock_aer.from_backend.assert_called_once_with(backend)
 
@@ -89,6 +89,20 @@ def test_local_fake_backend_alias_accepts_ibm_device_names():
     assert _local_fake_backend_alias("ibm_sherbrooke", backends) == "fake_sherbrooke"
     assert _local_fake_backend_alias("fake_torino", backends) == "fake_torino"
     assert _local_fake_backend_alias("ibm_unknown", backends) is None
+    assert _local_fake_backend_alias("IBM_Torino", backends) is None
+    assert _local_fake_backend_alias("ibm-torino", backends) is None
+    assert _local_fake_backend_alias("torino", backends) is None
+
+
+def test_fake_local_backends_are_cached_on_provider():
+    provider = LocalProvider()
+    backend = fake_backend("fake_torino")
+
+    with patch("metriq_gym.local.provider._local_fake_backends", return_value={"fake_torino": backend}) as fake_backends:
+        assert provider._get_fake_local_backends() == {"fake_torino": backend}
+        assert provider._get_fake_local_backends() == {"fake_torino": backend}
+
+    fake_backends.assert_called_once_with()
 
 
 def test_get_device_with_valid_id():
@@ -106,7 +120,7 @@ def test_get_device_with_invalid_id_raises():
 def test_get_device_with_noise_model():
     provider = LocalProvider()
     with (
-        patch("metriq_gym.local.provider._local_fake_backends", return_value={}),
+        patch.object(provider, "_get_fake_local_backends", return_value={}),
         patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
         patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
     ):
@@ -131,7 +145,7 @@ def test_get_device_uses_local_fake_backend_without_ibm_auth():
     aer_backend = MagicMock()
 
     with (
-        patch("metriq_gym.local.provider._local_fake_backends", return_value={"fake_torino": backend}),
+        patch.object(provider, "_get_fake_local_backends", return_value={"fake_torino": backend}),
         patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
         patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
     ):
@@ -151,7 +165,7 @@ def test_get_device_uses_local_fake_backend_for_ibm_name_without_ibm_auth():
     aer_backend = MagicMock()
 
     with (
-        patch("metriq_gym.local.provider._local_fake_backends", return_value={"fake_torino": backend}),
+        patch.object(provider, "_get_fake_local_backends", return_value={"fake_torino": backend}),
         patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
         patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
     ):
@@ -162,5 +176,28 @@ def test_get_device_uses_local_fake_backend_for_ibm_name_without_ibm_auth():
 
     assert isinstance(device, LocalAerDevice)
     assert device.id == "ibm_torino"
+    mock_service.assert_not_called()
+    mock_aer.from_backend.assert_called_once_with(backend)
+
+
+def test_get_device_reuses_cached_local_fake_backend_aliases():
+    provider = LocalProvider()
+    backend = fake_backend("fake_torino")
+    aer_backend = MagicMock()
+
+    with (
+        patch.object(provider, "_get_fake_local_backends", return_value={"fake_torino": backend}),
+        patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
+        patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
+    ):
+        mock_service.side_effect = Exception("Not configured")
+        mock_aer.from_backend.return_value = aer_backend
+
+        ibm_device = provider.get_device("ibm_torino")
+        fake_device = provider.get_device("fake_torino")
+
+    assert ibm_device is fake_device
+    assert ibm_device.id == "ibm_torino"
+    assert list(provider._devices) == ["fake_torino"]
     mock_service.assert_not_called()
     mock_aer.from_backend.assert_called_once_with(backend)
