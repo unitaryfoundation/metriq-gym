@@ -11,6 +11,7 @@ def _local_fake_backends() -> dict[str, object]:
 
 
 def _local_fake_backend_alias(device_id: str, backends: dict[str, object]) -> str | None:
+    """Resolve `fake_*` and canonical `ibm_*` names to local fake backend IDs."""
     if device_id in backends:
         return device_id
 
@@ -27,11 +28,17 @@ class LocalProvider(QuantumProvider):
         super().__init__()
         self.device = LocalAerDevice(provider=self)
         self._devices: dict[str, LocalAerDevice] = {}
+        self._fake_local_backends: dict[str, object] | None = None
+
+    def _get_fake_local_backends(self) -> dict[str, object]:
+        if self._fake_local_backends is None:
+            self._fake_local_backends = _local_fake_backends()
+        return self._fake_local_backends
 
     def get_devices(self, **_) -> list[QuantumDevice]:
         devices = [self.device]
 
-        for device_id in sorted(_local_fake_backends()):
+        for device_id in sorted(self._get_fake_local_backends()):
             try:
                 device = self.get_device(device_id)
                 if device not in devices:
@@ -69,8 +76,12 @@ class LocalProvider(QuantumProvider):
         try:
             # Try loading a local fake backend first, which doesn't require an
             # IBM Quantum account, otherwise load from the runtime service.
-            local_backends = _local_fake_backends()
+            local_backends = self._get_fake_local_backends()
             local_backend_id = _local_fake_backend_alias(device_id, local_backends)
+            cache_key = local_backend_id or device_id
+            if cache_key in self._devices:
+                return self._devices[cache_key]
+
             if local_backend_id is not None:
                 backend = local_backends[local_backend_id]
             else:
@@ -80,5 +91,5 @@ class LocalProvider(QuantumProvider):
             raise ValueError("Unknown device identifier") from exc
 
         device = LocalAerDevice(provider=self, device_id=device_id, backend=aer_backend)
-        self._devices[device_id] = device
+        self._devices[cache_key] = device
         return device
