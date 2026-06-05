@@ -47,8 +47,15 @@ class LocalProvider(QuantumProvider):
             # IBM Quantum account, otherwise load from the runtime service.
 
             fake_local_backends = {b.name: b for b in FakeProviderForBackendV2().backends()}
+            fake_device_id = (
+                device_id.replace("ibm_", "fake_", 1)
+                if device_id.startswith("ibm_")
+                else device_id
+            )
             if device_id in fake_local_backends:
                 backend = fake_local_backends[device_id]
+            elif fake_device_id in fake_local_backends:
+                backend = fake_local_backends[fake_device_id]
             else:
                 backend = QiskitRuntimeService().backend(device_id)
             aer_backend = AerSimulator.from_backend(backend)
