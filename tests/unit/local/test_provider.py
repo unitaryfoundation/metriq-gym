@@ -113,7 +113,12 @@ def test_get_device_with_valid_id():
 
 def test_get_device_with_invalid_id_raises():
     provider = LocalProvider()
-    with pytest.raises(ValueError, match="Unknown device identifier"):
+    with (
+        patch.object(provider, "_get_fake_local_backends", return_value={}),
+        patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
+        pytest.raises(ValueError, match="Unknown device identifier"),
+    ):
+        mock_service.side_effect = Exception("Not configured")
         provider.get_device("invalid_id")
 
 
