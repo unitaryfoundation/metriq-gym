@@ -180,6 +180,46 @@ def test_get_device_uses_local_fake_backend_for_ibm_name_without_ibm_auth():
     mock_aer.from_backend.assert_called_once_with(backend)
 
 
+def test_get_device_resolves_real_qiskit_fake_backend_alias_without_ibm_auth(monkeypatch):
+    fake_backend_names = sorted(
+        backend.name
+        for backend in LocalProvider()._get_fake_local_backends().values()
+        if isinstance(backend.name, str) and backend.name.startswith("fake_")
+    )
+    if not fake_backend_names:
+        pytest.fail("FakeProviderForBackendV2 returned no fake_*-prefixed backends")
+
+    fake_backend_name = (
+        "fake_torino" if "fake_torino" in fake_backend_names else fake_backend_names[0]
+    )
+    ibm_device_id = fake_backend_name.replace("fake_", "ibm_", 1)
+
+    for key in (
+        "QISKIT_IBM_TOKEN",
+        "QISKIT_IBM_CHANNEL",
+        "QISKIT_IBM_INSTANCE",
+        "IBM_QUANTUM_TOKEN",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+    class RuntimeServiceShouldNotBeNeeded:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError(
+                "QiskitRuntimeService should not be required for local fake backend aliases"
+            )
+
+    monkeypatch.setattr(
+        "metriq_gym.local.provider.QiskitRuntimeService",
+        RuntimeServiceShouldNotBeNeeded,
+    )
+
+    device = LocalProvider().get_device(ibm_device_id)
+
+    assert isinstance(device, LocalAerDevice)
+    assert device.id == ibm_device_id
+    assert device.profile.simulator is True
+
+
 def test_get_device_reuses_cached_local_fake_backend_aliases():
     provider = LocalProvider()
     backend = fake_backend("fake_torino")
