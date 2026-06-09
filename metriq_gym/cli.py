@@ -43,15 +43,39 @@ LATEST_JOB_ID = "latest"
 app = typer.Typer(
     name="mgym",
     help="Metriq-Gym CLI — dispatch, poll, and upload results for quantum benchmarks",
-    no_args_is_help=True,
 )
 
 # Sub-apps for job and suite commands
-job_app = typer.Typer(help="Job operations", no_args_is_help=True)
-suite_app = typer.Typer(help="Suite operations", no_args_is_help=True)
+job_app = typer.Typer(help="Job operations")
+suite_app = typer.Typer(help="Suite operations")
 
 app.add_typer(job_app, name="job")
 app.add_typer(suite_app, name="suite")
+
+
+def _show_help_and_exit_if_no_subcommand(ctx: typer.Context) -> None:
+    """Show help and exit successfully when invoked without a subcommand."""
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        raise typer.Exit(code=0)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context) -> None:
+    """Show top-level help when mgym is invoked without a command."""
+    _show_help_and_exit_if_no_subcommand(ctx)
+
+
+@job_app.callback(invoke_without_command=True)
+def job_main(ctx: typer.Context) -> None:
+    """Show job help when mgym job is invoked without a subcommand."""
+    _show_help_and_exit_if_no_subcommand(ctx)
+
+
+@suite_app.callback(invoke_without_command=True)
+def suite_main(ctx: typer.Context) -> None:
+    """Show suite help when mgym suite is invoked without a subcommand."""
+    _show_help_and_exit_if_no_subcommand(ctx)
 
 
 def list_jobs(
