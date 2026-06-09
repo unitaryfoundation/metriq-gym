@@ -2,15 +2,22 @@
 
 Summary:
     Loads an OLE circuit from the Quantum Advantage Tracker (by name) or from
-    a local OpenQASM 3.0 file (via qasm_path), appends measurements on the
-    specified observable qubits, and computes the Pauli-Z product expectation
-    value ⟨Z_{q_0} ⊗ ... ⊗ Z_{q_k}⟩ = P(even parity) − P(odd parity).
+    a local OpenQASM 3.0 file (via qasm_path) and estimates the operator
+    Loschmidt echo of the Pauli-Z product observable O = Z_{q_0} ... Z_{q_k}.
+
+    Following the QAT protocol, the estimator averages over randomly sampled
+    computational-basis initial states. For each sampled state |x⟩ the circuit
+    is run with an X-gate preparation layer, the observable qubits are
+    measured, and the measured parity expectation m_x = ⟨Z_{q_0} ... Z_{q_k}⟩
+    is weighted by the initial-state parity factor
+    σ_z(x) = ⟨x|Z_{q_0} ... Z_{q_k}|x⟩ = ±1:
+
+        OLE ≈ (1 / N_init) Σ_x σ_z(x) · m_x
 
 Result interpretation:
-    - observable_value: ⟨Z_{q_0} ... Z_{q_k}⟩ for the specific circuit and
-      observable measured. This is a raw expectation value for a single
-      instance; interpreting it as a decoherence or fidelity metric requires
-      a reference value (e.g. noiseless simulation) that is not yet included.
+    - observable_value: the OLE estimate averaged over the sampled initial
+      states. Its uncertainty combines per-state shot noise and the sampling
+      spread across initial states.
     - circuit_id: name of the named circuit or basename of qasm_path.
     Score is left unset pending a reference-based definition.
 
@@ -21,7 +28,9 @@ Local simulator usage:
           "benchmark_name": "QAT OLE",
           "qasm_path": "metriq_gym/schemas/examples/qat_ole_small.qasm",
           "observable_qubits": [0, 1, 2],
-          "shots": 100
+          "num_initial_states": 5,
+          "shots": 100,
+          "seed": 42
         }
 
     qasm_path is resolved relative to the current working directory.
@@ -38,11 +47,13 @@ Real hardware usage:
         {
           "benchmark_name": "QAT OLE",
           "circuit": "49Q_L3",
+          "num_initial_states": 10,
           "shots": 1000
         }
 
     The named circuits are pre-compiled to 156 physical qubits and require a
-    large-scale device such as IBM Eagle or IBM Heron.
+    large-scale device such as IBM Eagle or IBM Heron. Note that the device
+    executes num_initial_states circuits, each with the configured shots.
 
 References:
     - QAT OLE circuits: https://github.com/quantum-advantage-tracker/
@@ -55,6 +66,7 @@ References:
 from __future__ import annotations
 
 import os
+import random
 import urllib.request
 from dataclasses import dataclass
 from math import sqrt
@@ -85,6 +97,8 @@ _BASE_URL = (
 
 # Observable is O = Z_52 ⊗ Z_59 ⊗ Z_72 for all named QAT circuits.
 _OBSERVABLE_QUBITS = [52, 59, 72]
+
+_DEFAULT_NUM_INITIAL_STATES = 10
 
 _CIRCUIT_FILENAMES: dict[str, str] = {
     "49Q_L3": "49Q_OLE_circuit_L_3_b_0.25_delta0.15.qasm",
@@ -119,10 +133,8 @@ def _load_qasm_source(params) -> tuple[str, str, list[int]]:
     raise ValueError("Either 'circuit' or 'qasm_path' must be specified in the config")
 
 
-def _build_ole_circuit(
-    qasm_source: str, observable_qubits: list[int]
-) -> QuantumCircuit:
-    """Parse a QASM 3.0 source string and append measurements on the observable qubits.
+def _parse_and_validate(qasm_source: str, observable_qubits: list[int]) -> QuantumCircuit:
+    """Parse a QASM 3.0 source string and validate it against the observable.
 
     Raises ValueError if the circuit already contains classical bits/measurements
     (which would make the added observable register ambiguous in the counts) or if
@@ -146,15 +158,47 @@ def _build_ole_circuit(
     out_of_range = [q for q in observable_qubits if not (0 <= q < num_qubits)]
     if out_of_range:
         raise ValueError(
-            f"observable_qubits {out_of_range} are out of range for a "
-            f"{num_qubits}-qubit circuit"
+            f"observable_qubits {out_of_range} are out of range for a {num_qubits}-qubit circuit"
         )
+    return qc
 
+
+def _sample_initial_states(num_qubits: int, num_states: int, rng: random.Random) -> list[str]:
+    """Sample computational-basis initial states uniformly at random.
+
+    Each state is a bitstring where index i is the value of qubit i.
+    """
+    return ["".join(rng.choice("01") for _ in range(num_qubits)) for _ in range(num_states)]
+
+
+def _initial_state_sign(initial_state: str, observable_qubits: list[int]) -> int:
+    """Return σ_z(x) = ⟨x|Z_{q_0} ... Z_{q_k}|x⟩ = ±1 for a basis state x."""
+    parity = sum(int(initial_state[q]) for q in observable_qubits) % 2
+    return -1 if parity else 1
+
+
+def _prepare_circuit(
+    base: QuantumCircuit, initial_state: str, observable_qubits: list[int]
+) -> QuantumCircuit:
+    """Prepend X-gate state preparation and append observable measurements."""
+    qc = QuantumCircuit(base.num_qubits)
+    for q, bit in enumerate(initial_state):
+        if bit == "1":
+            qc.x(q)
+    qc.compose(base, inplace=True)
     cr = ClassicalRegister(len(observable_qubits), "c")
     qc.add_register(cr)
     for i, qubit_idx in enumerate(observable_qubits):
         qc.measure(qubit_idx, cr[i])
     return qc
+
+
+def _build_ole_circuits(
+    qasm_source: str, observable_qubits: list[int], initial_states: list[str]
+) -> list[QuantumCircuit]:
+    """Build one measured OLE circuit per sampled initial state."""
+    base = _parse_and_validate(qasm_source, observable_qubits)
+    return [_prepare_circuit(base, state, observable_qubits) for state in initial_states]
 
 
 def _pauli_z_product_expectation(counts: dict[str, int]) -> tuple[float, float]:
@@ -163,10 +207,6 @@ def _pauli_z_product_expectation(counts: dict[str, int]) -> tuple[float, float]:
     Even-parity outcomes contribute +1, odd-parity outcomes contribute −1.
     Returns (expectation, uncertainty) where uncertainty is the propagated
     binomial standard deviation (2σ from the parity fraction).
-
-    Note: this uncertainty reflects shot noise for a single circuit run only.
-    When initial-state averaging (N_init sampling) is added, the reported
-    uncertainty will need to combine both contributions.
     """
     total = sum(counts.values())
     if total == 0:
@@ -180,9 +220,45 @@ def _pauli_z_product_expectation(counts: dict[str, int]) -> tuple[float, float]:
     return expectation, uncertainty
 
 
+def _ole_estimate(
+    counts_list: list[dict[str, int]],
+    initial_states: list[str],
+    observable_qubits: list[int],
+) -> tuple[float, float]:
+    """Average sign-weighted parity expectations over the sampled initial states.
+
+    Returns (value, uncertainty). The uncertainty combines, in quadrature:
+    - shot noise propagated from each per-state parity estimate, and
+    - the sampling spread across initial states (standard error of the mean).
+    """
+    if len(counts_list) != len(initial_states):
+        raise ValueError(
+            f"Got {len(counts_list)} count dictionaries for {len(initial_states)} initial states"
+        )
+    estimates: list[float] = []
+    shot_variances: list[float] = []
+    for counts, state in zip(counts_list, initial_states):
+        m, u = _pauli_z_product_expectation(counts)
+        sign = _initial_state_sign(state, observable_qubits)
+        estimates.append(sign * m)
+        shot_variances.append(u * u)
+
+    n = len(estimates)
+    value = sum(estimates) / n
+    shot_term_sq = sum(shot_variances) / (n * n)
+    if n > 1:
+        sample_var = sum((e - value) ** 2 for e in estimates) / (n - 1)
+        sample_term_sq = sample_var / n
+    else:
+        sample_term_sq = 0.0
+    return value, sqrt(shot_term_sq + sample_term_sq)
+
+
 @dataclass
 class QATOLEData(BenchmarkData):
     observable_qubits: list[int]
+    initial_states: list[str]
+    seed: int | None
     shots: int
     circuit_id: str
     num_qubits: int
@@ -199,23 +275,29 @@ class QATOLEResult(BenchmarkResult):
 
 
 class QATOLE(Benchmark):
-    def _build_circuit(self) -> tuple[QuantumCircuit, str, list[int]]:
+    def _build_circuits(self) -> tuple[list[QuantumCircuit], str, list[int], list[str], int]:
         qasm_source, circuit_id, observable_qubits = _load_qasm_source(self.params)
-        circuit = _build_ole_circuit(qasm_source, observable_qubits)
-        return circuit, circuit_id, observable_qubits
+        base = _parse_and_validate(qasm_source, observable_qubits)
+        num_initial_states = getattr(self.params, "num_initial_states", _DEFAULT_NUM_INITIAL_STATES)
+        seed = getattr(self.params, "seed", None)
+        rng = random.Random(seed)
+        initial_states = _sample_initial_states(base.num_qubits, num_initial_states, rng)
+        circuits = [_prepare_circuit(base, state, observable_qubits) for state in initial_states]
+        num_gates = sum(
+            1 for instr in base.data if instr.operation.name not in ("barrier", "measure")
+        )
+        return circuits, circuit_id, observable_qubits, initial_states, num_gates
 
     def dispatch_handler(self, device: "QuantumDevice") -> QATOLEData:
-        circuit, circuit_id, observable_qubits = self._build_circuit()
-        num_gates = sum(
-            1 for instr in circuit.data
-            if instr.operation.name not in ("barrier", "measure")
-        )
+        circuits, circuit_id, observable_qubits, initial_states, num_gates = self._build_circuits()
         return QATOLEData.from_quantum_job(
-            device.run(circuit, shots=self.params.shots),
+            device.run(circuits, shots=self.params.shots),
             observable_qubits=observable_qubits,
+            initial_states=initial_states,
+            seed=getattr(self.params, "seed", None),
             shots=self.params.shots,
             circuit_id=circuit_id,
-            num_qubits=circuit.num_qubits,
+            num_qubits=circuits[0].num_qubits,
             num_gates=num_gates,
         )
 
@@ -225,13 +307,15 @@ class QATOLE(Benchmark):
         result_data: list["GateModelResultData"],
         quantum_jobs: list["QuantumJob"],
     ) -> QATOLEResult:
-        counts = flatten_counts(result_data)[0]
-        value, uncertainty = _pauli_z_product_expectation(counts)
+        counts_list = flatten_counts(result_data)
+        value, uncertainty = _ole_estimate(
+            counts_list, job_data.initial_states, job_data.observable_qubits
+        )
         return QATOLEResult(
             observable_value=BenchmarkScore(value=value, uncertainty=uncertainty),
             circuit_id=job_data.circuit_id,
         )
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
-        circuit, _, _ = self._build_circuit()
-        return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]
+        circuits, _, _, _, _ = self._build_circuits()
+        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]

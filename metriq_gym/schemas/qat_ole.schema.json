@@ -31,6 +31,18 @@
       "minItems": 1,
       "examples": [[0, 1, 2], [52, 59, 72]]
     },
+    "num_initial_states": {
+      "type": "integer",
+      "description": "Number of randomly sampled computational-basis initial states to average over (N_init in the QAT OLE protocol). The device executes one circuit per initial state.",
+      "default": 10,
+      "minimum": 1,
+      "examples": [5, 10, 20]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Optional random seed for sampling the initial states, for reproducibility.",
+      "examples": [42]
+    },
     "shots": {
       "type": "integer",
       "description": "Number of measurement shots per circuit execution.",

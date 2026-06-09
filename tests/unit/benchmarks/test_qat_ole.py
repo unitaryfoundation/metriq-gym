@@ -4,11 +4,16 @@ from unittest.mock import MagicMock
 import pytest
 
 from metriq_gym.benchmarks.benchmark import BenchmarkScore
+import random
+
 from metriq_gym.benchmarks.qat_ole import (
     QATOLEResult,
-    _build_ole_circuit,
+    _build_ole_circuits,
+    _initial_state_sign,
     _load_qasm_source,
+    _ole_estimate,
     _pauli_z_product_expectation,
+    _sample_initial_states,
 )
 from metriq_gym.constants import JobType
 from metriq_gym.exporters.base_exporter import BaseExporter
@@ -153,7 +158,7 @@ def test_load_qasm_source_missing_both():
         _load_qasm_source(params)
 
 
-def test_build_ole_circuit_rejects_existing_clbits():
+def test_build_ole_circuits_rejects_existing_clbits():
     # QASM with an existing classical register should be rejected
     qasm = """
 OPENQASM 3.0;
@@ -162,16 +167,95 @@ bit[1] c;
 c[0] = measure q[0];
 """
     with pytest.raises(ValueError, match="classical bits"):
-        _build_ole_circuit(qasm, [0])
+        _build_ole_circuits(qasm, [0], ["00"])
 
 
-def test_build_ole_circuit_rejects_out_of_range_qubit():
+def test_build_ole_circuits_rejects_out_of_range_qubit():
     qasm = "OPENQASM 3.0;\nqubit[3] q;\n"
     with pytest.raises(ValueError, match="out of range"):
-        _build_ole_circuit(qasm, [0, 5])
+        _build_ole_circuits(qasm, [0, 5], ["000"])
 
 
-def test_build_ole_circuit_rejects_duplicate_qubits():
+def test_build_ole_circuits_rejects_duplicate_qubits():
     qasm = "OPENQASM 3.0;\nqubit[3] q;\n"
     with pytest.raises(ValueError, match="duplicates"):
-        _build_ole_circuit(qasm, [0, 1, 0])
+        _build_ole_circuits(qasm, [0, 1, 0], ["000"])
+
+
+def test_build_ole_circuits_one_circuit_per_initial_state():
+    qasm = "OPENQASM 3.0;\nqubit[3] q;\n"
+    circuits = _build_ole_circuits(qasm, [0, 1], ["000", "110", "011"])
+    assert len(circuits) == 3
+    # The "110" preparation should contain exactly two X gates
+    x_counts = [sum(1 for instr in qc.data if instr.operation.name == "x") for qc in circuits]
+    assert x_counts == [0, 2, 2]
+    # Each circuit measures both observable qubits
+    for qc in circuits:
+        assert sum(1 for instr in qc.data if instr.operation.name == "measure") == 2
+
+
+# --- Initial-state sampling and sign factor ---
+
+
+def test_sample_initial_states_shape_and_alphabet():
+    rng = random.Random(7)
+    states = _sample_initial_states(num_qubits=5, num_states=4, rng=rng)
+    assert len(states) == 4
+    assert all(len(s) == 5 and set(s) <= {"0", "1"} for s in states)
+
+
+def test_sample_initial_states_reproducible_with_seed():
+    states_a = _sample_initial_states(6, 8, random.Random(42))
+    states_b = _sample_initial_states(6, 8, random.Random(42))
+    assert states_a == states_b
+
+
+def test_initial_state_sign():
+    # Even parity on the observable qubits → +1, odd → −1
+    assert _initial_state_sign("000", [0, 1, 2]) == 1
+    assert _initial_state_sign("110", [0, 1, 2]) == 1
+    assert _initial_state_sign("100", [0, 1, 2]) == -1
+    assert _initial_state_sign("111", [0, 1, 2]) == -1
+    # Only the observable qubits count toward the parity
+    assert _initial_state_sign("100", [1, 2]) == 1
+    assert _initial_state_sign("010", [1, 2]) == -1
+
+
+# --- OLE estimate over initial states ---
+
+
+def test_ole_estimate_perfect_echo():
+    # A perfect echo returns each initial state unchanged: the measured parity
+    # always equals the initial-state parity, so sign * m = +1 for every state.
+    counts_list = [
+        {"000": 100},  # initial 000: even parity, sign +1, m = +1
+        {"101": 100},  # initial 101 measured as-is on qubits [0,1,2]
+    ]
+    initial_states = ["000", "101"]
+    value, uncertainty = _ole_estimate(counts_list, initial_states, [0, 1, 2])
+    assert value == pytest.approx(1.0)
+    assert uncertainty == pytest.approx(0.0)
+
+
+def test_ole_estimate_sign_weighting():
+    # Both runs measure even parity (m = +1), but the second initial state has
+    # odd parity (sign −1), so the two contributions cancel.
+    counts_list = [{"00": 100}, {"00": 100}]
+    initial_states = ["00", "10"]
+    value, _ = _ole_estimate(counts_list, initial_states, [0, 1])
+    assert value == pytest.approx(0.0)
+
+
+def test_ole_estimate_includes_sampling_spread():
+    # Per-state estimates are exact (no shot noise) but disagree, so the
+    # uncertainty must reflect the spread across initial states.
+    counts_list = [{"00": 100}, {"01": 100}]
+    initial_states = ["00", "00"]
+    value, uncertainty = _ole_estimate(counts_list, initial_states, [0, 1])
+    assert value == pytest.approx(0.0)
+    assert uncertainty > 0.5  # sample std of [+1, −1] over sqrt(2)
+
+
+def test_ole_estimate_length_mismatch():
+    with pytest.raises(ValueError, match="initial states"):
+        _ole_estimate([{"0": 1}], ["0", "1"], [0])
