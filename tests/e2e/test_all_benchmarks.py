@@ -20,9 +20,9 @@ def get_example_files():
     """Return all .json files in the examples directory."""
     # Exclude benchmarks that cannot run on the local simulator:
     # - lr_qaoa_native_layout: incompatible with the fully connected AER device.
-    # - qat_ole: circuits are pre-compiled to 156 physical qubits (from the
-    #   Quantum Advantage Tracker), which exceed any local simulator target.
-    #   This benchmark is intended for large-scale real hardware only.
+    # - qat_ole.example.json: fetches a 156-qubit circuit from the Quantum
+    #   Advantage Tracker and requires IBM Eagle/Heron class hardware. The
+    #   small fixture (qat_ole.small.example.json) runs locally and is included.
     excluded_files = {
         "lr_qaoa_native_layout.example.json",
         "qat_ole.example.json",

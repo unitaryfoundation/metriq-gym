@@ -2,7 +2,7 @@
   "$id": "metriq-gym/qat_ole.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "QAT OLE",
-  "description": "Quantum Advantage Tracker Operator Loschmidt Echo (OLE) benchmark. Loads an OLE circuit and estimates the Pauli-Z product expectation value ⟨Z_{q_0} ... Z_{q_k}⟩. A value close to 1.0 indicates low decoherence. The benchmark score equals the reported OLE observable value.",
+  "description": "Quantum Advantage Tracker Operator Loschmidt Echo (OLE) benchmark. Loads an OLE circuit and estimates the Pauli-Z product expectation value ⟨Z_{q_0} ... Z_{q_k}⟩.",
   "type": "object",
   "properties": {
     "benchmark_name": {
@@ -18,12 +18,12 @@
     },
     "qasm_path": {
       "type": "string",
-      "description": "Path to a local OpenQASM 3.0 circuit file. Mutually exclusive with circuit. Requires observable_qubits to be set explicitly.",
+      "description": "Path to a local OpenQASM 3.0 circuit file, resolved relative to the current working directory. Mutually exclusive with circuit. Requires observable_qubits.",
       "examples": ["metriq_gym/schemas/examples/qat_ole_small.qasm"]
     },
     "observable_qubits": {
       "type": "array",
-      "description": "Qubit indices to measure for the Pauli-Z product observable. Required when using qasm_path. Defaults to [52, 59, 72] for named QAT circuits.",
+      "description": "Qubit indices to measure for the Pauli-Z product observable. Required when using qasm_path. Ignored when using circuit (the QAT observable [52, 59, 72] is used instead).",
       "items": {
         "type": "integer",
         "minimum": 0
@@ -39,5 +39,17 @@
       "examples": [100, 1000, 4096]
     }
   },
-  "required": ["benchmark_name"]
+  "required": ["benchmark_name"],
+  "oneOf": [
+    {
+      "description": "Named QAT circuit fetched from the Quantum Advantage Tracker.",
+      "required": ["circuit"],
+      "not": { "required": ["qasm_path"] }
+    },
+    {
+      "description": "Local QASM file with explicit observable qubits.",
+      "required": ["qasm_path", "observable_qubits"],
+      "not": { "required": ["circuit"] }
+    }
+  ]
 }

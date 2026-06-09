@@ -1,10 +1,13 @@
 from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from metriq_gym.benchmarks.benchmark import BenchmarkScore
 from metriq_gym.benchmarks.qat_ole import (
     QATOLEResult,
+    _build_ole_circuit,
+    _load_qasm_source,
     _pauli_z_product_expectation,
 )
 from metriq_gym.constants import JobType
@@ -32,10 +35,7 @@ def _build_metriq_job() -> MetriqGymJob:
 def _make_result(value: float = 0.85, uncertainty: float = 0.02) -> QATOLEResult:
     return QATOLEResult(
         observable_value=BenchmarkScore(value=value, uncertainty=uncertainty),
-        shots=1000,
         circuit_id="49Q_L3",
-        num_qubits=156,
-        num_gates=2048,
     )
 
 
@@ -92,28 +92,27 @@ def test_pauli_z_product_expectation_ghz_two_qubit():
 # --- QATOLEResult model ---
 
 
-def test_qat_ole_result_score_properties():
+def test_qat_ole_result_score_unset():
+    # score is intentionally unset pending a reference-based definition
     result = _make_result(0.85, 0.02)
-    assert result.score.value == pytest.approx(0.85)
-    assert result.score.uncertainty == pytest.approx(0.02)
+    assert result.score is None
 
 
-def test_qat_ole_result_extra_fields():
+def test_qat_ole_result_observable_value():
     result = _make_result(0.72, 0.03)
-    assert result.shots == 1000
+    assert result.observable_value.value == pytest.approx(0.72)
+    assert result.observable_value.uncertainty == pytest.approx(0.03)
     assert result.circuit_id == "49Q_L3"
-    assert result.num_qubits == 156
-    assert result.num_gates == 2048
 
 
 def test_qat_ole_result_values_and_uncertainties():
     result = _make_result(0.72, 0.03)
-    # observable_value is a BenchmarkScore; shots/num_qubits/num_gates are bare ints
+    # observable_value is the only metric; resource fields live in job data now
     assert result.values["observable_value"] == pytest.approx(0.72)
     assert result.uncertainties["observable_value"] == pytest.approx(0.03)
-    assert result.values["shots"] == pytest.approx(1000)
-    assert result.values["num_qubits"] == pytest.approx(156)
-    assert result.values["num_gates"] == pytest.approx(2048)
+    assert "shots" not in result.values
+    assert "num_qubits" not in result.values
+    assert "num_gates" not in result.values
 
 
 def test_qat_ole_result_exporter_payload():
@@ -124,7 +123,6 @@ def test_qat_ole_result_exporter_payload():
     payload = exporter.as_dict()
     assert payload["results"]["observable_value"]["value"] == pytest.approx(0.91)
     assert payload["results"]["observable_value"]["uncertainty"] == pytest.approx(0.01)
-    assert payload["results"]["score"]["value"] == pytest.approx(0.91)
     assert payload["platform"] == {"provider": "provider", "device": "device"}
 
 
@@ -132,4 +130,48 @@ def test_qat_ole_result_score_keys_match():
     result = _make_result(0.5, 0.05)
     assert "observable_value" in result.values
     assert "circuit_id" not in result.values  # string field, not a metric
-    assert result.uncertainties.get("observable_value") is not None
+
+
+# --- Input validation ---
+
+
+def test_load_qasm_source_mutual_exclusion():
+    params = MagicMock()
+    params.circuit = "49Q_L3"
+    params.qasm_path = "some/path.qasm"
+    params.observable_qubits = None
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        _load_qasm_source(params)
+
+
+def test_load_qasm_source_missing_both():
+    params = MagicMock()
+    params.circuit = None
+    params.qasm_path = None
+    params.observable_qubits = None
+    with pytest.raises(ValueError, match="Either"):
+        _load_qasm_source(params)
+
+
+def test_build_ole_circuit_rejects_existing_clbits():
+    # QASM with an existing classical register should be rejected
+    qasm = """
+OPENQASM 3.0;
+qubit[2] q;
+bit[1] c;
+c[0] = measure q[0];
+"""
+    with pytest.raises(ValueError, match="classical bits"):
+        _build_ole_circuit(qasm, [0])
+
+
+def test_build_ole_circuit_rejects_out_of_range_qubit():
+    qasm = "OPENQASM 3.0;\nqubit[3] q;\n"
+    with pytest.raises(ValueError, match="out of range"):
+        _build_ole_circuit(qasm, [0, 5])
+
+
+def test_build_ole_circuit_rejects_duplicate_qubits():
+    qasm = "OPENQASM 3.0;\nqubit[3] q;\n"
+    with pytest.raises(ValueError, match="duplicates"):
+        _build_ole_circuit(qasm, [0, 1, 0])

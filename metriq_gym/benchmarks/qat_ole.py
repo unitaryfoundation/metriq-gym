@@ -3,17 +3,16 @@
 Summary:
     Loads an OLE circuit from the Quantum Advantage Tracker (by name) or from
     a local OpenQASM 3.0 file (via qasm_path), appends measurements on the
-    specified observable qubits, and estimates the Pauli-Z product expectation
-    value ⟨Z_{q_0} ⊗ ... ⊗ Z_{q_k}⟩.
+    specified observable qubits, and computes the Pauli-Z product expectation
+    value ⟨Z_{q_0} ⊗ ... ⊗ Z_{q_k}⟩ = P(even parity) − P(odd parity).
 
 Result interpretation:
-    - observable_value: ⟨Z_{q_0} ... Z_{q_k}⟩ = P(even parity) − P(odd parity).
-      Close to +1.0 → low decoherence. Close to 0.0 → heavy noise.
-    - shots: number of measurement shots used.
+    - observable_value: ⟨Z_{q_0} ... Z_{q_k}⟩ for the specific circuit and
+      observable measured. This is a raw expectation value for a single
+      instance; interpreting it as a decoherence or fidelity metric requires
+      a reference value (e.g. noiseless simulation) that is not yet included.
     - circuit_id: name of the named circuit or basename of qasm_path.
-    - num_qubits: total qubits in the circuit.
-    - num_gates: total gate count (excluding barriers and measurements).
-    Score equals observable_value, as stated here for aggregation purposes.
+    Score is left unset pending a reference-based definition.
 
 Local simulator usage:
     Create an example config referencing a small fixture circuit:
@@ -24,6 +23,8 @@ Local simulator usage:
           "observable_qubits": [0, 1, 2],
           "shots": 100
         }
+
+    qasm_path is resolved relative to the current working directory.
 
     Then run:
 
@@ -59,7 +60,7 @@ from dataclasses import dataclass
 from math import sqrt
 from typing import TYPE_CHECKING
 
-from qiskit import QuantumCircuit, ClassicalRegister
+from qiskit import ClassicalRegister, QuantumCircuit
 from qiskit import qasm3
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
@@ -73,9 +74,12 @@ from metriq_gym.resource_estimation import CircuitBatch
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
 
+# Pinned to a specific upstream commit for reproducibility.
+# Update this SHA (and verify the circuits) when pulling in new QAT data.
+_QAT_COMMIT = "3dcd31e9aefb461fc327b58d1c2506948b9a7a3e"
 _BASE_URL = (
     "https://raw.githubusercontent.com/quantum-advantage-tracker/"
-    "quantum-advantage-tracker.github.io/main/data/observable-estimations/"
+    f"quantum-advantage-tracker.github.io/{_QAT_COMMIT}/data/observable-estimations/"
     "circuit-models/operator_loschmidt_echo/"
 )
 
@@ -92,7 +96,7 @@ _CIRCUIT_FILENAMES: dict[str, str] = {
 def _fetch_qasm(circuit_name: str) -> str:
     url = _BASE_URL + _CIRCUIT_FILENAMES[circuit_name]
     with urllib.request.urlopen(url, timeout=60) as resp:  # noqa: S310
-        return resp.read().decode()
+        return resp.read().decode("utf-8")
 
 
 def _load_qasm_source(params) -> tuple[str, str, list[int]]:
@@ -101,10 +105,13 @@ def _load_qasm_source(params) -> tuple[str, str, list[int]]:
     qasm_path = getattr(params, "qasm_path", None)
     obs_qubits = getattr(params, "observable_qubits", None)
 
+    if circuit_name is not None and qasm_path is not None:
+        raise ValueError("'circuit' and 'qasm_path' are mutually exclusive — set only one")
     if circuit_name is not None:
         return _fetch_qasm(circuit_name), circuit_name, _OBSERVABLE_QUBITS
     if qasm_path is not None:
-        with open(qasm_path) as f:
+        # qasm_path is resolved relative to the current working directory.
+        with open(qasm_path, encoding="utf-8") as f:
             source = f.read()
         if obs_qubits is None:
             raise ValueError("observable_qubits must be set when using qasm_path")
@@ -115,8 +122,34 @@ def _load_qasm_source(params) -> tuple[str, str, list[int]]:
 def _build_ole_circuit(
     qasm_source: str, observable_qubits: list[int]
 ) -> QuantumCircuit:
-    """Parse a QASM 3.0 source string and append measurements on the observable qubits."""
+    """Parse a QASM 3.0 source string and append measurements on the observable qubits.
+
+    Raises ValueError if the circuit already contains classical bits/measurements
+    (which would make the added observable register ambiguous in the counts) or if
+    any observable qubit index is out of range or duplicated.
+    """
+    # qiskit.qasm3 is included in qiskit >= 1.x; no separate package needed.
     qc = qasm3.loads(qasm_source)
+
+    if qc.num_clbits > 0:
+        raise ValueError(
+            "Input QASM circuit already contains classical bits or measurements. "
+            "Provide a circuit with no classical registers so the observable "
+            "register can be unambiguously parsed from the counts."
+        )
+
+    num_qubits = qc.num_qubits
+    if not observable_qubits:
+        raise ValueError("observable_qubits must contain at least one index")
+    if len(observable_qubits) != len(set(observable_qubits)):
+        raise ValueError(f"observable_qubits contains duplicates: {observable_qubits}")
+    out_of_range = [q for q in observable_qubits if not (0 <= q < num_qubits)]
+    if out_of_range:
+        raise ValueError(
+            f"observable_qubits {out_of_range} are out of range for a "
+            f"{num_qubits}-qubit circuit"
+        )
+
     cr = ClassicalRegister(len(observable_qubits), "c")
     qc.add_register(cr)
     for i, qubit_idx in enumerate(observable_qubits):
@@ -130,6 +163,10 @@ def _pauli_z_product_expectation(counts: dict[str, int]) -> tuple[float, float]:
     Even-parity outcomes contribute +1, odd-parity outcomes contribute −1.
     Returns (expectation, uncertainty) where uncertainty is the propagated
     binomial standard deviation (2σ from the parity fraction).
+
+    Note: this uncertainty reflects shot noise for a single circuit run only.
+    When initial-state averaging (N_init sampling) is added, the reported
+    uncertainty will need to combine both contributions.
     """
     total = sum(counts.values())
     if total == 0:
@@ -154,13 +191,11 @@ class QATOLEData(BenchmarkData):
 
 class QATOLEResult(BenchmarkResult):
     observable_value: BenchmarkScore
-    shots: int
     circuit_id: str
-    num_qubits: int
-    num_gates: int
 
-    def compute_score(self) -> BenchmarkScore:
-        return self.observable_value
+    # score is intentionally left unset (compute_score returns None from the base
+    # class) pending a reference-based definition; "higher is better" is not
+    # meaningful without a noiseless reference value.
 
 
 class QATOLE(Benchmark):
@@ -194,10 +229,7 @@ class QATOLE(Benchmark):
         value, uncertainty = _pauli_z_product_expectation(counts)
         return QATOLEResult(
             observable_value=BenchmarkScore(value=value, uncertainty=uncertainty),
-            shots=job_data.shots,
             circuit_id=job_data.circuit_id,
-            num_qubits=job_data.num_qubits,
-            num_gates=job_data.num_gates,
         )
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
