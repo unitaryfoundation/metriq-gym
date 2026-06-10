@@ -8,10 +8,12 @@ import random
 
 from metriq_gym.benchmarks.qat_ole import (
     QATOLEResult,
+    _active_qubits,
     _build_ole_circuits,
     _initial_state_sign,
     _load_qasm_source,
     _ole_estimate,
+    _parse_and_validate,
     _pauli_z_product_expectation,
     _sample_initial_states,
 )
@@ -246,16 +248,51 @@ def test_ole_estimate_sign_weighting():
     assert value == pytest.approx(0.0)
 
 
-def test_ole_estimate_includes_sampling_spread():
-    # Per-state estimates are exact (no shot noise) but disagree, so the
-    # uncertainty must reflect the spread across initial states.
+def test_ole_estimate_uncertainty_is_sem_of_states():
+    # The uncertainty is the standard error of the mean of the per-state
+    # estimates: sample std of [+1, −1] is sqrt(2), over sqrt(n=2) gives 1.0.
+    # No separate shot term is added — the spread already contains shot noise.
     counts_list = [{"00": 100}, {"01": 100}]
     initial_states = ["00", "00"]
     value, uncertainty = _ole_estimate(counts_list, initial_states, [0, 1])
     assert value == pytest.approx(0.0)
-    assert uncertainty > 0.5  # sample std of [+1, −1] over sqrt(2)
+    assert uncertainty == pytest.approx(1.0)
+
+
+def test_ole_estimate_single_state_uses_shot_noise():
+    # With one initial state there is no spread to measure, so the propagated
+    # binomial shot noise of that single estimate is used.
+    counts = {"00": 70, "01": 30}
+    value, uncertainty = _ole_estimate([counts], ["00"], [0, 1])
+    _, expected_u = _pauli_z_product_expectation(counts)
+    assert value == pytest.approx(0.4)
+    assert uncertainty == pytest.approx(expected_u)
 
 
 def test_ole_estimate_length_mismatch():
     with pytest.raises(ValueError, match="initial states"):
         _ole_estimate([{"0": 1}], ["0", "1"], [0])
+
+
+def test_sample_initial_states_respects_active_qubits():
+    # Idle qubits must stay '0' across every sampled state; active ones vary.
+    rng = random.Random(3)
+    active = {1, 3}
+    states = _sample_initial_states(num_qubits=5, num_states=20, rng=rng, active_qubits=active)
+    for s in states:
+        assert s[0] == "0" and s[2] == "0" and s[4] == "0"
+    assert any(s[1] == "1" for s in states)
+    assert any(s[3] == "1" for s in states)
+
+
+def test_active_qubits_ignores_barriers_and_idle():
+    qasm = """
+OPENQASM 3.0;
+include "stdgates.inc";
+qubit[6] q;
+h q[1];
+cx q[1], q[3];
+barrier q;
+"""
+    base = _parse_and_validate(qasm, [1])
+    assert _active_qubits(base) == {1, 3}

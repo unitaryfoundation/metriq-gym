@@ -140,7 +140,8 @@ def _parse_and_validate(qasm_source: str, observable_qubits: list[int]) -> Quant
     (which would make the added observable register ambiguous in the counts) or if
     any observable qubit index is out of range or duplicated.
     """
-    # qiskit.qasm3 is included in qiskit >= 1.x; no separate package needed.
+    # qasm3.loads() requires the optional qiskit-qasm3-import package,
+    # declared explicitly via the qiskit[qasm3-import] extra in pyproject.toml.
     qc = qasm3.loads(qasm_source)
 
     if qc.num_clbits > 0:
@@ -163,12 +164,37 @@ def _parse_and_validate(qasm_source: str, observable_qubits: list[int]) -> Quant
     return qc
 
 
-def _sample_initial_states(num_qubits: int, num_states: int, rng: random.Random) -> list[str]:
+def _active_qubits(circuit: QuantumCircuit) -> set[int]:
+    """Qubit indices touched by at least one non-barrier operation."""
+    active: set[int] = set()
+    for instr in circuit.data:
+        if instr.operation.name == "barrier":
+            continue
+        for q in instr.qubits:
+            active.add(circuit.find_bit(q).index)
+    return active
+
+
+def _sample_initial_states(
+    num_qubits: int,
+    num_states: int,
+    rng: random.Random,
+    active_qubits: set[int] | None = None,
+) -> list[str]:
     """Sample computational-basis initial states uniformly at random.
 
-    Each state is a bitstring where index i is the value of qubit i.
+    Each state is a bitstring where index i is the value of qubit i. Only
+    qubits in active_qubits get random bits; the rest stay '0'. The named QAT
+    circuits declare 156 physical qubits but only act on the 49/70-qubit
+    problem lattice, and random X preparations on idle padding qubits would
+    add hardware noise and crosstalk without affecting the echo.
     """
-    return ["".join(rng.choice("01") for _ in range(num_qubits)) for _ in range(num_states)]
+    if active_qubits is None:
+        active_qubits = set(range(num_qubits))
+    return [
+        "".join(rng.choice("01") if q in active_qubits else "0" for q in range(num_qubits))
+        for _ in range(num_states)
+    ]
 
 
 def _initial_state_sign(initial_state: str, observable_qubits: list[int]) -> int:
@@ -227,9 +253,12 @@ def _ole_estimate(
 ) -> tuple[float, float]:
     """Average sign-weighted parity expectations over the sampled initial states.
 
-    Returns (value, uncertainty). The uncertainty combines, in quadrature:
-    - shot noise propagated from each per-state parity estimate, and
-    - the sampling spread across initial states (standard error of the mean).
+    Returns (value, uncertainty). For multiple initial states the uncertainty
+    is the standard error of the mean of the per-state estimates. Their spread
+    already includes finite-shot noise (each estimate is itself shot-noisy),
+    so no separate shot term is added — that would double count. With a single
+    initial state there is no spread to measure, so the propagated shot noise
+    of that one estimate is used instead.
     """
     if len(counts_list) != len(initial_states):
         raise ValueError(
@@ -245,13 +274,12 @@ def _ole_estimate(
 
     n = len(estimates)
     value = sum(estimates) / n
-    shot_term_sq = sum(shot_variances) / (n * n)
     if n > 1:
         sample_var = sum((e - value) ** 2 for e in estimates) / (n - 1)
-        sample_term_sq = sample_var / n
+        uncertainty = sqrt(sample_var / n)
     else:
-        sample_term_sq = 0.0
-    return value, sqrt(shot_term_sq + sample_term_sq)
+        uncertainty = sqrt(shot_variances[0])
+    return value, uncertainty
 
 
 @dataclass
@@ -281,7 +309,11 @@ class QATOLE(Benchmark):
         num_initial_states = getattr(self.params, "num_initial_states", _DEFAULT_NUM_INITIAL_STATES)
         seed = getattr(self.params, "seed", None)
         rng = random.Random(seed)
-        initial_states = _sample_initial_states(base.num_qubits, num_initial_states, rng)
+        # Restrict sampling to qubits the circuit actually acts on — the named
+        # QAT circuits pad to 156 declared qubits. Observable qubits are always
+        # included so the parity sign factor stays well-defined.
+        active = _active_qubits(base) | set(observable_qubits)
+        initial_states = _sample_initial_states(base.num_qubits, num_initial_states, rng, active)
         circuits = [_prepare_circuit(base, state, observable_qubits) for state in initial_states]
         num_gates = sum(
             1 for instr in base.data if instr.operation.name not in ("barrier", "measure")
