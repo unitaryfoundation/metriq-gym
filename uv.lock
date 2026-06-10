@@ -1316,7 +1316,7 @@ dependencies = [
     { name = "pytket-qiskit" },
     { name = "qbraid", extra = ["azure", "braket", "ionq", "qiskit"] },
     { name = "qbraid-core" },
-    { name = "qiskit" },
+    { name = "qiskit", extra = ["qasm3-import"] },
     { name = "qiskit-aer" },
     { name = "qiskit-experiments" },
     { name = "qiskit-ibm-runtime" },
@@ -1365,7 +1365,7 @@ requires-dist = [
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.78.0" },
     { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit"], specifier = ">=0.10.0,<0.12.2" },
     { name = "qbraid-core", specifier = ">=0.1.45,<0.4.0" },
-    { name = "qiskit", specifier = ">=1.4.3,<3.0" },
+    { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
     { name = "qiskit-experiments", specifier = ">=0.9.0,<0.15.0" },
     { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.48.0" },
@@ -2456,6 +2456,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1b/0c/19ffdb15d2e72156de406fe27cad26c6015071a385e6b48c6db87d8ce676/qiskit-2.3.1-cp310-abi3-manylinux2014_s390x.manylinux_2_17_s390x.whl", hash = "sha256:a1a030b4a0cd75f3299c9866a3e9489a02078efc343abd42eec74ad2a5f2fa80", size = 8513126, upload-time = "2026-03-13T02:30:30.288Z" },
     { url = "https://files.pythonhosted.org/packages/11/06/41f4197fcb3c38e99f22f400ea25375c9057190cd094cd6c0f97be730796/qiskit-2.3.1-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:350027279bb171e9746fee5756c674872df97f4608b079129d4edb25b5bb1fdd", size = 8833222, upload-time = "2026-03-13T00:42:59.092Z" },
     { url = "https://files.pythonhosted.org/packages/a5/db/6ddc52eaf22ab1f95ee6251ff7a375c0a1a7453b5864528992303b166198/qiskit-2.3.1-cp310-abi3-win_amd64.whl", hash = "sha256:f884abd92c0173e246705f89f8b4808badaa0e1b167ed3277a3cb83c2564b4b8", size = 8639580, upload-time = "2026-03-13T00:43:01.022Z" },
+]
+
+[package.optional-dependencies]
+qasm3-import = [
+    { name = "qiskit-qasm3-import" },
 ]
 
 [[package]]
