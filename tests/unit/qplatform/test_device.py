@@ -18,6 +18,7 @@ from metriq_gym.origin.device import OriginDevice
 from metriq_gym.qplatform.device import (
     version,
     connectivity_graph,
+    calibration_metadata,
     normalized_metadata,
     pruned_connectivity_graph,
 )
@@ -49,6 +50,41 @@ class MockTopologyGraph:
     def _create_nx_graph(self):
         edges = [(i, (i + 1) % self.num_qubits) for i in range(self.num_qubits)]
         return nx.Graph(edges)
+
+
+class MockProperty:
+    def __init__(self, name, value, unit=None):
+        self.name = name
+        self.value = value
+        self.unit = unit
+
+
+class MockGateProperty:
+    def __init__(self, qubits, gate_error):
+        self.qubits = qubits
+        self.parameters = [MockProperty("gate_error", gate_error)]
+
+
+class MockCalibrationProperties:
+    def __init__(self):
+        self.qubits = [
+            [
+                MockProperty("T1", 120, "us"),
+                MockProperty("T2", 90, "us"),
+                MockProperty("readout_error", 0.025),
+            ],
+            [
+                MockProperty("T1", 180, "us"),
+                MockProperty("T2", 110, "us"),
+                MockProperty("readout_error", 0.035),
+            ],
+        ]
+        self.gates = [
+            MockGateProperty([0], 0.001),
+            MockGateProperty([1], 0.003),
+            MockGateProperty([0, 1], 0.02),
+        ]
+        self.last_update_date = "2026-06-01T12:00:00Z"
 
 
 def _make_origin_device(
@@ -338,6 +374,109 @@ class TestNormalizedMetadata:
 
         meta = normalized_metadata(Unsupported())
         assert meta == {}
+
+    def test_qiskit_backend_calibration_metadata(self, mock_qiskit_backend):
+        mock_qiskit_backend._backend.properties.return_value = MockCalibrationProperties()
+
+        calibration = calibration_metadata(mock_qiskit_backend)
+
+        assert calibration["avg_t1_s"] == pytest.approx(150e-6)
+        assert calibration["avg_t2_s"] == pytest.approx(100e-6)
+        assert calibration["avg_readout_error"] == pytest.approx(0.03)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.002)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.02)
+        assert calibration["last_update_date"] == "2026-06-01T12:00:00Z"
+
+        meta = normalized_metadata(mock_qiskit_backend)
+        assert meta["calibration"] == calibration
+
+    def test_braket_calibration_prefers_detailed_values(self):
+        device = Mock(spec=BraketDevice)
+        device.num_qubits = 2
+        device._provider_name = "Amazon Braket"
+        device.metadata.return_value = {
+            "num_qubits": 2,
+            "calibration": {
+                "lastUpdateDate": "2026-06-02T00:00:00Z",
+                # Summary fidelity should not be averaged together with detailed
+                # oneQubitProperties values below.
+                "singleQubitFidelity": [0.90],
+                "oneQubitProperties": [
+                    {
+                        "T1": {"value": 100, "unit": "us"},
+                        "T2": {"value": 70, "unit": "us"},
+                        "oneQubitFidelity": 0.99,
+                        "readoutFidelity": 0.97,
+                    },
+                    {
+                        "T1": {"value": 200, "unit": "us"},
+                        "T2": {"value": 130, "unit": "us"},
+                        "oneQubitFidelity": 0.98,
+                        "readoutFidelity": 0.95,
+                    },
+                ],
+                "twoQubitProperties": [
+                    {"twoQubitGateFidelity": 0.93},
+                    {"twoQubitGateFidelity": 0.91},
+                ],
+            },
+        }
+
+        calibration = calibration_metadata(device)
+
+        assert calibration["avg_t1_s"] == pytest.approx(150e-6)
+        assert calibration["avg_t2_s"] == pytest.approx(100e-6)
+        assert calibration["avg_readout_error"] == pytest.approx(0.04)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.015)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.08)
+        assert calibration["last_update_date"] == "2026-06-02T00:00:00Z"
+
+        meta = normalized_metadata(device)
+        assert meta["num_qubits"] == 2
+        assert meta["calibration"] == calibration
+
+    def test_braket_standardized_calibration_separates_readout_fidelity(self):
+        device = Mock(spec=BraketDevice)
+        device.num_qubits = 2
+        device._provider_name = "Amazon Braket"
+        device._device = Mock()
+        device._device.properties = {
+            "standardized": {
+                "updatedAt": "2026-06-03T00:00:00Z",
+                "readoutFidelity": [{"fidelity": 0.50}],
+                "singleQubitFidelity": [{"fidelity": 0.50}],
+                "twoQubitGateFidelity": [{"fidelity": 0.50}],
+                "oneQubitProperties": {
+                    "0": {
+                        "T1": {"value": 100, "unit": "us"},
+                        "T2": {"value": 80, "unit": "us"},
+                        "oneQubitFidelity": [
+                            {"fidelity": 0.96, "fidelityType": {"name": "READOUT"}},
+                            {"fidelity": 0.995, "fidelityType": {"name": "GATE"}},
+                        ],
+                    },
+                    "1": {
+                        "T1": {"value": 200, "unit": "us"},
+                        "T2": {"value": 120, "unit": "us"},
+                        "oneQubitFidelity": [
+                            {"fidelity": 0.97, "fidelityType": {"name": "READOUT"}},
+                            {"fidelity": 0.985, "fidelityType": {"name": "GATE"}},
+                        ],
+                    },
+                },
+                "twoQubitProperties": {"0-1": {"twoQubitGateFidelity": [{"fidelity": 0.94}]}},
+            }
+        }
+        device.metadata.return_value = {}
+
+        calibration = calibration_metadata(device)
+
+        assert calibration["avg_t1_s"] == pytest.approx(150e-6)
+        assert calibration["avg_t2_s"] == pytest.approx(100e-6)
+        assert calibration["avg_readout_error"] == pytest.approx(0.035)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.01)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.06)
+        assert calibration["last_update_date"] == "2026-06-03T00:00:00Z"
 
     def test_azure_device_zero_qubits(self):
         device = Mock(spec=AzureQuantumDevice)

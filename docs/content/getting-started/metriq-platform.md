@@ -92,7 +92,7 @@ report uncertainty on a metric use that same object shape for the metric itself.
 | `results` | Benchmark outputs. Metrics may be plain numbers or `{value, uncertainty}` objects; `results.score` is the summary score when the benchmark defines one |
 | `platform.provider` | Provider identifier used for the run |
 | `platform.device` | Device or backend identifier used for the run |
-| `platform.device_metadata` | Optional normalized metadata such as `num_qubits`, `simulator`, and backend `version` |
+| `platform.device_metadata` | Optional normalized metadata such as `num_qubits`, `simulator`, backend `version`, and vendor calibration summaries under `calibration` |
 | `params` | Validated benchmark configuration used to run the job |
 
 ## Contributing Quality Data
@@ -160,4 +160,3 @@ git clone https://github.com/unitaryfoundation/metriq-data.git
 - [Metriq Platform](https://metriq.info)
 - [metriq-data Repository](https://github.com/unitaryfoundation/metriq-data)
 - [Unitary Foundation](https://unitary.foundation)
-
