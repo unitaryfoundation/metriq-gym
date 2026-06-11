@@ -478,6 +478,65 @@ class TestNormalizedMetadata:
         assert calibration["avg_2q_gate_error"] == pytest.approx(0.06)
         assert calibration["last_update_date"] == "2026-06-03T00:00:00Z"
 
+    def test_braket_standardized_calibration_reads_model_object_fields(self):
+        device = Mock(spec=BraketDevice)
+        device.num_qubits = 2
+        device._provider_name = "Amazon Braket"
+        device._device = Mock()
+        device._device.properties = types.SimpleNamespace(
+            standardized=types.SimpleNamespace(
+                updatedAt="2026-06-04T00:00:00Z",
+                oneQubitProperties={
+                    "0": types.SimpleNamespace(
+                        T1=types.SimpleNamespace(value=110, unit="us"),
+                        T2=types.SimpleNamespace(value=70, unit="us"),
+                        oneQubitFidelity=[
+                            types.SimpleNamespace(
+                                fidelity=0.96,
+                                fidelityType=types.SimpleNamespace(name="READOUT"),
+                            ),
+                            types.SimpleNamespace(
+                                fidelity=0.996,
+                                fidelityType=types.SimpleNamespace(name="GATE"),
+                            ),
+                        ],
+                    ),
+                    "1": types.SimpleNamespace(
+                        T1=types.SimpleNamespace(value=190, unit="us"),
+                        T2=types.SimpleNamespace(value=130, unit="us"),
+                        oneQubitFidelity=[
+                            types.SimpleNamespace(
+                                fidelity=0.98,
+                                fidelityType=types.SimpleNamespace(name="READOUT"),
+                            ),
+                            types.SimpleNamespace(
+                                fidelity=0.984,
+                                fidelityType=types.SimpleNamespace(name="GATE"),
+                            ),
+                        ],
+                    ),
+                },
+                twoQubitProperties={
+                    "0-1": types.SimpleNamespace(
+                        twoQubitGateFidelity=[
+                            types.SimpleNamespace(fidelity=0.94),
+                            types.SimpleNamespace(fidelity=0.92),
+                        ]
+                    )
+                },
+            )
+        )
+        device.metadata.return_value = {}
+
+        calibration = calibration_metadata(device)
+
+        assert calibration["avg_t1_s"] == pytest.approx(150e-6)
+        assert calibration["avg_t2_s"] == pytest.approx(100e-6)
+        assert calibration["avg_readout_error"] == pytest.approx(0.03)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.01)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.07)
+        assert calibration["last_update_date"] == "2026-06-04T00:00:00Z"
+
     def test_azure_device_zero_qubits(self):
         device = Mock(spec=AzureQuantumDevice)
         device.metadata.return_value = {"num_qubits": 0}

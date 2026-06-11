@@ -18,6 +18,7 @@ from metriq_gym.quantinuum.device import QuantinuumDevice
 
 
 logger = logging.getLogger(__name__)
+_MISSING = object()
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
@@ -395,8 +396,21 @@ def _fidelity_errors(
 def _collect_braket_named_average(
     source: Any, names: set[str], *, seconds: bool = False
 ) -> list[float]:
+    entries: list[tuple[float, str | None]] = []
+    if not isinstance(source, Mapping) and not (
+        isinstance(source, Sequence) and not isinstance(source, (str, bytes, bytearray))
+    ):
+        for name in names:
+            for candidate in {name, name.lower(), name.upper()}:
+                value = _field(source, candidate, _MISSING)
+                if value is not _MISSING:
+                    entries.extend(_entry_values(value))
+
+    if not entries:
+        entries = _walk_named_entries(source, names)
+
     values = []
-    for value, unit in _walk_named_entries(source, names):
+    for value, unit in entries:
         values.append(_seconds(value, unit) if seconds else value)
     return values
 
@@ -459,6 +473,11 @@ def _braket_standardized_calibration(standardized: Any) -> dict[str, Any]:
     last_update_date = _first_named_text(
         [standardized], {"updatedat", "lastupdatedate", "last_update_date", "lastupdated"}
     )
+    if not last_update_date:
+        for name in ("updatedAt", "lastUpdateDate", "last_update_date", "lastUpdated"):
+            last_update_date = _isoformat(_field(standardized, name))
+            if last_update_date:
+                break
     if last_update_date:
         calibration["last_update_date"] = last_update_date
 
