@@ -18,8 +18,13 @@ Result interpretation:
     - observable_value: the OLE estimate averaged over the sampled initial
       states. Its uncertainty combines per-state shot noise and the sampling
       spread across initial states.
-    - circuit_id: name of the named circuit or basename of qasm_path.
-    Score is left unset pending a reference-based definition.
+    - noiseless_reference: the exact OLE value over the same sampled initial
+      states, computed by statevector simulation when the circuit is small
+      enough (at most 20 qubits). None for the named QAT circuits, which sit
+      beyond classical simulation.
+    - score: observable_value / noiseless_reference when a reference is
+      available (1.0 means noiseless; decoherence drives it toward 0).
+      Unset when no classical reference exists.
 
 Local simulator usage:
     Create an example config referencing a small fixture circuit:
@@ -70,10 +75,11 @@ import random
 import urllib.request
 from dataclasses import dataclass
 from math import sqrt
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 from qiskit import ClassicalRegister, QuantumCircuit
 from qiskit import qasm3
+from qiskit.quantum_info import SparsePauliOp, Statevector
 from metriq_gym.benchmarks.benchmark import (
     Benchmark,
     BenchmarkData,
@@ -100,6 +106,9 @@ _OBSERVABLE_QUBITS = [52, 59, 72]
 
 _DEFAULT_NUM_INITIAL_STATES = 10
 
+# Largest circuit for which a noiseless statevector reference is computed.
+_MAX_REFERENCE_QUBITS = 20
+
 _CIRCUIT_FILENAMES: dict[str, str] = {
     "49Q_L3": "49Q_OLE_circuit_L_3_b_0.25_delta0.15.qasm",
     "49Q_L6": "49Q_OLE_circuit_L_6_b_0.25_delta0.15.qasm",
@@ -108,6 +117,11 @@ _CIRCUIT_FILENAMES: dict[str, str] = {
 
 
 def _fetch_qasm(circuit_name: str) -> str:
+    if circuit_name not in _CIRCUIT_FILENAMES:
+        raise ValueError(
+            f"Unknown circuit {circuit_name!r}. "
+            f"Supported circuits: {', '.join(sorted(_CIRCUIT_FILENAMES))}"
+        )
     url = _BASE_URL + _CIRCUIT_FILENAMES[circuit_name]
     with urllib.request.urlopen(url, timeout=60) as resp:  # noqa: S310
         return resp.read().decode("utf-8")
@@ -122,7 +136,8 @@ def _load_qasm_source(params) -> tuple[str, str, list[int]]:
     if circuit_name is not None and qasm_path is not None:
         raise ValueError("'circuit' and 'qasm_path' are mutually exclusive — set only one")
     if circuit_name is not None:
-        return _fetch_qasm(circuit_name), circuit_name, _OBSERVABLE_QUBITS
+        # Copy so callers can't mutate the module-level list.
+        return _fetch_qasm(circuit_name), circuit_name, list(_OBSERVABLE_QUBITS)
     if qasm_path is not None:
         # qasm_path is resolved relative to the current working directory.
         with open(qasm_path, encoding="utf-8") as f:
@@ -219,6 +234,35 @@ def _prepare_circuit(
     return qc
 
 
+def _noiseless_reference(
+    base: QuantumCircuit, initial_states: list[str], observable_qubits: list[int]
+) -> float | None:
+    """Exact OLE value over the same sampled initial states, by statevector.
+
+    Gives the device-independent target the measured estimate is compared
+    against in compute_score. Only available when the circuit is small enough
+    to simulate classically; returns None above _MAX_REFERENCE_QUBITS (the
+    named QAT circuits declare 156 qubits, where no classical reference
+    exists; that regime is the point of the QAT).
+    """
+    if base.num_qubits > _MAX_REFERENCE_QUBITS:
+        return None
+    observable = SparsePauliOp.from_sparse_list(
+        [("Z" * len(observable_qubits), observable_qubits, 1.0)],
+        num_qubits=base.num_qubits,
+    )
+    total = 0.0
+    for state in initial_states:
+        qc = QuantumCircuit(base.num_qubits)
+        for q, bit in enumerate(state):
+            if bit == "1":
+                qc.x(q)
+        qc.compose(base, inplace=True)
+        expectation = Statevector(qc).expectation_value(observable).real
+        total += _initial_state_sign(state, observable_qubits) * expectation
+    return total / len(initial_states)
+
+
 def _build_ole_circuits(
     qasm_source: str, observable_qubits: list[int], initial_states: list[str]
 ) -> list[QuantumCircuit]:
@@ -291,25 +335,67 @@ class QATOLEData(BenchmarkData):
     circuit_id: str
     num_qubits: int
     num_gates: int
+    noiseless_reference: float | None = None
 
 
 class QATOLEResult(BenchmarkResult):
     observable_value: BenchmarkScore
-    circuit_id: str
+    noiseless_reference: float | None = None
 
-    # score is intentionally left unset (compute_score returns None from the base
-    # class) pending a reference-based definition; "higher is better" is not
-    # meaningful without a noiseless reference value.
+    def compute_score(self) -> BenchmarkScore | None:
+        """Score = measured OLE divided by the noiseless reference.
+
+        1.0 means the device reproduced the ideal echo; decoherence drives the
+        ratio toward 0. Only defined when a classical reference is available
+        (circuits small enough for statevector simulation). For the named QAT
+        circuits no reference is classically computable, so score stays unset.
+        """
+        if self.noiseless_reference is None or abs(self.noiseless_reference) < 1e-9:
+            return None
+        uncertainty = self.observable_value.uncertainty
+        return BenchmarkScore(
+            value=self.observable_value.value / self.noiseless_reference,
+            uncertainty=(
+                abs(uncertainty / self.noiseless_reference) if uncertainty is not None else None
+            ),
+        )
+
+
+class _BuiltCircuits(NamedTuple):
+    """Everything _build_circuits produces for dispatch.
+
+    Attributes:
+        circuits: One measured OLE circuit per sampled initial state.
+        circuit_id: Named-circuit name, or the basename of qasm_path.
+        observable_qubits: Indices of the Z-product observable qubits.
+        initial_states: The sampled computational-basis states, as bitstrings.
+        num_gates: Gate count of the base circuit (barriers/measures excluded).
+        noiseless_reference: Exact OLE over the sampled states via statevector,
+            or None when the circuit is too large to simulate classically.
+    """
+
+    circuits: list[QuantumCircuit]
+    circuit_id: str
+    observable_qubits: list[int]
+    initial_states: list[str]
+    num_gates: int
+    noiseless_reference: float | None
 
 
 class QATOLE(Benchmark):
-    def _build_circuits(self) -> tuple[list[QuantumCircuit], str, list[int], list[str], int]:
+    def _build_circuits(self) -> _BuiltCircuits:
+        """Load the base circuit, sample initial states, and build the run set.
+
+        QASM loading itself lives in _load_qasm_source/_parse_and_validate;
+        this method layers the OLE-specific parts on top (initial-state
+        sampling, preparation/measurement layers, noiseless reference).
+        """
         qasm_source, circuit_id, observable_qubits = _load_qasm_source(self.params)
         base = _parse_and_validate(qasm_source, observable_qubits)
         num_initial_states = getattr(self.params, "num_initial_states", _DEFAULT_NUM_INITIAL_STATES)
         seed = getattr(self.params, "seed", None)
         rng = random.Random(seed)
-        # Restrict sampling to qubits the circuit actually acts on — the named
+        # Restrict sampling to qubits the circuit actually acts on: the named
         # QAT circuits pad to 156 declared qubits. Observable qubits are always
         # included so the parity sign factor stays well-defined.
         active = _active_qubits(base) | set(observable_qubits)
@@ -318,19 +404,27 @@ class QATOLE(Benchmark):
         num_gates = sum(
             1 for instr in base.data if instr.operation.name not in ("barrier", "measure")
         )
-        return circuits, circuit_id, observable_qubits, initial_states, num_gates
-
-    def dispatch_handler(self, device: "QuantumDevice") -> QATOLEData:
-        circuits, circuit_id, observable_qubits, initial_states, num_gates = self._build_circuits()
-        return QATOLEData.from_quantum_job(
-            device.run(circuits, shots=self.params.shots),
+        return _BuiltCircuits(
+            circuits=circuits,
+            circuit_id=circuit_id,
             observable_qubits=observable_qubits,
             initial_states=initial_states,
+            num_gates=num_gates,
+            noiseless_reference=_noiseless_reference(base, initial_states, observable_qubits),
+        )
+
+    def dispatch_handler(self, device: "QuantumDevice") -> QATOLEData:
+        built = self._build_circuits()
+        return QATOLEData.from_quantum_job(
+            device.run(built.circuits, shots=self.params.shots),
+            observable_qubits=built.observable_qubits,
+            initial_states=built.initial_states,
             seed=getattr(self.params, "seed", None),
             shots=self.params.shots,
-            circuit_id=circuit_id,
-            num_qubits=circuits[0].num_qubits,
-            num_gates=num_gates,
+            circuit_id=built.circuit_id,
+            num_qubits=built.circuits[0].num_qubits,
+            num_gates=built.num_gates,
+            noiseless_reference=built.noiseless_reference,
         )
 
     def poll_handler(
@@ -345,9 +439,9 @@ class QATOLE(Benchmark):
         )
         return QATOLEResult(
             observable_value=BenchmarkScore(value=value, uncertainty=uncertainty),
-            circuit_id=job_data.circuit_id,
+            noiseless_reference=job_data.noiseless_reference,
         )
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
-        circuits, _, _, _, _ = self._build_circuits()
-        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
+        built = self._build_circuits()
+        return [CircuitBatch(circuits=built.circuits, shots=self.params.shots)]

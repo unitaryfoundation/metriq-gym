@@ -7,11 +7,13 @@ from metriq_gym.benchmarks.benchmark import BenchmarkScore
 import random
 
 from metriq_gym.benchmarks.qat_ole import (
+    _OBSERVABLE_QUBITS,
     QATOLEResult,
     _active_qubits,
     _build_ole_circuits,
     _initial_state_sign,
     _load_qasm_source,
+    _noiseless_reference,
     _ole_estimate,
     _parse_and_validate,
     _pauli_z_product_expectation,
@@ -39,10 +41,12 @@ def _build_metriq_job() -> MetriqGymJob:
     )
 
 
-def _make_result(value: float = 0.85, uncertainty: float = 0.02) -> QATOLEResult:
+def _make_result(
+    value: float = 0.85, uncertainty: float = 0.02, reference: float | None = None
+) -> QATOLEResult:
     return QATOLEResult(
         observable_value=BenchmarkScore(value=value, uncertainty=uncertainty),
-        circuit_id="49Q_L3",
+        noiseless_reference=reference,
     )
 
 
@@ -99,9 +103,22 @@ def test_pauli_z_product_expectation_ghz_two_qubit():
 # --- QATOLEResult model ---
 
 
-def test_qat_ole_result_score_unset():
-    # score is intentionally unset pending a reference-based definition
-    result = _make_result(0.85, 0.02)
+def test_qat_ole_result_score_unset_without_reference():
+    # No classical reference (e.g. the named 156-qubit circuits): score unset
+    result = _make_result(0.85, 0.02, reference=None)
+    assert result.score is None
+
+
+def test_qat_ole_result_score_is_ratio_to_reference():
+    result = _make_result(0.85, 0.02, reference=0.94)
+    assert result.score is not None
+    assert result.score.value == pytest.approx(0.85 / 0.94)
+    assert result.score.uncertainty == pytest.approx(0.02 / 0.94)
+
+
+def test_qat_ole_result_score_unset_for_near_zero_reference():
+    # A vanishing ideal echo makes the ratio meaningless
+    result = _make_result(0.01, 0.02, reference=1e-12)
     assert result.score is None
 
 
@@ -109,7 +126,6 @@ def test_qat_ole_result_observable_value():
     result = _make_result(0.72, 0.03)
     assert result.observable_value.value == pytest.approx(0.72)
     assert result.observable_value.uncertainty == pytest.approx(0.03)
-    assert result.circuit_id == "49Q_L3"
 
 
 def test_qat_ole_result_values_and_uncertainties():
@@ -134,9 +150,11 @@ def test_qat_ole_result_exporter_payload():
 
 
 def test_qat_ole_result_score_keys_match():
-    result = _make_result(0.5, 0.05)
+    result = _make_result(0.5, 0.05, reference=0.9)
     assert "observable_value" in result.values
-    assert "circuit_id" not in result.values  # string field, not a metric
+    assert "noiseless_reference" in result.values
+    # circuit_id lives in the job data/params, not the result
+    assert "circuit_id" not in QATOLEResult.model_fields
 
 
 # --- Input validation ---
@@ -158,6 +176,28 @@ def test_load_qasm_source_missing_both():
     params.observable_qubits = None
     with pytest.raises(ValueError, match="Either"):
         _load_qasm_source(params)
+
+
+def test_load_qasm_source_unknown_circuit_name():
+    # An unknown name should fail with the supported IDs, before any fetch
+    params = MagicMock()
+    params.circuit = "99Q_L9"
+    params.qasm_path = None
+    params.observable_qubits = None
+    with pytest.raises(ValueError, match="49Q_L3"):
+        _load_qasm_source(params)
+
+
+def test_load_qasm_source_returns_observable_qubits_copy(monkeypatch):
+    # Mutating the returned list must not corrupt the module-level constant
+    monkeypatch.setattr("metriq_gym.benchmarks.qat_ole._fetch_qasm", lambda name: "")
+    params = MagicMock()
+    params.circuit = "49Q_L3"
+    params.qasm_path = None
+    params.observable_qubits = None
+    _, _, obs_qubits = _load_qasm_source(params)
+    obs_qubits.append(999)
+    assert _OBSERVABLE_QUBITS == [52, 59, 72]
 
 
 def test_build_ole_circuits_rejects_existing_clbits():
@@ -283,6 +323,29 @@ def test_sample_initial_states_respects_active_qubits():
         assert s[0] == "0" and s[2] == "0" and s[4] == "0"
     assert any(s[1] == "1" for s in states)
     assert any(s[3] == "1" for s in states)
+
+
+def test_noiseless_reference_perfect_echo_is_one():
+    # An empty base circuit is a perfect echo: each initial state comes back
+    # unchanged, so sign * <Z...Z> = +1 for every sampled state.
+    base = _parse_and_validate("OPENQASM 3.0;\nqubit[3] q;\n", [0, 1, 2])
+    ref = _noiseless_reference(base, ["000", "101", "110"], [0, 1, 2])
+    assert ref == pytest.approx(1.0)
+
+
+def test_noiseless_reference_parity_flip_is_minus_one():
+    # An X on an observable qubit flips the parity for every initial state
+    qasm = 'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nx q[0];\n'
+    base = _parse_and_validate(qasm, [0])
+    ref = _noiseless_reference(base, ["00", "10"], [0])
+    assert ref == pytest.approx(-1.0)
+
+
+def test_noiseless_reference_none_above_qubit_limit():
+    from qiskit import QuantumCircuit
+
+    base = QuantumCircuit(21)
+    assert _noiseless_reference(base, ["0" * 21], [0]) is None
 
 
 def test_active_qubits_ignores_barriers_and_idle():
