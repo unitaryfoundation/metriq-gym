@@ -19,6 +19,7 @@ from metriq_gym.quantinuum.device import QuantinuumDevice
 
 logger = logging.getLogger(__name__)
 _MISSING = object()
+_MAX_METADATA_WALK_DEPTH = 8
 
 
 # Version of a device backend (e.g. ibm_sherbrooke --> '1.6.73').
@@ -220,7 +221,25 @@ def _iter_collection(value: Any) -> list[Any]:
     return []
 
 
-def _entry_values(value: Any) -> list[tuple[float, str | None]]:
+def _entry_values(
+    value: Any,
+    *,
+    _depth: int = 0,
+    _seen: set[int] | None = None,
+) -> list[tuple[float, str | None]]:
+    if _depth > _MAX_METADATA_WALK_DEPTH:
+        return []
+    if isinstance(value, Mapping) or (
+        isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))
+    ):
+        seen = set() if _seen is None else _seen
+        value_id = id(value)
+        if value_id in seen:
+            return []
+        seen.add(value_id)
+    else:
+        seen = _seen
+
     if isinstance(value, Mapping):
         unit = value.get("unit")
         unit_str = unit if isinstance(unit, str) else None
@@ -230,7 +249,7 @@ def _entry_values(value: Any) -> list[tuple[float, str | None]]:
                 return [(number, unit_str)]
         values: list[tuple[float, str | None]] = []
         for nested_value in value.values():
-            values.extend(_entry_values(nested_value))
+            values.extend(_entry_values(nested_value, _depth=_depth + 1, _seen=seen))
         return values
 
     number = _safe_float(value)
@@ -240,7 +259,7 @@ def _entry_values(value: Any) -> list[tuple[float, str | None]]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         values = []
         for item in value:
-            values.extend(_entry_values(item))
+            values.extend(_entry_values(item, _depth=_depth + 1, _seen=seen))
         return values
 
     attr_value = getattr(value, "value", None)
@@ -252,17 +271,36 @@ def _entry_values(value: Any) -> list[tuple[float, str | None]]:
     return []
 
 
-def _walk_named_entries(value: Any, names: set[str]) -> list[tuple[float, str | None]]:
+def _walk_named_entries(
+    value: Any,
+    names: set[str],
+    *,
+    _depth: int = 0,
+    _seen: set[int] | None = None,
+) -> list[tuple[float, str | None]]:
+    if _depth > _MAX_METADATA_WALK_DEPTH:
+        return []
+
     entries: list[tuple[float, str | None]] = []
     if isinstance(value, Mapping):
+        seen = set() if _seen is None else _seen
+        value_id = id(value)
+        if value_id in seen:
+            return []
+        seen.add(value_id)
         for key, nested_value in value.items():
             key_name = str(key).lower()
             if key_name in names:
-                entries.extend(_entry_values(nested_value))
-            entries.extend(_walk_named_entries(nested_value, names))
+                entries.extend(_entry_values(nested_value, _seen=set(seen)))
+            entries.extend(_walk_named_entries(nested_value, names, _depth=_depth + 1, _seen=seen))
     elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        seen = set() if _seen is None else _seen
+        value_id = id(value)
+        if value_id in seen:
+            return []
+        seen.add(value_id)
         for item in value:
-            entries.extend(_walk_named_entries(item, names))
+            entries.extend(_walk_named_entries(item, names, _depth=_depth + 1, _seen=seen))
     return entries
 
 
@@ -307,19 +345,38 @@ def _first_average(
     return None
 
 
-def _first_named_text(sources: Sequence[Any], names: set[str]) -> str | None:
+def _first_named_text(
+    sources: Sequence[Any],
+    names: set[str],
+    *,
+    _depth: int = 0,
+    _seen: set[int] | None = None,
+) -> str | None:
+    if _depth > _MAX_METADATA_WALK_DEPTH:
+        return None
+
     for source in sources:
         if isinstance(source, Mapping):
+            seen = set() if _seen is None else _seen
+            source_id = id(source)
+            if source_id in seen:
+                continue
+            seen.add(source_id)
             for key, value in source.items():
                 if str(key).lower() in names:
                     text = _isoformat(value)
                     if text:
                         return text
-                text = _first_named_text([value], names)
+                text = _first_named_text([value], names, _depth=_depth + 1, _seen=seen)
                 if text:
                     return text
         elif isinstance(source, Sequence) and not isinstance(source, (str, bytes, bytearray)):
-            text = _first_named_text(source, names)
+            seen = set() if _seen is None else _seen
+            source_id = id(source)
+            if source_id in seen:
+                continue
+            seen.add(source_id)
+            text = _first_named_text(source, names, _depth=_depth + 1, _seen=seen)
             if text:
                 return text
     return None
@@ -474,6 +531,7 @@ def _braket_standardized_calibration(standardized: Any) -> dict[str, Any]:
         [standardized], {"updatedat", "lastupdatedate", "last_update_date", "lastupdated"}
     )
     if not last_update_date:
+        # Braket SDK model objects expose attributes instead of dict keys.
         for name in ("updatedAt", "lastUpdateDate", "last_update_date", "lastUpdated"):
             last_update_date = _isoformat(_field(standardized, name))
             if last_update_date:
@@ -534,6 +592,9 @@ def _(device: BraketDevice) -> dict[str, Any]:
     device_properties = getattr(getattr(device, "_device", None), "properties", None)
     device_metadata = _metadata(device)
     metadata_calibration = device_metadata.get("calibration")
+    provider_name = str(getattr(device, "_provider_name", "") or "").lower()
+    is_rigetti = "rigetti" in provider_name
+    is_ionq = "ionq" in provider_name
 
     for source in (device_properties, device_metadata, metadata_calibration):
         standardized = _field(source, "standardized")
@@ -565,9 +626,14 @@ def _(device: BraketDevice) -> dict[str, Any]:
         [{"readouterror", "readout_error", "avg_readout_error"}],
     )
     if readout is None:
+        readout_fidelity_names = [{"readoutfidelity", "fidelityreadout"}]
+        if is_rigetti:
+            readout_fidelity_names.append({"fro"})
+        if is_ionq:
+            readout_fidelity_names.append({"spam"})
         readout = _first_average(
             sources,
-            [{"readoutfidelity", "fidelityreadout", "fro", "spam"}],
+            readout_fidelity_names,
             transform=lambda value, unit: _error_from_fidelity(value),
         )
     if readout is not None:
@@ -578,9 +644,16 @@ def _(device: BraketDevice) -> dict[str, Any]:
         [{"onequbitgateerror", "singlequbitgateerror", "avg_1q_gate_error"}],
     )
     if one_qubit_error is None:
+        one_qubit_fidelity_names = [
+            {"onequbitfidelity"},
+            {"singlequbitgatefidelity"},
+            {"singlequbitfidelity"},
+        ]
+        if is_rigetti:
+            one_qubit_fidelity_names.append({"f1qrb"})
         one_qubit_error = _first_average(
             sources,
-            [{"onequbitfidelity", "f1qrb"}, {"singlequbitgatefidelity"}, {"singlequbitfidelity"}],
+            one_qubit_fidelity_names,
             transform=lambda value, unit: _error_from_fidelity(value),
         )
     if one_qubit_error is not None:
@@ -591,9 +664,12 @@ def _(device: BraketDevice) -> dict[str, Any]:
         [{"twoqubitgateerror", "avg_2q_gate_error"}],
     )
     if two_qubit_error is None:
+        two_qubit_fidelity_names = [{"twoqubitfidelity"}, {"twoqubitgatefidelity"}]
+        if is_rigetti:
+            two_qubit_fidelity_names.append({"fcz"})
         two_qubit_error = _first_average(
             sources,
-            [{"twoqubitfidelity", "fcz"}, {"twoqubitgatefidelity"}],
+            two_qubit_fidelity_names,
             transform=lambda value, unit: _error_from_fidelity(value),
         )
     if two_qubit_error is not None:
@@ -606,6 +682,30 @@ def _(device: BraketDevice) -> dict[str, Any]:
         calibration["last_update_date"] = last_update_date
 
     return calibration
+
+
+@calibration_metadata.register
+def _(device: AzureQuantumDevice) -> dict[str, Any]:
+    # TODO(#668): normalize Azure calibration metadata when qBraid exposes it.
+    return {}
+
+
+@calibration_metadata.register
+def _(device: LocalAerDevice) -> dict[str, Any]:
+    # TODO(#668): local simulators do not expose vendor calibration metadata.
+    return {}
+
+
+@calibration_metadata.register
+def _(device: OriginDevice) -> dict[str, Any]:
+    # TODO(#668): normalize Origin calibration metadata when available.
+    return {}
+
+
+@calibration_metadata.register
+def _(device: QuantinuumDevice) -> dict[str, Any]:
+    # TODO(#668): normalize Quantinuum calibration metadata when available.
+    return {}
 
 
 def normalized_metadata(device: QuantumDevice) -> dict:

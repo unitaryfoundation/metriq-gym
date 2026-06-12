@@ -537,6 +537,58 @@ class TestNormalizedMetadata:
         assert calibration["avg_2q_gate_error"] == pytest.approx(0.07)
         assert calibration["last_update_date"] == "2026-06-04T00:00:00Z"
 
+    def test_braket_calibration_uses_rigetti_vendor_tokens_only_for_rigetti(self):
+        device = Mock(spec=BraketDevice)
+        device.num_qubits = 2
+        device._provider_name = "Rigetti"
+        device.metadata.return_value = {
+            "num_qubits": 2,
+            "calibration": {
+                "fRO": 0.96,
+                "f1QRB": 0.99,
+                "fCZ": 0.92,
+            },
+        }
+
+        calibration = calibration_metadata(device)
+
+        assert calibration["avg_readout_error"] == pytest.approx(0.04)
+        assert calibration["avg_1q_gate_error"] == pytest.approx(0.01)
+        assert calibration["avg_2q_gate_error"] == pytest.approx(0.08)
+
+    def test_braket_calibration_ignores_vendor_tokens_for_unknown_vendor(self):
+        device = Mock(spec=BraketDevice)
+        device.num_qubits = 2
+        device._provider_name = "Unknown Vendor"
+        device.metadata.return_value = {
+            "num_qubits": 2,
+            "calibration": {
+                "fRO": 0.96,
+                "spam": 0.97,
+                "f1QRB": 0.99,
+                "fCZ": 0.92,
+            },
+        }
+
+        assert calibration_metadata(device) == {}
+
+    def test_braket_calibration_handles_circular_metadata(self):
+        device = Mock(spec=BraketDevice)
+        device.num_qubits = 2
+        device._provider_name = "Amazon Braket"
+        calibration_payload: dict[str, object] = {
+            "T1": {"value": 100, "unit": "us"},
+        }
+        calibration_payload["loop"] = calibration_payload
+        device.metadata.return_value = {
+            "num_qubits": 2,
+            "calibration": calibration_payload,
+        }
+
+        calibration = calibration_metadata(device)
+
+        assert calibration["avg_t1_s"] == pytest.approx(100e-6)
+
     def test_azure_device_zero_qubits(self):
         device = Mock(spec=AzureQuantumDevice)
         device.metadata.return_value = {"num_qubits": 0}
