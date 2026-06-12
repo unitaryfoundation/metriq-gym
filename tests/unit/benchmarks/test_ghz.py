@@ -104,6 +104,19 @@ class TestBuildGhzCircuits:
         with pytest.raises(ValueError, match="phases required"):
             build_ghz_circuits(graph, num_qubits=4, method="parity_oscillation")
 
+    def test_num_qubits_exceeds_device_raises(self):
+        graph = rx.generators.path_graph(3)
+        with pytest.raises(ValueError, match="device only exposes"):
+            build_ghz_circuits(graph, num_qubits=5, method="dfe")
+
+    def test_unreachable_qubits_via_bfs_raises(self):
+        # Two disjoint components of 3 nodes each: 0-1-2 and 3-4-5
+        graph = rx.PyGraph()
+        graph.add_nodes_from(range(6))
+        graph.add_edges_from_no_data([(0, 1), (1, 2), (3, 4), (4, 5)])
+        with pytest.raises(ValueError, match="connectivity graph may"):
+            build_ghz_circuits(graph, num_qubits=6, method="dfe")
+
 
 class TestPostSelectResults:
     def test_no_flags(self):
@@ -142,6 +155,23 @@ class TestEstimateFidelityDfe:
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0)
 
+    def test_ghz_minus_treated_same_as_ghz_plus(self):
+        # GHZ- = (|000> - |111>)/sqrt(2) — X-basis measurements give purely
+        # odd-parity outcomes. Without abs() the coherence would come back as
+        # -1.0 and the fidelity lower bound (pop + coh)/2 would collapse to 0
+        # despite the state having perfect off-diagonal magnitude.
+        n = 3
+        z_counts = {"000": 500, "111": 500}
+        x_counts = {
+            "001": 250,
+            "010": 250,
+            "100": 250,
+            "111": 250,
+        }  # all odd parity
+        pop, coh, _, _ = estimate_fidelity_dfe(z_counts, x_counts, n, num_flag_qubits=0)
+        assert pop == pytest.approx(1.0)
+        assert coh == pytest.approx(1.0)
+
     def test_maximally_mixed(self):
         n = 2
         # Uniform distribution over all 4 bitstrings
@@ -169,7 +199,11 @@ class TestEstimateFidelityOscillation:
             total = 1000
             even = int(total * (1 + parity) / 2)
             odd = total - even
-            osc_counts_list.append({"00": even, "01": odd})
+            # Real GHZ circuits return n-bit measurement outcomes — use any
+            # even-parity / odd-parity 4-bit labels here. The estimator only
+            # counts "1"s in each bitstring, so labels are length-agnostic,
+            # but matching the real input shape avoids confusing future readers.
+            osc_counts_list.append({"0000": even, "0001": odd})
 
         z_counts = {"0000": 500, "1111": 500}
         pop, coh, _, _ = estimate_fidelity_oscillation(

@@ -18,6 +18,7 @@ References:
       arXiv:2409.15302 (2024).
 """
 
+import logging
 from collections import deque
 from dataclasses import dataclass, field
 
@@ -39,6 +40,9 @@ from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -109,8 +113,18 @@ def build_ghz_circuits(
     Returns:
         (circuits, data_qubits, flag_qubits) where circuits is the list of
         verification circuits and data/flag_qubits are the physical qubit indices used.
+
+    Raises:
+        ValueError: if the device has fewer than `num_qubits` qubits or if a
+            BFS from the root cannot reach `num_qubits` distinct qubits
+            (e.g. disconnected connectivity graph).
     """
     total_device_qubits = graph.num_nodes()
+    if num_qubits > total_device_qubits:
+        raise ValueError(
+            f"Requested {num_qubits} qubits but device only exposes "
+            f"{total_device_qubits} qubits in its connectivity graph"
+        )
 
     # BFS from node 0 to select data qubits
     root = 0
@@ -120,6 +134,12 @@ def build_ghz_circuits(
         data_qubits_set.add(ctrl)
         data_qubits_set.add(targ)
     data_qubits = sorted(data_qubits_set)[:num_qubits]
+    if len(data_qubits) < num_qubits:
+        raise ValueError(
+            f"BFS from root {root} could only reach {len(data_qubits)} of the "
+            f"{num_qubits} requested qubits; the device connectivity graph may "
+            f"be disconnected"
+        )
 
     # Select flag qubits from neighbors not in data set
     flag_qubits = _select_flag_qubits(graph, set(data_qubits), num_flag_qubits)
@@ -228,8 +248,12 @@ def estimate_fidelity_dfe(
     population = (z_ps.get("0" * n, 0) + z_ps.get("1" * n, 0)) / total_z
     p_err = np.sqrt(population * (1 - population) / total_z)
 
+    # Use the magnitude of the X-basis parity. The signed value distinguishes
+    # GHZ+ from GHZ-, but for a fidelity *lower bound* of the form
+    # (population + coherence) / 2 we want the off-diagonal magnitude so that
+    # GHZ-like states with a relative phase are not penalized.
     even_x = sum(c for b, c in x_ps.items() if b.count("1") % 2 == 0)
-    coherence = (2 * even_x - total_x) / total_x
+    coherence = abs((2 * even_x - total_x) / total_x)
     c_err = np.sqrt((1 - coherence**2) / total_x)
 
     return population, coherence, p_err, c_err
@@ -274,7 +298,12 @@ def estimate_fidelity_oscillation(
         popt, pcov = curve_fit(osc_func, np.array(phases), np.array(parities), p0=[0.5, 0])
         coherence = abs(popt[0])
         c_err = np.sqrt(pcov[0, 0])
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "Parity oscillation fit failed for GHZ benchmark "
+            "(returning coherence=0); root cause: %s",
+            exc,
+        )
         coherence = 0.0
         c_err = 0.0
 
