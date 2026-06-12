@@ -229,16 +229,14 @@ def _entry_values(
 ) -> list[tuple[float, str | None]]:
     if _depth > _MAX_METADATA_WALK_DEPTH:
         return []
+    seen = set() if _seen is None else _seen
     if isinstance(value, Mapping) or (
         isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))
     ):
-        seen = set() if _seen is None else _seen
         value_id = id(value)
         if value_id in seen:
             return []
         seen.add(value_id)
-    else:
-        seen = _seen
 
     if isinstance(value, Mapping):
         unit = value.get("unit")
