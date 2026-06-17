@@ -77,6 +77,21 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
     return counts
 
 
+def count_gates(circuit: QuantumCircuit) -> GateCounts:
+    """Count circuit operations by the number of qubits they act on."""
+    return _count_gates(circuit)
+
+
+def two_qubit_gate_count(circuit: QuantumCircuit) -> int:
+    """Return the number of two-qubit gates in a circuit."""
+    return count_gates(circuit).two_qubit
+
+
+def two_qubit_gate_counts(circuits: Iterable[QuantumCircuit]) -> list[int]:
+    """Return the two-qubit gate count for each circuit."""
+    return [two_qubit_gate_count(circuit) for circuit in circuits]
+
+
 HQCFunction = Callable[[GateCounts, int, int], float]
 
 

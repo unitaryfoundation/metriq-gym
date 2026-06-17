@@ -170,7 +170,6 @@ def calc_random_stats(num_qubits, graph_info, shots, num_random_trials, optimal_
 
 @dataclass
 class LinearRampQAOAData(BenchmarkData):
-    provider_job_ids: list[str]
     num_qubits: int
     graph_info: list[list]
     graph_type: GraphType

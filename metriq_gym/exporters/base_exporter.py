@@ -34,6 +34,12 @@ class BaseExporter(ABC):
             "job_type": self.metriq_gym_job.job_type.value,
             "results": results_block,
         }
+        for key in (
+            "input_two_qubit_gate_counts",
+            "transpiled_two_qubit_gate_counts",
+        ):
+            if key in self.metriq_gym_job.data:
+                record[key] = self.metriq_gym_job.data[key]
 
         runtime_seconds = getattr(self.metriq_gym_job, "runtime_seconds", None)
         if runtime_seconds is not None:

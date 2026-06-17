@@ -166,6 +166,9 @@ def test_dispatch_instantiated_calls_device_run():
 
     assert isinstance(result, ClopsData)
     device.run.assert_called_once()
+    assert result.input_two_qubit_gate_counts == result.transpiled_two_qubit_gate_counts
+    assert len(result.input_two_qubit_gate_counts) == 3
+    assert all(count > 0 for count in result.input_two_qubit_gate_counts)
     # Check circuits were passed
     circuits_arg = device.run.call_args[0][0]
     assert len(circuits_arg) == 3  # num_circuits=3
@@ -203,6 +206,9 @@ def test_dispatch_parameterized_calls_submit_with_pub():
         result = clops.dispatch_handler(device)
 
     assert isinstance(result, ClopsData)
+    assert result.input_two_qubit_gate_counts == result.transpiled_two_qubit_gate_counts
+    assert len(result.input_two_qubit_gate_counts) == 3
+    assert len(set(result.input_two_qubit_gate_counts)) == 1
     clops._submit_ibm_with_options.assert_called_once()
     kwargs = clops._submit_ibm_with_options.call_args
     pubs = kwargs.kwargs["pubs"]
@@ -247,6 +253,9 @@ def test_dispatch_twirled_calls_submit_with_twirling_opts():
         result = clops.dispatch_handler(device)
 
     assert isinstance(result, ClopsData)
+    assert result.input_two_qubit_gate_counts == result.transpiled_two_qubit_gate_counts
+    assert len(result.input_two_qubit_gate_counts) == 3
+    assert len(set(result.input_two_qubit_gate_counts)) == 1
     clops._submit_ibm_with_options.assert_called_once()
     kwargs = clops._submit_ibm_with_options.call_args.kwargs
     # Should have a single fixed circuit (no parameters)

@@ -1,9 +1,9 @@
 import argparse
+from dataclasses import dataclass, field
 from typing import Iterable, TYPE_CHECKING, Protocol
 from abc import ABC
 
 from pydantic import BaseModel, computed_field
-from dataclasses import dataclass
 
 
 if TYPE_CHECKING:
@@ -27,6 +27,8 @@ class BenchmarkData:
     """Stores intermediate data from pre-processing and dispatching"""
 
     provider_job_ids: list[str]
+    input_two_qubit_gate_counts: list[int] = field(default_factory=list, kw_only=True)
+    transpiled_two_qubit_gate_counts: list[int] = field(default_factory=list, kw_only=True)
 
     @classmethod
     def from_quantum_job(cls, quantum_job, **kwargs):

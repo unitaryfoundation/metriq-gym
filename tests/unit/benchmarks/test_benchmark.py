@@ -41,6 +41,26 @@ class TestBenchmarkData:
         assert data.provider_job_ids == [TEST_JOB_ID]
         assert data.extra == 42
 
+    def test_gate_count_fields_default_to_empty_lists(self):
+        data = BenchmarkData(provider_job_ids=["job"])
+
+        assert data.input_two_qubit_gate_counts == []
+        assert data.transpiled_two_qubit_gate_counts == []
+
+    def test_from_quantum_job_preserves_gate_count_kwargs(self):
+        mock_job = MagicMock(spec=QuantumJob)
+        mock_job.id = "job_with_counts"
+
+        data = BenchmarkData.from_quantum_job(
+            mock_job,
+            input_two_qubit_gate_counts=[1, 2],
+            transpiled_two_qubit_gate_counts=[3, 4],
+        )
+
+        assert data.provider_job_ids == ["job_with_counts"]
+        assert data.input_two_qubit_gate_counts == [1, 2]
+        assert data.transpiled_two_qubit_gate_counts == [3, 4]
+
 
 class TestBenchmarkDirections:
     def test_no_direction_required_for_float_metric(self):
