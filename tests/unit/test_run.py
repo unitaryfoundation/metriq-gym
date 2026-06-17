@@ -128,6 +128,22 @@ def test_setup_device_invalid_device(mock_provider, patch_load_provider, caplog)
     assert "Devices available: device1, device2" in caplog.text
 
 
+def test_setup_device_unexpected_device_value_error_propagates(
+    mock_provider, patch_load_provider, caplog
+):
+    caplog.set_level(logging.INFO)
+    mock_provider.get_device.side_effect = ValueError("provider construction bug")
+    mock_provider.get_devices.return_value = [FakeDevice(id="device1"), FakeDevice(id="device2")]
+
+    provider_name = "test_provider"
+    backend_name = "non_existent_backend"
+
+    with pytest.raises(ValueError, match="provider construction bug"):
+        setup_device(provider_name, backend_name)
+
+    assert "Devices available" not in caplog.text
+
+
 def test_setup_device_empty_device(mock_provider, patch_load_provider, caplog):
     caplog.set_level(logging.INFO)
     mock_provider.get_device.side_effect = QbraidError()
