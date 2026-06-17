@@ -77,6 +77,44 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
     return counts
 
 
+def count_two_qubit_gates(circuit: QuantumCircuit) -> int:
+    """Return the number of two-qubit *gates* in a circuit.
+
+    Only genuine two-qubit gate operations are counted. Non-gate instructions
+    are skipped: directives such as ``barrier`` (which can span two qubits but
+    are not gates), as well as ``measure`` and ``reset``. This is the public
+    helper benchmarks use to record per-circuit 2Q gate counts.
+    """
+    count = 0
+    for inst in circuit.data:
+        operation = inst.operation
+        if getattr(operation, "_directive", False):
+            continue
+        if operation.name in ("measure", "reset"):
+            continue
+        if len(inst.qubits) == 2:
+            count += 1
+    return count
+
+
+def two_qubit_gate_counts(
+    circuits: "QuantumCircuit | Iterable",
+) -> list[int]:
+    """Return per-circuit two-qubit gate counts in iteration order.
+
+    Accepts a single circuit, a flat iterable of circuits, or a nested
+    iterable of circuits (e.g. BSEQ's list-of-circuit-sets). The result is a
+    flat ``list[int]`` with one entry per circuit, flattened in traversal
+    order so it lines up with the order circuits are submitted to the device.
+    """
+    if isinstance(circuits, QuantumCircuit):
+        return [count_two_qubit_gates(circuits)]
+    counts: list[int] = []
+    for item in circuits:
+        counts.extend(two_qubit_gate_counts(item))
+    return counts
+
+
 HQCFunction = Callable[[GateCounts, int, int], float]
 
 

@@ -39,7 +39,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
 )
 from metriq_gym.qplatform.device import connectivity_graph, connectivity_graph_for_gate
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, two_qubit_gate_counts
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -313,12 +313,16 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
     def _build_circuits(
         self, device: "QuantumDevice"
-    ) -> tuple[list, list[int], list[list[tuple[int, int]]], str, list[str]]:
+    ) -> tuple[list, list[int], list[list[tuple[int, int]]], str, list[str], list[int]]:
         """Build LayerFidelity circuits.
 
         Returns:
             Tuple of (circuits, qubit_chain, two_disjoint_layers,
-                      two_qubit_gate, one_qubit_basis_gates).
+                      two_qubit_gate, one_qubit_basis_gates,
+                      input_two_qubit_gate_counts). ``circuits`` are the
+                      circuits that will be submitted (transpiled when
+                      ``decompose_clifford_ops`` is set); the counts are taken
+                      from the logical pre-transpilation circuits.
         """
         num_qubits_in_chain = self.params.num_qubits_in_chain
         two_qubit_gate = self.params.two_qubit_gate
@@ -356,21 +360,42 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         )
 
         lfexp.experiment_options.max_circuits = 2 * num_samples * len(lengths)
+        # The logical circuits define the input 2Q counts. When
+        # decompose_clifford_ops is set, the submitted circuits are the
+        # transpiled ones, which can carry a different 2Q count.
+        input_circuits = lfexp.circuits()
         if self.params.decompose_clifford_ops:
             circuits = lfexp._transpiled_circuits()
         else:
-            circuits = lfexp.circuits()
+            circuits = input_circuits
+        input_two_qubit_gate_counts = two_qubit_gate_counts(input_circuits)
 
-        return circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates
+        return (
+            circuits,
+            qubit_chain,
+            two_disjoint_layers,
+            two_qubit_gate,
+            one_qubit_basis_gates,
+            input_two_qubit_gate_counts,
+        )
 
     def dispatch_handler(self, device: "QuantumDevice") -> EPLGData:
         """Generate circuits, submit to device, return EPLGData."""
-        circuits, qubit_chain, two_disjoint_layers, two_qubit_gate, one_qubit_basis_gates = (
-            self._build_circuits(device)
-        )
+        (
+            circuits,
+            qubit_chain,
+            two_disjoint_layers,
+            two_qubit_gate,
+            one_qubit_basis_gates,
+            input_two_qubit_gate_counts,
+        ) = self._build_circuits(device)
 
         shots = self.params.shots
         quantum_job = device.run(circuits, shots=shots)
+
+        # Counts from the circuits just before submission reflect any
+        # transpilation/optimization the dispatch path performed.
+        transpiled_two_qubit_gate_counts = two_qubit_gate_counts(circuits)
 
         # Serialize the two_disjoint_layers as nested lists
         serialized_layers = [[list(edge) for edge in layer] for layer in two_disjoint_layers]
@@ -386,6 +411,8 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             seed=self.params.seed,
             two_qubit_gate=two_qubit_gate,
             one_qubit_basis_gates=one_qubit_basis_gates,
+            input_two_qubit_gate_counts=input_two_qubit_gate_counts,
+            transpiled_two_qubit_gate_counts=transpiled_two_qubit_gate_counts,
         )
 
     def poll_handler(
@@ -478,5 +505,5 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
         """Return circuit batches for resource estimation."""
-        circuits, _, _, _, _ = self._build_circuits(device)
+        circuits, *_ = self._build_circuits(device)
         return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
