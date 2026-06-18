@@ -80,17 +80,14 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
 def count_two_qubit_gates(circuit: QuantumCircuit) -> int:
     """Return the number of two-qubit *gates* in a circuit.
 
-    Only genuine two-qubit gate operations are counted. Non-gate instructions
-    are skipped: directives such as ``barrier`` (which can span two qubits but
-    are not gates), as well as ``measure`` and ``reset``. This is the public
-    helper benchmarks use to record per-circuit 2Q gate counts.
+    Only genuine two-qubit gate operations are counted. ``barrier`` (which can
+    span two qubits but is not a gate), ``measure``, and ``reset`` are skipped by
+    name so the count is not inflated. This is the public helper benchmarks use to
+    record per-circuit 2Q gate counts.
     """
     count = 0
     for inst in circuit.data:
-        operation = inst.operation
-        if getattr(operation, "_directive", False):
-            continue
-        if operation.name in ("measure", "reset"):
+        if inst.operation.name in ("barrier", "measure", "reset"):
             continue
         if len(inst.qubits) == 2:
             count += 1

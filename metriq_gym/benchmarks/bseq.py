@@ -203,8 +203,10 @@ class BSEQ(Benchmark):
         topology_graph = connectivity_graph(device)
         circuit_sets, coloring = build_bseq_circuits(topology_graph, max_colors)
 
-        # Flatten the per-color circuit sets into submission order. No local
-        # transpilation pass, so transpiled counts mirror the input.
+        # Flatten the per-color circuit sets into one flat list, one entry per
+        # circuit in submission order (the per-color grouping is recoverable from
+        # ``coloring`` if a consumer needs it). No local transpilation pass, so
+        # transpiled counts mirror the input.
         counts = two_qubit_gate_counts(circuit_sets)
 
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
