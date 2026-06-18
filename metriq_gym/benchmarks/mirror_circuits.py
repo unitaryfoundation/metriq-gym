@@ -43,7 +43,7 @@ from metriq_gym.qplatform.device import connectivity_graph
 
 from typing import TYPE_CHECKING
 
-from metriq_gym.resource_estimation import CircuitBatch, two_qubit_gate_counts
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -559,7 +559,7 @@ class MirrorCircuits(Benchmark):
         circuits, expected_bitstrings, actual_width = self._build_circuits(device)
 
         # No local transpilation pass, so transpiled counts mirror the input.
-        counts = two_qubit_gate_counts(circuits)
+        counts = [count_two_qubit_gates(c) for c in circuits]
 
         return MirrorCircuitsData.from_quantum_job(
             quantum_job=device.run(circuits, shots=self.params.shots),

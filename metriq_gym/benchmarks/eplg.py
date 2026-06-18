@@ -39,7 +39,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
 )
 from metriq_gym.qplatform.device import connectivity_graph, connectivity_graph_for_gate
-from metriq_gym.resource_estimation import CircuitBatch, two_qubit_gate_counts
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -368,7 +368,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
             circuits = lfexp._transpiled_circuits()
         else:
             circuits = input_circuits
-        input_two_qubit_gate_counts = two_qubit_gate_counts(input_circuits)
+        input_two_qubit_gate_counts = [count_two_qubit_gates(c) for c in input_circuits]
 
         return (
             circuits,
@@ -395,7 +395,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
 
         # Counts from the circuits just before submission reflect any
         # transpilation/optimization the dispatch path performed.
-        transpiled_two_qubit_gate_counts = two_qubit_gate_counts(circuits)
+        transpiled_two_qubit_gate_counts = [count_two_qubit_gates(c) for c in circuits]
 
         # Serialize the two_disjoint_layers as nested lists
         serialized_layers = [[list(edge) for edge in layer] for layer in two_disjoint_layers]

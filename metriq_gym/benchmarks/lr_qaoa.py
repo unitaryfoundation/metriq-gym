@@ -45,7 +45,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
-from metriq_gym.resource_estimation import CircuitBatch, two_qubit_gate_counts
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -449,7 +449,7 @@ class LinearRampQAOA(Benchmark):
         )
 
         # No local transpilation pass, so transpiled counts mirror the input.
-        counts = two_qubit_gate_counts(circuits_with_params)
+        counts = [count_two_qubit_gates(c) for c in circuits_with_params]
 
         return LinearRampQAOAData.from_quantum_job(
             quantum_job=device.run(circuits_with_params, shots=self.params.shots),

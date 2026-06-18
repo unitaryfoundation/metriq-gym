@@ -78,38 +78,16 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
 
 
 def count_two_qubit_gates(circuit: QuantumCircuit) -> int:
-    """Return the number of two-qubit *gates* in a circuit.
+    """Number of two-qubit gates in a circuit.
 
-    Only genuine two-qubit gate operations are counted. ``barrier`` (which can
-    span two qubits but is not a gate), ``measure``, and ``reset`` are skipped by
-    name so the count is not inflated. This is the public helper benchmarks use to
-    record per-circuit 2Q gate counts.
+    Barriers, measurements, and resets are skipped by name so they don't inflate
+    the count (a barrier can span two qubits but isn't a gate).
     """
-    count = 0
-    for inst in circuit.data:
-        if inst.operation.name in ("barrier", "measure", "reset"):
-            continue
-        if len(inst.qubits) == 2:
-            count += 1
-    return count
-
-
-def two_qubit_gate_counts(
-    circuits: "QuantumCircuit | Iterable",
-) -> list[int]:
-    """Return per-circuit two-qubit gate counts in iteration order.
-
-    Accepts a single circuit, a flat iterable of circuits, or a nested
-    iterable of circuits (e.g. BSEQ's list-of-circuit-sets). The result is a
-    flat ``list[int]`` with one entry per circuit, flattened in traversal
-    order so it lines up with the order circuits are submitted to the device.
-    """
-    if isinstance(circuits, QuantumCircuit):
-        return [count_two_qubit_gates(circuits)]
-    counts: list[int] = []
-    for item in circuits:
-        counts.extend(two_qubit_gate_counts(item))
-    return counts
+    return sum(
+        1
+        for inst in circuit.data
+        if inst.operation.name not in ("barrier", "measure", "reset") and len(inst.qubits) == 2
+    )
 
 
 HQCFunction = Callable[[GateCounts, int, int], float]

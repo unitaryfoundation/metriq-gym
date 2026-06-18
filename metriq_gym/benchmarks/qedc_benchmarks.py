@@ -32,7 +32,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.constants import JobType
 from metriq_gym.helpers.task_helpers import flatten_counts
-from metriq_gym.resource_estimation import CircuitBatch, two_qubit_gate_counts
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 from _common import metrics
 
@@ -297,7 +297,7 @@ class QEDCBenchmark(Benchmark):
         circuits, circuit_metrics, circuit_identifiers = self._build_circuits(device)
 
         # No local transpilation pass, so transpiled counts mirror the input.
-        counts = two_qubit_gate_counts(circuits)
+        counts = [count_two_qubit_gates(c) for c in circuits]
 
         return QEDCData.from_quantum_job(
             quantum_job=device.run(circuits, shots=self.params.shots),

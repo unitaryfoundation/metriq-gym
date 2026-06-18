@@ -23,7 +23,7 @@ from metriq_gym.benchmarks.eplg import EPLG, EPLGData
 from metriq_gym.constants import JobType
 from metriq_gym.exporters.dict_exporter import DictExporter
 from metriq_gym.job_manager import MetriqGymJob
-from metriq_gym.resource_estimation import count_two_qubit_gates, two_qubit_gate_counts
+from metriq_gym.resource_estimation import count_two_qubit_gates
 
 
 def _circuit_with_2q_gates(n: int) -> QuantumCircuit:
@@ -49,21 +49,6 @@ class TestCountingHelpers:
         qc = _circuit_with_2q_gates(2)
         qc.measure_all()
         assert count_two_qubit_gates(qc) == 2
-
-    def test_two_qubit_gate_counts_single_circuit(self):
-        assert two_qubit_gate_counts(_circuit_with_2q_gates(3)) == [3]
-
-    def test_two_qubit_gate_counts_flat_list(self):
-        circuits = [_circuit_with_2q_gates(1), _circuit_with_2q_gates(2)]
-        assert two_qubit_gate_counts(circuits) == [1, 2]
-
-    def test_two_qubit_gate_counts_nested_in_order(self):
-        # e.g. BSEQ's list-of-circuit-sets is flattened in submission order.
-        nested = [
-            [_circuit_with_2q_gates(1)],
-            [_circuit_with_2q_gates(2), _circuit_with_2q_gates(3)],
-        ]
-        assert two_qubit_gate_counts(nested) == [1, 2, 3]
 
 
 class TestBenchmarkDataFields:

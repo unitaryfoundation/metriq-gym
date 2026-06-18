@@ -47,7 +47,7 @@ from metriq_gym.qplatform.device import (
     connectivity_graph_for_gate,
     pruned_connectivity_graph,
 )
-from metriq_gym.resource_estimation import CircuitBatch, two_qubit_gate_counts
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -392,7 +392,7 @@ class Clops(Benchmark):
         )
         # CLOPS submits circuits directly without a local transpilation pass, so
         # the transpiled counts mirror the input counts.
-        counts = two_qubit_gate_counts(circuits)
+        counts = [count_two_qubit_gates(c) for c in circuits]
         if isinstance(device, QiskitBackend) and self.params.use_session:
             return ClopsData.from_quantum_job(
                 self._submit_ibm_with_options(
@@ -426,7 +426,7 @@ class Clops(Benchmark):
         # One template stands in for num_circuits circuits of identical gate
         # structure; report the count once per logical circuit for consistency
         # with the instantiated mode. No local transpilation, so input == transpiled.
-        counts = two_qubit_gate_counts(template) * self.params.num_circuits
+        counts = [count_two_qubit_gates(template)] * self.params.num_circuits
         return ClopsData.from_quantum_job(
             self._submit_ibm_with_options(device, pubs=[pub], use_session=self.params.use_session),
             input_two_qubit_gate_counts=counts,
@@ -450,7 +450,7 @@ class Clops(Benchmark):
         )
         # The Sampler twirls one template into num_circuits randomized variants,
         # each with the same 2Q gate structure. No local transpilation pass.
-        counts = two_qubit_gate_counts(template) * self.params.num_circuits
+        counts = [count_two_qubit_gates(template)] * self.params.num_circuits
         return ClopsData.from_quantum_job(
             self._submit_ibm_with_options(
                 device,

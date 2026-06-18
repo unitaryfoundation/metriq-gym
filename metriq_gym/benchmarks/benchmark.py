@@ -24,19 +24,12 @@ def flatten_job_ids(job: SupportsId | Iterable[SupportsId]) -> list[str]:
 
 @dataclass
 class BenchmarkData:
-    """Stores intermediate data from pre-processing and dispatching.
-
-    Construction contract: ``provider_job_ids`` is a required positional field,
-    while the gate-count fields are keyword-only. The keyword-only declaration is
-    what lets subclasses keep adding their own required (non-default) positional
-    fields after the base without hitting the dataclass "non-default argument
-    follows default argument" rule. Any direct ``BenchmarkData(...)`` or subclass
-    construction must therefore pass the gate-count values as keyword arguments.
-    """
+    """Stores intermediate data from pre-processing and dispatching"""
 
     provider_job_ids: list[str]
-    # Two-qubit gate counts, one entry per circuit in dispatch order. Populated by
-    # benchmarks that build circuits; left as None for benchmarks not yet wired up.
+    # Two-qubit gate counts per circuit, in dispatch order; None when a benchmark
+    # doesn't set them. Keyword-only so subclasses can still add positional fields
+    # after the base, and so they're passed by keyword when constructing directly.
     input_two_qubit_gate_counts: list[int] | None = field(default=None, kw_only=True)
     transpiled_two_qubit_gate_counts: list[int] | None = field(default=None, kw_only=True)
 
