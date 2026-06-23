@@ -14,6 +14,7 @@ class JobType(StrEnum):
     QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
     LR_QAOA = "Linear Ramp QAOA"
     GHZ = "GHZ"
+    QAT_OLE = "QAT OLE"
 
 
 SCHEMA_MAPPING = {
@@ -29,4 +30,5 @@ SCHEMA_MAPPING = {
     JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.schema.json",
     JobType.LR_QAOA: "lr_qaoa.schema.json",
     JobType.GHZ: "ghz.schema.json",
+    JobType.QAT_OLE: "qat_ole.schema.json",
 }

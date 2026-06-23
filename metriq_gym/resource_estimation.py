@@ -77,6 +77,19 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
     return counts
 
 
+def count_two_qubit_gates(circuit: QuantumCircuit) -> int:
+    """Number of two-qubit gates in a circuit.
+
+    Barriers, measurements, and resets are skipped by name so they don't inflate
+    the count (a barrier can span two qubits but isn't a gate).
+    """
+    return sum(
+        1
+        for inst in circuit.data
+        if inst.operation.name not in ("barrier", "measure", "reset") and len(inst.qubits) == 2
+    )
+
+
 HQCFunction = Callable[[GateCounts, int, int], float]
 
 
