@@ -36,7 +36,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -347,12 +347,17 @@ class GHZBenchmark(Benchmark):
 
         quantum_job = device.run(circuits, shots=self.params.shots)
 
+        # No local transpilation pass, so transpiled counts mirror the input.
+        counts = [count_two_qubit_gates(c) for c in circuits]
+
         return GHZData.from_quantum_job(
             quantum_job,
             num_qubits=self.params.num_qubits,
             method=method,
             phases=phases,
             num_flag_qubits=num_flag_qubits,
+            input_two_qubit_gate_counts=counts,
+            transpiled_two_qubit_gate_counts=counts,
         )
 
     def poll_handler(
