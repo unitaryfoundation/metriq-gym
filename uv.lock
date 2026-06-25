@@ -165,21 +165,19 @@ wheels = [
 
 [[package]]
 name = "azure-quantum"
-version = "2.2.0"
+version = "3.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
     { name = "azure-identity" },
     { name = "azure-storage-blob" },
     { name = "deprecated" },
-    { name = "markdown" },
     { name = "msrest" },
     { name = "numpy" },
-    { name = "python-markdown-math" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/65/b4c2426c92be4bb439e9970680531f8ef0ad556f425ac85d6048c1b04c46/azure-quantum-2.2.0.tar.gz", hash = "sha256:f8989fde2f472a009ccc80ac558fc9cf3aebd725aa65182c30d7c0274bce3b43", size = 112600, upload-time = "2024-10-22T23:37:39.899Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/1d/d791eedf1c0cb934d0db05577bd0f486226bfa273870659afbad63bc9dab/azure_quantum-3.10.0.tar.gz", hash = "sha256:870322164bdfa67dc79e434d8c5c5153351c601ff31d607d1f00116165735f14", size = 132599, upload-time = "2026-05-27T22:59:22.693Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/a2/18040275f3c91e11b8a0ba4b82a680a3efa6139fd2e52ced73f861fb0758/azure_quantum-2.2.0-py3-none-any.whl", hash = "sha256:d68663b0c514a0d5dcce208a6dbf601baf6760f1b4ee0ef29b32b73ff64de9ea", size = 146079, upload-time = "2024-10-22T23:37:41.823Z" },
+    { url = "https://files.pythonhosted.org/packages/24/64/b81b323e4bdb2a91893258ee031b5d2c0472d67e1f8d5368c21102517255/azure_quantum-3.10.0-py3-none-any.whl", hash = "sha256:01ac7722f2f42a479cc1cc2bc54270c88133ea2bc0da3095e9162b40e3dbd096", size = 166765, upload-time = "2026-05-27T22:59:24.022Z" },
 ]
 
 [[package]]
@@ -1363,14 +1361,14 @@ requires-dist = [
     { name = "pyqpanda3", specifier = ">=0.3.2" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.78.0" },
-    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit"], specifier = ">=0.10.0,<0.12.2" },
+    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit"], specifier = ">=0.12.0,<0.13.0" },
     { name = "qbraid-core", specifier = ">=0.1.45,<0.4.0" },
     { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
     { name = "qiskit-experiments", specifier = ">=0.9.0,<0.15.0" },
     { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.48.0" },
     { name = "qnexus", specifier = ">=0.39.0,<1.0.0" },
-    { name = "rustworkx", specifier = ">=0.17.1,<0.18.0" },
+    { name = "rustworkx", specifier = ">=0.17.1,<0.19.0" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
     { name = "tabulate", specifier = ">=0.9.0,<0.11.0" },
     { name = "typer", specifier = ">=0.21.1,<1.0.0" },
@@ -2235,18 +2233,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-markdown-math"
-version = "0.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "markdown" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/68/fbea05ec6fb318bdcf56ea47596605614554f51d77bfd14f6fb481139ad8/python_markdown_math-0.9.tar.gz", hash = "sha256:567395553dc4941e79b3789a1096dcabb3fda9539d150d558ef3507948b264a3", size = 8680, upload-time = "2025-04-10T10:10:31.84Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/eb/68/ecf3535c40845de2efd8ac2d092dd5fca0868219fa3684d9e58ef7abeece/python_markdown_math-0.9-py3-none-any.whl", hash = "sha256:ac9932df517a5c0f6d01c56e7a44d065eca4a420893ac45f7a6937c67cb41e86", size = 6046, upload-time = "2025-04-10T10:10:30.318Z" },
-]
-
-[[package]]
 name = "pytket"
 version = "2.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2384,7 +2370,7 @@ wheels = [
 
 [[package]]
 name = "qbraid"
-version = "0.11.1"
+version = "0.12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -2396,14 +2382,13 @@ dependencies = [
     { name = "rustworkx" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3c/1e/f9c56e1ea3bedae952279c19f8d4b8bd4d2fb35532c4fb88af4617f1fba3/qbraid-0.11.1.tar.gz", hash = "sha256:bbdabd181b400f146437552cadb923d38062cc06f9b174927807ed37d922bccf", size = 549477, upload-time = "2026-02-24T17:58:33.624Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/94/cf1d036345861bed1c3af175e6bfc9922b563b86694abe0594ced2961cc9/qbraid-0.12.1.tar.gz", hash = "sha256:af3e74ac0cb134a88235e4d47d464467f4644f33d70d4356d4ad19ea6bae66f1", size = 647480, upload-time = "2026-05-17T16:07:42.906Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/ab/2e4ef35e5f014420f71282aefd1c80d631fbde6d6a1c992338130eee3b54/qbraid-0.11.1-py3-none-any.whl", hash = "sha256:f459c6bc261117b64530c064ca27d3c92af7427fbed543bd118d2db84f0b5180", size = 276005, upload-time = "2026-02-24T17:58:31.98Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/59/b283431c53b3846ec8c03ae360654ca8818597b3e822b9737da7d8b6dbe9/qbraid-0.12.1-py3-none-any.whl", hash = "sha256:2c51a70be7889d1cc27a805461272fa81d4c497754828713660cc7769c7770ca", size = 326708, upload-time = "2026-05-17T16:07:41.307Z" },
 ]
 
 [package.optional-dependencies]
 azure = [
-    { name = "azure-identity" },
     { name = "azure-quantum" },
 ]
 braket = [
@@ -2422,7 +2407,7 @@ qiskit = [
 
 [[package]]
 name = "qbraid-core"
-version = "0.2.2"
+version = "0.3.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
@@ -2430,9 +2415,9 @@ dependencies = [
     { name = "requests" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0f/62/6c2613b6eadf9753806cb2d4885386cb7902df4a804aba6e6a3eb274216f/qbraid_core-0.2.2.tar.gz", hash = "sha256:bea160db65b332f36ee4216d3dd1dd2326f0e29cb86ad390f8b6b1e21ff16084", size = 248390, upload-time = "2026-04-10T23:23:57.247Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/eb/1b016ff7e10226ea208a3b5a6044f5561e4e937f457077a9543612d9150e/qbraid_core-0.3.4.tar.gz", hash = "sha256:9f628603fcc36ecde656db5039c7588146f47f72495e2f791bb3ad720219b49d", size = 369924, upload-time = "2026-06-08T22:50:19.968Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/58/a4a520a4c33cbced86d69744d23343fc52b766c47b379602446d22f9b0de/qbraid_core-0.2.2-py3-none-any.whl", hash = "sha256:9a8c3a5a6ea44ccd4a8412ef4ecee961c6a05ed54b8fdc277f935883101a2de6", size = 108449, upload-time = "2026-04-10T23:23:56.08Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/03/51e769e8df585c80a7dae68f783c19f8f856d2b83588779b7c5e0e1ba818/qbraid_core-0.3.4-py3-none-any.whl", hash = "sha256:cb0e303b39b3723d00a8d0f36a6f5f76057835b517491fc76dc0b79d2b75378c", size = 246898, upload-time = "2026-06-08T22:50:18.468Z" },
 ]
 
 [[package]]
