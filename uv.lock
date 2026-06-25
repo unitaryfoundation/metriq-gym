@@ -165,7 +165,7 @@ wheels = [
 
 [[package]]
 name = "azure-quantum"
-version = "3.8.2"
+version = "3.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
@@ -175,9 +175,9 @@ dependencies = [
     { name = "msrest" },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/be/88/f85f35f1e3fddd4a0c171e5897b28152b1a4614c9fae7df32ee48b8c2aa1/azure_quantum-3.8.2.tar.gz", hash = "sha256:314779341481917d4324ea89edbf475c0389fd238ddbc96bd2d238d4d3ce5ee6", size = 132462, upload-time = "2026-04-16T00:01:39.128Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/1d/d791eedf1c0cb934d0db05577bd0f486226bfa273870659afbad63bc9dab/azure_quantum-3.10.0.tar.gz", hash = "sha256:870322164bdfa67dc79e434d8c5c5153351c601ff31d607d1f00116165735f14", size = 132599, upload-time = "2026-05-27T22:59:22.693Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/24/28/3415e78e555600c78cc41eb2fad60240fcf2c1486bd2bc1e3c50fef76bbf/azure_quantum-3.8.2-py3-none-any.whl", hash = "sha256:12d01635e5cbd30e6bd342f27d60ddb6caf0c73a467e9313f05bbcaf5f6fd330", size = 166664, upload-time = "2026-04-16T00:01:40.47Z" },
+    { url = "https://files.pythonhosted.org/packages/24/64/b81b323e4bdb2a91893258ee031b5d2c0472d67e1f8d5368c21102517255/azure_quantum-3.10.0-py3-none-any.whl", hash = "sha256:01ac7722f2f42a479cc1cc2bc54270c88133ea2bc0da3095e9162b40e3dbd096", size = 166765, upload-time = "2026-05-27T22:59:24.022Z" },
 ]
 
 [[package]]
@@ -1314,7 +1314,7 @@ dependencies = [
     { name = "pytket-qiskit" },
     { name = "qbraid", extra = ["azure", "braket", "ionq", "qiskit"] },
     { name = "qbraid-core" },
-    { name = "qiskit" },
+    { name = "qiskit", extra = ["qasm3-import"] },
     { name = "qiskit-aer" },
     { name = "qiskit-experiments" },
     { name = "qiskit-ibm-runtime" },
@@ -1361,14 +1361,14 @@ requires-dist = [
     { name = "pyqpanda3", specifier = ">=0.3.2" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.78.0" },
-    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit"], git = "https://github.com/vprusso/qBraid.git?rev=f1344eaccf0cba2a0f28abb01eafd2faf4cc66eb" },
-    { name = "qbraid-core", specifier = ">=0.1.45,<0.3.0" },
-    { name = "qiskit", specifier = ">=1.4.3,<3.0" },
+    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit"], specifier = ">=0.12.0,<0.13.0" },
+    { name = "qbraid-core", specifier = ">=0.1.45,<0.4.0" },
+    { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
-    { name = "qiskit-experiments", specifier = ">=0.9.0,<0.14.0" },
-    { name = "qiskit-ibm-runtime", specifier = ">=0.25.0,<0.47.0" },
+    { name = "qiskit-experiments", specifier = ">=0.9.0,<0.15.0" },
+    { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.48.0" },
     { name = "qnexus", specifier = ">=0.39.0,<1.0.0" },
-    { name = "rustworkx", specifier = ">=0.17.1,<0.18.0" },
+    { name = "rustworkx", specifier = ">=0.17.1,<0.19.0" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
     { name = "tabulate", specifier = ">=0.9.0,<0.11.0" },
     { name = "typer", specifier = ">=0.21.1,<1.0.0" },
@@ -1383,7 +1383,7 @@ dev = [
     { name = "mkdocs", specifier = ">=1.5" },
     { name = "mkdocs-material", specifier = ">=9.0" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.24" },
-    { name = "mypy", specifier = ">=1.18.2,<2.0.0" },
+    { name = "mypy", specifier = ">=1.18.2,<3.0.0" },
     { name = "pre-commit", specifier = ">=4.3.0,<5.0.0" },
     { name = "pytest", specifier = ">=8.4.2,<10.0.0" },
     { name = "ruff", specifier = ">=0.13.2,<0.16.0" },
@@ -2370,8 +2370,8 @@ wheels = [
 
 [[package]]
 name = "qbraid"
-version = "0.11.2.dev0"
-source = { git = "https://github.com/vprusso/qBraid.git?rev=f1344eaccf0cba2a0f28abb01eafd2faf4cc66eb#f1344eaccf0cba2a0f28abb01eafd2faf4cc66eb" }
+version = "0.12.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "openqasm3", extra = ["parser"] },
@@ -2381,6 +2381,10 @@ dependencies = [
     { name = "qbraid-core" },
     { name = "rustworkx" },
     { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/91/94/cf1d036345861bed1c3af175e6bfc9922b563b86694abe0594ced2961cc9/qbraid-0.12.1.tar.gz", hash = "sha256:af3e74ac0cb134a88235e4d47d464467f4644f33d70d4356d4ad19ea6bae66f1", size = 647480, upload-time = "2026-05-17T16:07:42.906Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d4/59/b283431c53b3846ec8c03ae360654ca8818597b3e822b9737da7d8b6dbe9/qbraid-0.12.1-py3-none-any.whl", hash = "sha256:2c51a70be7889d1cc27a805461272fa81d4c497754828713660cc7769c7770ca", size = 326708, upload-time = "2026-05-17T16:07:41.307Z" },
 ]
 
 [package.optional-dependencies]
@@ -2403,7 +2407,7 @@ qiskit = [
 
 [[package]]
 name = "qbraid-core"
-version = "0.2.2"
+version = "0.3.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
@@ -2411,9 +2415,9 @@ dependencies = [
     { name = "requests" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0f/62/6c2613b6eadf9753806cb2d4885386cb7902df4a804aba6e6a3eb274216f/qbraid_core-0.2.2.tar.gz", hash = "sha256:bea160db65b332f36ee4216d3dd1dd2326f0e29cb86ad390f8b6b1e21ff16084", size = 248390, upload-time = "2026-04-10T23:23:57.247Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/eb/1b016ff7e10226ea208a3b5a6044f5561e4e937f457077a9543612d9150e/qbraid_core-0.3.4.tar.gz", hash = "sha256:9f628603fcc36ecde656db5039c7588146f47f72495e2f791bb3ad720219b49d", size = 369924, upload-time = "2026-06-08T22:50:19.968Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/58/a4a520a4c33cbced86d69744d23343fc52b766c47b379602446d22f9b0de/qbraid_core-0.2.2-py3-none-any.whl", hash = "sha256:9a8c3a5a6ea44ccd4a8412ef4ecee961c6a05ed54b8fdc277f935883101a2de6", size = 108449, upload-time = "2026-04-10T23:23:56.08Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/03/51e769e8df585c80a7dae68f783c19f8f856d2b83588779b7c5e0e1ba818/qbraid_core-0.3.4-py3-none-any.whl", hash = "sha256:cb0e303b39b3723d00a8d0f36a6f5f76057835b517491fc76dc0b79d2b75378c", size = 246898, upload-time = "2026-06-08T22:50:18.468Z" },
 ]
 
 [[package]]
@@ -2437,6 +2441,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1b/0c/19ffdb15d2e72156de406fe27cad26c6015071a385e6b48c6db87d8ce676/qiskit-2.3.1-cp310-abi3-manylinux2014_s390x.manylinux_2_17_s390x.whl", hash = "sha256:a1a030b4a0cd75f3299c9866a3e9489a02078efc343abd42eec74ad2a5f2fa80", size = 8513126, upload-time = "2026-03-13T02:30:30.288Z" },
     { url = "https://files.pythonhosted.org/packages/11/06/41f4197fcb3c38e99f22f400ea25375c9057190cd094cd6c0f97be730796/qiskit-2.3.1-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:350027279bb171e9746fee5756c674872df97f4608b079129d4edb25b5bb1fdd", size = 8833222, upload-time = "2026-03-13T00:42:59.092Z" },
     { url = "https://files.pythonhosted.org/packages/a5/db/6ddc52eaf22ab1f95ee6251ff7a375c0a1a7453b5864528992303b166198/qiskit-2.3.1-cp310-abi3-win_amd64.whl", hash = "sha256:f884abd92c0173e246705f89f8b4808badaa0e1b167ed3277a3cb83c2564b4b8", size = 8639580, upload-time = "2026-03-13T00:43:01.022Z" },
+]
+
+[package.optional-dependencies]
+qasm3-import = [
+    { name = "qiskit-qasm3-import" },
 ]
 
 [[package]]
