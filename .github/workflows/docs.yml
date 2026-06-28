@@ -27,14 +27,17 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install .[docs]
+        run: pip install ".[docs]"
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Deploy to GitHub Pages
+      - name: Build documentation
         run: |
           cd docs
-          mkdocs gh-deploy --force
+          mkdocs build
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: docs/site
+          clean-exclude: pr-preview
+          force: false
