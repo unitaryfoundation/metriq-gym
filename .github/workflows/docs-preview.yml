@@ -7,11 +7,6 @@ on:
       - reopened
       - synchronize
       - closed
-    paths:
-      - 'docs/**'
-      - 'metriq_gym/**'
-      - '.github/workflows/docs-preview.yml'
-      - '.github/workflows/docs-preview-deploy.yml'
 
 permissions:
   contents: read
@@ -37,9 +32,9 @@ jobs:
           path: preview-metadata/
           retention-days: 3
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: ${{ github.event.action != 'closed' }}
-
+      
       - name: Set up Python
         if: ${{ github.event.action != 'closed' }}
         uses: actions/setup-python@v6

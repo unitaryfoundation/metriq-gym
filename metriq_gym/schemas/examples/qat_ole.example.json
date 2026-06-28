@@ -1,0 +1,6 @@
+{
+  "benchmark_name": "QAT OLE",
+  "circuit": "49Q_L3",
+  "num_initial_states": 10,
+  "shots": 1000
+}

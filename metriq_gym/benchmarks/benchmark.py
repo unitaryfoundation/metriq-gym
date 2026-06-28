@@ -3,7 +3,7 @@ from typing import Iterable, TYPE_CHECKING, Protocol
 from abc import ABC
 
 from pydantic import BaseModel, computed_field
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 if TYPE_CHECKING:
@@ -27,6 +27,11 @@ class BenchmarkData:
     """Stores intermediate data from pre-processing and dispatching"""
 
     provider_job_ids: list[str]
+    # Two-qubit gate counts per circuit, in dispatch order; None when a benchmark
+    # doesn't set them. Keyword-only so subclasses can still add positional fields
+    # after the base, and so they're passed by keyword when constructing directly.
+    input_two_qubit_gate_counts: list[int] | None = field(default=None, kw_only=True)
+    transpiled_two_qubit_gate_counts: list[int] | None = field(default=None, kw_only=True)
 
     @classmethod
     def from_quantum_job(cls, quantum_job, **kwargs):
