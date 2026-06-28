@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - Build Documentation Preview
+      - Cleanup Documentation Preview
     types:
       - completed
 
@@ -22,7 +23,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download preview metadata
         env:

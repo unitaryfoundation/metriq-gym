@@ -6,7 +6,12 @@ on:
       - opened
       - reopened
       - synchronize
-      - closed
+    paths:
+      - 'docs/**'
+      - 'metriq_gym/**'
+      - 'pyproject.toml'
+      - '.github/workflows/docs-preview.yml'
+      - '.github/workflows/docs-preview-deploy.yml'
 
 permissions:
   contents: read
@@ -33,21 +38,17 @@ jobs:
           retention-days: 3
 
       - uses: actions/checkout@v7
-        if: ${{ github.event.action != 'closed' }}
-      
+
       - name: Set up Python
-        if: ${{ github.event.action != 'closed' }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
       - name: Install dependencies
-        if: ${{ github.event.action != 'closed' }}
         run: |
-          pip install .[docs]
+          pip install ".[docs]"
 
       - name: Build documentation
-        if: ${{ github.event.action != 'closed' }}
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -57,7 +58,6 @@ jobs:
           mkdocs build
 
       - name: Upload built documentation
-        if: ${{ github.event.action != 'closed' }}
         uses: actions/upload-artifact@v6
         with:
           name: docs-preview-site
