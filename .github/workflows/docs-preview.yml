@@ -31,7 +31,7 @@ jobs:
           printf '%s\n' "${{ github.event.action }}" > preview-metadata/pr-action.txt
 
       - name: Upload preview metadata
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: docs-preview-metadata
           path: preview-metadata/
@@ -58,7 +58,7 @@ jobs:
           mkdocs build
 
       - name: Upload built documentation
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: docs-preview-site
           path: docs/site/
