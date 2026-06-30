@@ -8,6 +8,7 @@ from metriq_gym.benchmarks.ghz import (
     _bfs_edges,
     _select_flag_qubits,
     build_ghz_circuits,
+    estimate_fidelity_compressed_sensing,
     estimate_fidelity_dfe,
     estimate_fidelity_oscillation,
     post_select_results,
@@ -83,6 +84,22 @@ class TestBuildGhzCircuits:
         # 1 z-basis + 10 oscillation circuits
         assert len(circuits) == 11
         assert len(data_qubits) == 4
+
+    def test_compressed_sensing_returns_correct_count(self):
+        graph = rx.generators.complete_graph(4)
+        # CS uses a single-period grid; circuit shape matches parity_oscillation.
+        phases = np.linspace(0, 2 * np.pi / 4, 6, endpoint=False).tolist()
+        circuits, data_qubits, flag_qubits = build_ghz_circuits(
+            graph, num_qubits=4, method="compressed_sensing", phases=phases
+        )
+        # 1 z-basis + 6 oscillation circuits
+        assert len(circuits) == 7
+        assert len(data_qubits) == 4
+
+    def test_compressed_sensing_no_phases_raises(self):
+        graph = rx.generators.complete_graph(4)
+        with pytest.raises(ValueError, match="phases required"):
+            build_ghz_circuits(graph, num_qubits=4, method="compressed_sensing")
 
     def test_with_flag_qubits(self):
         graph = rx.generators.path_graph(6)
@@ -214,6 +231,65 @@ class TestEstimateFidelityOscillation:
 
     def test_empty_z_counts(self):
         pop, coh, _, _ = estimate_fidelity_oscillation({}, [], [], 3, 0)
+        assert pop == 0.0
+        assert coh == 0.0
+
+
+class TestEstimateFidelityCompressedSensing:
+    def _build_osc_counts(self, n: int, phases, amplitude: float, offset: float, shots: int):
+        """Helper: synthesize ideal parity counts P(φ) = A cos(n φ + θ)."""
+        osc_counts_list = []
+        for phi in phases:
+            parity = amplitude * np.cos(n * phi + offset)
+            even = int(round(shots * (1 + parity) / 2))
+            odd = shots - even
+            osc_counts_list.append({"0" * n: even, "0" * (n - 1) + "1": odd})
+        return osc_counts_list
+
+    def test_perfect_ghz_amplitude_one(self):
+        n = 4
+        # Single n-qubit period, sparse sampling: M=6 phases on [0, 2π/n).
+        phases = np.linspace(0, 2 * np.pi / n, 6, endpoint=False).tolist()
+        osc_counts_list = self._build_osc_counts(n, phases, amplitude=1.0, offset=0.0, shots=2000)
+
+        z_counts = {"0" * n: 1000, "1" * n: 1000}
+        pop, coh, _p_err, c_err = estimate_fidelity_compressed_sensing(
+            z_counts, osc_counts_list, phases, n, num_flag_qubits=0
+        )
+        assert pop == pytest.approx(1.0)
+        assert coh == pytest.approx(1.0, abs=0.02)
+        assert c_err >= 0.0
+
+    def test_recovers_amplitude_below_one(self):
+        n = 5
+        phases = np.linspace(0, 2 * np.pi / n, 8, endpoint=False).tolist()
+        target_amplitude = 0.6
+        osc_counts_list = self._build_osc_counts(
+            n, phases, amplitude=target_amplitude, offset=0.7, shots=5000
+        )
+        z_counts = {"0" * n: 800, "1" * n: 200}
+        pop, coh, _p_err, _c_err = estimate_fidelity_compressed_sensing(
+            z_counts, osc_counts_list, phases, n, num_flag_qubits=0
+        )
+        # Population reflects whatever Z-basis stats the user provided.
+        assert pop == pytest.approx(1.0)
+        # CS estimates magnitude regardless of phase offset.
+        assert coh == pytest.approx(target_amplitude, abs=0.03)
+
+    def test_zero_parity_signal_gives_zero_coherence(self):
+        n = 3
+        phases = np.linspace(0, 2 * np.pi / n, 8, endpoint=False).tolist()
+        # P(φ) = 0 for every phase ⇒ DFT bin is empty.
+        osc_counts_list = [{"000": 500, "001": 500} for _ in phases]
+        z_counts = {"000": 250, "001": 250, "010": 250, "011": 250}
+        pop, coh, _p_err, _c_err = estimate_fidelity_compressed_sensing(
+            z_counts, osc_counts_list, phases, n, num_flag_qubits=0
+        )
+        assert coh == pytest.approx(0.0, abs=0.02)
+        assert pop == pytest.approx(0.25)
+
+    def test_empty_z_counts(self):
+        pop, coh, _, _ = estimate_fidelity_compressed_sensing({}, [], [], 3, 0)
         assert pop == 0.0
         assert coh == 0.0
 
