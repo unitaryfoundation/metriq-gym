@@ -1811,11 +1811,17 @@
 <li><code>aer_simulator_density_matrix</code> - Density matrix simulator</li>
 </ul>
 <h3 id="ibm-noise-model-simulators">IBM Noise Model Simulators<a class="headerlink" href="#ibm-noise-model-simulators" title="Permanent link">&para;</a></h3>
-<p>Use any IBM device name (e.g., <code>ibm_sherbrooke</code>, <code>ibm_fez</code>) to run locally with that device's noise model.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Noise model simulators require valid IBM credentials to fetch the noise model, but execution is local.</p>
-</div>
+<p>Use an IBM device name (for example, <code>ibm_sherbrooke</code> or <code>ibm_fez</code>) to run
+locally with that device's noise model. If IBM credentials are configured,
+Metriq-Gym uses the live IBM backend data to build the simulator. If IBM
+credentials are not available, it falls back to the cached fake backend
+snapshots included with <code>qiskit-ibm-runtime</code>.</p>
+<p>Cached fake snapshots can be selected with either fake backend names or IBM
+aliases. For example, <code>fake_torino</code>, <code>ibm_torino</code>, <code>ibm-torino</code>,
+<code>IBM_Torino</code>, and <code>torino</code> all resolve to the Torino noise model locally.
+Device discovery lists fake snapshots without requiring IBM credentials, and
+authenticated discovery prefers live IBM backend names over duplicate fake
+twins.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="ideal-simulation">Ideal Simulation<a class="headerlink" href="#ideal-simulation" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>metriq_gym/schemas/examples/wit.example.json<span class="w"> </span><span class="se">\</span>
@@ -1890,10 +1896,10 @@
 <h3 id="parallelization">Parallelization<a class="headerlink" href="#parallelization" title="Permanent link">&para;</a></h3>
 <p>For benchmarks with multiple circuits, Aer parallelizes across available CPU cores.</p>
 <h2 id="noise-model-details">Noise Model Details<a class="headerlink" href="#noise-model-details" title="Permanent link">&para;</a></h2>
-<p>When using <code>ibm_&lt;device&gt;</code> noise models:</p>
+<p>When using <code>ibm_&lt;device&gt;</code> noise models with IBM credentials:</p>
 <ol>
-<li>Metriq-Gym fetches the current noise model from IBM Quantum</li>
-<li>The model includes:</li>
+<li>Metriq-Gym fetches the current backend data from IBM Quantum</li>
+<li>The generated simulator model includes:</li>
 <li>Single-qubit gate errors</li>
 <li>Two-qubit gate errors</li>
 <li>Readout errors</li>
@@ -1901,6 +1907,8 @@
 <li>Circuits are transpiled to the device's basis gates</li>
 <li>Simulation runs locally with the noise model applied</li>
 </ol>
+<p>Without IBM credentials, Metriq-Gym uses the corresponding cached
+<code>fake_&lt;device&gt;</code> snapshot when one is available.</p>
 <h3 id="noise-model-caching">Noise Model Caching<a class="headerlink" href="#noise-model-caching" title="Permanent link">&para;</a></h3>
 <p>Noise models are cached to reduce API calls. Clear the cache by deleting:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>rm<span class="w"> </span>-rf<span class="w"> </span><span class="nv">$MGYM_LOCAL_SIMULATOR_CACHE_DIR</span>
