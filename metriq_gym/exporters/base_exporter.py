@@ -84,6 +84,22 @@ class BaseExporter(ABC):
 
         record["platform"] = platform_info
 
+        # Surface per-circuit two-qubit gate counts collected at dispatch time.
+        # These live on the BenchmarkData (stored as the job's ``data`` dict) and
+        # are emitted additively so existing fields are unaffected.
+        job_data = getattr(self.metriq_gym_job, "data", None)
+        if isinstance(job_data, dict):
+            circuit_metadata = {
+                key: job_data[key]
+                for key in (
+                    "input_two_qubit_gate_counts",
+                    "transpiled_two_qubit_gate_counts",
+                )
+                if job_data.get(key) is not None
+            }
+            if circuit_metadata:
+                record["circuit_metadata"] = circuit_metadata
+
         return record
 
     @abstractmethod
