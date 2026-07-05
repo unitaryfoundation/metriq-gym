@@ -369,7 +369,7 @@ def estimate_fidelity_compressed_sensing(
 
     phi = np.asarray(phases)
     p_arr = np.asarray(parities)
-    complex_sum = np.sum(p_arr * np.exp(-1j * n * phi))
+    complex_sum: complex = np.sum(p_arr * np.exp(-1j * n * phi))
     coherence = (2.0 / M) * float(np.abs(complex_sum))
     # For uniform phases on a single period the real and imaginary parts of
     # the DFT bin pick up roughly half the parity variance each; the magnitude

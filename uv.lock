@@ -1370,7 +1370,7 @@ requires-dist = [
     { name = "qiskit-experiments", specifier = ">=0.9.0,<0.15.0" },
     { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.48.0" },
     { name = "qnexus", specifier = ">=0.39.0,<1.0.0" },
-    { name = "rustworkx", specifier = ">=0.17.1,<0.18.0" },
+    { name = "rustworkx", specifier = ">=0.17.1,<0.19.0" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
     { name = "tabulate", specifier = ">=0.9.0,<0.11.0" },
     { name = "typer", specifier = ">=0.21.1,<1.0.0" },
