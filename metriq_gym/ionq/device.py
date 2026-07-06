@@ -1,33 +1,38 @@
-"""Patches for qBraid's IonQ provider.
+"""Patches for qBraid's IonQ provider (qbraid >= 0.12, with qiskit-ionq).
 
-Addresses two qBraid/IonQ issues so that every benchmark receives correctly
-formatted measurement counts without benchmark-specific workarounds:
+Two adjustments make every benchmark receive correctly shaped measurement
+counts without benchmark-specific workarounds:
 
-1. **Bitstring padding** — IonQJob._get_counts() uses normalize_data() which
-   can return truncated bitstrings (e.g. "0" instead of "0000000") when only
-   a single computational basis state is observed.  We pad every key to the
-   circuit's qubit count, which is available in the IonQ job response.
+1. **Native conversion path.** With qiskit-ionq installed, qBraid transpiles
+   qiskit circuits with qiskit's default ``optimization_level=2``, which lays
+   the logical qubits out onto arbitrary physical qubits of the (29-qubit)
+   IonQ backend. Measured bitstrings then no longer line up with the circuit's
+   own qubits (e.g. logical qubit 3 surfaces at physical qubit 28). We convert
+   each circuit to OpenQASM 3 before dispatch, which routes through qBraid's
+   native qasm->ionq path and preserves qubit indices (logical qubit i is
+   bit i of the result).
 
-2. **All-qubit measurement** — IonQ measures every qubit regardless of the
-   circuit's measurement gates (qBraid's QASM→IonQ conversion discards them).
-   We extract the measurement mapping at dispatch time, persist it in IonQ's
-   job metadata field, and marginalize the all-qubit counts back to the
-   classical register at poll time.
+2. **Count reshaping.** IonQ returns probabilities keyed by integer, which
+   qBraid normalizes to bitstrings whose width is only that of the largest
+   observed value (so a circuit that only ever yields |0..0> and |0..01>
+   reports "0"/"1"). We pad every bitstring to the circuit's qubit count and
+   marginalize onto its classical register, using measurement metadata
+   persisted in the IonQ job at dispatch time.
 
-Note: The qiskit_ionq qubit-count bug (see qBraid/qBraid#1141) is resolved
-by uninstalling qiskit-ionq, which forces qBraid to use its native
-qiskit → qasm3 → ionq conversion path.
+The dispatch (patch_ionq_device) and poll (patch_ionq_job) sides communicate
+through the IonQ job's ``metadata`` field, which survives across processes, so
+the same reshaping applies whether polling in the dispatching process or a
+later one.
 """
 
 import json
 import logging
-import types
 from typing import Any
 
 from qiskit import QuantumCircuit
+from qiskit.qasm3 import dumps as qasm3_dumps
 from qbraid.runtime import IonQDevice
-from qbraid.runtime.ionq.job import IonQJob, IonQJobError
-from qbraid.runtime.postprocess import distribute_counts, normalize_data
+from qbraid.runtime.ionq.job import IonQJob
 from qbraid.runtime.result import Result
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
 
@@ -36,8 +41,10 @@ logger = logging.getLogger(__name__)
 # Sentinel so we only patch the IonQJob class once per process.
 _ionq_job_patched = False
 
-# ── Metadata keys stored in IonQ job metadata ──────────────────────────
-_META_MEAS_MAP = "_metriq_meas_map"
+# Keys under which per-circuit reshaping metadata is stored in the IonQ job.
+# Each holds a JSON list with one entry per dispatched circuit, in order.
+_META_MEAS_MAPS = "_metriq_meas_maps"
+_META_NUM_QUBITS = "_metriq_num_qubits"
 _META_NUM_CLBITS = "_metriq_num_clbits"
 
 
@@ -45,10 +52,10 @@ _META_NUM_CLBITS = "_metriq_num_clbits"
 
 
 def _extract_measurement_map(circuit: QuantumCircuit) -> dict[str, int]:
-    """Return ``{qubit_index: clbit_index}`` for every measure gate.
+    """Return ``{"qubit_index": clbit_index}`` for every measure gate.
 
-    Keys are strings because IonQ job metadata is JSON-serialised (int keys
-    become strings).  We use strings from the start for consistency.
+    Keys are strings because the map is JSON-serialised into IonQ job
+    metadata (JSON object keys are always strings).
     """
     meas_map: dict[str, int] = {}
     for inst in circuit.data:
@@ -69,7 +76,7 @@ def _marginalize_to_clbits(
     meas_map: dict[str, int],
     num_clbits: int,
 ) -> MeasCount:
-    """Reduce all-qubit counts to the classical register.
+    """Reduce full-width qubit counts to the circuit's classical register.
 
     Args:
         counts: Measurement counts with full-width (num_qubits) bitstring keys.
@@ -80,27 +87,45 @@ def _marginalize_to_clbits(
     clbit_indices = [meas_map[str(q)] for q in qubit_indices]
 
     marginal: dict[str, int] = {}
-    num_qubits = len(next(iter(counts)))
     for bitstring, count in counts.items():
+        width = len(bitstring)
+        # Bitstrings are big-endian: index i holds bit/clbit (n - 1 - i), so an
+        # identity qubit->clbit map reproduces the input unchanged.
         clbits = ["0"] * num_clbits
         for q_idx, c_idx in zip(qubit_indices, clbit_indices):
-            # IonQ/qBraid bitstrings are big-endian (MSB first via bin()),
-            # so qubit q is at string index (n - 1 - q).
-            clbits[c_idx] = bitstring[num_qubits - 1 - q_idx]
+            clbits[num_clbits - 1 - c_idx] = bitstring[width - 1 - q_idx]
         key = "".join(clbits)
         marginal[key] = marginal.get(key, 0) + count
     return marginal
 
 
-def _apply_counts(
+def _reshape_counts(
     counts: MeasCount | list[MeasCount],
-    fn,
-    *args,
+    meas_maps: list[dict[str, int]] | None,
+    num_qubits: list[int] | None,
+    num_clbits: list[int] | None,
 ) -> MeasCount | list[MeasCount]:
-    """Apply *fn* to a single counts dict or to each element of a batch."""
-    if isinstance(counts, list):
-        return [fn(c, *args) for c in counts]
-    return fn(counts, *args)
+    """Pad, then marginalize, each circuit's counts using dispatch metadata.
+
+    ``counts`` is a single dict for a single-circuit job or a list (in circuit
+    dispatch order) for a multi-circuit job. When metadata is absent the counts
+    are returned unchanged.
+    """
+    if num_qubits is None:
+        return counts
+
+    as_list = isinstance(counts, list)
+    counts_list: list[MeasCount] = counts if as_list else [counts]  # type: ignore[assignment]
+
+    reshaped: list[MeasCount] = []
+    for i, circuit_counts in enumerate(counts_list):
+        nq = num_qubits[i] if i < len(num_qubits) else num_qubits[-1]
+        padded = _pad_counts(circuit_counts, nq)
+        if meas_maps is not None and num_clbits is not None:
+            padded = _marginalize_to_clbits(padded, meas_maps[i], num_clbits[i])
+        reshaped.append(padded)
+
+    return reshaped if as_list else reshaped[0]
 
 
 # ── Public patch entry points ──────────────────────────────────────────
@@ -109,95 +134,72 @@ def _apply_counts(
 def patch_ionq_device(device: IonQDevice) -> None:
     """Patch an IonQDevice instance.
 
-    * Injects measurement-mapping metadata into the IonQ job (issue 2).
-    * Ensures the class-level IonQJob patches are applied (issues 1 & 2).
+    Converts qiskit circuits to OpenQASM 3 (forcing qBraid's native path) and
+    records per-circuit reshaping metadata on the IonQ job. Also ensures the
+    class-level IonQJob patch is applied so polling reshapes the counts.
     """
     patch_ionq_job()  # idempotent
 
-    original_run = IonQDevice.run
+    original_run = device.run
 
-    def run_with_patches(self, run_input, *args, **kwargs):
-        # Inject measurement metadata for partial-measurement circuits.
-        if isinstance(run_input, QuantumCircuit):
-            if run_input.num_clbits < run_input.num_qubits:
-                meas_map = _extract_measurement_map(run_input)
-                metadata = kwargs.get("metadata") or {}
-                metadata[_META_MEAS_MAP] = json.dumps(meas_map)
-                metadata[_META_NUM_CLBITS] = str(run_input.num_clbits)
-                kwargs["metadata"] = metadata
+    def run_with_patches(run_input, *args, **kwargs):
+        is_single = not isinstance(run_input, list)
+        circuits = [run_input] if is_single else list(run_input)
 
-        return original_run(self, run_input, *args, **kwargs)
+        # Only qiskit circuits need the native-path conversion and reshaping.
+        if circuits and all(isinstance(c, QuantumCircuit) for c in circuits):
+            meas_maps = [_extract_measurement_map(c) for c in circuits]
+            num_qubits = [c.num_qubits for c in circuits]
+            num_clbits = [c.num_clbits for c in circuits]
 
-    device.run = types.MethodType(run_with_patches, device)
+            metadata = dict(kwargs.get("metadata") or {})
+            metadata[_META_MEAS_MAPS] = json.dumps(meas_maps)
+            metadata[_META_NUM_QUBITS] = json.dumps(num_qubits)
+            metadata[_META_NUM_CLBITS] = json.dumps(num_clbits)
+            kwargs["metadata"] = metadata
+
+            converted: list[Any] = [qasm3_dumps(c) for c in circuits]
+            run_input = converted[0] if is_single else converted
+
+        return original_run(run_input, *args, **kwargs)
+
+    device.run = run_with_patches
 
 
 def patch_ionq_job() -> None:
-    """Patch IonQJob at the class level (idempotent).
+    """Patch IonQJob.result at the class level (idempotent).
 
-    * ``_get_counts`` — pads bitstrings to circuit qubit width (issue 2).
-    * ``result`` — marginalises to the classical register when measurement
-      metadata is present (issue 3).
+    Wraps qBraid's own ``result`` so it keeps tracking qBraid internals, then
+    pads and marginalizes the counts using the metadata recorded at dispatch.
     """
     global _ionq_job_patched  # noqa: PLW0603
     if _ionq_job_patched:
         return
     _ionq_job_patched = True
 
-    def _get_counts_padded(result: dict[str, Any]) -> MeasCount | list[MeasCount]:
-        """Replacement for IonQJob._get_counts that pads bitstrings."""
-        shots = result.get("shots")
-        probabilities = result.get("probabilities")
-        num_qubits = result.get("qubits")
+    original_result = IonQJob.result
 
-        if shots is None or probabilities is None:
-            raise ValueError("Missing shots or probabilities in result data.")
+    def result_reshaped(self) -> Result:
+        result = original_result(self)
 
-        def convert_to_counts(meas_prob: dict[str, float]) -> dict[str, int]:
-            probs_dec = {int(key): value for key, value in meas_prob.items()}
-            probs_normal = normalize_data(probs_dec)
-            counts = distribute_counts(probs_normal, shots)
-            if num_qubits is not None:
-                counts = _pad_counts(counts, num_qubits)
-            return counts
-
-        if all(isinstance(value, dict) for value in probabilities.values()):
-            return [convert_to_counts(probs) for probs in probabilities.values()]
-
-        return convert_to_counts(probabilities)
-
-    def result_with_marginalization(self) -> Result:
-        """Replacement for IonQJob.result that marginalises to classical bits."""
-        self.wait_for_final_state()
-        job_data = self.session.get_job(self.id)
-        success = job_data.get("status") == "completed"
-        if not success:
-            failure: dict = job_data.get("failure", {})
-            code = failure.get("code")
-            message = failure.get("error")
-            raise IonQJobError(f"Job failed with code {code}: {message}")
-
-        results_url: str = job_data["results_url"]
-        results_endpoint = results_url.split("v0.3")[-1]
-        job_data["probabilities"] = self.session.get(results_endpoint).json()
-        job_data["shots"] = job_data.get("shots", self._cache_metadata.get("shots"))
-
-        measurement_counts = self._get_counts(job_data)
-
-        # Marginalize if measurement metadata was injected at dispatch time.
+        job_data = self.session.get_job(self.id) or {}
         metadata = job_data.get("metadata") or {}
-        meas_map_raw = metadata.get(_META_MEAS_MAP)
-        num_clbits_raw = metadata.get(_META_NUM_CLBITS)
-        if meas_map_raw is not None and num_clbits_raw is not None:
-            meas_map = json.loads(meas_map_raw) if isinstance(meas_map_raw, str) else meas_map_raw
-            num_clbits = int(num_clbits_raw)
-            measurement_counts = _apply_counts(
-                measurement_counts, _marginalize_to_clbits, meas_map, num_clbits
-            )
+        if _META_NUM_QUBITS not in metadata:
+            return result  # not dispatched through metriq-gym; leave as-is
 
-        data = GateModelResultData(measurement_counts=measurement_counts)
+        meas_maps = json.loads(metadata[_META_MEAS_MAPS]) if _META_MEAS_MAPS in metadata else None
+        num_qubits = json.loads(metadata[_META_NUM_QUBITS])
+        num_clbits = json.loads(metadata[_META_NUM_CLBITS]) if _META_NUM_CLBITS in metadata else None
+
+        reshaped = _reshape_counts(
+            result.data.get_counts(), meas_maps, num_qubits, num_clbits
+        )
+        data = GateModelResultData(measurement_counts=reshaped)
         return Result(
-            device_id=job_data["target"], job_id=self.id, success=success, data=data, **job_data
+            device_id=result.device_id,
+            job_id=result.job_id,
+            success=result.success,
+            data=data,
         )
 
-    IonQJob._get_counts = staticmethod(_get_counts_padded)
-    IonQJob.result = result_with_marginalization
+    IonQJob.result = result_reshaped
