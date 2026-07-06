@@ -19,8 +19,8 @@
         },
         "n_qubits_per_side": {
             "type": "integer",
-            "description": "Number of qubits on each side of the thermofield double state. Use this for generalized WIT circuits of any size.",
-            "minimum": 1,
+            "description": "Number of qubits on each side of the thermofield double state. Use this for generalized WIT circuits of any size. Must be at least 2, since the message register (message_size >= 1) must be strictly smaller than each side.",
+            "minimum": 2,
             "examples": [3, 4, 5]
         },
         "num_qubits": {
