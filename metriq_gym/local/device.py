@@ -1,4 +1,7 @@
+import time
 import uuid
+from typing import Any, Protocol
+
 from qbraid import QPROGRAM, load_program
 from qbraid.runtime import QuantumDevice, DeviceStatus, TargetProfile
 from qbraid.programs import ExperimentType, ProgramSpec
@@ -7,10 +10,15 @@ from qiskit_aer import AerSimulator
 from .job import LocalAerJob
 
 
+class AerBackend(Protocol):
+    def configuration(self) -> Any: ...
+
+    def run(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
 def _make_profile(
-    *, device_id: str = "aer_simulator", backend: AerSimulator | None = None
+    *, device_id: str = "aer_simulator", backend: AerBackend | None = None
 ) -> TargetProfile:
-    device_id = "aer_simulator"
     backend = backend or AerSimulator()
     cfg = backend.configuration()
     return TargetProfile(
@@ -27,7 +35,7 @@ def _make_profile(
 
 class LocalAerDevice(QuantumDevice):
     def __init__(
-        self, *, provider, device_id: str = "aer_simulator", backend: AerSimulator | None = None
+        self, *, provider, device_id: str = "aer_simulator", backend: AerBackend | None = None
     ) -> None:
         backend = backend or AerSimulator()
         super().__init__(_make_profile(device_id=device_id, backend=backend))
@@ -45,5 +53,10 @@ class LocalAerDevice(QuantumDevice):
     def submit(
         self, run_input: QPROGRAM | list[QPROGRAM], *, shots: int | None = None, **kwargs
     ) -> LocalAerJob:
+        start_time = time.perf_counter()
         counts = self._backend.run(run_input, shots=shots, **kwargs).result().get_counts()
-        return LocalAerJob(uuid.uuid4().hex, device=self, counts=counts)
+        end_time = time.perf_counter()
+        execution_time = end_time - start_time
+        return LocalAerJob(
+            uuid.uuid4().hex, device=self, counts=counts, execution_time=execution_time
+        )

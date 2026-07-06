@@ -1,3 +1,20 @@
+"""Quantum Machine Learning Kernel benchmark implementation.
+
+Summary:
+    Constructs a ZZ feature map kernel, computes the inner-product circuit, and measures the
+    probability of returning to the all-zero state as a proxy for kernel quality.
+
+Result interpretation:
+    Polling returns QMLKernelResult.accuracy_score as a BenchmarkScore where:
+        - value: fraction of shots measuring the expected all-zero bitstring.
+        - uncertainty: binomial standard deviation from the sample counts.
+    Higher accuracy suggests better kernel reproducibility on the selected hardware.
+
+References:
+    - Inspired by ZZ-feature map approaches, e.g.,
+      [Bowles et al., arXiv:2405.09724](https://arxiv.org/abs/2405.09724).
+"""
+
 import numpy as np
 from dataclasses import dataclass
 
@@ -13,6 +30,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkScore,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -27,8 +45,8 @@ class QMLKernelData(BenchmarkData):
 class QMLKernelResult(BenchmarkResult):
     accuracy_score: BenchmarkScore
 
-    def compute_score(self) -> float | None:
-        return self.accuracy_score.value
+    def compute_score(self) -> BenchmarkScore:
+        return self.accuracy_score
 
 
 def ZZfeature_circuit(num_qubits: int) -> QuantumCircuit:
@@ -87,11 +105,25 @@ def calculate_accuracy_score(num_qubits: int, count_results: "MeasCount") -> lis
 
 
 class QMLKernel(Benchmark):
+    def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            The QML kernel inner product circuit.
+        """
+        return create_inner_product_circuit(self.params.num_qubits)
+
     def dispatch_handler(self, device: "QuantumDevice") -> QMLKernelData:
+        circuit = self._build_circuits(device)
+        # No local transpilation pass, so transpiled counts mirror the input.
+        counts = [count_two_qubit_gates(circuit)]
         return QMLKernelData.from_quantum_job(
-            device.run(
-                create_inner_product_circuit(self.params.num_qubits), shots=self.params.shots
-            )
+            device.run(circuit, shots=self.params.shots),
+            input_two_qubit_gate_counts=counts,
+            transpiled_two_qubit_gate_counts=counts,
         )
 
     def poll_handler(
@@ -107,3 +139,7 @@ class QMLKernel(Benchmark):
                 uncertainty=metrics[1],
             )
         )
+
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
+        circuit = self._build_circuits(device)
+        return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]

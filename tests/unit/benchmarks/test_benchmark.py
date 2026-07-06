@@ -48,22 +48,22 @@ class TestBenchmarkDirections:
             numeric_value: float
 
             def compute_score(self):
-                return None
+                return BenchmarkScore(value=self.numeric_value, uncertainty=None)
 
         # Should not raise
         r = R(numeric_value=1.23)
         assert r.values["numeric_value"] == pytest.approx(1.23)
 
-    def test_no_direction_required_for_benchmarkscore_metric(self):
+    def test_benchmarkscore_metric_allowed(self):
         class R(BenchmarkResult):
             metric: BenchmarkScore
 
             def compute_score(self):
-                return None
+                return self.metric
 
-        # Should not raise
         r = R(metric=BenchmarkScore(value=0.5, uncertainty=0.1))
         assert r.values["metric"] == pytest.approx(0.5)
+        assert r.uncertainties["metric"] == pytest.approx(0.1)
 
     def test_bool_metric_allowed(self):
         class R(BenchmarkResult):
@@ -78,11 +78,11 @@ class TestBenchmarkDirections:
     def test_fields_with_metadata_are_ok(self):
         class R(BenchmarkResult):
             accuracy: float = Field(...)
-            latency: BenchmarkScore = Field(...)
+            latency: float = Field(...)
 
             def compute_score(self):
-                return None
+                return BenchmarkScore(value=self.accuracy, uncertainty=None)
 
-        r = R(accuracy=0.99, latency=BenchmarkScore(value=12.0, uncertainty=0.5))
+        r = R(accuracy=0.99, latency=12.0)
         assert r.values["accuracy"] == pytest.approx(0.99)
-        assert r.uncertainties["latency"] == pytest.approx(0.5)
+        assert "latency" in r.values

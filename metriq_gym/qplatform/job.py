@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 from functools import singledispatch
-from typing import Optional
+from typing import Iterable
 
 from qbraid import QuantumJob
 from qbraid.runtime import QiskitJob, AzureQuantumJob, BraketQuantumTask
 from qbraid.runtime.enums import JobStatus
 from qiskit_ibm_runtime.execution_span import ExecutionSpans
+
+from metriq_gym.local.job import LocalAerJob
+from metriq_gym.quantinuum.job import QuantinuumJob
 
 
 @singledispatch
@@ -31,11 +34,32 @@ def _(quantum_job: AzureQuantumJob) -> float:
 
 
 @execution_time.register
-def _(quantum_job: BraketQuantumTask) -> float:
-    # TODO: for speed benchmarking, we need 'execution' metadata instead of 'createdAt' and 'endedAt'
-    return (
-        quantum_job._task.metadata()["endedAt"] - quantum_job._task.metadata()["createdAt"]
-    ).total_seconds()
+def _(quantum_job: LocalAerJob) -> float:
+    if quantum_job._execution_time_s is None:
+        raise ValueError("Execution time not available")
+    return quantum_job._execution_time_s
+
+
+@execution_time.register
+def _(quantum_job: QuantinuumJob) -> float:
+    res = quantum_job.execution_time_s()
+    if res is None:
+        raise ValueError("Execution time not available")
+    return res
+
+
+def total_execution_time(quantum_jobs: Iterable[QuantumJob]) -> float | None:
+    """Sum execution time for completed jobs, skipping jobs that do not report it."""
+    total = None
+    for qjob in quantum_jobs:
+        if qjob.status() != JobStatus.COMPLETED:
+            continue
+        try:
+            t = execution_time(qjob)
+        except (NotImplementedError, ValueError):
+            continue
+        total = t if total is None else total + t
+    return total
 
 
 @dataclass
@@ -43,7 +67,7 @@ class JobStatusInfo:
     """Provider agnostic job status information."""
 
     status: JobStatus
-    queue_position: Optional[int] = None
+    queue_position: int | None = None
 
 
 def extract_status_info(quantum_job: QuantumJob, supports_queue_position: bool) -> JobStatusInfo:

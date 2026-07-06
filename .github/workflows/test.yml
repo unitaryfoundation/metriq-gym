@@ -24,7 +24,7 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
       with:
         submodules: recursive  # Ensures submodules are fetched
 
@@ -62,7 +62,7 @@ jobs:
         uv run ruff check
 
     - name: Type checking with MyPy
-      # Running mypy with numpy > 2.0 is broken. 
+      # Running mypy with numpy > 2.0 is broken.
       # This is a fix for stubgen: https://github.com/python/mypy/issues/17396
       run: |
         uv run stubgen --no-analysis

@@ -5,14 +5,22 @@ Tests the version and connectivity_graph functions for different device types
 using mocked qBraid device objects.
 """
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 import rustworkx as rx
 import networkx as nx
-from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
+from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice, TargetProfile
+from qbraid.programs import ExperimentType, ProgramSpec
 
 from metriq_gym.local.provider import LocalProvider
-from metriq_gym.qplatform.device import version, connectivity_graph, normalized_metadata
+from qbraid.runtime.origin import OriginDevice
+from metriq_gym.qplatform.device import (
+    version,
+    connectivity_graph,
+    normalized_metadata,
+    pruned_connectivity_graph,
+)
 
 
 class MockCouplingMap:
@@ -41,6 +49,96 @@ class MockTopologyGraph:
     def _create_nx_graph(self):
         edges = [(i, (i + 1) % self.num_qubits) for i in range(self.num_qubits)]
         return nx.Graph(edges)
+
+
+def _make_origin_device(
+    *, high=None, available=None, edges=None, double_edges=None, num_qubits=102
+):
+    class StubDoubleInfo:
+        def __init__(self, qubits):
+            self._qubits = qubits
+
+        def get_qubits(self):
+            return self._qubits
+
+    class StubChipInfo:
+        def __init__(self):
+            self._high = [] if high is None else list(high)
+            self._available = [] if available is None else list(available)
+            self._edges = [] if edges is None else list(edges)
+
+        def high_frequency_qubits(self):
+            return self._high
+
+        def available_qubits(self):
+            return self._available
+
+        def get_chip_topology(self, nodes):
+            if not nodes:
+                return self._edges
+            return [edge for edge in self._edges if edge[0] in nodes and edge[1] in nodes]
+
+        def double_qubits_info(self):
+            if not double_edges:
+                return []
+            return [StubDoubleInfo(pair) for pair in double_edges]
+
+        def qubits_num(self):
+            return num_qubits
+
+        def get_basic_gates(self):
+            return ["x", "cx"]
+
+    class StubBackend:
+        def __init__(self):
+            self._chip_info = StubChipInfo()
+
+        def chip_info(self):
+            return self._chip_info
+
+    backend = StubBackend()
+    profile = TargetProfile(
+        device_id="WK_C102_400",
+        simulator=False,
+        experiment_type=ExperimentType.GATE_MODEL,
+        num_qubits=num_qubits,
+        program_spec=ProgramSpec(str, alias="qasm2"),
+        provider_name="origin",
+    )
+    device = OriginDevice(
+        profile=profile,
+        service=Mock(),
+        backend=backend,
+    )
+    return device
+
+
+def _make_origin_simulator_device(backend_name: str = "full_amplitude"):
+    class SimulatorBackend:
+        def chip_info(self):
+            raise RuntimeError("chip_info only available on hardware backends")
+
+    sim_backend = SimulatorBackend()
+    # Simulator qubit counts are hardcoded in qbraid.runtime.origin.provider.SIMULATOR_BACKENDS
+    simulator_qubit_counts = {
+        "full_amplitude": 35,
+        "partial_amplitude": 68,
+        "single_amplitude": 200,
+    }
+    profile = TargetProfile(
+        device_id=backend_name,
+        simulator=True,
+        experiment_type=ExperimentType.GATE_MODEL,
+        num_qubits=simulator_qubit_counts[backend_name],
+        program_spec=ProgramSpec(str, alias="qasm2"),
+        provider_name="origin",
+    )
+    device = OriginDevice(
+        profile=profile,
+        service=Mock(),
+        backend=sim_backend,
+    )
+    return device
 
 
 @pytest.fixture
@@ -139,6 +237,46 @@ class TestConnectivityGraphFunction:
         assert result.num_nodes() == expected_nodes
         assert result.num_edges() == expected_edges
         mock_azure_device.metadata.assert_called_once()
+
+    def test_origin_simulator_connectivity_uses_complete_graph(self):
+        device = _make_origin_simulator_device()
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == device.num_qubits == 35
+        expected_edges = 35 * 34 // 2
+        assert graph.num_edges() == expected_edges
+
+    def test_origin_device_connectivity_uses_available_qubits_without_edges(self):
+        device = _make_origin_device(
+            high=[7, 9, 11], available=[7, 9, 11, 15], edges=[], num_qubits=12
+        )
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        assert graph.num_nodes() == 4
+        assert graph.num_edges() == 0
+        # Physical qubit ids should be preserved as node payloads so callers
+        # can map graph indices back to the device's actual qubit labels.
+        assert set(graph.nodes()) == {7, 9, 11, 15}
+
+    def test_origin_device_connectivity_preserves_qubit_ids_with_edges(self):
+        device = _make_origin_device(
+            high=[7, 9], available=[7, 9, 11], edges=[(7, 9), (9, 11)], num_qubits=12
+        )
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        # Non-contiguous physical qubit ids should be mapped to contiguous 0..N-1 indices,
+        # but the original qubit ids must remain accessible via node payloads.
+        assert set(graph.node_indices()) == {0, 1, 2}
+        assert set(graph.nodes()) == {7, 9, 11}
+        # Edges use the reindexed positions (0-based), not the physical ids.
+        edges = {tuple(sorted(e)) for e in graph.edge_list()}
+        assert edges == {(0, 1), (1, 2)}
 
     def test_unsupported_device_connectivity_raises(self, mock_unsupported_device):
         with pytest.raises(NotImplementedError) as exc_info:
@@ -262,3 +400,198 @@ class TestNormalizedMetadata:
         result = connectivity_graph(device)
         assert isinstance(result, rx.PyGraph)
         assert result.num_nodes() == 0
+
+
+class MockGate:
+    """Mock faulty gate for testing."""
+
+    def __init__(self, qubits):
+        self.qubits = qubits
+
+
+class MockBackendProperties:
+    """Mock backend properties for testing faulty qubit/gate removal."""
+
+    def __init__(self, faulty_qubits=None, faulty_gates=None):
+        self._faulty_qubits = faulty_qubits or []
+        self._faulty_gates = faulty_gates or []
+
+    def faulty_qubits(self):
+        return self._faulty_qubits
+
+    def faulty_gates(self):
+        return self._faulty_gates
+
+
+def _create_test_graph(num_nodes, edges):
+    """Create a test graph with specified nodes and edges."""
+    graph = rx.PyGraph()
+    graph.add_nodes_from(range(num_nodes))
+    graph.add_edges_from_no_data(edges)
+    return graph
+
+
+class TestPrunedConnectivityGraph:
+    """Test cases for the pruned_connectivity_graph function."""
+
+    def test_unsupported_device_returns_copy(self, mock_unsupported_device):
+        """Unsupported devices should return unchanged copy."""
+        graph = _create_test_graph(5, [(0, 1), (1, 2), (2, 3), (3, 4)])
+        result = pruned_connectivity_graph(mock_unsupported_device, graph)
+
+        assert isinstance(result, rx.PyGraph)
+        assert result is not graph  # Should be a copy
+        assert result.num_nodes() == 5
+        assert result.num_edges() == 4
+
+    def test_qiskit_no_faulty_qubits_returns_copy(self):
+        """QiskitBackend with no faulty qubits returns unchanged copy."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.properties.return_value = MockBackendProperties()
+        device._backend = mock_backend
+
+        graph = _create_test_graph(5, [(0, 1), (1, 2), (2, 3), (3, 4)])
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result is not graph
+        assert result.num_nodes() == 5
+        assert result.num_edges() == 4
+        assert set(result.node_indices()) == {0, 1, 2, 3, 4}
+
+    def test_qiskit_removes_faulty_qubits(self):
+        """QiskitBackend removes faulty qubits from graph."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.properties.return_value = MockBackendProperties(faulty_qubits=[2])
+        device._backend = mock_backend
+
+        # Linear chain: 0-1-2-3-4
+        graph = _create_test_graph(5, [(0, 1), (1, 2), (2, 3), (3, 4)])
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result.num_nodes() == 4
+        assert 2 not in result.node_indices()
+        # Edges involving node 2 should be removed
+        assert result.num_edges() == 2  # Only (0,1) and (3,4) remain
+
+    def test_qiskit_preserves_node_indices(self):
+        """Node indices should be preserved after removal (gaps allowed)."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.properties.return_value = MockBackendProperties(faulty_qubits=[1, 3])
+        device._backend = mock_backend
+
+        graph = _create_test_graph(5, [(0, 1), (1, 2), (2, 3), (3, 4)])
+        result = pruned_connectivity_graph(device, graph)
+
+        # Nodes 0, 2, 4 should remain with their original indices
+        assert set(result.node_indices()) == {0, 2, 4}
+        assert result.num_nodes() == 3
+
+    def test_qiskit_removes_faulty_edges(self):
+        """QiskitBackend removes faulty 2-qubit gate edges."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        # Faulty CZ gate on qubits (1, 2)
+        mock_backend.properties.return_value = MockBackendProperties(
+            faulty_gates=[MockGate([1, 2])]
+        )
+        device._backend = mock_backend
+
+        graph = _create_test_graph(5, [(0, 1), (1, 2), (2, 3), (3, 4)])
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result.num_nodes() == 5
+        assert result.num_edges() == 3  # Edge (1,2) removed
+        edge_list = result.edge_list()
+        assert (1, 2) not in edge_list and (2, 1) not in edge_list
+
+    def test_qiskit_removes_both_faulty_qubits_and_edges(self):
+        """QiskitBackend removes both faulty qubits and edges."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.properties.return_value = MockBackendProperties(
+            faulty_qubits=[0], faulty_gates=[MockGate([3, 4])]
+        )
+        device._backend = mock_backend
+
+        graph = _create_test_graph(5, [(0, 1), (1, 2), (2, 3), (3, 4)])
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result.num_nodes() == 4  # Node 0 removed
+        assert 0 not in result.node_indices()
+        assert result.num_edges() == 2  # (0,1) removed with node, (3,4) faulty
+        edge_list = result.edge_list()
+        assert (3, 4) not in edge_list and (4, 3) not in edge_list
+
+    def test_qiskit_no_properties_returns_copy(self):
+        """QiskitBackend without properties() returns unchanged copy."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.properties.return_value = None
+        device._backend = mock_backend
+
+        graph = _create_test_graph(5, [(0, 1), (1, 2)])
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result is not graph
+        assert result.num_nodes() == 5
+        assert result.num_edges() == 2
+
+    def test_qiskit_ignores_single_qubit_faulty_gates(self):
+        """Only 2-qubit faulty gates should affect edges."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        # Single-qubit faulty gate should be ignored for edge removal
+        mock_backend.properties.return_value = MockBackendProperties(faulty_gates=[MockGate([2])])
+        device._backend = mock_backend
+
+        graph = _create_test_graph(5, [(0, 1), (1, 2), (2, 3), (3, 4)])
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result.num_nodes() == 5
+        assert result.num_edges() == 4  # No edges removed
+
+    def test_empty_graph_returns_empty(self):
+        """Empty graph should return empty graph."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.properties.return_value = MockBackendProperties(faulty_qubits=[0, 1])
+        device._backend = mock_backend
+
+        graph = rx.PyGraph()
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result.num_nodes() == 0
+        assert result.num_edges() == 0
+
+    def test_preserves_edge_data(self):
+        """Edge data should be preserved in the new graph."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.properties.return_value = MockBackendProperties()
+        device._backend = mock_backend
+
+        graph = rx.PyGraph()
+        graph.add_nodes_from(range(3))
+        graph.add_edge(0, 1, {"weight": 0.5})
+        graph.add_edge(1, 2, {"weight": 0.7})
+
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result.get_edge_data(0, 1) == {"weight": 0.5}
+        assert result.get_edge_data(1, 2) == {"weight": 0.7}
+
+    def test_all_qubits_faulty_returns_empty(self):
+        """If all qubits are faulty, return empty graph."""
+        device = Mock(spec=QiskitBackend)
+        mock_backend = Mock()
+        mock_backend.properties.return_value = MockBackendProperties(faulty_qubits=[0, 1, 2])
+        device._backend = mock_backend
+
+        graph = _create_test_graph(3, [(0, 1), (1, 2)])
+        result = pruned_connectivity_graph(device, graph)
+
+        assert result.num_nodes() == 0
+        assert result.num_edges() == 0

@@ -6,12 +6,15 @@ import tempfile
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 from typing import Optional, Any
 
 
 from metriq_gym.exporters.base_exporter import BaseExporter
 
 MAX_BRANCH_SUFFIX_ATTEMPTS = 1000
+GITHUB_API_NETLOC = "api.github.com"
+GITHUB_API_TIMEOUT_SECONDS = 30
 
 
 class GitHubPRExporter(BaseExporter):
@@ -34,6 +37,7 @@ class GitHubPRExporter(BaseExporter):
         commit_message: Optional[str] = None,
         pr_title: Optional[str] = None,
         pr_body: Optional[str] = None,
+        pr_labels: Optional[list[str]] = None,
         clone_dir: Optional[str] = None,
         payload: dict[str, Any] | list[dict[str, Any]] | None = None,
         filename: Optional[str] = None,
@@ -52,6 +56,7 @@ class GitHubPRExporter(BaseExporter):
             commit_message: Commit message. Defaults to a message with job id.
             pr_title: Pull request title. Defaults to a title with job id.
             pr_body: Pull request body. Optional.
+            pr_labels: Labels to add to the created pull request. Optional.
             clone_dir: Optional directory to perform clone/work. Defaults to a temp dir.
             payload: Optional data to write instead of self.as_dict().
             filename: Filename to write. Defaults to "<job_id>.json".
@@ -176,7 +181,7 @@ class GitHubPRExporter(BaseExporter):
                     f"{base_branch}...{login}:{branch_name}?expand=1"
                 )
                 try:
-                    pr_url = self._create_pull_request(
+                    pr_url, pr_number = self._create_pull_request(
                         token=token,  # type: ignore[arg-type]
                         owner=owner,
                         repo=repo_name,
@@ -185,9 +190,21 @@ class GitHubPRExporter(BaseExporter):
                         base=base_branch,
                         body=pr_body,
                     )
+                    if pr_labels:
+                        # Labels must be added via the issues API after PR creation.
+                        self._add_labels_to_pull_request(
+                            token=token,  # type: ignore[arg-type]
+                            owner=owner,
+                            repo=repo_name,
+                            pr_number=pr_number,
+                            labels=pr_labels,
+                        )
                     return pr_url
                 except Exception:
                     # Fallback: return compare URL so user can open PR manually in browser
+                    if pr_labels:
+                        labels_param = urllib.parse.quote(",".join(pr_labels))
+                        return f"{compare_url}&labels={labels_param}"
                     return compare_url
             else:
                 return (
@@ -217,6 +234,14 @@ class GitHubPRExporter(BaseExporter):
             headers["Content-Type"] = content_type
         return headers
 
+    def _urlopen_github_api(self, req: urllib.request.Request):
+        url = req.full_url
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme != "https" or parsed.netloc.lower() != GITHUB_API_NETLOC:
+            raise ValueError(f"Refusing to open non-GitHub API URL: {url!r}")
+        opener = urllib.request.build_opener()
+        return opener.open(req, timeout=GITHUB_API_TIMEOUT_SECONDS)
+
     def _run(self, cmd: list[str]) -> None:
         try:
             subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -244,7 +269,7 @@ class GitHubPRExporter(BaseExporter):
         head: str,
         base: str,
         body: Optional[str] = None,
-    ) -> str:
+    ) -> tuple[str, int]:
         api_url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
         data = {
             "title": title,
@@ -261,16 +286,34 @@ class GitHubPRExporter(BaseExporter):
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req) as resp:
+            with self._urlopen_github_api(req) as resp:
                 resp_data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"GitHub PR creation failed: {e.read().decode('utf-8')}") from e
 
         # Expect an 'html_url' field in the PR response
         pr_url = resp_data.get("html_url")
-        if not pr_url:
-            raise RuntimeError("GitHub PR creation: missing html_url in response")
-        return pr_url
+        pr_number = resp_data.get("number")
+        if not pr_url or not pr_number:
+            raise RuntimeError("GitHub PR creation: missing html_url or number in response")
+        return pr_url, int(pr_number)
+
+    def _add_labels_to_pull_request(
+        self, *, token: str, owner: str, repo: str, pr_number: int, labels: list[str]
+    ) -> None:
+        api_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/labels"
+        data = {"labels": labels}
+        req = urllib.request.Request(
+            api_url,
+            data=json.dumps(data).encode("utf-8"),
+            headers=self._headers(token, content_type="application/json"),
+            method="POST",
+        )
+        try:
+            with self._urlopen_github_api(req) as resp:
+                resp.read()
+        except urllib.error.HTTPError as e:
+            raise RuntimeError(f"GitHub label add failed: {e.read().decode('utf-8')}") from e
 
     def _run_out(self, cmd: list[str]) -> tuple[str, str]:
         try:
@@ -314,7 +357,7 @@ class GitHubPRExporter(BaseExporter):
             method="GET",
         )
         try:
-            with urllib.request.urlopen(req) as resp:
+            with self._urlopen_github_api(req) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             raise RuntimeError(
@@ -338,7 +381,8 @@ class GitHubPRExporter(BaseExporter):
             method="POST",
         )
         try:
-            urllib.request.urlopen(req).read()
+            with self._urlopen_github_api(req) as resp:
+                resp.read()
         except urllib.error.HTTPError as e:
             # If fork already exists or immediate accept, ignore certain errors
             if e.code not in (202, 201):
@@ -364,7 +408,7 @@ class GitHubPRExporter(BaseExporter):
             method="GET",
         )
         try:
-            with urllib.request.urlopen(req) as resp:
+            with self._urlopen_github_api(req) as resp:
                 return resp.getcode() == 200
         except urllib.error.HTTPError as e:
             if e.code == 404:

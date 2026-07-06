@@ -1,7 +1,7 @@
 {
   "_comment": "TODO (424)",
   "$id": "metriq-gym/hidden_shift.schema.json",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Hidden Shift",
   "description": "Hidden Shift benchmark schema definition, describing parameters for the benchmark.",
   "type": "object",
@@ -11,7 +11,7 @@
       "const": "Hidden Shift",
       "description": "Name of the benchmark. Must be 'Hidden Shift' for this schema."
     },
-    "num_shots": {
+    "shots": {
       "type": "integer",
       "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
       "default": 1000,

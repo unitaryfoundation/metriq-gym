@@ -1,12 +1,14 @@
 import argparse
 from typing import Iterable, TYPE_CHECKING, Protocol
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from pydantic import BaseModel, computed_field
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
+    from metriq_gym.resource_estimation import CircuitBatch
 
 
 class SupportsId(Protocol):
@@ -25,6 +27,11 @@ class BenchmarkData:
     """Stores intermediate data from pre-processing and dispatching"""
 
     provider_job_ids: list[str]
+    # Two-qubit gate counts per circuit, in dispatch order; None when a benchmark
+    # doesn't set them. Keyword-only so subclasses can still add positional fields
+    # after the base, and so they're passed by keyword when constructing directly.
+    input_two_qubit_gate_counts: list[int] | None = field(default=None, kw_only=True)
+    transpiled_two_qubit_gate_counts: list[int] | None = field(default=None, kw_only=True)
 
     @classmethod
     def from_quantum_job(cls, quantum_job, **kwargs):
@@ -37,6 +44,14 @@ class BenchmarkScore(BaseModel):
     # If not specified, treat uncertainty as not available (N/A)
     uncertainty: float | None = None
 
+    def __str__(self) -> str:
+        if self.uncertainty is None or self.uncertainty == "":
+            return str(self.value)
+        return f"{self.value} ± {self.uncertainty}"
+
+    def __repr__(self) -> str:
+        return f"BenchmarkScore(value={self.value}, uncertainty={self.uncertainty})"
+
 
 class BenchmarkResult(BaseModel, ABC):
     """Base class for benchmark results.
@@ -48,9 +63,10 @@ class BenchmarkResult(BaseModel, ABC):
 
     def _iter_metric_items(self):
         for name in self.__class__.model_fields:
+            if name in self.__class__.model_computed_fields:
+                continue
             value = getattr(self, name, None)
             if isinstance(value, BenchmarkScore):
-                # If uncertainty is not provided, leave as None
                 u = value.uncertainty
                 yield name, float(value.value), (float(u) if u is not None else None)
             elif isinstance(value, (int, float)):
@@ -65,17 +81,16 @@ class BenchmarkResult(BaseModel, ABC):
     def uncertainties(self) -> dict[str, float | None]:
         return {name: uncertainty for name, _, uncertainty in self._iter_metric_items()}
 
-    @abstractmethod
-    def compute_score(self) -> float | None:
+    def compute_score(self) -> BenchmarkScore | None:
         """Hook for computing a scalar score from result metrics.
 
         Default implementation returns None. Benchmarks should override this to
         implement single- or multi-metric scoring as appropriate.
         """
-        ...
+        return None
 
-    @computed_field(return_type=float | None)
-    def score(self) -> float | None:
+    @computed_field(return_type=BenchmarkScore | None)
+    def score(self) -> BenchmarkScore | None:
         return self.compute_score()
 
 
@@ -97,4 +112,7 @@ class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
         result_data: list["GateModelResultData"],
         quantum_jobs: list["QuantumJob"],
     ) -> BR:
+        raise NotImplementedError
+
+    def estimate_resources_handler(self, device: "QuantumDevice") -> list["CircuitBatch"]:
         raise NotImplementedError

@@ -1,13 +1,21 @@
-"""WIT (Wormhole-inspired teleportation) benchmark for the Metriq Gym
-(credit to Paul Nation for the original code for IBM devices).
+"""WIT (wormhole-inspired teleportation) benchmark implementation.
 
-The WIT benchmark is based on the following paper:
-    Towards Quantum Gravity in the Lab on Quantum Processors
-    Illya Shapoval, Vincent Paul Su, Wibe de Jong, Miro Urbanek, Brian Swingle
-    Quantum 7, 1138 (2023)
+Summary:
+    Runs a six- or seven-qubit teleportation-inspired circuit that mimics the protocol from
+    Shapoval et al. (2023) and reports a Pauli-Z expectation value with binomial uncertainty.
 
-A generalized version of the WIT benchmark software can also be found as a companion [software
-repository](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py) to the above paper.
+Result interpretation:
+    Polling returns WITResult.expectation_value as a BenchmarkScore:
+        - value: estimated Pauli-Z expectation (ideal teleportation trends toward +1).
+        - uncertainty: binomial standard deviation computed from the observed counts.
+    Compare value versus uncertainty to decide whether more shots are required or if noise is
+    degrading the teleportation fidelity.
+
+References:
+    - [Shapoval et al., "Towards Quantum Gravity in the Lab on Quantum Processors",
+      Quantum 7, 1138 (2023)](https://arxiv.org/abs/2205.14081).
+    - [Companion script](https://gitlab.com/ishapova/qglab/-/blob/master/scripts/wormhole.py).
+    - Implementation lineage credited to Paul Nation (IBM Quantum).
 """
 
 import numpy as np
@@ -26,6 +34,7 @@ from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
     binary_expectation_value,
 )
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -277,7 +286,9 @@ def build_wit_config_from_params(params) -> WormholeTeleportationConfig:
             message_size=int(cast(SupportsInt, message_size)),
             x_rotation_transverse_angle=float(cast(SupportsFloat, x_rotation_transverse_angle)),
             zz_rotation_angle=float(cast(SupportsFloat, zz_rotation_angle)),
-            z_rotation_angles=tuple(float(v) for v in cast(Sequence[SupportsFloat], z_rotation_angles)),
+            z_rotation_angles=tuple(
+                float(v) for v in cast(Sequence[SupportsFloat], z_rotation_angles)
+            ),
             time_steps=int(cast(SupportsInt, time_steps)),
             insert_message_method=str(insert_message_method).lower(),
             interaction_coupling_strength=float(cast(SupportsFloat, interaction_coupling_strength)),
@@ -294,8 +305,8 @@ def build_wit_config_from_params(params) -> WormholeTeleportationConfig:
 class WITResult(BenchmarkResult):
     expectation_value: BenchmarkScore
 
-    def compute_score(self) -> float | None:
-        return self.expectation_value.value
+    def compute_score(self) -> BenchmarkScore:
+        return self.expectation_value
 
 
 @dataclass
@@ -304,13 +315,31 @@ class WITData(BenchmarkData):
 
 
 class WIT(Benchmark):
-    def dispatch_handler(self, device: "QuantumDevice") -> WITData:
+    def _build_circuits(self, device: "QuantumDevice") -> QuantumCircuit:
+        """Shared circuit construction logic.
+
+        Args:
+            device: The quantum device to build circuits for.
+
+        Returns:
+            The WIT quantum circuit.
+        """
         config = build_wit_config_from_params(self.params)
+        return wit_circuit(config)
+
+    def dispatch_handler(self, device: "QuantumDevice") -> WITData:
+        circuit = self._build_circuits(device)
         shots_value = getattr(self.params, "shots", None)
         if shots_value is None:
             raise ValueError("WIT parameters must include 'shots'.")
         shots = int(cast(SupportsInt, shots_value))
-        return WITData.from_quantum_job(device.run(wit_circuit(config), shots=shots))
+        # No local transpilation pass, so transpiled counts mirror the input.
+        counts = [count_two_qubit_gates(circuit)]
+        return WITData.from_quantum_job(
+            device.run(circuit, shots=shots),
+            input_two_qubit_gate_counts=counts,
+            transpiled_two_qubit_gate_counts=counts,
+        )
 
     def poll_handler(
         self,
@@ -329,3 +358,10 @@ class WIT(Benchmark):
                 uncertainty=binary_expectation_stddev(shots, counts),
             )
         )
+
+    def estimate_resources_handler(
+        self,
+        device: "QuantumDevice",
+    ) -> list[CircuitBatch]:
+        circuit = self._build_circuits(device)
+        return [CircuitBatch(circuits=[circuit], shots=self.params.shots)]
