@@ -1,5 +1,7 @@
 import time
 import uuid
+from typing import Any, Protocol
+
 from qbraid import QPROGRAM, load_program
 from qbraid.runtime import QuantumDevice, DeviceStatus, TargetProfile
 from qbraid.programs import ExperimentType, ProgramSpec
@@ -8,8 +10,14 @@ from qiskit_aer import AerSimulator
 from .job import LocalAerJob
 
 
+class AerBackend(Protocol):
+    def configuration(self) -> Any: ...
+
+    def run(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
 def _make_profile(
-    *, device_id: str = "aer_simulator", backend: AerSimulator | None = None
+    *, device_id: str = "aer_simulator", backend: AerBackend | None = None
 ) -> TargetProfile:
     backend = backend or AerSimulator()
     cfg = backend.configuration()
@@ -27,7 +35,7 @@ def _make_profile(
 
 class LocalAerDevice(QuantumDevice):
     def __init__(
-        self, *, provider, device_id: str = "aer_simulator", backend: AerSimulator | None = None
+        self, *, provider, device_id: str = "aer_simulator", backend: AerBackend | None = None
     ) -> None:
         backend = backend or AerSimulator()
         super().__init__(_make_profile(device_id=device_id, backend=backend))
