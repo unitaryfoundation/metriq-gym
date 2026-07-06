@@ -1,9 +1,12 @@
+from argparse import Namespace
+
 import numpy as np
 import pytest
 import rustworkx as rx
 from qiskit import QuantumCircuit
 
 from metriq_gym.benchmarks.ghz import (
+    GHZBenchmark,
     GHZResult,
     _bfs_edges,
     _select_flag_qubits,
@@ -236,11 +239,15 @@ class TestEstimateFidelityOscillation:
 
 
 class TestEstimateFidelityCompressedSensing:
-    def _build_osc_counts(self, n: int, phases, amplitude: float, offset: float, shots: int):
-        """Helper: synthesize ideal parity counts P(φ) = A cos(n φ + θ)."""
+    def _random_phases(self, count: int, seed: int = 7) -> list[float]:
+        """Random phases on [0, 2π), as drawn by the CS phase grid."""
+        return np.random.default_rng(seed).uniform(0, 2 * np.pi, count).tolist()
+
+    def _build_osc_counts(self, n: int, phases, shots: int, parity_fn):
+        """Helper: synthesize parity counts from P(φ) = parity_fn(φ)."""
         osc_counts_list = []
         for phi in phases:
-            parity = amplitude * np.cos(n * phi + offset)
+            parity = parity_fn(phi)
             even = int(round(shots * (1 + parity) / 2))
             odd = shots - even
             osc_counts_list.append({"0" * n: even, "0" * (n - 1) + "1": odd})
@@ -248,50 +255,108 @@ class TestEstimateFidelityCompressedSensing:
 
     def test_perfect_ghz_amplitude_one(self):
         n = 4
-        # Single n-qubit period, sparse sampling: M=6 phases on [0, 2π/n).
-        phases = np.linspace(0, 2 * np.pi / n, 6, endpoint=False).tolist()
-        osc_counts_list = self._build_osc_counts(n, phases, amplitude=1.0, offset=0.0, shots=2000)
+        # Sub-Nyquist sampling: M = 11 random phases vs 2n+1 = 9 unknowns
+        # spread over frequencies up to n.
+        phases = self._random_phases(11)
+        osc_counts_list = self._build_osc_counts(
+            n, phases, shots=2000, parity_fn=lambda phi: np.cos(n * phi)
+        )
 
         z_counts = {"0" * n: 1000, "1" * n: 1000}
-        pop, coh, _p_err, c_err = estimate_fidelity_compressed_sensing(
+        pop, coh, _p_err, c_err, freq = estimate_fidelity_compressed_sensing(
             z_counts, osc_counts_list, phases, n, num_flag_qubits=0
         )
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0, abs=0.02)
+        assert freq == n
         assert c_err >= 0.0
 
     def test_recovers_amplitude_below_one(self):
         n = 5
-        phases = np.linspace(0, 2 * np.pi / n, 8, endpoint=False).tolist()
+        phases = self._random_phases(13)
         target_amplitude = 0.6
         osc_counts_list = self._build_osc_counts(
-            n, phases, amplitude=target_amplitude, offset=0.7, shots=5000
+            n, phases, shots=5000, parity_fn=lambda phi: target_amplitude * np.cos(n * phi + 0.7)
         )
         z_counts = {"0" * n: 800, "1" * n: 200}
-        pop, coh, _p_err, _c_err = estimate_fidelity_compressed_sensing(
+        pop, coh, _p_err, _c_err, freq = estimate_fidelity_compressed_sensing(
             z_counts, osc_counts_list, phases, n, num_flag_qubits=0
         )
         # Population reflects whatever Z-basis stats the user provided.
         assert pop == pytest.approx(1.0)
         # CS estimates magnitude regardless of phase offset.
         assert coh == pytest.approx(target_amplitude, abs=0.03)
+        assert freq == n
+
+    def test_broken_ghz_recovers_actual_size(self):
+        # Intended 12-qubit GHZ but only a 10-qubit entangled core, with the
+        # remaining qubits in |+>. The parity signal is cos(10φ)·cos²(φ),
+        # which has spectral peaks at frequencies 8, 10 (dominant), and 12.
+        # The dominant recovered frequency exposes the actual GHZ size, and
+        # the coherence at frequency 12 drops to 1/4.
+        n, k = 12, 10
+        phases = self._random_phases(30)
+        osc_counts_list = self._build_osc_counts(
+            n, phases, shots=100_000, parity_fn=lambda phi: np.cos(k * phi) * np.cos(phi) ** 2
+        )
+        z_counts = {"0" * n: 500, "1" * n: 500}
+        _pop, coh, _p_err, _c_err, freq = estimate_fidelity_compressed_sensing(
+            z_counts, osc_counts_list, phases, n, num_flag_qubits=0
+        )
+        assert freq == k
+        assert coh == pytest.approx(0.25, abs=0.03)
 
     def test_zero_parity_signal_gives_zero_coherence(self):
         n = 3
-        phases = np.linspace(0, 2 * np.pi / n, 8, endpoint=False).tolist()
-        # P(φ) = 0 for every phase ⇒ DFT bin is empty.
+        phases = self._random_phases(8)
+        # P(φ) = 0 for every phase ⇒ empty spectrum.
         osc_counts_list = [{"000": 500, "001": 500} for _ in phases]
         z_counts = {"000": 250, "001": 250, "010": 250, "011": 250}
-        pop, coh, _p_err, _c_err = estimate_fidelity_compressed_sensing(
+        pop, coh, _p_err, _c_err, freq = estimate_fidelity_compressed_sensing(
             z_counts, osc_counts_list, phases, n, num_flag_qubits=0
         )
         assert coh == pytest.approx(0.0, abs=0.02)
         assert pop == pytest.approx(0.25)
+        assert freq == 0
 
     def test_empty_z_counts(self):
-        pop, coh, _, _ = estimate_fidelity_compressed_sensing({}, [], [], 3, 0)
+        pop, coh, _, _, freq = estimate_fidelity_compressed_sensing({}, [], [], 3, 0)
         assert pop == 0.0
         assert coh == 0.0
+        assert freq == 0
+
+
+class TestPhaseGrid:
+    def _benchmark(self, **params) -> GHZBenchmark:
+        return GHZBenchmark(args=Namespace(), params=Namespace(**params))
+
+    def test_parity_oscillation_uniform_grid(self):
+        bench = self._benchmark(num_phases=None)
+        grid = bench._phase_grid("parity_oscillation", n=8)
+        assert grid == pytest.approx(np.linspace(0, 2 * np.pi, 20, endpoint=False).tolist())
+
+    def test_compressed_sensing_default_count_is_log_scaled(self):
+        bench = self._benchmark(num_phases=None, seed=1)
+        grid = bench._phase_grid("compressed_sensing", n=8)
+        # M = max(6, ceil(5 ln 8)) = 11 random phases on [0, 2π)
+        assert len(grid) == 11
+        assert all(0 <= phi < 2 * np.pi for phi in grid)
+
+    def test_compressed_sensing_seed_reproducible(self):
+        grid_a = self._benchmark(num_phases=None, seed=42)._phase_grid("compressed_sensing", n=6)
+        grid_b = self._benchmark(num_phases=None, seed=42)._phase_grid("compressed_sensing", n=6)
+        grid_c = self._benchmark(num_phases=None, seed=43)._phase_grid("compressed_sensing", n=6)
+        assert grid_a == grid_b
+        assert grid_a != grid_c
+
+    def test_explicit_num_phases_respected(self):
+        bench = self._benchmark(num_phases=25, seed=0)
+        assert len(bench._phase_grid("compressed_sensing", n=8)) == 25
+        assert len(bench._phase_grid("parity_oscillation", n=8)) == 25
+
+    def test_dfe_has_no_phases(self):
+        bench = self._benchmark(num_phases=None)
+        assert bench._phase_grid("dfe", n=8) == []
 
 
 class TestGHZResult:
