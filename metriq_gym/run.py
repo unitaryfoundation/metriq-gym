@@ -145,6 +145,9 @@ def setup_device(provider_name: str, device_name: str):
         )
         logger.error(f"Devices available: {devices}")
         raise QBraidSetupError("Device not found")
+    from metriq_gym.qplatform.device import prepare_device_for_dispatch
+
+    prepare_device_for_dispatch(device)
     return device
 
 

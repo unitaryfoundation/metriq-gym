@@ -229,6 +229,37 @@ class TestConnectivityGraphFunction:
         expected_edges = mock_num_qubits * (mock_num_qubits - 1) // 2
         assert result.num_edges() == expected_edges
 
+    def test_braket_ionq_connectivity_without_topology_uses_complete_graph(self):
+        mock_num_qubits = 36
+        device = Mock(spec=BraketDevice)
+        mock_internal_device = Mock()
+        mock_internal_device.topology_graph = None
+        device._device = mock_internal_device
+        device._provider_name = "IonQ"
+        device.id = "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1"
+        device.num_qubits = mock_num_qubits
+
+        result = connectivity_graph(device)
+
+        assert isinstance(result, rx.PyGraph)
+        assert result.num_nodes() == mock_num_qubits
+        expected_edges = mock_num_qubits * (mock_num_qubits - 1) // 2
+        assert result.num_edges() == expected_edges
+
+    def test_braket_missing_topology_for_sparse_device_raises_clear_error(self):
+        device = Mock(spec=BraketDevice)
+        mock_internal_device = Mock()
+        mock_internal_device.topology_graph = None
+        device._device = mock_internal_device
+        device._provider_name = "Rigetti"
+        device.id = "arn:aws:braket:us-west-1::device/qpu/rigetti/Ankaa-3"
+        device.num_qubits = 84
+
+        with pytest.raises(NotImplementedError) as exc_info:
+            connectivity_graph(device)
+
+        assert "Connectivity graph not available for Braket device" in str(exc_info.value)
+
     def test_azure_device_connectivity(self, mock_azure_device):
         result = connectivity_graph(mock_azure_device)
         assert isinstance(result, rx.PyGraph)

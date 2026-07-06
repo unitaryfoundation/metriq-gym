@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import json
 from pydantic import BaseModel
 from qbraid import QbraidError
-from qbraid.runtime import JobStatus
+from qbraid.runtime import BraketDevice, JobStatus
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
 from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, BenchmarkScore
 from metriq_gym.run import (
@@ -77,6 +77,36 @@ def test_setup_device_success(mock_provider, mock_device, patch_load_provider):
 
     mock_provider.get_device.assert_called_once_with(backend_name)
     assert device == mock_device
+
+
+def test_setup_device_disables_validation_for_braket_without_parsed_capabilities(
+    mock_provider, patch_load_provider, caplog
+):
+    device = MagicMock(spec=BraketDevice)
+    device.id = "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1"
+    device._device = SimpleNamespace(properties=None)
+    mock_provider.get_device.return_value = device
+    caplog.set_level(logging.WARNING)
+
+    result = setup_device("aws", device.id)
+
+    assert result == device
+    device.set_options.assert_called_once_with(validate=False)
+    assert "could not be parsed" in caplog.text
+
+
+def test_setup_device_keeps_validation_for_braket_with_parsed_capabilities(
+    mock_provider, patch_load_provider
+):
+    device = MagicMock(spec=BraketDevice)
+    device.id = "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1"
+    device._device = SimpleNamespace(properties=object())
+    mock_provider.get_device.return_value = device
+
+    result = setup_device("aws", device.id)
+
+    assert result == device
+    device.set_options.assert_not_called()
 
 
 @patch("metriq_gym.run.get_providers")
