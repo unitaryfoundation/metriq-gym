@@ -14,7 +14,7 @@ from metriq_gym.cli import app
 
 
 # Disable Rich markup/colors for consistent test output across environments
-runner = CliRunner(mix_stderr=False, env={"NO_COLOR": "1", "TERM": "dumb"})
+runner = CliRunner(env={"NO_COLOR": "1", "TERM": "dumb"})
 
 
 class TestMainApp:
@@ -49,6 +49,14 @@ class TestJobCommands:
         assert "delete" in result.output
         assert "upload" in result.output
         assert "estimate" in result.output
+
+    def test_job_no_args_shows_help(self):
+        """Running mgym job without args should show help."""
+        result = runner.invoke(app, ["job"], color=False)
+        assert result.exit_code == 0
+        assert "dispatch" in result.output
+        assert "poll" in result.output
+        assert "Job operations" in result.output
 
     def test_job_dispatch_help(self):
         """mgym job dispatch --help should show usage."""
@@ -259,6 +267,14 @@ class TestSuiteCommands:
         assert "view" in result.output
         assert "delete" in result.output
         assert "upload" in result.output
+
+    def test_suite_no_args_shows_help(self):
+        """Running mgym suite without args should show help."""
+        result = runner.invoke(app, ["suite"], color=False)
+        assert result.exit_code == 0
+        assert "dispatch" in result.output
+        assert "poll" in result.output
+        assert "Suite operations" in result.output
 
     def test_suite_dispatch_help(self):
         """mgym suite dispatch --help should show usage."""
