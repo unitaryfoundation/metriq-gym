@@ -5,7 +5,7 @@ Tests the version and connectivity_graph functions for different device types
 using mocked qBraid device objects.
 """
 
-from unittest.mock import Mock
+from unittest.mock import Mock, PropertyMock
 
 import pytest
 import rustworkx as rx
@@ -20,6 +20,7 @@ from metriq_gym.qplatform.device import (
     connectivity_graph,
     normalized_metadata,
     pruned_connectivity_graph,
+    validate_qubit_capacity,
 )
 
 
@@ -196,6 +197,14 @@ class TestVersionFunction:
         provider = LocalProvider()
         device = provider.get_device("aer_simulator")
         assert isinstance(version(device), str)
+
+
+class TestValidateQubitCapacity:
+    def test_missing_num_qubits_is_ignored(self):
+        device = Mock(spec=AzureQuantumDevice)
+        type(device).num_qubits = PropertyMock(side_effect=AttributeError("num_qubits"))
+
+        validate_qubit_capacity(device, required_qubits=50)
 
 
 class TestConnectivityGraphFunction:

@@ -53,7 +53,11 @@ def _complete_graph_for_device(device: QuantumDevice, device_type: str) -> rx.Py
 
 def validate_qubit_capacity(device: QuantumDevice, required_qubits: int) -> None:
     """Reject workloads that exceed a device's reported qubit capacity."""
-    available_qubits = device.num_qubits
+    try:
+        available_qubits = device.num_qubits
+    except AttributeError:
+        return
+
     if not isinstance(available_qubits, int):
         return
 
