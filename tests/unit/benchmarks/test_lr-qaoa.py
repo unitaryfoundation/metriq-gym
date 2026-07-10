@@ -1,7 +1,11 @@
 import pytest
 import networkx as nx
 import random
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from metriq_gym.benchmarks.lr_qaoa import (
+    LinearRampQAOA,
     prepare_qaoa_circuit,
     calc_stats,
     cost_maxcut,
@@ -10,6 +14,26 @@ from metriq_gym.benchmarks.lr_qaoa import (
 )
 from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOAData
 from metriq_gym.circuits import distribute_edges, SWAP_pairs
+from metriq_gym.exceptions import DeviceCapacityError
+
+
+def test_lr_qaoa_rejects_oversized_workload_before_connectivity_lookup():
+    benchmark = LinearRampQAOA(
+        SimpleNamespace(),
+        SimpleNamespace(num_qubits=50),
+    )
+    device = SimpleNamespace(
+        id="arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1",
+        num_qubits=36,
+    )
+
+    with (
+        patch("metriq_gym.benchmarks.lr_qaoa.connectivity_graph") as connectivity_mock,
+        pytest.raises(DeviceCapacityError, match="Requested 50 qubits"),
+    ):
+        benchmark._build_circuits(device)
+
+    connectivity_mock.assert_not_called()
 
 
 @pytest.mark.parametrize("num_qubits, qaoa_layers", [(5, [10]), [10, [5, 7]]])

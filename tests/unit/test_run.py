@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 import logging
+import os
 import pytest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -13,6 +14,7 @@ from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, Benc
 from metriq_gym.run import (
     setup_device,
     dispatch_job,
+    dispatch_suite,
     fetch_result,
     estimate_job,
     _export_raw_debug_data,
@@ -77,6 +79,32 @@ def test_setup_device_success(mock_provider, mock_device, patch_load_provider):
 
     mock_provider.get_device.assert_called_once_with(backend_name)
     assert device == mock_device
+
+
+@pytest.mark.parametrize("configured_region", [None, "eu-west-2"])
+def test_setup_device_uses_braket_arn_region_temporarily(
+    configured_region, mock_provider, mock_device, patch_load_provider, monkeypatch
+):
+    arn = "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1"
+    observed_regions = []
+
+    if configured_region is None:
+        monkeypatch.delenv("AWS_REGION", raising=False)
+    else:
+        monkeypatch.setenv("AWS_REGION", configured_region)
+
+    def get_device(device_name):
+        observed_regions.append(os.environ.get("AWS_REGION"))
+        assert device_name == arn
+        return mock_device
+
+    mock_provider.get_device.side_effect = get_device
+
+    device = setup_device("aws", arn)
+
+    assert device == mock_device
+    assert observed_regions == ["us-east-1"]
+    assert os.environ.get("AWS_REGION") == configured_region
 
 
 def test_setup_device_disables_validation_for_braket_without_parsed_capabilities(
@@ -209,6 +237,56 @@ def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, 
         assert "Configuration file not found" in captured.out
 
 
+def test_dispatch_suite_skips_benchmark_exceeding_device_capacity(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = tmp_path / "oversized_suite.json"
+    suite_file.write_text(
+        json.dumps(
+            {
+                "name": "lr_qaoa_scale_suite",
+                "benchmarks": [
+                    {
+                        "name": "LR_QAOA_1D_50",
+                        "config": {
+                            "benchmark_name": "Linear Ramp QAOA",
+                            "graph_type": "1D",
+                            "num_qubits": 50,
+                        },
+                    }
+                ],
+            }
+        )
+    )
+    device = SimpleNamespace(
+        id="arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1",
+        num_qubits=36,
+    )
+    args = SimpleNamespace(
+        provider="aws",
+        device=device.id,
+        suite_config=str(suite_file),
+    )
+    registry = MagicMock()
+    registry.get_available_benchmarks.return_value = ["Linear Ramp QAOA"]
+    setup_benchmark_mock = MagicMock(
+        side_effect=AssertionError("setup_benchmark must not be called")
+    )
+
+    monkeypatch.setattr("metriq_gym.run.setup_device", lambda *_: device)
+    monkeypatch.setattr("metriq_gym.run._lazy_registry", lambda: registry)
+    monkeypatch.setattr("metriq_gym.run.setup_benchmark", setup_benchmark_mock)
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "Requested 50 qubits" in output
+    assert "supports only 36" in output
+    assert "Successfully dispatched 0/1 benchmarks" in output
+    setup_benchmark_mock.assert_not_called()
+    mock_job_manager.add_job.assert_not_called()
+
+
 def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
     class DummyParams(BaseModel):
         benchmark_name: str = "WIT"
@@ -221,7 +299,11 @@ def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
     monkeypatch.setattr("metriq_gym.run.load_and_validate", lambda *_: DummyParams())
     monkeypatch.setattr(
         "metriq_gym.run.setup_device",
-        lambda *_, **__: SimpleNamespace(id="H1-1", profile=SimpleNamespace(basis_gates=[])),
+        lambda *_, **__: SimpleNamespace(
+            id="H1-1",
+            num_qubits=20,
+            profile=SimpleNamespace(basis_gates=[]),
+        ),
     )
 
     # Mock the registry

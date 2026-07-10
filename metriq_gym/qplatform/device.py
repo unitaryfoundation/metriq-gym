@@ -10,6 +10,7 @@ from qiskit.transpiler import CouplingMap
 from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
+from metriq_gym.exceptions import DeviceCapacityError
 from qbraid.runtime.origin import OriginDevice
 from metriq_gym.quantinuum.device import QuantinuumDevice
 
@@ -48,6 +49,19 @@ def _complete_graph_for_device(device: QuantumDevice, device_type: str) -> rx.Py
             f"{device_type} device {device.id} does not report a qubit count for connectivity graph"
         )
     return rx.generators.complete_graph(num_qubits)
+
+
+def validate_qubit_capacity(device: QuantumDevice, required_qubits: int) -> None:
+    """Reject workloads that exceed a device's reported qubit capacity."""
+    available_qubits = device.num_qubits
+    if not isinstance(available_qubits, int):
+        return
+
+    if required_qubits > available_qubits:
+        raise DeviceCapacityError(
+            f"Requested {required_qubits} qubits, but device {device.id} supports "
+            f"only {available_qubits}."
+        )
 
 
 def _braket_metadata_is_fully_connected(device: BraketDevice) -> bool:
