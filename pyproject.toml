@@ -135,6 +135,7 @@ include-package-data = true
 write_to = "metriq_gym/_version.py"
 write_to_template = "__version__ = \"{version}\"\n"
 fallback_version = "0.0.0"
+git_describe_command = "git describe --dirty --tags --long --match v[0-9]*"
 
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
