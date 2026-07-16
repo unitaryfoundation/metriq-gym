@@ -29,6 +29,30 @@ def test_default_upload_dir_builds_expected_path():
     assert path == "metriq-gym/v0.4/aws_braket/rigetti_aspen_m2"
 
 
+def test_default_upload_dir_uses_canonicalized_job_platform():
+    job = MetriqGymJob(
+        id="job-aws",
+        job_type=JobType.WIT,
+        params={},
+        data={},
+        provider_name="braket",
+        device_name="arn:aws:braket:us-west-1::device/qpu/rigetti/Cepheus-1-108Q",
+        dispatch_time=datetime(2026, 7, 15),
+    )
+
+    path = default_upload_dir("0.7.0", job.provider_name, job.device_name)
+    assert path == "metriq-gym/v0.7/aws/rigetti_cepheus-1-108q"
+
+
+def test_default_upload_dir_accepts_braket_alias_directly():
+    path = default_upload_dir(
+        "0.7.0",
+        "braket",
+        "arn:aws:braket:us-west-1::device/qpu/rigetti/Cepheus-1-108Q",
+    )
+    assert path == "metriq-gym/v0.7/aws/rigetti_cepheus-1-108q"
+
+
 def test_job_filename_structure():
     when = datetime(2024, 1, 2, 3, 4, 5)
 
