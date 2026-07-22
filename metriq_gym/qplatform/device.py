@@ -10,6 +10,7 @@ from qiskit.transpiler import CouplingMap
 from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
+from metriq_gym.exceptions import DeviceCapacityError
 from qbraid.runtime.origin import OriginDevice
 from metriq_gym.quantinuum.device import QuantinuumDevice
 
@@ -41,6 +42,77 @@ def coupling_map_to_graph(coupling_map: CouplingMap) -> rx.PyGraph:
     return coupling_map.graph.to_undirected(multigraph=False)
 
 
+def _complete_graph_for_device(device: QuantumDevice, device_type: str) -> rx.PyGraph:
+    num_qubits = device.num_qubits
+    if not isinstance(num_qubits, int):
+        raise NotImplementedError(
+            f"{device_type} device {device.id} does not report a qubit count for connectivity graph"
+        )
+    return rx.generators.complete_graph(num_qubits)
+
+
+def validate_qubit_capacity(device: QuantumDevice, required_qubits: int) -> None:
+    """Reject workloads that exceed a device's reported qubit capacity."""
+    try:
+        available_qubits = device.num_qubits
+    except AttributeError:
+        return
+
+    if not isinstance(available_qubits, int):
+        return
+
+    if required_qubits > available_qubits:
+        raise DeviceCapacityError(
+            f"Requested {required_qubits} qubits, but device {device.id} supports "
+            f"only {available_qubits}."
+        )
+
+
+def _braket_metadata_is_fully_connected(device: BraketDevice) -> bool:
+    try:
+        connectivity = device._device.properties.paradigm.connectivity
+    except AttributeError:
+        return False
+    return connectivity.fullyConnected is True
+
+
+def _is_braket_all_to_all_device(device: BraketDevice) -> bool:
+    provider_name = (device._provider_name or "").lower()
+
+    if device.simulator is True or provider_name == "amazon braket":
+        return True
+
+    if provider_name == "ionq" or "/ionq/" in device.id.lower():
+        return True
+
+    return _braket_metadata_is_fully_connected(device)
+
+
+def _braket_topology_graph(device: BraketDevice) -> nx.Graph | None:
+    try:
+        return device._device.topology_graph
+    except AttributeError:
+        return None
+
+
+@singledispatch
+def prepare_device_for_dispatch(device: QuantumDevice) -> None:
+    """Apply provider-specific runtime workarounds before submitting benchmarks."""
+
+
+@prepare_device_for_dispatch.register
+def _(device: BraketDevice) -> None:
+    if device._device.properties is not None:
+        return
+
+    logger.warning(
+        "Amazon Braket capabilities for device %s could not be parsed; "
+        "disabling qBraid runtime validation for dispatch.",
+        device.id,
+    )
+    device.set_options(validate=False)
+
+
 @singledispatch
 def connectivity_graph(device: QuantumDevice) -> rx.PyGraph:
     raise NotImplementedError(
@@ -55,10 +127,14 @@ def _(device: QiskitBackend) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: BraketDevice) -> rx.PyGraph:
-    if device._provider_name == "Amazon Braket":
-        device_topology = nx.complete_graph(device.num_qubits)
-    else:
-        device_topology = device._device.topology_graph.to_undirected()
+    device_topology = _braket_topology_graph(device)
+
+    if device_topology is None:
+        if _is_braket_all_to_all_device(device):
+            return _complete_graph_for_device(device, "Braket")
+        raise NotImplementedError(f"Connectivity graph not available for Braket device {device.id}")
+
+    device_topology = device_topology.to_undirected()
 
     return cast(
         rx.PyGraph,
@@ -109,7 +185,7 @@ def _(device: OriginDevice) -> rx.PyGraph:
             "Origin device does not report a qubit count for connectivity graph"
         )
 
-    if getattr(device.profile, "simulator", False):
+    if device.profile.simulator:
         return rx.generators.complete_graph(num_qubits)
 
     try:
@@ -186,18 +262,20 @@ def normalized_metadata(device: QuantumDevice) -> dict:
     """
     meta: dict = {}
     try:
-        simulator = getattr(getattr(device, "profile", object()), "simulator", None)
+        simulator = device.profile.simulator
+    except AttributeError:
+        pass
+    else:
         if isinstance(simulator, bool):
             meta["simulator"] = simulator
-    except Exception:
-        pass
 
     try:
-        n = getattr(device, "num_qubits", None)
-        if isinstance(n, int):
-            meta["num_qubits"] = n
-    except Exception:
+        num_qubits = device.num_qubits
+    except AttributeError:
         pass
+    else:
+        if isinstance(num_qubits, int):
+            meta["num_qubits"] = num_qubits
 
     try:
         ver = version(device)
