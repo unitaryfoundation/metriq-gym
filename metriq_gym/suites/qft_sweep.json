@@ -1,28 +1,36 @@
 {
     "name": "qft_sweep",
-    "description": "Quantum Fourier Transform swept over qubit counts. Each entry is a single fixed-qubit-count QFT run; the sweep is defined here at the suite level rather than inside the benchmark.",
+    "description": "Quantum Fourier Transform swept over the {10, 20, 30, 50} qubit counts used in the metriq-gym paper (arXiv:2603.08680, section IV.B.4). Each entry is a single fixed-qubit-count QFT run; the sweep is defined here at the suite level rather than inside the benchmark.",
     "benchmarks": [
         {
-            "name": "qft_3_qubits",
+            "name": "qft_10_qubits",
             "config": {
                 "benchmark_name": "Quantum Fourier Transform",
-                "num_qubits": 3,
+                "num_qubits": 10,
                 "shots": 1000
             }
         },
         {
-            "name": "qft_4_qubits",
+            "name": "qft_20_qubits",
             "config": {
                 "benchmark_name": "Quantum Fourier Transform",
-                "num_qubits": 4,
+                "num_qubits": 20,
                 "shots": 1000
             }
         },
         {
-            "name": "qft_5_qubits",
+            "name": "qft_30_qubits",
             "config": {
                 "benchmark_name": "Quantum Fourier Transform",
-                "num_qubits": 5,
+                "num_qubits": 30,
+                "shots": 1000
+            }
+        },
+        {
+            "name": "qft_50_qubits",
+            "config": {
+                "benchmark_name": "Quantum Fourier Transform",
+                "num_qubits": 50,
                 "shots": 1000
             }
         }
