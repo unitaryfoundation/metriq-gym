@@ -354,13 +354,13 @@ def pauli_from_layer(pauli_layer: QuantumCircuit) -> Pauli:
     per_qubit = ["I"] * n  # default all identity
 
     for instruction in pauli_layer.data:
-        instr = instruction.operation
+        op = instruction.operation
         qargs = instruction.qubits
-        name = instr.name.lower()
+        name = op.name.lower()
         if name in ("barrier", "delay", "measure"):
             continue  # middle layer shouldn't have these, but be permissive
         if len(qargs) != 1:
-            raise ValueError(f"Non-1q op '{instr.name}' found in middle_pauli layer.")
+            raise ValueError(f"Non-1q op '{op.name}' found in middle_pauli layer.")
         # Get the circuit's index for this qubit (portable across Terra versions)
         q = pauli_layer.find_bit(qargs[0]).index
         if name in ("x", "y", "z"):
@@ -368,7 +368,7 @@ def pauli_from_layer(pauli_layer: QuantumCircuit) -> Pauli:
         elif name in ("id", "i"):
             per_qubit[q] = "I"
         else:
-            raise ValueError(f"Non-Pauli op '{instr.name}' found in middle_pauli layer.")
+            raise ValueError(f"Non-Pauli op '{op.name}' found in middle_pauli layer.")
 
     label = "".join(per_qubit[::-1])
     return Pauli(label)
