@@ -213,10 +213,18 @@ def get_circuits_and_metrics(
     benchmark = import_benchmark_module(benchmark_name)
 
     # Call the QED-C submodule to get the circuits and creation information.
-    # Conver to QED-C parameter naming conventions.
+    # Convert to QED-C parameter naming conventions.
     qedc_params = params.copy()
     if "shots" in qedc_params:
         qedc_params["num_shots"] = qedc_params.pop("shots")
+    # A single fixed qubit count (num_qubits) maps to a one-point QED-C sweep.
+    # This lets a benchmark expose the same num_qubits parameter as the rest of
+    # the suite while still driving QED-C's range-based run().
+    if "num_qubits" in qedc_params:
+        num_qubits = qedc_params.pop("num_qubits")
+        qedc_params["min_qubits"] = num_qubits
+        qedc_params["max_qubits"] = num_qubits
+        qedc_params["skip_qubits"] = 1
     circuits, circuit_metrics = benchmark.run(
         **qedc_params,
         api="qiskit",
@@ -247,7 +255,12 @@ def calculate_accuracy_score(circuit_metrics: QEDC_Metrics) -> tuple[float, floa
     Returns:
         values: the score and the uncertainty.
     """
-    # Obtain the average fidelity and standard deviation for each qubit size (group) in the sweep.
+    # aggregate_metrics() appends to the module-global group_metrics, so reset that
+    # accumulator first. Without this, polling several QED-C jobs in one process
+    # (for example a suite that sweeps QFT over qubit counts) would aggregate each
+    # job's fidelities on top of the previous jobs' and inflate the score. Only
+    # group_metrics is reset; circuit_metrics holds the per-job data being scored.
+    metrics.group_metrics = {key: [] for key in metrics.group_metrics}
     metrics.circuit_metrics = circuit_metrics
     metrics.aggregate_metrics()
     avgs = metrics.group_metrics["avg_fidelities"]
