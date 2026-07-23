@@ -1415,6 +1415,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Release Process">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tag-naming-requirement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tag naming requirement
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1835,6 +1852,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Release Process">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tag-naming-requirement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tag naming requirement
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2053,6 +2087,20 @@
 <li>CI builds and publishes to PyPI</li>
 <li>Documentation is deployed to GitHub Pages</li>
 </ol>
+<h3 id="tag-naming-requirement">Tag naming requirement<a class="headerlink" href="#tag-naming-requirement" title="Permanent link">&para;</a></h3>
+<p>Release tags <strong>must</strong> follow the <code>v&lt;digit&gt;</code> scheme, i.e. <code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>
+with an optional pre-release suffix (e.g. <code>v0.7.1</code>, <code>v0.8.0rc1</code>). <code>setuptools_scm</code>
+is configured to only consider tags matching the glob <code>v[0-9]*</code> when deriving the
+package version, so:</p>
+<ul>
+<li>A release cut from a conforming tag builds a clean version (e.g. <code>0.7.1</code>) that
+  PyPI accepts.</li>
+<li>A release cut from a non-conforming tag (e.g. <code>release-1.0</code>) would fall back to
+  the nearest conforming tag and produce a dev version with a <code>+g&lt;hash&gt;</code> local
+  segment, which PyPI rejects on upload.</li>
+</ul>
+<p>Tags that are not releases (e.g. <code>metriq-paper-v1</code>) must <strong>not</strong> match <code>v[0-9]*</code>;
+they are ignored by versioning, so they can be created freely.</p>
 <h2 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="https://github.com/unitaryfoundation/metriq-gym/issues">Issue Tracker</a></li>
