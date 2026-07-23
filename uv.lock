@@ -35,7 +35,7 @@ wheels = [
 
 [[package]]
 name = "amazon-braket-sdk"
-version = "1.107.0"
+version = "1.120.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "amazon-braket-default-simulator" },
@@ -53,9 +53,9 @@ dependencies = [
     { name = "oqpy" },
     { name = "sympy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/7b/0b3b01422326747988572e401296d5d30e2cc94833e57a82e2c8a0ab1d42/amazon_braket_sdk-1.107.0.tar.gz", hash = "sha256:e90d1607a2f1a71a8a2bfb81562ca5b4a3754781b5e6475cd0c94f6b4a00b214", size = 480626, upload-time = "2025-12-22T16:15:15.671Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/67/0e/c4bb4f1ac1d9ed60d51cfc36f826076b0dd501f93d13ee22a0be0b7b4ac1/amazon_braket_sdk-1.120.0.tar.gz", hash = "sha256:f840f8689c6bcb6dfc2ed9be174dcac5e1096d47a1015e8973f875dee76e2101", size = 270701, upload-time = "2026-06-22T16:16:38.943Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/52/939b5cdbca1d5d53d3d505f777886a86a0a5457003c9c2238efd38a9ad54/amazon_braket_sdk-1.107.0-py3-none-any.whl", hash = "sha256:34b971c4a1cd8f9795ae9053575b01f89e22a28fdde3cfdba104895a48515e5b", size = 372411, upload-time = "2025-12-22T16:15:14.425Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/fe/76f8b18eae1b9f62ec3d6e527ca867cb05b679a41fcb20ff48f30242eae0/amazon_braket_sdk-1.120.0-py3-none-any.whl", hash = "sha256:362fab3e4ce5a2f3cabb77ac4ebf3551e152c30a5905805419962c3e32aaf4ed", size = 397919, upload-time = "2026-06-22T16:16:37.178Z" },
 ]
 
 [[package]]
@@ -1303,6 +1303,7 @@ wheels = [
 name = "metriq-gym"
 source = { editable = "." }
 dependencies = [
+    { name = "amazon-braket-sdk" },
     { name = "dimod" },
     { name = "jsonschema" },
     { name = "networkx" },
@@ -1349,6 +1350,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "amazon-braket-sdk", specifier = ">=1.111.1" },
     { name = "dimod", specifier = ">=0.12.20,<0.13.0" },
     { name = "jsonschema", specifier = ">=4.25.1,<5.0.0" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.5" },
@@ -1366,7 +1368,7 @@ requires-dist = [
     { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
     { name = "qiskit-experiments", specifier = ">=0.9.0,<0.15.0" },
-    { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.48.0" },
+    { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.49.0" },
     { name = "qnexus", specifier = ">=0.39.0,<1.0.0" },
     { name = "rustworkx", specifier = ">=0.17.1,<0.19.0" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
@@ -2370,7 +2372,7 @@ wheels = [
 
 [[package]]
 name = "qbraid"
-version = "0.12.1"
+version = "0.12.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -2382,9 +2384,9 @@ dependencies = [
     { name = "rustworkx" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/94/cf1d036345861bed1c3af175e6bfc9922b563b86694abe0594ced2961cc9/qbraid-0.12.1.tar.gz", hash = "sha256:af3e74ac0cb134a88235e4d47d464467f4644f33d70d4356d4ad19ea6bae66f1", size = 647480, upload-time = "2026-05-17T16:07:42.906Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c1/75/67a70b5a4873d135ff4d9e458fa1e3492d041bf392d2931a601297b72026/qbraid-0.12.2.tar.gz", hash = "sha256:fc361be51405a3cf024f7046826329fcf19361ddaca7c7fe123f84dcfe8389d0", size = 695223, upload-time = "2026-07-11T14:02:59.705Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/59/b283431c53b3846ec8c03ae360654ca8818597b3e822b9737da7d8b6dbe9/qbraid-0.12.1-py3-none-any.whl", hash = "sha256:2c51a70be7889d1cc27a805461272fa81d4c497754828713660cc7769c7770ca", size = 326708, upload-time = "2026-05-17T16:07:41.307Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/0c/67f3040f37c38fabfa22b6027adafe6e1326b17f4e4e0fc7ebd217178d3b/qbraid-0.12.2-py3-none-any.whl", hash = "sha256:58370d5654ada79b6648ca146e51336e085d2eb7a474c62e13a2587142104c7d", size = 360382, upload-time = "2026-07-11T14:02:58.1Z" },
 ]
 
 [package.optional-dependencies]
