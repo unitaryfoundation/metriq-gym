@@ -1,0 +1,52 @@
+{
+  "$id": "metriq-gym/ghz.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GHZ",
+  "description": "GHZ state preparation and verification benchmark. Constructs a GHZ state on the device using a BFS spanning tree of the device connectivity, then estimates fidelity via direct fidelity estimation (DFE), parity oscillation curve fitting, or compressed sensing (random-phase parity sampling with sparse spectrum recovery by L1 minimization).",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "GHZ",
+      "description": "Name of the benchmark. Must be 'GHZ' for this schema."
+    },
+    "num_qubits": {
+      "type": "integer",
+      "description": "Number of data qubits for the GHZ state.",
+      "minimum": 2,
+      "examples": [4, 10, 20]
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [1000, 10000]
+    },
+    "method": {
+      "type": "string",
+      "description": "Verification method: 'dfe' (2 circuits, fast, lower-bound fidelity), 'parity_oscillation' (many circuits on a uniform grid over [0, 2π), curve-fit amplitude), or 'compressed_sensing' (~5·ln(N) circuits at random phases on [0, 2π); coherence and the dominant oscillation frequency are recovered by LASSO over a cosine basis, so it also witnesses the actual GHZ size).",
+      "enum": ["dfe", "parity_oscillation", "compressed_sensing"],
+      "default": "dfe"
+    },
+    "num_phases": {
+      "type": "integer",
+      "description": "Number of phase points for the oscillation-style methods. Ignored for DFE. Defaults to 20 for parity_oscillation (dense enough to fit cos(Nφ+θ)) and to ceil(5·ln(N)), at least 6, for compressed_sensing.",
+      "minimum": 5,
+      "examples": [8, 20, 50]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Seed for the random phase draw used by compressed_sensing, for reproducible dispatches. Ignored by other methods.",
+      "examples": [42]
+    },
+    "num_flag_qubits": {
+      "type": "integer",
+      "description": "Number of flag qubits for error detection via ZZ stabilizer checks. Set to 0 to disable.",
+      "default": 0,
+      "minimum": 0,
+      "examples": [0, 2]
+    }
+  },
+  "required": ["benchmark_name", "num_qubits"]
+}

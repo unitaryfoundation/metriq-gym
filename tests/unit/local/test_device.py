@@ -31,7 +31,12 @@ def test_status_returns_online(mock_provider, mock_backend):
 
 
 def test_submit_returns_local_aer_job(mock_provider, mock_backend):
-    with patch("metriq_gym.local.device._make_profile") as mock_make_profile:
+    with (
+        patch("metriq_gym.local.device._make_profile") as mock_make_profile,
+        patch(
+            "metriq_gym.local.device.transpile", side_effect=lambda circuits, **_: circuits
+        ) as mock_transpile,
+    ):
         mock_make_profile.return_value = MagicMock(
             device_id="test_device", extra={"backend": mock_backend}
         )
@@ -40,6 +45,10 @@ def test_submit_returns_local_aer_job(mock_provider, mock_backend):
         )
         input_circuit = QuantumCircuit(2)
         job = device.submit(input_circuit, shots=N_SHOTS)
+        # Circuits are translated to the backend basis without optimization.
+        mock_transpile.assert_called_once_with(
+            input_circuit, backend=mock_backend, optimization_level=0
+        )
         assert isinstance(job, LocalAerJob)
         assert job.device == device
         assert job.result().data.measurement_counts == {"00": N_SHOTS}
