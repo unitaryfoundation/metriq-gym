@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>metriq-gym · jobs</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --bg-2: #f8fafc;
+  --panel: rgba(17, 27, 44, 0.05);
+  --text: #1e2a3b;
+  --muted: #6c778a;
+  --accent: #2563eb;
+  --accent-2: #1fb4c2;
+  --border: rgba(15, 23, 42, 0.08);
+  --radius: 12px;
+  --shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  --font: "Iowan Old Style", "Palatino LT STD", "Book Antiqua", Palatino, serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* status */
+  --st-queued: #6c778a;      --st-queued-bg: #f1f5f9;
+  --st-running: #2563eb;     --st-running-bg: #eef4ff;
+  --st-ready: #b45309;       --st-ready-bg: #fff7ed;
+  --st-uploaded: #15803d;    --st-uploaded-bg: #f0fdf4;
+  --st-failed: #b91c1c;      --st-failed-bg: #fef2f2;
+  /* filter tokens (metriq.info) */
+  --filter-selected-bg: #eef4ff;
+  --filter-selected-border: #93bbfd;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; color: var(--text); background: var(--bg);
+  font: 400 16px/1.65 var(--font);
+}
+.container { max-width: 1120px; margin: 0 auto; padding: 32px 24px 64px; }
+
+/* ---- nav ---- */
+.nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
+}
+.brand { display: inline-flex; align-items: flex-start; text-decoration: none; color: inherit; }
+.brand__word { font-size: 26px; font-weight: 600; letter-spacing: .1px; }
+.brand__word small { font-weight: 400; color: var(--muted); }
+.brand__suffix {
+  color: var(--accent); font-size: 11px; font-weight: 600; line-height: 1;
+  letter-spacing: .03em; text-transform: lowercase; margin: 2px 0 0 6px;
+}
+.nav__actions { display: flex; align-items: center; gap: 14px; }
+.refreshed { font-size: 12.5px; color: var(--muted); }
+.btn {
+  appearance: none; border: 1px solid rgba(15,23,42,.14); background: var(--bg-2);
+  color: var(--text); padding: 9px 16px; border-radius: 6px; cursor: pointer;
+  font-family: var(--font); font-weight: 600; font-size: 13px; letter-spacing: .2px;
+  transition: background .18s ease, border-color .18s ease;
+}
+.btn:hover { border-color: rgba(37,99,235,.28); background: #eef2fd; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn--accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn--accent:hover { background: #3b74ee; }
+.btn--sm { padding: 4px 10px; font-size: 12px; }
+.btn--danger { color: var(--muted); }
+.btn--danger:hover { color: var(--st-failed); border-color: rgba(185,28,28,.35); background: var(--st-failed-bg); }
+
+/* ---- action banner ---- */
+.banner {
+  margin: 0 0 24px; padding: 10px 14px; border: 1px solid #fde68a;
+  background: linear-gradient(90deg, #fff7ed 0%, #fff5d7 100%); color: #92400e;
+  border-radius: 10px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+}
+.banner__fail { color: var(--st-failed); font-weight: 600; width: 100%; }
+.banner .linkbtn {
+  background: none; border: none; cursor: pointer; font: inherit; color: var(--accent);
+  text-decoration: underline; padding: 0;
+}
+
+/* ---- stat tiles ---- */
+.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 36px; }
+@media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+.tile {
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px 12px;
+  cursor: pointer; background: var(--bg); text-align: left; font-family: var(--font);
+  transition: background .18s ease, border-color .18s ease;
+}
+.tile:hover { background: var(--bg-2); }
+.tile.is-zero { opacity: .45; }
+.tile.is-active { background: var(--filter-selected-bg); border-color: var(--filter-selected-border); }
+.tile__n { font-size: 36px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile__label { font-size: 12.5px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+
+/* ---- sections ---- */
+h2 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+.section { margin-bottom: 40px; }
+.section__meta { font-size: 12.5px; color: var(--muted); margin: 0 0 14px; }
+
+/* ---- coverage matrix ---- */
+.matrix-wrap { overflow-x: auto; }
+.matrix { border-collapse: collapse; width: 100%; font-size: 14px; }
+.matrix th, .matrix td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border); }
+.matrix th { font-weight: 600; font-size: 12.5px; color: var(--muted); }
+.matrix td:first-child, .matrix th:first-child { text-align: left; white-space: nowrap; }
+.matrix td { font-variant-numeric: tabular-nums; }
+.mcell { cursor: pointer; border-radius: 6px; }
+.mcell:hover { background: var(--bg-2); }
+.mcell .frac { display: inline-block; min-width: 34px; }
+.mcell .bar { display: block; height: 2px; border-radius: 1px; background: var(--panel); margin-top: 3px; position: relative; overflow: hidden; }
+.mcell .bar i { position: absolute; inset: 0 auto 0 0; border-radius: 1px; }
+.g-uploaded { color: var(--st-uploaded); }
+.g-ready { color: var(--st-ready); }
+.g-running { color: var(--st-running); }
+.g-queued { color: var(--st-queued); }
+.g-failed { color: var(--st-failed); }
+.g-none { color: rgba(108,119,138,.45); }
+
+/* ---- filters ---- */
+.filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.filters select {
+  font-family: var(--font); font-size: 13px; color: var(--text); padding: 6px 10px;
+  border: 1px solid rgba(15,23,42,.14); border-radius: 6px; background: var(--bg);
+}
+.filters .clear { font-size: 12.5px; color: var(--accent); cursor: pointer; background: none; border: none; font-family: var(--font); text-decoration: underline; padding: 0; }
+
+/* ---- jobs table ---- */
+.jobs { width: 100%; border-collapse: collapse; font-size: 14px; }
+.jobs th {
+  text-align: left; font-size: 12px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border);
+}
+.jobs td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.jobs tr.row { cursor: pointer; }
+.jobs tr.row:hover { background: var(--bg-2); }
+.jobs tr.row.in-suite td:first-child { box-shadow: inset 3px 0 0 var(--accent-2); }
+.jobs .num { font-variant-numeric: tabular-nums; }
+.jobs .muted { color: var(--muted); }
+.jobs .actions { white-space: nowrap; text-align: right; }
+.jobs .actions .btn--sm { visibility: hidden; }
+.jobs tr.row:hover .actions .btn--sm { visibility: visible; }
+tr.suitehead td {
+  font-size: 13px; color: var(--muted); background: var(--bg-2); padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+tr.suitehead td b { color: var(--text); }
+tr.suitehead td { box-shadow: inset 3px 0 0 var(--accent-2); }
+.custom-chip {
+  font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px;
+  padding: 1px 7px; margin-left: 6px; vertical-align: 1px;
+}
+.empty { color: var(--muted); font-size: 14px; padding: 24px 0; }
+.empty code { font-family: var(--mono); font-size: 12.5px; background: var(--bg-2); padding: 2px 6px; border-radius: 4px; }
+
+/* ---- status chips ---- */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+}
+.chip--queued { color: var(--st-queued); background: var(--st-queued-bg); }
+.chip--unknown { color: var(--st-queued); background: var(--st-queued-bg); }
+.chip--running { color: var(--st-running); background: var(--st-running-bg); }
+.chip--ready_to_upload { color: var(--st-ready); background: var(--st-ready-bg); }
+.chip--uploaded { color: var(--st-uploaded); background: var(--st-uploaded-bg); }
+.chip--failed { color: var(--st-failed); background: var(--st-failed-bg); }
+.pulse { animation: pulse 2s ease infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ---- drawer ---- */
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 92vw); background: var(--bg);
+  box-shadow: var(--shadow); border-left: 1px solid var(--border); transform: translateX(105%);
+  transition: transform .22s ease; z-index: 20; overflow-y: auto; padding: 24px;
+}
+.drawer.open { transform: translateX(0); }
+.drawer h3 { margin: 0 0 2px; font-size: 18px; }
+.drawer .close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+.drawer dl { margin: 14px 0; font-size: 13.5px; }
+.drawer dt { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.drawer dd { margin: 1px 0 0; }
+.drawer pre {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5; overflow-x: auto; white-space: pre-wrap;
+  word-break: break-all;
+}
+.drawer .taskid { font-family: var(--mono); font-size: 11.5px; word-break: break-all; }
+.drawer .drawer-actions { display: flex; gap: 10px; margin: 16px 0; }
+.scrim { position: fixed; inset: 0; z-index: 15; display: none; }
+.scrim.open { display: block; }
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 30;
+  background: var(--text); color: #fff; font-size: 13px; padding: 10px 18px; border-radius: 8px;
+  opacity: 0; transition: opacity .25s ease; pointer-events: none; max-width: 80vw;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="container">
+  <nav class="nav">
+    <a class="brand" href="#">
+      <span class="brand__word">metriq<small>-gym</small></span>
+      <span class="brand__suffix">jobs</span>
+    </a>
+    <div class="nav__actions">
+      <span class="refreshed" id="refreshed"></span>
+      <button class="btn" id="pollall">&#10227; Poll all pending</button>
+    </div>
+  </nav>
+
+  <div id="banner"></div>
+  <div class="tiles" id="tiles"></div>
+
+  <section class="section">
+    <h2>Metriq-score coverage</h2>
+    <p class="section__meta">Jobs matching the paper's suite spec, per device. Click a cell to filter.</p>
+    <div class="matrix-wrap"><table class="matrix" id="matrix"></table></div>
+  </section>
+
+  <section class="section">
+    <h2>Jobs</h2>
+    <div class="filters" id="filters"></div>
+    <table class="jobs">
+      <thead><tr>
+        <th>Status</th><th>Benchmark</th><th>n</th><th>Device</th><th>Provider</th>
+        <th>Dispatched</th><th>Runtime</th><th class="actions"></th>
+      </tr></thead>
+      <tbody id="jobrows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>
+      No jobs yet — dispatch one with
+      <code>mgym job dispatch config.json --provider &lt;p&gt; --device &lt;d&gt;</code>
+    </div>
+  </section>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= Metriq-score suite spec (paper §IV) ================= */
+const SPEC = {
+  "BSEQ": [{ shots: 1000 }],
+  "CLOPS": [{ num_qubits: 100, num_layers: 100, num_circuits: 1000, shots: 100 }],
+  "EPLG": [{}],  // both full and reduced panels count
+  "Mirror Circuits": [
+    { width: 8,  num_layers: 64, two_qubit_gate_prob: 0.5, num_circuits: 10 },
+    { width: 16, num_layers: 32, two_qubit_gate_prob: 0.5, num_circuits: 10 },
+    { width: 24, num_layers: 16, two_qubit_gate_prob: 0.5, num_circuits: 10 },
+    { width: 32, num_layers: 8,  two_qubit_gate_prob: 0.5, num_circuits: 10 },
+    { width: 64, num_layers: 4,  two_qubit_gate_prob: 0.5, num_circuits: 10 },
+    { width: 128, num_layers: 2, two_qubit_gate_prob: 0.5, num_circuits: 10 },
+  ],
+  "QML Kernel": [10, 20, 30, 50].map(n => ({ num_qubits: n, shots: 1000 })),
+  "Linear Ramp QAOA": [10, 20, 50, 100].map(n => ({
+    graph_type: "1D", num_qubits: n, qaoa_layers: [10],
+    delta_beta: 0.3, delta_gamma: 0.6, shots: 1000, trials: 10,
+  })),
+  "WIT": [{ num_qubits: 7, shots: 8192 }],
+  "Quantum Fourier Transform": [{ min_qubits: 4, max_qubits: 20, skip_qubits: 4, method: 1 }],
+};
+const SPEC_LABELS = {
+  "BSEQ": "BSEQ", "CLOPS": "CLOPS", "EPLG": "EPLG", "Mirror Circuits": "Mirror",
+  "QML Kernel": "QMLK", "Linear Ramp QAOA": "LR-QAOA", "WIT": "WIT",
+  "Quantum Fourier Transform": "QFT",
+};
+const STATE_META = {
+  queued:          { icon: "◌", word: "Queued" },
+  running:         { icon: "●", word: "Running" },
+  ready_to_upload: { icon: "↑", word: "Ready" },
+  uploaded:        { icon: "✓", word: "Uploaded" },
+  failed:          { icon: "✕", word: "Failed" },
+  unknown:         { icon: "◌", word: "Not polled" },
+};
+const TILE_ORDER = ["queued", "running", "ready_to_upload", "uploaded", "failed"];
+
+let jobs = [];
+let filter = { state: null, device: null, benchmark: null };
+let lastFetch = null;
+
+/* ================= data ================= */
+async function refresh() {
+  try {
+    const r = await fetch("/api/jobs");
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    jobs = d.jobs;
+    lastFetch = Date.now();
+    render();
+  } catch (e) { toast("Refresh failed: " + e.message); }
+}
+
+function subsetMatch(spec, params) {
+  return Object.entries(spec).every(([k, v]) =>
+    JSON.stringify(params[k]) === JSON.stringify(v));
+}
+function specMatches(job) {
+  const specs = SPEC[job.benchmark];
+  if (!specs) return false;
+  return specs.some(s => subsetMatch(s, job.params));
+}
+
+/* ================= render ================= */
+function render() { renderBanner(); renderTiles(); renderMatrix(); renderFilters(); renderTable(); renderRefreshed(); }
+
+function counts() {
+  const c = { queued: 0, running: 0, ready_to_upload: 0, uploaded: 0, failed: 0, unknown: 0 };
+  jobs.forEach(j => c[j.state] = (c[j.state] || 0) + 1);
+  c.queued += c.unknown; // unpolled pending jobs count as queued in the tiles
+  return c;
+}
+
+function renderBanner() {
+  const el = document.getElementById("banner");
+  const ready = jobs.filter(j => j.state === "ready_to_upload").length;
+  const failed = jobs.filter(j => j.state === "failed").length;
+  if (!ready && !failed) { el.innerHTML = ""; return; }
+  let html = "";
+  if (ready) html += `<span>&#9650;</span> <span><b>${ready} job${ready > 1 ? "s" : ""}</b> ready to upload to metriq-data</span>
+    <button class="linkbtn" onclick="uploadAll()">Upload all</button>`;
+  if (failed) html += `<span class="banner__fail">&#10005; ${failed} job${failed > 1 ? "s" : ""} reported a failure &mdash; click the row to inspect</span>`;
+  el.innerHTML = `<div class="banner">${html}</div>`;
+}
+
+function renderTiles() {
+  const c = counts();
+  document.getElementById("tiles").innerHTML = TILE_ORDER.map(s => {
+    const m = STATE_META[s];
+    const n = c[s] || 0;
+    const active = filter.state === s ? " is-active" : "";
+    const zero = n === 0 ? " is-zero" : "";
+    return `<button class="tile${active}${zero}" onclick="toggleStateFilter('${s}')">
+      <div class="tile__n">${n}</div>
+      <div class="tile__label"><span class="g-${cls(s)}">${m.icon}</span> ${m.word}</div>
+    </button>`;
+  }).join("");
+}
+function cls(s) { return s === "ready_to_upload" ? "ready" : s === "unknown" ? "queued" : s; }
+
+const RANK = { uploaded: 5, ready_to_upload: 4, running: 3, queued: 2, unknown: 1, failed: 0 };
+function bestJobFor(device, bench, spec) {
+  const cands = jobs.filter(j => j.device === device && j.benchmark === bench && subsetMatch(spec, j.params));
+  if (!cands.length) return null;
+  return cands.reduce((a, b) => RANK[a.state] >= RANK[b.state] ? a : b);
+}
+
+function renderMatrix() {
+  const devices = [...new Set(jobs.map(j => j.device))].sort();
+  const benches = Object.keys(SPEC);
+  if (!devices.length) { document.getElementById("matrix").innerHTML = ""; return; }
+  let html = "<tr><th>device</th>" + benches.map(b => `<th>${SPEC_LABELS[b]}</th>`).join("") + "</tr>";
+  for (const dev of devices) {
+    html += `<tr><td>${dev}</td>`;
+    for (const bench of benches) {
+      const specs = SPEC[bench];
+      const states = specs.map(s => { const j = bestJobFor(dev, bench, s); return j ? j.state : "none"; });
+      const done = states.filter(s => s === "uploaded" || s === "ready_to_upload").length;
+      let cell;
+      if (specs.length === 1) {
+        const s = states[0];
+        cell = s === "none" ? `<span class="g-none">&mdash;</span>`
+             : `<span class="g-${cls(s)}" title="${STATE_META[s].word}">${STATE_META[s].icon}</span>`;
+      } else {
+        const attempted = states.filter(s => s !== "none").length;
+        if (!attempted) cell = `<span class="g-none">&mdash;</span>`;
+        else {
+          const pend = states.find(s => s === "failed") || states.find(s => s === "running" || s === "queued" || s === "unknown");
+          const color = done === specs.length ? "var(--st-uploaded)" : pend === "failed" ? "var(--st-failed)" : "var(--st-running)";
+          cell = `<span class="frac">${done}/${specs.length}</span>
+            <span class="bar"><i style="width:${100 * done / specs.length}%;background:${color}"></i></span>`;
+        }
+      }
+      html += `<td class="mcell" onclick="matrixFilter('${dev}','${bench}')">${cell}</td>`;
+    }
+    html += "</tr>";
+  }
+  document.getElementById("matrix").innerHTML = html;
+}
+
+function renderFilters() {
+  const devices = [...new Set(jobs.map(j => j.device))].sort();
+  const benches = [...new Set(jobs.map(j => j.benchmark))].sort();
+  const sel = (id, label, opts, val) =>
+    `<select onchange="filter.${id}=this.value||null;render()">
+       <option value="">${label}</option>
+       ${opts.map(o => `<option ${o === val ? "selected" : ""}>${o}</option>`).join("")}
+     </select>`;
+  let html = sel("device", "All devices", devices, filter.device) +
+             sel("benchmark", "All benchmarks", benches, filter.benchmark);
+  if (filter.state || filter.device || filter.benchmark)
+    html += `<button class="clear" onclick="filter={state:null,device:null,benchmark:null};render()">clear filters</button>`;
+  document.getElementById("filters").innerHTML = html;
+}
+
+function visibleJobs() {
+  return jobs.filter(j =>
+    (!filter.state || j.state === filter.state || (filter.state === "queued" && j.state === "unknown")) &&
+    (!filter.device || j.device === filter.device) &&
+    (!filter.benchmark || j.benchmark === filter.benchmark));
+}
+
+function renderTable() {
+  const vis = visibleJobs();
+  document.getElementById("empty").hidden = vis.length > 0;
+
+  // group suite jobs under a header positioned at the suite's newest member
+  const rows = [];
+  const seenSuites = new Set();
+  for (const j of vis) {
+    if (j.suite_id) {
+      if (seenSuites.has(j.suite_id)) continue;
+      seenSuites.add(j.suite_id);
+      const members = vis.filter(x => x.suite_id === j.suite_id);
+      const done = members.filter(x => x.state === "uploaded" || x.state === "ready_to_upload").length;
+      rows.push({ suiteHead: true, name: j.suite_name || j.suite_id, done, total: members.length });
+      members.forEach(m => rows.push({ job: m, inSuite: true }));
+    } else rows.push({ job: j });
+  }
+
+  document.getElementById("jobrows").innerHTML = rows.map(r => {
+    if (r.suiteHead)
+      return `<tr class="suitehead"><td colspan="8"><b>${r.name}</b> &middot; suite &middot; ${r.done}/${r.total} complete</td></tr>`;
+    const j = r.job;
+    return `<tr class="row${r.inSuite ? " in-suite" : ""}" onclick="openDrawer('${j.id}')">
+      <td>${chip(j)}</td>
+      <td>${j.benchmark}${specMatches(j) ? "" : `<span class="custom-chip">custom</span>`}</td>
+      <td class="num">${j.num_qubits ?? "&mdash;"}</td>
+      <td>${j.device}</td>
+      <td class="muted">${j.provider}</td>
+      <td class="muted" title="${j.dispatch_time}">${relTime(j.dispatch_time)}</td>
+      <td class="num muted">${fmtRuntime(j.runtime_seconds)}</td>
+      <td class="actions" onclick="event.stopPropagation()">${rowActions(j)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function chip(j) {
+  const m = STATE_META[j.state];
+  let word = m.word;
+  if (j.state === "queued" && j.queue_position != null) word += ` &middot; #${j.queue_position}`;
+  const pulse = j.state === "running" ? " pulse" : "";
+  return `<span class="chip chip--${j.state}"><span class="${pulse}">${m.icon}</span> ${word}</span>`;
+}
+
+function rowActions(j) {
+  let html = "";
+  if (["queued", "running", "unknown"].includes(j.state) || j.state === "failed")
+    html += `<button class="btn btn--sm" id="poll-${j.id}" onclick="pollOne('${j.id}')">Poll</button> `;
+  if (j.state === "ready_to_upload")
+    html += `<button class="btn btn--sm btn--accent" id="up-${j.id}" onclick="uploadOne('${j.id}')">Upload</button>`;
+  if (j.state === "uploaded" && j.pr_url)
+    html += `<a class="btn btn--sm" href="${j.pr_url}" target="_blank">PR &#8599;</a> `;
+  html += `<button class="btn btn--sm btn--danger" title="Stop tracking this job" onclick="deleteOne('${j.id}')">&#10005;</button>`;
+  return html;
+}
+
+async function deleteOne(id) {
+  const j = jobs.find(x => x.id === id);
+  if (!j) return;
+  const extra = j.state === "queued" || j.state === "running"
+    ? "\n\nNote: this only removes the local record — tasks already submitted to the provider keep running (and billing) on hardware."
+    : "";
+  if (!confirm(`Delete ${j.benchmark} (n=${j.num_qubits}) on ${j.device} from the local metriq-gym database?\n\nA timestamped backup of the database is kept next to it.${extra}`)) return;
+  try {
+    const r = await fetch("/api/delete/" + id, { method: "POST" });
+    const d = await r.json();
+    if (!d.ok) throw new Error((d.output || d.error || "unknown error").slice(-300));
+    closeDrawer();
+    toast("Job deleted");
+    await refresh();
+  } catch (e) {
+    // The db is the ground truth — a slow/killed subprocess can report failure
+    // after the deletion already landed.
+    await refresh();
+    if (!jobs.find(x => x.id === id)) { closeDrawer(); toast("Job deleted"); }
+    else toast("Delete failed: " + e.message);
+  }
+}
+
+/* ================= drawer ================= */
+function openDrawer(id) {
+  const j = jobs.find(x => x.id === id);
+  if (!j) return;
+  const braketConsole = arn => {
+    const m = /^arn:aws:braket:([a-z0-9-]+):/.exec(arn);
+    return m ? `https://${m[1]}.console.aws.amazon.com/braket/home?region=${m[1]}#/tasks` : null;
+  };
+  const tasks = j.provider_job_ids.map(t => {
+    const link = braketConsole(t);
+    return `<div class="taskid">${t}${link ? ` <a href="${link}" target="_blank">&#8599;</a>` : ""}</div>`;
+  }).join("") || `<span class="muted">&mdash;</span>`;
+
+  let resultHtml = "";
+  if (j.result_data) {
+    const flat = Object.entries(j.result_data)
+      .filter(([, v]) => typeof v !== "object" || (Array.isArray(v) && v.length <= 8))
+      .map(([k, v]) => `<dt>${k}</dt><dd class="num">${Array.isArray(v) ? v.map(x => typeof x === "number" ? +x.toFixed(4) : x).join(", ") : v}</dd>`)
+      .join("");
+    resultHtml = `<dt>result summary</dt><dd><dl>${flat || "<span class='muted'>see raw record</span>"}</dl></dd>`;
+  }
+
+  document.getElementById("drawer").innerHTML = `
+    <button class="close" onclick="closeDrawer()">&#10005;</button>
+    <h3>${j.benchmark}</h3>
+    <div>${chip(j)}${j.pr_url ? ` <a href="${j.pr_url}" target="_blank" style="font-size:13px">view PR &#8599;</a>` : ""}</div>
+    <div class="drawer-actions">
+      ${["queued","running","unknown","failed"].includes(j.state) ? `<button class="btn" onclick="pollOne('${j.id}')">Poll now</button>` : ""}
+      ${j.state === "ready_to_upload" ? `<button class="btn btn--accent" onclick="uploadOne('${j.id}')">Upload to metriq-data</button>` : ""}
+      <button class="btn" onclick='copyText(${JSON.stringify(JSON.stringify(j, null, 2))})'>Copy JSON</button>
+      <button class="btn btn--danger" onclick="deleteOne('${j.id}')">Delete</button>
+    </div>
+    <dl>
+      <dt>job id</dt><dd class="taskid">${j.id}</dd>
+      <dt>device</dt><dd>${j.device} <span class="muted">(${j.provider})</span></dd>
+      <dt>dispatched</dt><dd>${j.dispatch_time} <span class="muted">&middot; mgym v${j.app_version ?? "?"}</span></dd>
+      ${j.last_polled ? `<dt>last polled</dt><dd>${relTime(j.last_polled)}</dd>` : ""}
+      ${j.suite_name ? `<dt>suite</dt><dd>${j.suite_name}</dd>` : ""}
+      <dt>provider tasks (${j.provider_job_ids.length})</dt><dd>${tasks}</dd>
+      ${resultHtml}
+      <dt>params</dt><dd><pre>${JSON.stringify(j.params, null, 2)}</pre></dd>
+      ${j.result_data ? `<dt>raw result_data</dt><dd><pre>${escapeHtml(JSON.stringify(j.result_data, null, 2))}</pre></dd>` : ""}
+    </dl>`;
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("scrim").classList.add("open");
+}
+function closeDrawer() {
+  document.getElementById("drawer").classList.remove("open");
+  document.getElementById("scrim").classList.remove("open");
+}
+
+/* ================= actions ================= */
+async function pollOne(id) {
+  const btn = document.getElementById("poll-" + id);
+  if (btn) { btn.disabled = true; btn.textContent = "Polling…"; }
+  try {
+    const r = await fetch("/api/poll/" + id, { method: "POST" });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    await refresh();
+    const j = jobs.find(x => x.id === id);
+    toast(`Poll: ${j ? STATE_META[j.state].word : d.status}`);
+  } catch (e) { toast("Poll failed: " + e.message); }
+}
+
+async function uploadOne(id) {
+  const j = jobs.find(x => x.id === id);
+  if (!confirm(`Upload ${j.benchmark} (n=${j.num_qubits}) on ${j.device} to metriq-data?`)) return;
+  const btn = document.getElementById("up-" + id);
+  if (btn) { btn.disabled = true; btn.textContent = "Uploading…"; }
+  try {
+    const r = await fetch("/api/upload/" + id, { method: "POST" });
+    const d = await r.json();
+    if (!d.ok) throw new Error((d.output || d.error || "unknown error").slice(-300));
+    toast(d.pr_url ? "Uploaded — PR: " + d.pr_url : "Uploaded");
+    await refresh();
+  } catch (e) { toast("Upload failed: " + e.message); await refresh(); }
+}
+
+async function uploadAll() {
+  const ready = jobs.filter(j => j.state === "ready_to_upload");
+  if (!confirm(`Upload all ${ready.length} completed jobs to metriq-data?`)) return;
+  for (const j of ready) {
+    try {
+      const r = await fetch("/api/upload/" + j.id, { method: "POST" });
+      const d = await r.json();
+      toast(d.ok ? `Uploaded ${j.benchmark} on ${j.device}` : `Failed: ${j.benchmark} on ${j.device}`);
+    } catch (e) { toast("Upload failed: " + e.message); }
+    await refresh();
+  }
+}
+
+async function pollAll() {
+  const btn = document.getElementById("pollall");
+  const pending = jobs.filter(j => ["queued", "running", "unknown"].includes(j.state));
+  if (!pending.length) { toast("Nothing pending to poll"); return; }
+  btn.disabled = true;
+  let i = 0;
+  for (const j of pending) {
+    btn.textContent = `Polling ${++i}/${pending.length}…`;
+    try { await fetch("/api/poll/" + j.id, { method: "POST" }); } catch {}
+    await refresh();
+    if (i < pending.length) await new Promise(r => setTimeout(r, 2000));
+  }
+  btn.disabled = false;
+  btn.innerHTML = "&#10227; Poll all pending";
+}
+
+/* ================= filter handlers ================= */
+function toggleStateFilter(s) { filter.state = filter.state === s ? null : s; render(); }
+function matrixFilter(dev, bench) { filter.device = dev; filter.benchmark = bench; filter.state = null; render(); }
+
+/* ================= utils ================= */
+function relTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso.includes("T") ? iso : iso.replace(" ", "T"));
+  const s = (Date.now() - d.getTime()) / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + " min ago";
+  if (s < 86400) return Math.floor(s / 3600) + " h ago";
+  return Math.floor(s / 86400) + " d ago";
+}
+function fmtRuntime(s) {
+  if (s == null) return "—";
+  if (s < 60) return s.toFixed(1) + " s";
+  return (s / 60).toFixed(1) + " min";
+}
+function escapeHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+function copyText(t) { navigator.clipboard.writeText(t).then(() => toast("Copied")); }
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3500);
+}
+function renderRefreshed() {
+  const el = document.getElementById("refreshed");
+  el.textContent = lastFetch ? `refreshed ${relTime(new Date(lastFetch).toISOString())}` : "";
+}
+
+/* ================= boot ================= */
+document.getElementById("pollall").onclick = pollAll;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+refresh();
+setInterval(() => { if (!document.hidden) refresh(); }, 60000);
+setInterval(renderRefreshed, 10000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+</script>
+</body>
+</html>
