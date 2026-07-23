@@ -26,6 +26,7 @@ from metriq_gym.resource_estimation import (
 from metriq_gym.suite_parser import parse_suite_file
 from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
 from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_filename
+from metriq_gym.platform import canonical_provider_name
 
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ def load_provider(provider_name: str):
     """
     from qbraid.runtime import load_provider as _load_provider
 
-    return _load_provider(provider_name)
+    return _load_provider(canonical_provider_name(provider_name))
 
 
 def get_providers() -> list[str]:
@@ -74,7 +75,7 @@ def load_job(job_id: str, *, provider: str, **kwargs):
     """
     from qbraid.runtime import load_job as _load_job
 
-    return _load_job(job_id, provider=provider, **kwargs)
+    return _load_job(job_id, provider=canonical_provider_name(provider), **kwargs)
 
 
 def job_status(quantum_job):
@@ -152,7 +153,7 @@ def setup_device(provider_name: str, device_name: str):
         raise QBraidSetupError("Provider not found")
 
     try:
-        provider = load_provider(provider_name)
+        provider = load_provider(canonical_provider_name(provider_name))
     except QbraidError:
         providers = ", ".join(get_providers())
         logger.error(f"No provider matching the name '{provider_name}' found.")

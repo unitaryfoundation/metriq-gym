@@ -137,6 +137,21 @@ def test_setup_device_keeps_validation_for_braket_with_parsed_capabilities(
     device.set_options.assert_not_called()
 
 
+@pytest.mark.parametrize("provider_alias", ["aws", "braket"])
+def test_setup_device_uses_canonical_aws_provider(
+    provider_alias, mock_provider, mock_device, monkeypatch
+):
+    loaded_providers = []
+    mock_provider.get_device.return_value = mock_device
+    monkeypatch.setattr(
+        "metriq_gym.run.load_provider",
+        lambda provider: loaded_providers.append(provider) or mock_provider,
+    )
+
+    assert setup_device(provider_alias, "device-arn") == mock_device
+    assert loaded_providers == ["aws"]
+
+
 @patch("metriq_gym.run.get_providers")
 def test_setup_device_invalid_provider(get_providers_patch, caplog):
     get_providers_patch.return_value = ["supported_provider"]

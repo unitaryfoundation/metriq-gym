@@ -14,6 +14,7 @@ from typing import Any, Sequence
 from tabulate import tabulate
 from metriq_gym.constants import JobType
 from metriq_gym.paths import get_data_db_path
+from metriq_gym.platform import canonical_device_name, canonical_provider_name
 
 
 logger = logging.getLogger(__name__)
@@ -42,14 +43,22 @@ class MetriqGymJob:
         - If platform is missing, populate from provider_name/device_name.
         - If platform exists but lacks keys, backfill them from provider/device fields.
         """
+        self.provider_name = canonical_provider_name(self.provider_name)
+        self.device_name = canonical_device_name(self.provider_name, self.device_name)
+
         plat = self.platform or {}
         if not plat:
             plat = {"provider": self.provider_name, "device": self.device_name}
         else:
-            if "provider" not in plat:
-                plat["provider"] = self.provider_name
-            if "device" not in plat:
-                plat["device"] = self.device_name
+            platform_provider = canonical_provider_name(
+                str(plat.get("provider") or self.provider_name)
+            )
+            platform_device = canonical_device_name(
+                platform_provider,
+                str(plat.get("device") or self.device_name),
+            )
+            plat["provider"] = platform_provider
+            plat["device"] = platform_device
         self.platform = plat
 
     def num_qubits(self) -> int | None:

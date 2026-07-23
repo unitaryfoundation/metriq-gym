@@ -91,6 +91,7 @@ line-length = 100
 extend_exclude = ["submodules", ".poetry"]
 known_first_party = ["_common"]
 pep621_dev_dependency_groups = ["docs"]
+per_rule_ignores = { DEP002 = ["amazon-braket-sdk"] }
 
 [tool.pytest.ini_options]
 testpaths = [
