@@ -24,7 +24,7 @@ from metriq_gym.resource_estimation import (
     quantinuum_hqc_formula,
 )
 from metriq_gym.suite_parser import parse_suite_file
-from metriq_gym.exceptions import QBraidSetupError
+from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
 from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_filename
 from metriq_gym.platform import canonical_provider_name
 
@@ -104,6 +104,35 @@ COMMON_SUITE_METADATA = {
 }
 
 
+def _braket_region_from_arn(device_name: str) -> str | None:
+    """Return the region encoded in an Amazon Braket device ARN."""
+    arn_fields = device_name.split(":", 5)
+    if len(arn_fields) != 6:
+        return None
+
+    arn_prefix, _partition, service, region, _account, _resource = arn_fields
+    if arn_prefix != "arn" or service != "braket":
+        return None
+    return region or None
+
+
+def _get_device_with_arn_region(provider, device_name: str):
+    """Initialize Braket using its ARN region without changing process configuration."""
+    region = _braket_region_from_arn(device_name)
+    if region is None:
+        return provider.get_device(device_name)
+
+    previous_region = os.environ.get("AWS_REGION")
+    os.environ["AWS_REGION"] = region
+    try:
+        return provider.get_device(device_name)
+    finally:
+        if previous_region is None:
+            os.environ.pop("AWS_REGION", None)
+        else:
+            os.environ["AWS_REGION"] = previous_region
+
+
 def setup_device(provider_name: str, device_name: str):
     """
     Setup a QBraid device with id device_name from specified provider.
@@ -138,7 +167,7 @@ def setup_device(provider_name: str, device_name: str):
         raise QBraidSetupError("Device not found")
 
     try:
-        device = provider.get_device(device_name)
+        device = _get_device_with_arn_region(provider, device_name)
     except QbraidError:
         devices = ", ".join([device.id for device in provider.get_devices()])
         logger.error(
@@ -146,12 +175,26 @@ def setup_device(provider_name: str, device_name: str):
         )
         logger.error(f"Devices available: {devices}")
         raise QBraidSetupError("Device not found")
+    from metriq_gym.qplatform.device import prepare_device_for_dispatch
+
+    prepare_device_for_dispatch(device)
     return device
 
 
 def setup_benchmark(args, params, job_type: JobType) -> "Benchmark":
     reg = _lazy_registry()
     return reg.BENCHMARK_HANDLERS[job_type](args, params)
+
+
+def validate_benchmark_device_capacity(params, device) -> None:
+    """Validate explicit benchmark width before constructing its handler."""
+    requested_qubits = params.model_dump(exclude_none=True).get("num_qubits")
+    if not isinstance(requested_qubits, int):
+        return
+
+    from metriq_gym.qplatform.device import validate_qubit_capacity
+
+    validate_qubit_capacity(device, requested_qubits)
 
 
 def setup_job_data_class(job_type: JobType) -> type["BenchmarkData"]:
@@ -198,6 +241,12 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         return
 
     job_type = JobType(params.benchmark_name)
+
+    try:
+        validate_benchmark_device_capacity(params, device)
+    except DeviceCapacityError as exc:
+        print(f"✗ {params.benchmark_name}: {exc}")
+        return
 
     print(f"Dispatching {params.benchmark_name}...")
 
@@ -278,6 +327,8 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                 continue
 
             job_type = JobType(params.benchmark_name)
+
+            validate_benchmark_device_capacity(params, device)
 
             print(
                 f"Dispatching {benchmark_entry.name} ({params.benchmark_name}) from {suite.name}..."
@@ -873,6 +924,14 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
         return
 
     job_type = JobType(params.benchmark_name)
+
+    if device is not None:
+        try:
+            validate_benchmark_device_capacity(params, device)
+        except DeviceCapacityError as exc:
+            print(f"✗ {job_type.value}: {exc}")
+            return
+
     benchmark: Benchmark = setup_benchmark(args, params, job_type)
 
     try:
