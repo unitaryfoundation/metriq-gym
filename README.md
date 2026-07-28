@@ -74,6 +74,18 @@ Results:
 
 Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/examples/``.
 
+## Jobs dashboard
+
+A local web view of your dispatched jobs — lifecycle status, per-device suite coverage,
+and poll/upload/delete actions. From a repo checkout, with your metriq-gym environment active:
+
+```sh
+python dashboard/server.py
+```
+
+Then open http://localhost:8787. The dashboard reads your local job database; provider
+APIs are only contacted when you click Poll.
+
 ## Documentation
 
 - [Quickstart Guide](https://unitaryfoundation.github.io/metriq-gym/getting-started/quickstart/) - Get up and running quickly

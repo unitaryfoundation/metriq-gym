@@ -36,6 +36,17 @@ Resources:
 | `mgym suite delete` | Delete all jobs in a suite from the local database. |
 | `mgym suite upload` | Upload suite results to GitHub via pull request. |
 
+## Jobs dashboard
+
+A local web UI over the same job database and CLI actions. From a repo checkout:
+
+```bash
+python dashboard/server.py
+```
+
+Then open [http://localhost:8787](http://localhost:8787) to see job lifecycle status,
+per-device suite coverage, and poll/upload/delete buttons.
+
 ## Getting Help
 
 ```bash

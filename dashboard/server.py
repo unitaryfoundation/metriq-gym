@@ -1,9 +1,9 @@
 """Local server for the metriq-gym jobs dashboard.
 
 Serves index.html plus a small JSON API over the local metriq-gym job database.
-Run from the repo root so the metriq-gym environment is available:
+Run from the repo root, in an environment with metriq-gym installed:
 
-    UV_PROJECT_ENVIRONMENT=~/.venvs/metriq-gym uv run python dashboard/server.py
+    python dashboard/server.py
 
 Then open http://localhost:8787
 """
