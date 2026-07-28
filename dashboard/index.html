@@ -349,7 +349,7 @@ function renderMatrix() {
   if (!devices.length) { document.getElementById("matrix").innerHTML = ""; return; }
   let html = "<tr><th>device</th>" + benches.map(b => `<th>${SPEC_LABELS[b]}</th>`).join("") + "</tr>";
   for (const dev of devices) {
-    html += `<tr><td>${dev}</td>`;
+    html += `<tr><td>${escapeHtml(dev)}</td>`;
     for (const bench of benches) {
       const specs = SPEC[bench];
       const states = specs.map(s => { const j = bestJobFor(dev, bench, s); return j ? j.state : "none"; });
@@ -369,7 +369,7 @@ function renderMatrix() {
             <span class="bar"><i style="width:${100 * done / specs.length}%;background:${color}"></i></span>`;
         }
       }
-      html += `<td class="mcell" onclick="matrixFilter('${dev}','${bench}')">${cell}</td>`;
+      html += `<td class="mcell" onclick="matrixFilter(${jsArg(dev)},${jsArg(bench)})">${cell}</td>`;
     }
     html += "</tr>";
   }
@@ -382,7 +382,7 @@ function renderFilters() {
   const sel = (id, label, opts, val) =>
     `<select onchange="filter.${id}=this.value||null;render()">
        <option value="">${label}</option>
-       ${opts.map(o => `<option ${o === val ? "selected" : ""}>${o}</option>`).join("")}
+       ${opts.map(o => `<option ${o === val ? "selected" : ""}>${escapeHtml(o)}</option>`).join("")}
      </select>`;
   let html = sel("device", "All devices", devices, filter.device) +
              sel("benchmark", "All benchmarks", benches, filter.benchmark);
@@ -418,15 +418,15 @@ function renderTable() {
 
   document.getElementById("jobrows").innerHTML = rows.map(r => {
     if (r.suiteHead)
-      return `<tr class="suitehead"><td colspan="8"><b>${r.name}</b> &middot; suite &middot; ${r.done}/${r.total} complete</td></tr>`;
+      return `<tr class="suitehead"><td colspan="8"><b>${escapeHtml(r.name)}</b> &middot; suite &middot; ${r.done}/${r.total} complete</td></tr>`;
     const j = r.job;
-    return `<tr class="row${r.inSuite ? " in-suite" : ""}" onclick="openDrawer('${j.id}')">
+    return `<tr class="row${r.inSuite ? " in-suite" : ""}" onclick="openDrawer(${jsArg(j.id)})">
       <td>${chip(j)}</td>
-      <td>${j.benchmark}${specMatches(j) ? "" : `<span class="custom-chip">custom</span>`}</td>
+      <td>${escapeHtml(j.benchmark)}${specMatches(j) ? "" : `<span class="custom-chip">custom</span>`}</td>
       <td class="num">${j.num_qubits ?? "&mdash;"}</td>
-      <td>${j.device}</td>
-      <td class="muted">${j.provider}</td>
-      <td class="muted" title="${j.dispatch_time}">${relTime(j.dispatch_time)}</td>
+      <td>${escapeHtml(j.device)}</td>
+      <td class="muted">${escapeHtml(j.provider)}</td>
+      <td class="muted" title="${escapeHtml(j.dispatch_time)}">${relTime(j.dispatch_time)}</td>
       <td class="num muted">${fmtRuntime(j.runtime_seconds)}</td>
       <td class="actions" onclick="event.stopPropagation()">${rowActions(j)}</td>
     </tr>`;
@@ -434,9 +434,9 @@ function renderTable() {
 }
 
 function chip(j) {
-  const m = STATE_META[j.state];
+  const m = STATE_META[j.state] || STATE_META.unknown;
   let word = m.word;
-  if (j.state === "queued" && j.queue_position != null) word += ` &middot; #${j.queue_position}`;
+  if (j.state === "queued" && j.queue_position != null) word += ` &middot; #${escapeHtml(j.queue_position)}`;
   const pulse = j.state === "running" ? " pulse" : "";
   return `<span class="chip chip--${j.state}"><span class="${pulse}">${m.icon}</span> ${word}</span>`;
 }
@@ -444,12 +444,12 @@ function chip(j) {
 function rowActions(j) {
   let html = "";
   if (["queued", "running", "unknown"].includes(j.state) || j.state === "failed")
-    html += `<button class="btn btn--sm" id="poll-${j.id}" onclick="pollOne('${j.id}')">Poll</button> `;
+    html += `<button class="btn btn--sm" id="poll-${escapeHtml(j.id)}" onclick="pollOne(${jsArg(j.id)})">Poll</button> `;
   if (j.state === "ready_to_upload")
-    html += `<button class="btn btn--sm btn--accent" id="up-${j.id}" onclick="uploadOne('${j.id}')">Upload</button>`;
+    html += `<button class="btn btn--sm btn--accent" id="up-${escapeHtml(j.id)}" onclick="uploadOne(${jsArg(j.id)})">Upload</button>`;
   if (j.state === "uploaded" && j.pr_url)
-    html += `<a class="btn btn--sm" href="${j.pr_url}" target="_blank">PR &#8599;</a> `;
-  html += `<button class="btn btn--sm btn--danger" title="Stop tracking this job" onclick="deleteOne('${j.id}')">&#10005;</button>`;
+    html += `<a class="btn btn--sm" href="${escapeHtml(j.pr_url)}" target="_blank" rel="noopener noreferrer">PR &#8599;</a> `;
+  html += `<button class="btn btn--sm btn--danger" title="Stop tracking this job" onclick="deleteOne(${jsArg(j.id)})">&#10005;</button>`;
   return html;
 }
 
@@ -486,37 +486,37 @@ function openDrawer(id) {
   };
   const tasks = j.provider_job_ids.map(t => {
     const link = braketConsole(t);
-    return `<div class="taskid">${t}${link ? ` <a href="${link}" target="_blank">&#8599;</a>` : ""}</div>`;
+    return `<div class="taskid">${escapeHtml(t)}${link ? ` <a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">&#8599;</a>` : ""}</div>`;
   }).join("") || `<span class="muted">&mdash;</span>`;
 
   let resultHtml = "";
   if (j.result_data) {
     const flat = Object.entries(j.result_data)
       .filter(([, v]) => typeof v !== "object" || (Array.isArray(v) && v.length <= 8))
-      .map(([k, v]) => `<dt>${k}</dt><dd class="num">${Array.isArray(v) ? v.map(x => typeof x === "number" ? +x.toFixed(4) : x).join(", ") : v}</dd>`)
+      .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd class="num">${escapeHtml(Array.isArray(v) ? v.map(x => typeof x === "number" ? +x.toFixed(4) : x).join(", ") : v)}</dd>`)
       .join("");
     resultHtml = `<dt>result summary</dt><dd><dl>${flat || "<span class='muted'>see raw record</span>"}</dl></dd>`;
   }
 
   document.getElementById("drawer").innerHTML = `
     <button class="close" onclick="closeDrawer()">&#10005;</button>
-    <h3>${j.benchmark}</h3>
-    <div>${chip(j)}${j.pr_url ? ` <a href="${j.pr_url}" target="_blank" style="font-size:13px">view PR &#8599;</a>` : ""}</div>
+    <h3>${escapeHtml(j.benchmark)}</h3>
+    <div>${chip(j)}${j.pr_url ? ` <a href="${escapeHtml(j.pr_url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px">view PR &#8599;</a>` : ""}</div>
     <div class="drawer-actions">
-      ${["queued","running","unknown","failed"].includes(j.state) ? `<button class="btn" onclick="pollOne('${j.id}')">Poll now</button>` : ""}
-      ${j.state === "ready_to_upload" ? `<button class="btn btn--accent" onclick="uploadOne('${j.id}')">Upload to metriq-data</button>` : ""}
-      <button class="btn" onclick='copyText(${JSON.stringify(JSON.stringify(j, null, 2))})'>Copy JSON</button>
-      <button class="btn btn--danger" onclick="deleteOne('${j.id}')">Delete</button>
+      ${["queued","running","unknown","failed"].includes(j.state) ? `<button class="btn" onclick="pollOne(${jsArg(j.id)})">Poll now</button>` : ""}
+      ${j.state === "ready_to_upload" ? `<button class="btn btn--accent" onclick="uploadOne(${jsArg(j.id)})">Upload to metriq-data</button>` : ""}
+      <button class="btn" onclick="copyJob(${jsArg(j.id)})">Copy JSON</button>
+      <button class="btn btn--danger" onclick="deleteOne(${jsArg(j.id)})">Delete</button>
     </div>
     <dl>
-      <dt>job id</dt><dd class="taskid">${j.id}</dd>
-      <dt>device</dt><dd>${j.device} <span class="muted">(${j.provider})</span></dd>
-      <dt>dispatched</dt><dd>${j.dispatch_time} <span class="muted">&middot; mgym v${j.app_version ?? "?"}</span></dd>
+      <dt>job id</dt><dd class="taskid">${escapeHtml(j.id)}</dd>
+      <dt>device</dt><dd>${escapeHtml(j.device)} <span class="muted">(${escapeHtml(j.provider)})</span></dd>
+      <dt>dispatched</dt><dd>${escapeHtml(j.dispatch_time)} <span class="muted">&middot; mgym v${escapeHtml(j.app_version ?? "?")}</span></dd>
       ${j.last_polled ? `<dt>last polled</dt><dd>${relTime(j.last_polled)}</dd>` : ""}
-      ${j.suite_name ? `<dt>suite</dt><dd>${j.suite_name}</dd>` : ""}
+      ${j.suite_name ? `<dt>suite</dt><dd>${escapeHtml(j.suite_name)}</dd>` : ""}
       <dt>provider tasks (${j.provider_job_ids.length})</dt><dd>${tasks}</dd>
       ${resultHtml}
-      <dt>params</dt><dd><pre>${JSON.stringify(j.params, null, 2)}</pre></dd>
+      <dt>params</dt><dd><pre>${escapeHtml(JSON.stringify(j.params, null, 2))}</pre></dd>
       ${j.result_data ? `<dt>raw result_data</dt><dd><pre>${escapeHtml(JSON.stringify(j.result_data, null, 2))}</pre></dd>` : ""}
     </dl>`;
   document.getElementById("drawer").classList.add("open");
@@ -603,8 +603,21 @@ function fmtRuntime(s) {
   if (s < 60) return s.toFixed(1) + " s";
   return (s / 60).toFixed(1) + " min";
 }
-function escapeHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
-function copyText(t) { navigator.clipboard.writeText(t).then(() => toast("Copied")); }
+// Everything rendered via innerHTML comes from the local job DB / CLI output,
+// which is not trusted markup. Escape the full HTML-special set (quotes too, so
+// the helper is attribute-safe) and tolerate null/undefined.
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+// For values interpolated into inline on* handlers: JSON-quote for JS, then
+// HTML-escape for the attribute. onclick="fn(${jsArg(id)})" -> fn("id").
+function jsArg(v) { return escapeHtml(JSON.stringify(String(v))); }
+function copyJob(id) {
+  const j = jobs.find(x => x.id === id);
+  if (j) navigator.clipboard.writeText(JSON.stringify(j, null, 2)).then(() => toast("Copied"));
+}
 let toastTimer;
 function toast(msg) {
   const el = document.getElementById("toast");

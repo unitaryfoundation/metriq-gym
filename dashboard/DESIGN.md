@@ -41,8 +41,11 @@ dashboard/
 
 - `GET /api/jobs` — parse localdb.jsonl, merge sidecar state, return the wire model below
 - `POST /api/poll/{job_id}` — run `mgym job poll`, parse stdout, cache + return status
-- `POST /api/poll-all` — poll every non-terminal job, serialized with a small delay between calls
 - `POST /api/upload/{job_id}` — run `mgym job upload`, capture PR URL into `state.json`
+- `POST /api/delete/{job_id}` — run `mgym job delete`, verify against the db, drop sidecar state
+
+There is no poll-all endpoint: "Poll all pending" loops over `POST /api/poll/{id}`
+client-side with a ≥ 2 s delay between calls.
 
 The page re-fetches `/api/jobs` every 60 s (plain `setInterval` + `fetch`; no websockets).
 `/api/jobs` must never hit provider APIs — reading the page is always instant; only
@@ -55,19 +58,27 @@ explicit poll actions talk to the cloud.
   "id": "7ba5ee0e-2c1a-4b1c-a24c-04ae34827837",
   "benchmark": "Linear Ramp QAOA",
   "provider": "braket",
-  "device": "Cepheus-1-108Q",
+  "device": "rigetti_cepheus-1-108q",
+  "device_full": "arn:aws:braket:us-west-1::device/qpu/rigetti/Cepheus-1-108Q",
   "num_qubits": 10,
   "params": { "...": "full params dict for the detail drawer" },
   "suite_id": null,
   "suite_name": null,
   "dispatch_time": "2026-07-23T14:02:11",
   "runtime_seconds": null,
+  "app_version": "0.6.0",
+  "provider_job_ids": ["arn:aws:braket:us-west-1:...:quantum-task/..."],
+  "result_data": null,
   "state": "queued | running | ready_to_upload | uploaded | failed | unknown",
   "queue_position": 4,
+  "last_polled": null,
   "pr_url": null,
-  "spec_match": true
+  "uploaded_at": null
 }
 ```
+
+Spec matching (`custom` chip, coverage matrix) is computed client-side against the
+embedded spec constant — the server does not send a `spec_match` field.
 
 ### State derivation
 
@@ -75,7 +86,7 @@ explicit poll actions talk to the cloud.
 |---|---|
 | `ready_to_upload` | `result_data` present in localdb AND no upload record in sidecar |
 | `uploaded` | upload record exists in sidecar |
-| `queued` / `running` | `result_data` null; last cached poll says QUEUED/RUNNING (show min queue position across tasks) |
+| `queued` / `running` | `result_data` null; last cached poll says QUEUED/RUNNING (show max queue position across tasks — the job finishes with its slowest task) |
 | `failed` | last cached poll reported FAILED/CANCELLED for any task |
 | `unknown` | `result_data` null and never polled this session — render as neutral "not polled yet", with the Poll action as the affordance |
 
@@ -258,8 +269,8 @@ No categorical chart palette is needed anywhere — the page has no multi-series
 
 - **Auto-refresh:** `/api/jobs` every 60 s; pause the timer when the tab is hidden
   (`visibilitychange`). A manual ⟳ always works.
-- **Poll all pending:** disabled while running; streams per-job results into the UI as
-  each subprocess finishes (server can respond with NDJSON lines). Rate-limit to ≥ 2 s
+- **Poll all pending:** disabled while running; polls jobs one at a time from the client
+  (per-job `POST /api/poll/{id}`), refreshing the UI after each. Rate-limit to ≥ 2 s
   between provider calls.
 - **Upload:** confirm dialog naming the job and target repo, then run; on success swap
   the chip to Uploaded and surface the PR link. On failure show the subprocess stderr in

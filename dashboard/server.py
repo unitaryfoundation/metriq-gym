@@ -17,8 +17,13 @@ import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 
 PORT = 8787
+# Browsers send an Origin header on cross-site POSTs; only accept our own page
+# (or clients like curl that send no Origin) so a drive-by webpage can't CSRF
+# poll/upload/delete actions against the local server.
+ALLOWED_ORIGINS = {f"http://localhost:{PORT}", f"http://127.0.0.1:{PORT}"}
 DASHBOARD_DIR = Path(__file__).resolve().parent
 STATE_FILE = DASHBOARD_DIR / "state.json"
 INDEX_FILE = DASHBOARD_DIR / "index.html"
@@ -79,23 +84,26 @@ def read_jobs_raw() -> list[dict]:
 
 
 def short_device(name: str) -> str:
-    # Braket device ARNs -> trailing segment, e.g. "Cepheus-1-108Q"
+    # Braket device ARNs -> last two path segments, joined and lowercased, e.g.
+    # "rigetti_cepheus-1-108q" — the same key the job is stored and uploaded
+    # under. Mirrors canonical_device_name from PR #774; switch to that shared
+    # helper once it lands.
     if name.startswith("arn:"):
-        return name.rsplit("/", 1)[-1]
+        parts = [part for part in name.split("/") if part]
+        if len(parts) >= 2:
+            return f"{parts[-2]}_{parts[-1]}".lower()
+        return name.rsplit("/", 1)[-1].lower()
     return name
 
 
 def num_qubits(params: dict) -> int | None:
-    for key in ("num_qubits", "qubits", "width", "max_qubits"):
-        if key in params:
-            v = params[key]
-            if isinstance(v, bool):
-                return None
-            if isinstance(v, int):
-                return v
-            if isinstance(v, float) and v.is_integer():
-                return int(v)
-    return None
+    from metriq_gym.job_manager import MetriqGymJob
+
+    # Reuse MetriqGymJob.num_qubits rather than keeping a copy of its key
+    # order/type handling in sync. The method only reads .params, and a real
+    # MetriqGymJob can't be built here: deserialize() raises on records the
+    # tolerant raw reader deliberately accepts (unknown job_type, bad dates).
+    return MetriqGymJob.num_qubits(SimpleNamespace(params=params))
 
 
 QUEUE_POS_RE = re.compile(r"QUEUED(?:\s*\(position\s*(\d+)\))?", re.IGNORECASE)
@@ -120,14 +128,17 @@ def parse_poll_output(text: str) -> dict:
         status = "pending"
     return {
         "status": status,
-        "queue_position": min(positions) if positions else None,
+        # A job is done when its *slowest* task is, so across tasks the max
+        # position is the meaningful one; min would show 3 while a sibling
+        # task sits at 50.
+        "queue_position": max(positions) if positions else None,
         "at": datetime.now(timezone.utc).isoformat(),
         "detail": text[-2000:],
     }
 
 
 def job_state(raw: dict, state: dict) -> tuple[str, int | None]:
-    jid = raw["id"]
+    jid = raw.get("id")
     if jid in state["uploads"]:
         return "uploaded", None
     if raw.get("result_data") is not None:
@@ -154,13 +165,18 @@ def wire_jobs() -> list[dict]:
         state = load_state()
     out = []
     for raw in read_jobs_raw():
+        # Tolerate partial records the same way read_jobs_raw tolerates bad
+        # lines: one row missing "id" must not 500 the whole /api/jobs list.
+        # Without an id no action can target the job, so skip it entirely.
+        if not raw.get("id"):
+            continue
         st, qpos = job_state(raw, state)
         upload = state["uploads"].get(raw["id"], {})
         poll = state["polls"].get(raw["id"], {})
         out.append(
             {
                 "id": raw["id"],
-                "benchmark": raw["job_type"],
+                "benchmark": raw.get("job_type") or "unknown",
                 "provider": raw.get("provider_name"),
                 "device": short_device(raw.get("device_name") or ""),
                 "device_full": raw.get("device_name"),
@@ -232,31 +248,42 @@ def delete_job_record(job_id: str) -> dict:
             state["polls"].pop(job_id, None)
             state["uploads"].pop(job_id, None)
             save_state(state)
+        with _poll_locks_guard:
+            _poll_locks.pop(job_id, None)
     return {"ok": ok, "output": text[-1000:]}
 
 
-PR_URL_RE = re.compile(r"(?:pull request|create the PR): (\S+)")
+# `mgym job upload` exits 0 on every path (including "✗ Upload failed"), so the
+# printed URL is the only reliable success artifact: a PR URL when the PR was
+# opened, or a compare URL when the branch was pushed for a manual PR. Match the
+# URL shapes rather than the ✓ wording, which can change.
+PR_URL_RE = re.compile(r"https://\S+/pull/\d+")
+COMPARE_URL_RE = re.compile(r"https://\S+/compare/\S+")
 
 
 def upload_job(job_id: str) -> dict:
-    proc = subprocess.run(
-        mgym_cmd() + ["job", "upload", job_id],
-        capture_output=True,
-        text=True,
-        timeout=900,
-    )
+    # Upload can also write the db: fetch_result() persists result_data via
+    # job_manager.update_job(), so serialize with the other db-writing subprocesses.
+    with _mgym_write_lock:
+        proc = subprocess.run(
+            mgym_cmd() + ["job", "upload", job_id],
+            capture_output=True,
+            text=True,
+            timeout=900,
+        )
     text = proc.stdout + "\n" + proc.stderr
-    match = PR_URL_RE.search(text)
-    ok = ("Opened pull request" in text or "Branch pushed" in text) and proc.returncode == 0
+    match = PR_URL_RE.search(text) or COMPARE_URL_RE.search(text)
+    url = match.group(0) if match else None
+    ok = url is not None and proc.returncode == 0
     if ok:
         with _state_lock:
             state = load_state()
             state["uploads"][job_id] = {
-                "pr_url": match.group(1) if match else None,
+                "pr_url": url,
                 "uploaded_at": datetime.now(timezone.utc).isoformat(),
             }
             save_state(state)
-    return {"ok": ok, "pr_url": match.group(1) if match else None, "output": text[-3000:]}
+    return {"ok": ok, "pr_url": url, "output": text[-3000:]}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -282,7 +309,16 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, b"not found", "text/plain")
 
+    def _origin_ok(self) -> bool:
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True  # non-browser clients (curl, scripts) send no Origin
+        return origin in ALLOWED_ORIGINS
+
     def do_POST(self):
+        if not self._origin_ok():
+            self._json({"error": "cross-origin request rejected"}, 403)
+            return
         try:
             if self.path.startswith("/api/poll/"):
                 self._json(poll_job(self.path.rsplit("/", 1)[-1]))
