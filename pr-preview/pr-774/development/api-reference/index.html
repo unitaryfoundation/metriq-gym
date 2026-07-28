@@ -3574,11 +3574,10 @@ original quantum provider, using the raw measurement data captured with
 
     <div class="doc doc-contents ">
 
-        <p>Keep platform and provider/device fields in sync on initialization.</p>
-<ul>
-<li>If platform is missing, populate from provider_name/device_name.</li>
-<li>If platform exists but lacks keys, backfill them from provider/device fields.</li>
-</ul>
+        <p>Populate the canonical dataset platform without rewriting runtime identifiers.</p>
+<p><code>provider_name</code> and <code>device_name</code> retain the values needed to address the
+runtime provider and device. The corresponding <code>platform</code> values are stable
+dataset keys and may intentionally omit runtime details such as an AWS region.</p>
 
 
     </div>
