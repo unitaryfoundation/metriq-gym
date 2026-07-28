@@ -12,6 +12,7 @@ from qbraid.runtime import BraketDevice, JobStatus
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
 from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, BenchmarkScore
 from metriq_gym.run import (
+    load_provider,
     setup_device,
     dispatch_job,
     dispatch_suite,
@@ -138,7 +139,20 @@ def test_setup_device_keeps_validation_for_braket_with_parsed_capabilities(
 
 
 @pytest.mark.parametrize("provider_alias", ["aws", "braket"])
-def test_setup_device_uses_canonical_aws_provider(
+def test_load_provider_uses_canonical_aws_provider(provider_alias, monkeypatch):
+    loaded_providers = []
+    provider = object()
+    monkeypatch.setattr(
+        "qbraid.runtime.load_provider",
+        lambda provider_name: loaded_providers.append(provider_name) or provider,
+    )
+
+    assert load_provider(provider_alias) is provider
+    assert loaded_providers == ["aws"]
+
+
+@pytest.mark.parametrize("provider_alias", ["aws", "braket"])
+def test_setup_device_delegates_provider_alias_to_load_provider(
     provider_alias, mock_provider, mock_device, monkeypatch
 ):
     loaded_providers = []
@@ -149,7 +163,7 @@ def test_setup_device_uses_canonical_aws_provider(
     )
 
     assert setup_device(provider_alias, "device-arn") == mock_device
-    assert loaded_providers == ["aws"]
+    assert loaded_providers == [provider_alias]
 
 
 @patch("metriq_gym.run.get_providers")

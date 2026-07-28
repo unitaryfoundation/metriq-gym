@@ -153,7 +153,7 @@ def setup_device(provider_name: str, device_name: str):
         raise QBraidSetupError("Provider not found")
 
     try:
-        provider = load_provider(canonical_provider_name(provider_name))
+        provider = load_provider(provider_name)
     except QbraidError:
         providers = ", ".join(get_providers())
         logger.error(f"No provider matching the name '{provider_name}' found.")

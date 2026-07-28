@@ -38,27 +38,20 @@ class MetriqGymJob:
     runtime_seconds: float | None = None
 
     def __post_init__(self) -> None:
-        """Keep platform and provider/device fields in sync on initialization.
+        """Populate the canonical dataset platform without rewriting runtime identifiers.
 
-        - If platform is missing, populate from provider_name/device_name.
-        - If platform exists but lacks keys, backfill them from provider/device fields.
+        ``provider_name`` and ``device_name`` retain the values needed to address the
+        runtime provider and device. The corresponding ``platform`` values are stable
+        dataset keys and may intentionally omit runtime details such as an AWS region.
         """
-        self.provider_name = canonical_provider_name(self.provider_name)
-        self.device_name = canonical_device_name(self.provider_name, self.device_name)
-
-        plat = self.platform or {}
-        if not plat:
-            plat = {"provider": self.provider_name, "device": self.device_name}
-        else:
-            platform_provider = canonical_provider_name(
-                str(plat.get("provider") or self.provider_name)
-            )
-            platform_device = canonical_device_name(
-                platform_provider,
-                str(plat.get("device") or self.device_name),
-            )
-            plat["provider"] = platform_provider
-            plat["device"] = platform_device
+        plat = dict(self.platform or {})
+        platform_provider = canonical_provider_name(str(plat.get("provider") or self.provider_name))
+        platform_device = canonical_device_name(
+            platform_provider,
+            str(plat.get("device") or self.device_name),
+        )
+        plat["provider"] = platform_provider
+        plat["device"] = platform_device
         self.platform = plat
 
     def num_qubits(self) -> int | None:

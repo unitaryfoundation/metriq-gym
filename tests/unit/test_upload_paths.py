@@ -29,7 +29,7 @@ def test_default_upload_dir_builds_expected_path():
     assert path == "metriq-gym/v0.4/aws_braket/rigetti_aspen_m2"
 
 
-def test_default_upload_dir_uses_canonicalized_job_platform():
+def test_default_upload_dir_canonicalizes_job_runtime_identifiers():
     job = MetriqGymJob(
         id="job-aws",
         job_type=JobType.WIT,
