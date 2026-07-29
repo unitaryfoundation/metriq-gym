@@ -1020,32 +1020,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#run-a-component" class="md-nav__link">
+  <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Run a component
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-the-full-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run the full suite
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#canonical-configurations-versus-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Canonical configurations versus examples
+        References
       
     </span>
   </a>
@@ -1327,32 +1305,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#run-a-component" class="md-nav__link">
+  <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Run a component
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-the-full-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run the full suite
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#canonical-configurations-versus-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Canonical configurations versus examples
+        References
       
     </span>
   </a>
@@ -1380,19 +1336,16 @@
 
 
 <h1 id="metriq-score-10-suite">Metriq Score 1.0 Suite<a class="headerlink" href="#metriq-score-10-suite" title="Permanent link">&para;</a></h1>
-<p>The canonical configuration used for Metriq Score 1.0 is
-<a href="https://github.com/unitaryfoundation/metriq-gym/blob/main/metriq_gym/suites/metriq_score_1_0.json"><code>metriq_gym/suites/metriq_score_1_0.json</code></a>.
-It formalizes the benchmark parameters and scale datapoints reported in the
-<a href="https://arxiv.org/abs/2603.08680v1">Metriq paper (v1)</a>.</p>
-<p>The JSON ships with metriq-gym, so <code>metriq_score_1_0</code> can be used as a bundled
-suite name from any working directory. A direct path to a suite JSON file is
-also accepted.</p>
-<p>The suite contains eight score components and 22 dispatchable jobs:</p>
+<p>Metriq Score 1.0 is a versioned definition of the canonical Metriq benchmark
+suite. Later iterations can introduce new versioned definitions without
+changing the meaning of this one.</p>
+<p>The machine-readable definition is
+<a href="https://github.com/unitaryfoundation/metriq-gym/blob/main/metriq_gym/suites/metriq_score_1_0.json"><code>metriq_gym/suites/metriq_score_1_0.json</code></a>.</p>
+<p>The definition contains eight score components and 22 benchmark jobs:</p>
 <table>
 <thead>
 <tr>
 <th>Component</th>
-<th><code>--component</code> value</th>
 <th style="text-align: right;">Jobs</th>
 <th>Scale datapoints</th>
 </tr>
@@ -1400,90 +1353,53 @@ also accepted.</p>
 <tbody>
 <tr>
 <td>BSEQ</td>
-<td><code>bseq</code></td>
 <td style="text-align: right;">1</td>
 <td>All device qubit pairs</td>
 </tr>
 <tr>
 <td>EPLG</td>
-<td><code>eplg</code></td>
 <td style="text-align: right;">1</td>
 <td>10, 20, 50, and 100-qubit subchains</td>
 </tr>
 <tr>
 <td>Mirror Circuits</td>
-<td><code>mirror-circuits</code></td>
 <td style="text-align: right;">6</td>
 <td>Widths 8, 16, 24, 32, 64, and 128</td>
 </tr>
 <tr>
 <td>CLOPS</td>
-<td><code>clops</code></td>
 <td style="text-align: right;">1</td>
 <td>100 qubits</td>
 </tr>
 <tr>
 <td>QML Kernel</td>
-<td><code>qml-kernel</code></td>
 <td style="text-align: right;">4</td>
 <td>10, 20, 30, and 50 qubits</td>
 </tr>
 <tr>
 <td>WIT</td>
-<td><code>wit</code></td>
 <td style="text-align: right;">1</td>
 <td>7 qubits</td>
 </tr>
 <tr>
 <td>LR-QAOA</td>
-<td><code>lr-qaoa</code></td>
 <td style="text-align: right;">4</td>
 <td>10, 20, 50, and 100 qubits</td>
 </tr>
 <tr>
 <td>QFT</td>
-<td><code>qft</code></td>
 <td style="text-align: right;">4</td>
 <td>4, 8, 12, and 20 qubits</td>
 </tr>
 </tbody>
 </table>
-<h2 id="run-a-component">Run a component<a class="headerlink" href="#run-a-component" title="Permanent link">&para;</a></h2>
-<p>Pass <code>--component</code> (or <code>-c</code>) to dispatch one benchmark family. All scale
-datapoints belonging to that component are included:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>dispatch<span class="w"> </span>metriq_score_1_0<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span>--component<span class="w"> </span>qft<span class="w"> </span>--provider<span class="w"> </span>ibm<span class="w"> </span>--device<span class="w"> </span>&lt;device&gt;
-</code></pre></div>
-<p>The option is repeatable when several components are wanted:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>dispatch<span class="w"> </span>metriq_score_1_0<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>-c<span class="w"> </span>bseq<span class="w"> </span>-c<span class="w"> </span>wit<span class="w"> </span>--provider<span class="w"> </span>ibm<span class="w"> </span>--device<span class="w"> </span>&lt;device&gt;
-</code></pre></div>
-<p>An unknown or repeated component is rejected before provider initialization.</p>
-<h2 id="run-the-full-suite">Run the full suite<a class="headerlink" href="#run-the-full-suite" title="Permanent link">&para;</a></h2>
-<p>The complete suite can consume substantial hardware quota, runtime, and money.
-It is therefore never dispatched implicitly. Use <code>--all</code> as the explicit
-opt-in:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>dispatch<span class="w"> </span>metriq_score_1_0<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>--all<span class="w"> </span>--provider<span class="w"> </span>ibm<span class="w"> </span>--device<span class="w"> </span>&lt;device&gt;
-</code></pre></div>
-<p>Calling the command without either <code>--component</code> or <code>--all</code> prints the warning
-and available components, then exits before connecting to the provider.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Check device capabilities and account limits before dispatch. The canonical
-suite includes a 128-qubit Mirror Circuits run and a 100-qubit EPLG chain.
-Its score-compatible CLOPS configuration uses IBM Runtime twirling and a
-session, so it is IBM-specific. No single device or provider is guaranteed
-to support every component.</p>
-</div>
-<h2 id="canonical-configurations-versus-examples">Canonical configurations versus examples<a class="headerlink" href="#canonical-configurations-versus-examples" title="Permanent link">&para;</a></h2>
-<p>Files under <code>metriq_gym/schemas/examples/</code> are generic, editable examples for
-learning and ad hoc runs. They do not define Metriq Score 1.0 and should not be
-used as substitutes for the canonical suite.</p>
-<p>To adapt a configuration for a constrained platform, copy the canonical file
-and change the copy. Such a run may be useful, but changed parameters or missing
-scale datapoints may make its output ineligible for the published score
-definition.</p>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Cosentino et al., <a href="https://arxiv.org/abs/2603.08680v1">“Metriq: A Collaborative Platform for Benchmarking
+  Quantum Computers”</a>, especially
+  Section III (Metriq Score), Section IV (benchmark suite), and Appendix A
+  (benchmark configuration reference).</li>
+</ul>
 
 
 
