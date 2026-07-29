@@ -274,7 +274,7 @@ def test_dispatch_suite_skips_benchmark_exceeding_device_capacity(
     suite_file.write_text(
         json.dumps(
             {
-                "name": "lr_qaoa_scale_suite",
+                "name": "oversized_suite",
                 "benchmarks": [
                     {
                         "name": "LR_QAOA_1D_50",

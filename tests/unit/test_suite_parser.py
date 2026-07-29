@@ -118,9 +118,15 @@ def test_parse_suite_file_with_path_object(tmp_path):
 
 
 def test_parse_bundled_suite_by_name():
-    suite = parse_suite_file("uf_frugal_3")
+    suite = parse_suite_file("metriq_score_1_0")
 
-    assert suite.name == "verified_uf_suite"
+    assert suite.name == "metriq_score_1_0"
+
+
+@pytest.mark.parametrize("suite_name", ["uf_frugal_3", "lr_qaoa_scale"])
+def test_superseded_bundled_suite_is_not_available(suite_name):
+    with pytest.raises(FileNotFoundError):
+        parse_suite_file(suite_name)
 
 
 def test_parse_suite_file_invalid_json(tmp_path):
