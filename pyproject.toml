@@ -35,16 +35,17 @@ dependencies = [
     "pydantic>=2.5.0,<2.14",
     "numpy>=1.26.4,<3.0.0",
     "networkx>=3.6.1,<4.0.0",
-    "rustworkx>=0.17.1,<0.18.0",
-    "qiskit>=1.4.3,<3.0",
-    "qiskit-experiments>=0.9.0,<0.14.0",
+    "rustworkx>=0.17.1,<0.19.0",
+    "qiskit[qasm3-import]>=1.4.3,<3.0",
+    "qiskit-experiments>=0.9.0,<0.15.0",
     "qiskit-aer>=0.17.1,<0.18.0",
-    "qiskit-ibm-runtime>=0.41.1,<0.47.0",
-    "qbraid-core>=0.1.45,<0.3.0",
+    "qiskit-ibm-runtime>=0.41.1,<0.49.0",
+    "qbraid-core>=0.1.45,<0.4.0",
     "scipy>=1.16.2,<2.0.0",
     "tabulate>=0.9.0,<0.11.0",
     "typer>=0.21.1,<1.0.0",
-    "qbraid[ionq,qiskit,braket,azure]>=0.10.0,<0.11.2",
+    "qbraid[ionq,qiskit,braket,azure]>=0.12.0,<0.13.0",
+    "amazon-braket-sdk>=1.111.1",
     "platformdirs>=4.4.0,<5.0.0",
     "dimod>=0.12.20,<0.13.0",
     "qnexus>=0.39.0,<1.0.0",
@@ -64,10 +65,10 @@ docs = [
 
 [dependency-groups]
 dev = [
-    "mypy>=1.18.2,<2.0.0",
+    "mypy>=1.18.2,<3.0.0",
     "pre-commit>=4.3.0,<5.0.0",
     "pytest>=8.4.2,<10.0.0",
-    "ruff>=0.13.2,<0.16.0",
+    "ruff>=0.13.2,<0.17.0",
     "mkdocs>=1.5",
     "mkdocs-material>=9.0",
     "mkdocstrings[python]>=0.24",
@@ -90,6 +91,7 @@ line-length = 100
 extend_exclude = ["submodules", ".poetry"]
 known_first_party = ["_common"]
 pep621_dev_dependency_groups = ["docs"]
+per_rule_ignores = { DEP002 = ["amazon-braket-sdk"] }
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -135,13 +137,12 @@ include-package-data = true
 write_to = "metriq_gym/_version.py"
 write_to_template = "__version__ = \"{version}\"\n"
 fallback_version = "0.0.0"
+git_describe_command = "git describe --dirty --tags --long --match v[0-9]*"
 
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
 quantinuum = "metriq_gym.quantinuum.provider:QuantinuumProvider"
-origin = "metriq_gym.origin.provider:OriginProvider"
 
 [project.entry-points."qbraid.jobs"]
 local = "metriq_gym.local.job:LocalAerJob"
 quantinuum = "metriq_gym.quantinuum.job:QuantinuumJob"
-origin = "metriq_gym.origin.job:OriginJob"

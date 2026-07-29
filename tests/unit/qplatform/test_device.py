@@ -5,21 +5,22 @@ Tests the version and connectivity_graph functions for different device types
 using mocked qBraid device objects.
 """
 
-import types
-from unittest.mock import Mock
+from unittest.mock import Mock, PropertyMock
 
 import pytest
 import rustworkx as rx
 import networkx as nx
-from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice
+from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice, TargetProfile
+from qbraid.programs import ExperimentType, ProgramSpec
 
 from metriq_gym.local.provider import LocalProvider
-from metriq_gym.origin.device import OriginDevice
+from qbraid.runtime.origin import OriginDevice
 from metriq_gym.qplatform.device import (
     version,
     connectivity_graph,
     normalized_metadata,
     pruned_connectivity_graph,
+    validate_qubit_capacity,
 )
 
 
@@ -97,11 +98,18 @@ def _make_origin_device(
             return self._chip_info
 
     backend = StubBackend()
-    device = OriginDevice(
-        provider=types.SimpleNamespace(),
+    profile = TargetProfile(
         device_id="WK_C102_400",
+        simulator=False,
+        experiment_type=ExperimentType.GATE_MODEL,
+        num_qubits=num_qubits,
+        program_spec=ProgramSpec(str, alias="qasm2"),
+        provider_name="origin",
+    )
+    device = OriginDevice(
+        profile=profile,
+        service=Mock(),
         backend=backend,
-        backend_name="WK_C102_400",
     )
     return device
 
@@ -111,11 +119,25 @@ def _make_origin_simulator_device(backend_name: str = "full_amplitude"):
         def chip_info(self):
             raise RuntimeError("chip_info only available on hardware backends")
 
-    device = OriginDevice(
-        provider=types.SimpleNamespace(),
+    sim_backend = SimulatorBackend()
+    # Simulator qubit counts are hardcoded in qbraid.runtime.origin.provider.SIMULATOR_BACKENDS
+    simulator_qubit_counts = {
+        "full_amplitude": 35,
+        "partial_amplitude": 68,
+        "single_amplitude": 200,
+    }
+    profile = TargetProfile(
         device_id=backend_name,
-        backend=SimulatorBackend(),
-        backend_name=backend_name,
+        simulator=True,
+        experiment_type=ExperimentType.GATE_MODEL,
+        num_qubits=simulator_qubit_counts[backend_name],
+        program_spec=ProgramSpec(str, alias="qasm2"),
+        provider_name="origin",
+    )
+    device = OriginDevice(
+        profile=profile,
+        service=Mock(),
+        backend=sim_backend,
     )
     return device
 
@@ -177,6 +199,14 @@ class TestVersionFunction:
         assert isinstance(version(device), str)
 
 
+class TestValidateQubitCapacity:
+    def test_missing_num_qubits_is_ignored(self):
+        device = Mock(spec=AzureQuantumDevice)
+        type(device).num_qubits = PropertyMock(side_effect=AttributeError("num_qubits"))
+
+        validate_qubit_capacity(device, required_qubits=50)
+
+
 class TestConnectivityGraphFunction:
     """Test cases for the connectivity_graph function."""
 
@@ -208,6 +238,37 @@ class TestConnectivityGraphFunction:
         expected_edges = mock_num_qubits * (mock_num_qubits - 1) // 2
         assert result.num_edges() == expected_edges
 
+    def test_braket_ionq_connectivity_without_topology_uses_complete_graph(self):
+        mock_num_qubits = 36
+        device = Mock(spec=BraketDevice)
+        mock_internal_device = Mock()
+        mock_internal_device.topology_graph = None
+        device._device = mock_internal_device
+        device._provider_name = "IonQ"
+        device.id = "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1"
+        device.num_qubits = mock_num_qubits
+
+        result = connectivity_graph(device)
+
+        assert isinstance(result, rx.PyGraph)
+        assert result.num_nodes() == mock_num_qubits
+        expected_edges = mock_num_qubits * (mock_num_qubits - 1) // 2
+        assert result.num_edges() == expected_edges
+
+    def test_braket_missing_topology_for_sparse_device_raises_clear_error(self):
+        device = Mock(spec=BraketDevice)
+        mock_internal_device = Mock()
+        mock_internal_device.topology_graph = None
+        device._device = mock_internal_device
+        device._provider_name = "Rigetti"
+        device.id = "arn:aws:braket:us-west-1::device/qpu/rigetti/Ankaa-3"
+        device.num_qubits = 84
+
+        with pytest.raises(NotImplementedError) as exc_info:
+            connectivity_graph(device)
+
+        assert "Connectivity graph not available for Braket device" in str(exc_info.value)
+
     def test_azure_device_connectivity(self, mock_azure_device):
         result = connectivity_graph(mock_azure_device)
         assert isinstance(result, rx.PyGraph)
@@ -237,6 +298,25 @@ class TestConnectivityGraphFunction:
         assert isinstance(graph, rx.PyGraph)
         assert graph.num_nodes() == 4
         assert graph.num_edges() == 0
+        # Physical qubit ids should be preserved as node payloads so callers
+        # can map graph indices back to the device's actual qubit labels.
+        assert set(graph.nodes()) == {7, 9, 11, 15}
+
+    def test_origin_device_connectivity_preserves_qubit_ids_with_edges(self):
+        device = _make_origin_device(
+            high=[7, 9], available=[7, 9, 11], edges=[(7, 9), (9, 11)], num_qubits=12
+        )
+
+        graph = connectivity_graph(device)
+
+        assert isinstance(graph, rx.PyGraph)
+        # Non-contiguous physical qubit ids should be mapped to contiguous 0..N-1 indices,
+        # but the original qubit ids must remain accessible via node payloads.
+        assert set(graph.node_indices()) == {0, 1, 2}
+        assert set(graph.nodes()) == {7, 9, 11}
+        # Edges use the reindexed positions (0-based), not the physical ids.
+        edges = {tuple(sorted(e)) for e in graph.edge_list()}
+        assert edges == {(0, 1), (1, 2)}
 
     def test_unsupported_device_connectivity_raises(self, mock_unsupported_device):
         with pytest.raises(NotImplementedError) as exc_info:

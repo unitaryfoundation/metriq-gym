@@ -1,0 +1,8 @@
+{
+  "benchmark_name": "QAT OLE",
+  "qasm_path": "metriq_gym/schemas/examples/qat_ole_small.qasm",
+  "observable_qubits": [0, 1, 2],
+  "num_initial_states": 5,
+  "shots": 100,
+  "seed": 42
+}

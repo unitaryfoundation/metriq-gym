@@ -56,10 +56,33 @@ def test_list_jobs_all(capsys):
     assert captured.out == expected_output
 
 
-def test_list_jobs_prefers_max_qubits_for_qft(capsys):
+def test_list_jobs_shows_num_qubits_for_qft(capsys):
     mock_jobs = [
         MetriqGymJob(
             id="qft1",
+            device_name="local_sim",
+            provider_name="local",
+            job_type=JobType.QUANTUM_FOURIER_TRANSFORM,
+            dispatch_time=datetime.fromisoformat("2021-09-01T12:00:00"),
+            params={"num_qubits": 5},
+            data={},
+        )
+    ]
+
+    list_jobs(mock_jobs, show_index=False, show_suite_id=False)
+    captured = capsys.readouterr()
+
+    table = [["qft1", "local", "local_sim", "Quantum Fourier Transform", 5, "2021-09-01T12:00:00"]]
+    expected_output = tabulate(table, headers=LIST_JOBS_HEADERS, tablefmt="grid") + "\n"
+    assert captured.out == expected_output
+
+
+def test_list_jobs_falls_back_to_max_qubits_for_legacy_qft(capsys):
+    # QFT jobs dispatched before the single-qubit-count change persisted a
+    # max_qubits sweep bound; num_qubits() still resolves those via fallback.
+    mock_jobs = [
+        MetriqGymJob(
+            id="qft_legacy",
             device_name="local_sim",
             provider_name="local",
             job_type=JobType.QUANTUM_FOURIER_TRANSFORM,
@@ -72,7 +95,9 @@ def test_list_jobs_prefers_max_qubits_for_qft(capsys):
     list_jobs(mock_jobs, show_index=False, show_suite_id=False)
     captured = capsys.readouterr()
 
-    table = [["qft1", "local", "local_sim", "Quantum Fourier Transform", 6, "2021-09-01T12:00:00"]]
+    table = [
+        ["qft_legacy", "local", "local_sim", "Quantum Fourier Transform", 6, "2021-09-01T12:00:00"]
+    ]
     expected_output = tabulate(table, headers=LIST_JOBS_HEADERS, tablefmt="grid") + "\n"
     assert captured.out == expected_output
 
