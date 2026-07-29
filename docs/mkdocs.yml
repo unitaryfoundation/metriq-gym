@@ -44,7 +44,9 @@ nav:
     - Quantinuum: providers/quantinuum.md
     - OriginQ (Wukong): providers/originq.md
     - Local Simulators: providers/local.md
-  - Benchmarks: benchmarks/overview.md
+  - Benchmarks:
+    - Overview: benchmarks/overview.md
+    - Metriq Score 1.0 Suite: suites/metriq-score-1.0.md
   - Uploading Results:
     - Contributing to metriq-data: uploading/github.md
   - Development:

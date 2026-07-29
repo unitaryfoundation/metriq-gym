@@ -1,6 +1,6 @@
 {
     "name": "qft_sweep",
-    "description": "Quantum Fourier Transform swept over the {10, 20, 30, 50} qubit counts used in the metriq-gym paper (arXiv:2603.08680, section IV.B.4). Each entry is a single fixed-qubit-count QFT run; the sweep is defined here at the suite level rather than inside the benchmark.",
+    "description": "Legacy Quantum Fourier Transform sweep over {10, 20, 30, 50} qubits, retained for backward compatibility. This is not the canonical Metriq Score 1.0 panel; use the metriq_score_1_0 suite for the paper configuration.",
     "benchmarks": [
         {
             "name": "qft_10_qubits",

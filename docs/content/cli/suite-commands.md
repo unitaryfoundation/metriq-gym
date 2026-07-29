@@ -14,14 +14,16 @@ mgym suite dispatch <suite_config> [OPTIONS]
 
 | Argument | Type | Description | Required |
 |----------|------|-------------|----------|
-| `SUITE_CONFIG` | STR | Path to suite configuration file | Yes |
+| `SUITE_CONFIG` | STR | Path to suite configuration file or bundled suite name | Yes |
 
 ### Options
 
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
-| `--provider, -p` | STR | Provider name (e.g., ibm, braket, azure, ionq, local) | `None` |
+| `--provider, -p` | STR | Provider name (e.g., ibm, aws, azure, ionq, local; braket aliases aws) | `None` |
 | `--device, -d` | STR | Device identifier | `None` |
+| `--component, -c` | LIST | Component to dispatch; repeat the option to select multiple components | `None` |
+| `--all` | BOOL | Explicitly dispatch every component, including guarded full suites | `False` |
 
 ---
 

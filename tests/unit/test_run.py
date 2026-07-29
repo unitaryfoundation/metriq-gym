@@ -14,6 +14,7 @@ from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, Benc
 from metriq_gym.run import (
     load_provider,
     setup_device,
+    validate_benchmark_device_capacity,
     dispatch_job,
     dispatch_suite,
     fetch_result,
@@ -23,7 +24,7 @@ from metriq_gym.run import (
 )
 from metriq_gym.job_manager import MetriqGymJob, JobManager
 from metriq_gym.constants import JobType
-from metriq_gym.exceptions import QBraidSetupError
+from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
 from metriq_gym.resource_estimation import (
     GateCounts,
     CircuitEstimate,
@@ -313,6 +314,188 @@ def test_dispatch_suite_skips_benchmark_exceeding_device_capacity(
     assert "supports only 36" in output
     assert "Successfully dispatched 0/1 benchmarks" in output
     setup_benchmark_mock.assert_not_called()
+    mock_job_manager.add_job.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "width_field",
+    [
+        {"num_qubits": 50},
+        {"width": 50},
+        {"num_qubits_in_chain": 50},
+    ],
+)
+def test_validate_benchmark_device_capacity_recognizes_width_fields(width_field):
+    params = SimpleNamespace(model_dump=lambda **_: width_field)
+    device = SimpleNamespace(id="small-device", num_qubits=36)
+
+    with pytest.raises(DeviceCapacityError, match="Requested 50 qubits"):
+        validate_benchmark_device_capacity(params, device)
+
+
+def _write_component_suite(tmp_path, *, guarded: bool = True):
+    suite = {
+        "name": "component_suite",
+        "benchmarks": [
+            {
+                "name": "qft_small",
+                "component": "qft",
+                "config": {"benchmark_name": "WIT", "num_qubits": 7, "shots": 10},
+            },
+            {
+                "name": "wit",
+                "component": "wit",
+                "config": {"benchmark_name": "WIT", "num_qubits": 7, "shots": 10},
+            },
+            {
+                "name": "qft_large",
+                "component": "qft",
+                "config": {"benchmark_name": "WIT", "num_qubits": 7, "shots": 10},
+            },
+        ],
+    }
+    if guarded:
+        suite["full_suite_warning"] = "This test suite is expensive."
+
+    suite_file = tmp_path / "component_suite.json"
+    suite_file.write_text(json.dumps(suite))
+    return suite_file
+
+
+def _patch_successful_suite_dispatch(monkeypatch):
+    device = SimpleNamespace(id="test-device", num_qubits=200)
+    setup_device_mock = MagicMock(return_value=device)
+    registry = MagicMock()
+    registry.get_available_benchmarks.return_value = ["WIT"]
+    handler = MagicMock()
+    handler.dispatch_handler.return_value = BenchmarkData(provider_job_ids=["provider-job-id"])
+    setup_benchmark_mock = MagicMock(return_value=handler)
+
+    monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
+    monkeypatch.setattr("metriq_gym.run._lazy_registry", lambda: registry)
+    monkeypatch.setattr("metriq_gym.run.setup_benchmark", setup_benchmark_mock)
+    return setup_device_mock, setup_benchmark_mock
+
+
+def test_dispatch_guarded_suite_requires_selection_before_device_setup(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = _write_component_suite(tmp_path)
+    setup_device_mock = MagicMock()
+    monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "WARNING: This test suite is expensive." in output
+    assert "Full suite dispatch was not started" in output
+    assert "qft, wit" in output
+    setup_device_mock.assert_not_called()
+    mock_job_manager.add_job.assert_not_called()
+
+
+def test_dispatch_suite_selects_all_entries_in_component(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = _write_component_suite(tmp_path)
+    _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+        components=["qft"],
+        all_components=False,
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "qft_small" in output
+    assert "qft_large" in output
+    assert "Dispatching wit" not in output
+    assert "Successfully dispatched 2/2 benchmarks" in output
+    assert setup_benchmark_mock.call_count == 2
+    assert mock_job_manager.add_job.call_count == 2
+
+
+def test_dispatch_suite_all_explicitly_opts_into_guarded_suite(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = _write_component_suite(tmp_path)
+    _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+        components=None,
+        all_components=True,
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "WARNING: This test suite is expensive." in output
+    assert "Successfully dispatched 3/3 benchmarks" in output
+    assert setup_benchmark_mock.call_count == 3
+    assert mock_job_manager.add_job.call_count == 3
+
+
+def test_dispatch_legacy_suite_still_runs_all_without_all_flag(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = _write_component_suite(tmp_path, guarded=False)
+    _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "Successfully dispatched 3/3 benchmarks" in output
+    assert setup_benchmark_mock.call_count == 3
+    assert mock_job_manager.add_job.call_count == 3
+
+
+@pytest.mark.parametrize(
+    ("components", "all_components", "expected_error"),
+    [
+        (["missing"], False, "Unknown component(s): missing"),
+        (["qft"], True, "--component and --all cannot be used together"),
+        (["qft", "QFT"], False, "Duplicate component selection"),
+    ],
+)
+def test_dispatch_suite_rejects_invalid_selection_before_device_setup(
+    tmp_path,
+    monkeypatch,
+    mock_job_manager,
+    capsys,
+    components,
+    all_components,
+    expected_error,
+):
+    suite_file = _write_component_suite(tmp_path)
+    setup_device_mock = MagicMock()
+    monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+        components=components,
+        all_components=all_components,
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    assert expected_error in capsys.readouterr().out
+    setup_device_mock.assert_not_called()
     mock_job_manager.add_job.assert_not_called()
 
 
