@@ -64,11 +64,16 @@ def test_suite_select_components_rejects_unknown_component():
 def test_suite_select_components_rejects_duplicate_selection():
     suite = Suite(
         name="suite",
-        benchmarks=[BenchmarkEntry(name="qft_4", component="qft", config={})],
+        benchmarks=[
+            BenchmarkEntry(name="qft_4", component="qft", config={}),
+            BenchmarkEntry(name="wit", component="wit", config={}),
+        ],
     )
 
-    with pytest.raises(ValueError, match="Duplicate component selection"):
-        suite.select_components(["qft", "QFT"])
+    with pytest.raises(ValueError) as exc_info:
+        suite.select_components(["WIT", "qft", "wit", "QFT", "qft"])
+
+    assert str(exc_info.value) == "Duplicate component selection: WIT, qft, wit, QFT"
 
 
 def test_suite_keeps_legacy_duplicate_names_selectable():

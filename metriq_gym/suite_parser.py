@@ -61,20 +61,24 @@ class Suite(BaseModel):
         Component matching is case-insensitive. The returned entries retain their
         order in the suite definition, regardless of option order.
         """
-        requested_keys = [component.casefold() for component in requested_components]
-        duplicate_keys = {
-            component_key
-            for component_key in requested_keys
-            if requested_keys.count(component_key) > 1
-        }
+        requested_keys: list[str] = []
+        seen_keys: set[str] = set()
+        duplicate_keys: set[str] = set()
+        for component in requested_components:
+            component_key = component.casefold()
+            requested_keys.append(component_key)
+            if component_key in seen_keys:
+                duplicate_keys.add(component_key)
+            else:
+                seen_keys.add(component_key)
+
         if duplicate_keys:
-            duplicates = sorted(
-                {
+            duplicates = list(
+                dict.fromkeys(
                     component
                     for component in requested_components
                     if component.casefold() in duplicate_keys
-                },
-                key=str.casefold,
+                )
             )
             raise ValueError(f"Duplicate component selection: {', '.join(duplicates)}")
 
