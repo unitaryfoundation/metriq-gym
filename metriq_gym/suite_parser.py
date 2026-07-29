@@ -30,6 +30,10 @@ class Suite(BaseModel):
     version: str | None = Field(default=None, description="Version of the suite definition")
     description: str | None = Field(default=None, description="Description of the suite")
     source: str | None = Field(default=None, description="Source for the suite definition")
+    references: list[str] = Field(
+        default_factory=list,
+        description="References that document or contextualize the suite definition",
+    )
     full_suite_warning: str | None = Field(
         default=None,
         description=(

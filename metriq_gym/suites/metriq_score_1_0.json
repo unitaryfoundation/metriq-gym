@@ -1,9 +1,11 @@
 {
   "name": "metriq_score_1_0",
   "version": "1.0",
-  "description": "Canonical benchmark configurations for Metriq Score 1.0 as reported in the Metriq paper.",
-  "source": "https://arxiv.org/abs/2603.08680v1",
-  "full_suite_warning": "The complete Metriq Score 1.0 suite dispatches 22 hardware benchmark jobs. It can consume substantial device quota, runtime, and money, and some components require provider-specific capabilities.",
+  "description": "Version 1.0 of the canonical Metriq benchmark suite.",
+  "references": [
+    "https://arxiv.org/abs/2603.08680v1"
+  ],
+  "full_suite_warning": "The complete Metriq Score 1.0 suite dispatches 22 hardware benchmark jobs. It can consume substantial device quota, runtime, and money.",
   "benchmarks": [
     {
       "name": "bseq",

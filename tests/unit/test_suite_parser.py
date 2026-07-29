@@ -20,6 +20,7 @@ def test_suite_model():
         version="1.0",
         description="A test suite",
         source="https://example.com",
+        references=["https://example.com/reference"],
         full_suite_warning="Expensive suite",
         benchmarks=[entry1, entry2],
     )
@@ -27,6 +28,7 @@ def test_suite_model():
     assert suite.version == "1.0"
     assert suite.description == "A test suite"
     assert suite.source == "https://example.com"
+    assert suite.references == ["https://example.com/reference"]
     assert suite.full_suite_warning == "Expensive suite"
     assert len(suite.benchmarks) == 2
     assert suite.benchmarks[0].name == "b1_small"

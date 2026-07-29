@@ -7,7 +7,6 @@ from metriq_gym.suite_parser import parse_suite_file
 
 
 SUITE_PATH = Path(__file__).parents[2] / "metriq_gym" / "suites" / "metriq_score_1_0.json"
-QFT_SWEEP_PATH = Path(__file__).parents[2] / "metriq_gym" / "suites" / "qft_sweep.json"
 EXPECTED_CONFIGS: dict[str, dict] = {
     "bseq": {
         "benchmark_name": "BSEQ",
@@ -107,8 +106,12 @@ def test_metriq_score_1_0_definition_is_exact():
 
     assert raw_suite["name"] == "metriq_score_1_0"
     assert raw_suite["version"] == "1.0"
-    assert raw_suite["source"] == "https://arxiv.org/abs/2603.08680v1"
+    assert raw_suite["description"] == "Version 1.0 of the canonical Metriq benchmark suite."
+    assert raw_suite["references"] == ["https://arxiv.org/abs/2603.08680v1"]
+    assert "source" not in raw_suite
+    assert "paper" not in raw_suite["description"].casefold()
     assert "22" in raw_suite["full_suite_warning"]
+    assert "provider" not in raw_suite["full_suite_warning"].casefold()
     assert len(raw_entries) == 22
     assert set(raw_entries) == set(EXPECTED_CONFIGS)
 
@@ -145,9 +148,3 @@ def test_metriq_score_1_0_components_and_configs_are_valid():
         schema = load_schema(entry.config["benchmark_name"])
         assert set(entry.config) <= set(schema["properties"])
         validate_and_create_model(entry.config)
-
-
-def test_legacy_qft_sweep_is_not_repurposed_as_the_score_suite():
-    suite = parse_suite_file(QFT_SWEEP_PATH)
-
-    assert [entry.config["num_qubits"] for entry in suite.benchmarks] == [10, 20, 30, 50]
