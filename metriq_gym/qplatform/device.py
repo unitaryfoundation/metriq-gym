@@ -12,7 +12,7 @@ from pytket.architecture import FullyConnected
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.exceptions import DeviceCapacityError
 from qbraid.runtime.origin import OriginDevice
-from metriq_gym.quantinuum.device import QuantinuumDevice
+from qbraid.runtime.quantinuum import QuantinuumDevice
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def version(device: QuantumDevice) -> str:
 
 @version.register
 def _(device: QuantinuumDevice) -> str:
-    return device._backend_info.version
+    return device.backend_info.version
 
 
 @version.register
@@ -157,7 +157,7 @@ def _(device: LocalAerDevice) -> rx.PyGraph:
 
 @connectivity_graph.register
 def _(device: QuantinuumDevice) -> rx.PyGraph:
-    arch = device._backend_info.architecture
+    arch = device.backend_info.architecture
     num_qubits = len(arch.nodes)
 
     is_fc = isinstance(arch, FullyConnected)
