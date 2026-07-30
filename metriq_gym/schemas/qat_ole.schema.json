@@ -1,0 +1,67 @@
+{
+  "$id": "metriq-gym/qat_ole.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QAT OLE",
+  "description": "Quantum Advantage Tracker Operator Loschmidt Echo (OLE) benchmark. Loads an OLE circuit and estimates the Pauli-Z product expectation value ⟨Z_{q_0} ... Z_{q_k}⟩.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "QAT OLE",
+      "description": "Name of the benchmark. Must be 'QAT OLE' for this schema."
+    },
+    "circuit": {
+      "type": "string",
+      "description": "Named QAT OLE circuit to fetch from the Quantum Advantage Tracker repository. Mutually exclusive with qasm_path. Uses the known observable qubits [52, 59, 72] for all named circuits.",
+      "enum": ["49Q_L3", "49Q_L6", "70Q_L6"],
+      "examples": ["49Q_L3", "49Q_L6", "70Q_L6"]
+    },
+    "qasm_path": {
+      "type": "string",
+      "description": "Path to a local OpenQASM 3.0 circuit file, resolved relative to the current working directory. Mutually exclusive with circuit. Requires observable_qubits.",
+      "examples": ["metriq_gym/schemas/examples/qat_ole_small.qasm"]
+    },
+    "observable_qubits": {
+      "type": "array",
+      "description": "Qubit indices to measure for the Pauli-Z product observable. Required when using qasm_path. Ignored when using circuit (the QAT observable [52, 59, 72] is used instead).",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "minItems": 1,
+      "examples": [[0, 1, 2], [52, 59, 72]]
+    },
+    "num_initial_states": {
+      "type": "integer",
+      "description": "Number of randomly sampled computational-basis initial states to average over (N_init in the QAT OLE protocol). The device executes one circuit per initial state.",
+      "default": 10,
+      "minimum": 1,
+      "examples": [5, 10, 20]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Optional random seed for sampling the initial states, for reproducibility.",
+      "examples": [42]
+    },
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots per circuit execution.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [100, 1000, 4096]
+    }
+  },
+  "required": ["benchmark_name"],
+  "oneOf": [
+    {
+      "description": "Named QAT circuit fetched from the Quantum Advantage Tracker.",
+      "required": ["circuit"],
+      "not": { "required": ["qasm_path"] }
+    },
+    {
+      "description": "Local QASM file with explicit observable qubits.",
+      "required": ["qasm_path", "observable_qubits"],
+      "not": { "required": ["circuit"] }
+    }
+  ]
+}

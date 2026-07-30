@@ -6,6 +6,8 @@ import hashlib
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from metriq_gym.platform import canonical_device_name, canonical_provider_name
+
 if TYPE_CHECKING:
     from metriq_gym.job_manager import MetriqGymJob
 
@@ -35,8 +37,9 @@ def path_component(value: str | None) -> str:
 
 def default_upload_dir(version: str, provider: str, device: str) -> str:
     """Provider/device-aware default upload directory to avoid PR conflicts."""
-    provider_part = path_component(provider)
-    device_part = path_component(device)
+    canonical_provider = canonical_provider_name(provider)
+    provider_part = path_component(canonical_provider)
+    device_part = path_component(canonical_device_name(canonical_provider, device))
     return f"metriq-gym/{minor_series_label(version)}/{provider_part}/{device_part}"
 
 

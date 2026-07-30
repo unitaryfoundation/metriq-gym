@@ -1,0 +1,70 @@
+{
+  "name": "lr_qaoa_1d_scale_suite",
+  "description": "Verified Linear Ramp QAOA 1D benchmarks at different scales.",
+  "benchmarks": [
+    {
+        "name": "LR_QAOA_1D_10",
+        "config": {
+            "benchmark_name": "Linear Ramp QAOA",
+            "confidence_level": 0.999,
+            "delta_beta": 0.3,
+            "delta_gamma": 0.6,
+            "graph_type": "1D",
+            "num_qubits": 10,
+            "num_random_trials": 25,
+            "qaoa_layers": [10],
+            "seed": 123,
+            "shots": 1000,
+            "trials": 10
+        }
+    },
+    {
+        "name": "LR_QAOA_1D_20",
+        "config": {
+            "benchmark_name": "Linear Ramp QAOA",
+            "confidence_level": 0.999,
+            "delta_beta": 0.3,
+            "delta_gamma": 0.6,
+            "graph_type": "1D",
+            "num_qubits": 20,
+            "num_random_trials": 25,
+            "qaoa_layers": [10],
+            "seed": 123,
+            "shots": 1000,
+            "trials": 10
+        }
+    },
+    {
+        "name": "LR_QAOA_1D_50",
+        "config": {
+            "benchmark_name": "Linear Ramp QAOA",
+            "confidence_level": 0.999,
+            "delta_beta": 0.3,
+            "delta_gamma": 0.6,
+            "graph_type": "1D",
+            "num_qubits": 50,
+            "num_random_trials": 25,
+            "qaoa_layers": [10],
+            "seed": 123,
+            "shots": 1000,
+            "trials": 10
+        }
+    },
+    {
+        "name": "LR_QAOA_1D_100",
+        "config": {
+            "benchmark_name": "Linear Ramp QAOA",
+            "confidence_level": 0.999,
+            "delta_beta": 0.3,
+            "delta_gamma": 0.6,
+            "graph_type": "1D",
+            "num_qubits": 100,
+            "num_random_trials": 25,
+            "qaoa_layers": [10],
+            "seed": 123,
+            "shots": 1000,
+            "trials": 10
+        }
+    }
+  ]
+}

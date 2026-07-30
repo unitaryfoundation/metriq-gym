@@ -50,8 +50,9 @@ def make_device(device_id: str, backend_info: Any) -> QuantinuumDevice:
         num_qubits=len(backend_info.architecture.nodes),
         program_spec=ProgramSpec(Circuit, alias="pytket"),
         provider_name="quantinuum",
+        backend_info=backend_info,
     )
-    return QuantinuumDevice(profile=profile, backend_info=backend_info)
+    return QuantinuumDevice(profile=profile)
 
 
 class TestVersionQuantinuum:

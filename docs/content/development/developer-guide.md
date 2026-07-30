@@ -243,6 +243,22 @@ Releases are managed by maintainers:
 2. CI builds and publishes to PyPI
 3. Documentation is deployed to GitHub Pages
 
+### Tag naming requirement
+
+Release tags **must** follow the `v<digit>` scheme, i.e. `v<major>.<minor>.<patch>`
+with an optional pre-release suffix (e.g. `v0.7.1`, `v0.8.0rc1`). `setuptools_scm`
+is configured to only consider tags matching the glob `v[0-9]*` when deriving the
+package version, so:
+
+- A release cut from a conforming tag builds a clean version (e.g. `0.7.1`) that
+  PyPI accepts.
+- A release cut from a non-conforming tag (e.g. `release-1.0`) would fall back to
+  the nearest conforming tag and produce a dev version with a `+g<hash>` local
+  segment, which PyPI rejects on upload.
+
+Tags that are not releases (e.g. `metriq-paper-v1`) must **not** match `v[0-9]*`;
+they are ignored by versioning, so they can be created freely.
+
 ## Getting Help
 
 - [Issue Tracker](https://github.com/unitaryfoundation/metriq-gym/issues)
