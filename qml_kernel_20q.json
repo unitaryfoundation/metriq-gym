@@ -1,5 +1,0 @@
-{
-  "benchmark_name": "QML Kernel",
-  "num_qubits": 20,
-  "shots": 1000
-}

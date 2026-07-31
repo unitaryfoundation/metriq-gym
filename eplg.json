@@ -1,7 +1,0 @@
-{
-  "benchmark_name": "EPLG",
-  "num_qubits_in_chain": 80,
-  "lengths": [2, 4, 8, 16, 50, 100],
-  "num_samples": 5,
-  "shots": 500
-}

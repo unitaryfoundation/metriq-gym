@@ -1,9 +1,9 @@
 """Local server for the metriq-gym jobs dashboard.
 
 Serves index.html plus a small JSON API over the local metriq-gym job database.
-Run from the repo root, in an environment with metriq-gym installed:
+Launch via the CLI:
 
-    python dashboard/server.py
+    mgym dashboard [--port 8787]
 
 Then open http://localhost:8787
 """
