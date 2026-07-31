@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 PORT = 8787
 # Browsers send an Origin header on cross-site POSTs; only accept our own page
@@ -77,7 +78,7 @@ def save_state(state: dict) -> None:
 
 def read_jobs_raw() -> list[dict]:
     path = db_path()
-    jobs = []
+    jobs: list[dict] = []
     if not path.exists():
         return jobs
     with open(path) as f:
@@ -106,7 +107,7 @@ def num_qubits(params: dict) -> int | None:
     # order/type handling in sync. The method only reads .params, and a real
     # MetriqGymJob can't be built here: deserialize() raises on records the
     # tolerant raw reader deliberately accepts (unknown job_type, bad dates).
-    return MetriqGymJob.num_qubits(SimpleNamespace(params=params))
+    return MetriqGymJob.num_qubits(cast(MetriqGymJob, SimpleNamespace(params=params)))
 
 
 QUEUE_POS_RE = re.compile(r"QUEUED(?:\s*\(position\s*(\d+)\))?", re.IGNORECASE)
