@@ -77,10 +77,10 @@ Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/
 ## Jobs dashboard
 
 A local web view of your dispatched jobs — lifecycle status, per-device suite coverage,
-and poll/upload/delete actions. From a repo checkout, with your metriq-gym environment active:
+and poll/upload/delete actions:
 
 ```sh
-python dashboard/server.py
+mgym dashboard
 ```
 
 Then open http://localhost:8787. The dashboard reads your local job database; provider

@@ -22,11 +22,18 @@ from types import SimpleNamespace
 PORT = 8787
 # Browsers send an Origin header on cross-site POSTs; only accept our own page
 # (or clients like curl that send no Origin) so a drive-by webpage can't CSRF
-# poll/upload/delete actions against the local server.
+# poll/upload/delete actions against the local server. Recomputed in main() so
+# it tracks the serving port.
 ALLOWED_ORIGINS = {f"http://localhost:{PORT}", f"http://127.0.0.1:{PORT}"}
 DASHBOARD_DIR = Path(__file__).resolve().parent
-STATE_FILE = DASHBOARD_DIR / "state.json"
 INDEX_FILE = DASHBOARD_DIR / "index.html"
+
+
+def state_file() -> Path:
+    # Sidecar lives next to the local job db, not in the (possibly read-only)
+    # installed package directory.
+    return db_path().parent / "dashboard_state.json"
+
 
 _state_lock = threading.Lock()
 _poll_locks: dict[str, threading.Lock] = {}
@@ -52,18 +59,20 @@ def mgym_cmd() -> list[str]:
 
 
 def load_state() -> dict:
-    if STATE_FILE.exists():
+    path = state_file()
+    if path.exists():
         try:
-            return json.loads(STATE_FILE.read_text())
+            return json.loads(path.read_text())
         except json.JSONDecodeError:
             pass
     return {"uploads": {}, "polls": {}}
 
 
 def save_state(state: dict) -> None:
-    tmp = STATE_FILE.with_suffix(".json.tmp")
+    path = state_file()
+    tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(state, indent=2))
-    tmp.replace(STATE_FILE)
+    tmp.replace(path)
 
 
 def read_jobs_raw() -> list[dict]:
@@ -83,17 +92,11 @@ def read_jobs_raw() -> list[dict]:
     return jobs
 
 
-def short_device(name: str) -> str:
-    # Braket device ARNs -> last two path segments, joined and lowercased, e.g.
-    # "rigetti_cepheus-1-108q" — the same key the job is stored and uploaded
-    # under. Mirrors canonical_device_name from PR #774; switch to that shared
-    # helper once it lands.
-    if name.startswith("arn:"):
-        parts = [part for part in name.split("/") if part]
-        if len(parts) >= 2:
-            return f"{parts[-2]}_{parts[-1]}".lower()
-        return name.rsplit("/", 1)[-1].lower()
-    return name
+def short_device(provider: str, name: str) -> str:
+    # The same dataset key the job is stored and uploaded under.
+    from metriq_gym.platform import canonical_device_name
+
+    return canonical_device_name(provider or "", name)
 
 
 def num_qubits(params: dict) -> int | None:
@@ -178,7 +181,9 @@ def wire_jobs() -> list[dict]:
                 "id": raw["id"],
                 "benchmark": raw.get("job_type") or "unknown",
                 "provider": raw.get("provider_name"),
-                "device": short_device(raw.get("device_name") or ""),
+                "device": short_device(
+                    raw.get("provider_name") or "", raw.get("device_name") or ""
+                ),
                 "device_full": raw.get("device_name"),
                 "num_qubits": num_qubits(raw.get("params") or {}),
                 "params": raw.get("params") or {},
@@ -337,10 +342,12 @@ class Handler(BaseHTTPRequestHandler):
         pass  # keep the terminal quiet
 
 
-def main() -> None:
-    print(f"metriq-gym jobs dashboard: http://localhost:{PORT}")
+def main(port: int = PORT) -> None:
+    global ALLOWED_ORIGINS
+    ALLOWED_ORIGINS = {f"http://localhost:{port}", f"http://127.0.0.1:{port}"}
+    print(f"metriq-gym jobs dashboard: http://localhost:{port}")
     print(f"reading jobs from: {db_path()}")
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 
 
 if __name__ == "__main__":

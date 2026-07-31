@@ -38,10 +38,10 @@ Resources:
 
 ## Jobs dashboard
 
-A local web UI over the same job database and CLI actions. From a repo checkout:
+A local web UI over the same job database and CLI actions:
 
 ```bash
-python dashboard/server.py
+mgym dashboard [--port 8787]
 ```
 
 Then open [http://localhost:8787](http://localhost:8787) to see job lifecycle status,
