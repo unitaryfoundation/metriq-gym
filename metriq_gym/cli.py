@@ -148,7 +148,7 @@ ProviderOption = Annotated[
     typer.Option(
         "--provider",
         "-p",
-        help="Provider name (e.g., ibm, braket, azure, ionq, local)",
+        help="Provider name (e.g., ibm, aws, azure, ionq, local; braket aliases aws)",
     ),
 ]
 
