@@ -874,9 +874,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../benchmarks/overview/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -890,7 +907,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../suites/metriq-score-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metriq Score 1.0 Suite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1659,6 +1748,73 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.BenchmarkEntry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BenchmarkEntry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BenchmarkEntry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.BenchmarkEntry.component_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        component_name
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.Suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Suite
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Suite">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.Suite.component_names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        component_names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.Suite.select_components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        select_components
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metriq_gym.suite_parser.parse_suite_file" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2423,6 +2579,73 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.BenchmarkEntry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BenchmarkEntry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BenchmarkEntry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.BenchmarkEntry.component_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        component_name
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.Suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Suite
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Suite">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.Suite.component_names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        component_names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metriq_gym.suite_parser.Suite.select_components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        select_components
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -3337,7 +3560,7 @@ original quantum provider, using the raw measurement data captured with
 
 
 <h2 id="metriq_gym.cli.suite_dispatch" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">suite_dispatch</span><span class="p">(</span><span class="n">suite_config</span><span class="p">,</span> <span class="n">provider</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">suite_dispatch</span><span class="p">(</span><span class="n">suite_config</span><span class="p">,</span> <span class="n">provider</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">all_components</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
 <a href="#metriq_gym.cli.suite_dispatch" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -3744,6 +3967,162 @@ dataset keys and may intentionally omit runtime details such as an AWS region.</
 
 
 
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="metriq_gym.suite_parser.BenchmarkEntry" class="doc doc-heading">
+            <code>BenchmarkEntry</code>
+
+
+<a href="#metriq_gym.suite_parser.BenchmarkEntry" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="metriq_gym.suite_parser.BenchmarkEntry.component_name" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">component_name</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#metriq_gym.suite_parser.BenchmarkEntry.component_name" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the component identifier used by suite selection.</p>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="metriq_gym.suite_parser.Suite" class="doc doc-heading">
+            <code>Suite</code>
+
+
+<a href="#metriq_gym.suite_parser.Suite" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="metriq_gym.suite_parser.Suite.component_names" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">component_names</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#metriq_gym.suite_parser.Suite.component_names" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return component identifiers in their first-occurrence order.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="metriq_gym.suite_parser.Suite.select_components" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">select_components</span><span class="p">(</span><span class="n">requested_components</span><span class="p">)</span></code>
+
+<a href="#metriq_gym.suite_parser.Suite.select_components" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Select all entries belonging to the requested components.</p>
+<p>Component matching is case-insensitive. The returned entries retain their
+order in the suite definition, regardless of option order.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
 
 <div class="doc doc-object doc-function">
 
@@ -3756,7 +4135,7 @@ dataset keys and may intentionally omit runtime details such as an AWS region.</
 
     <div class="doc doc-contents ">
 
-        <p>Parse a suite JSON file and return a Suite object.</p>
+        <p>Parse a suite JSON file or bundled suite name and return a Suite object.</p>
 
 
     </div>
