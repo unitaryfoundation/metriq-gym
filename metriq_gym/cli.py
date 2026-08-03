@@ -393,9 +393,27 @@ def job_replay(
 
 @suite_app.command("dispatch")
 def suite_dispatch(
-    suite_config: Annotated[str, typer.Argument(help="Path to suite configuration file")],
+    suite_config: Annotated[
+        str,
+        typer.Argument(help="Path to suite configuration file or bundled suite name"),
+    ],
     provider: ProviderOption = None,
     device: DeviceOption = None,
+    components: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            "--component",
+            "-c",
+            help="Component to dispatch; repeat the option to select multiple components",
+        ),
+    ] = None,
+    all_components: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Explicitly dispatch every component, including guarded full suites",
+        ),
+    ] = False,
 ) -> None:
     """Dispatch a suite of benchmark jobs to a quantum device."""
     from metriq_gym.run import dispatch_suite as _dispatch_suite
@@ -404,6 +422,8 @@ def suite_dispatch(
     args.suite_config = suite_config
     args.provider = provider
     args.device = device
+    args.components = components
+    args.all_components = all_components
 
     job_manager = JobManager()
     _dispatch_suite(args, job_manager)
