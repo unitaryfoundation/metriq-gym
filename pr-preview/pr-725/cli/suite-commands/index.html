@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -641,6 +641,39 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#bundled-suites-and-json-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bundled suites and JSON files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dispatch-selected-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dispatch selected components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dispatch-a-complete-guarded-suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dispatch a complete guarded suite
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1098,9 +1131,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../benchmarks/overview/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -1114,7 +1164,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../suites/metriq-score-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metriq Score 1.0 Suite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1411,6 +1533,39 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#bundled-suites-and-json-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bundled suites and JSON files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dispatch-selected-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dispatch selected components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dispatch-a-complete-guarded-suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dispatch a complete guarded suite
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1590,7 +1745,7 @@
 <tr>
 <td><code>SUITE_CONFIG</code></td>
 <td>STR</td>
-<td>Path to suite configuration file</td>
+<td>Path to suite configuration file or bundled suite name</td>
 <td>Yes</td>
 </tr>
 </tbody>
@@ -1609,7 +1764,7 @@
 <tr>
 <td><code>--provider, -p</code></td>
 <td>STR</td>
-<td>Provider name (e.g., ibm, braket, azure, ionq, local)</td>
+<td>Provider name (e.g., ibm, aws, azure, ionq, local; braket aliases aws)</td>
 <td><code>None</code></td>
 </tr>
 <tr>
@@ -1618,12 +1773,51 @@
 <td>Device identifier</td>
 <td><code>None</code></td>
 </tr>
+<tr>
+<td><code>--component, -c</code></td>
+<td>LIST</td>
+<td>Component to dispatch; repeat the option to select multiple components</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>--all</code></td>
+<td>BOOL</td>
+<td>Explicitly dispatch every component, including guarded full suites</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
+<h3 id="bundled-suites-and-json-files">Bundled suites and JSON files<a class="headerlink" href="#bundled-suites-and-json-files" title="Permanent link">&para;</a></h3>
+<p>The suite argument accepts either a path to a JSON file or the name of a suite
+bundled with metriq-gym. For example, <code>metriq_score_1_0</code> resolves to the
+versioned Metriq Score 1.0 definition from any working directory.</p>
+<h3 id="dispatch-selected-components">Dispatch selected components<a class="headerlink" href="#dispatch-selected-components" title="Permanent link">&para;</a></h3>
+<p>Use <code>--component</code> (or <code>-c</code>) to dispatch one component and all of its configured
+scale points:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>dispatch<span class="w"> </span>metriq_score_1_0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--component<span class="w"> </span>qft<span class="w"> </span>--provider<span class="w"> </span>&lt;provider&gt;<span class="w"> </span>--device<span class="w"> </span>&lt;device&gt;
+</code></pre></div>
+<p>The option is repeatable:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>dispatch<span class="w"> </span>metriq_score_1_0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>-c<span class="w"> </span>bseq<span class="w"> </span>-c<span class="w"> </span>wit<span class="w"> </span>--provider<span class="w"> </span>&lt;provider&gt;<span class="w"> </span>--device<span class="w"> </span>&lt;device&gt;
+</code></pre></div>
+<p>Unknown or repeated component names are rejected before provider
+initialization.</p>
+<h3 id="dispatch-a-complete-guarded-suite">Dispatch a complete guarded suite<a class="headerlink" href="#dispatch-a-complete-guarded-suite" title="Permanent link">&para;</a></h3>
+<p>Some suite definitions require an explicit <code>--all</code> opt-in before every
+configured job is dispatched:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>dispatch<span class="w"> </span>metriq_score_1_0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>--all<span class="w"> </span>--provider<span class="w"> </span>&lt;provider&gt;<span class="w"> </span>--device<span class="w"> </span>&lt;device&gt;
+</code></pre></div>
+<p>Without <code>--component</code> or <code>--all</code>, a guarded suite prints its runtime and cost
+warning, lists the available components, and exits before provider
+initialization.</p>
+<p>See <a href="../../suites/metriq-score-1.0/">Metriq Score 1.0 Suite</a> for the versioned
+component and scale-point reference.</p>
 <hr />
 <h2 id="poll">poll<a class="headerlink" href="#poll" title="Permanent link">&para;</a></h2>
 <p>Poll suite jobs and retrieve results when complete.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>poll<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>poll<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_1">Arguments<a class="headerlink" href="#arguments_1" title="Permanent link">&para;</a></h3>
 <table>
@@ -1672,7 +1866,7 @@
 <hr />
 <h2 id="view">view<a class="headerlink" href="#view" title="Permanent link">&para;</a></h2>
 <p>View jobs in a suite.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>view<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>view<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_2">Arguments<a class="headerlink" href="#arguments_2" title="Permanent link">&para;</a></h3>
 <table>
@@ -1696,7 +1890,7 @@
 <hr />
 <h2 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">&para;</a></h2>
 <p>Delete all jobs in a suite from the local database.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>delete<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>delete<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_3">Arguments<a class="headerlink" href="#arguments_3" title="Permanent link">&para;</a></h3>
 <table>
@@ -1720,7 +1914,7 @@
 <hr />
 <h2 id="upload">upload<a class="headerlink" href="#upload" title="Permanent link">&para;</a></h2>
 <p>Upload suite results to GitHub via pull request.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>upload<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>upload<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_4">Arguments<a class="headerlink" href="#arguments_4" title="Permanent link">&para;</a></h3>
 <table>
@@ -1883,7 +2077,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "content.code.copy", "content.code.annotate", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
