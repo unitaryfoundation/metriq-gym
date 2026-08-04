@@ -345,8 +345,9 @@ def calc_stats(data: LinearRampQAOAData, samples: list["MeasCount"]) -> Aggregat
         all(stat[ith_layer].confidence_pass for stat in trial_stats)
         for ith_layer in range(len(data.qaoa_layers))
     ]
+    # Floored at zero: performance at or below the random-sampling baseline scores 0.
     effective_approx_ratio = [
-        (r - data.approx_ratio_random_mean) / (1 - data.approx_ratio_random_mean)
+        max(0.0, (r - data.approx_ratio_random_mean) / (1 - data.approx_ratio_random_mean))
         for r in approx_ratio
     ]
 
