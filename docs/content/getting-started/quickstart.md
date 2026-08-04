@@ -21,7 +21,9 @@ curl -O https://raw.githubusercontent.com/unitaryfoundation/metriq-gym/main/metr
 ```
 
 !!! note
-    Example configurations for all benchmarks are available in the `metriq_gym/schemas/examples/` directory.
+    Generic example configurations for all benchmarks are available in the
+    `metriq_gym/schemas/examples/` directory. They are learning templates, not
+    the canonical configurations used to calculate Metriq Score 1.0.
 
 ### 2. Dispatch the Benchmark
 
@@ -53,6 +55,9 @@ Each benchmark is configured via JSON documents. The `metriq_gym/schemas/example
 - Switch benchmarks (change `benchmark_name`)
 - Adjust qubit counts or shots
 - Supply provider-specific options
+
+For score-compatible parameters and scale datapoints, use the
+[Metriq Score 1.0 suite](../suites/metriq-score-1.0.md) instead of an example.
 
 Example WIT configuration:
 

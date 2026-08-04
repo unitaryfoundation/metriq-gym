@@ -335,6 +335,15 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         # that restricted topology to create the chain
         graph = connectivity_graph_for_gate(device, two_qubit_gate)
         if graph is None:
+            warnings.warn(
+                "EPLG could not confirm that the target device supports the configured "
+                f"two_qubit_gate={two_qubit_gate!r}. The two_qubit_gate and "
+                "one_qubit_basis_gates parameters are provider/device-specific; if circuit "
+                "construction or transpilation fails, change them to a native universal "
+                "gate set supported by the target device.",
+                category=RuntimeWarning,
+                stacklevel=2,
+            )
             graph = connectivity_graph(device)
 
         qubit_chain = random_chain_from_graph(

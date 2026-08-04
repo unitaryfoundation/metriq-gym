@@ -283,6 +283,8 @@ class TestSuiteCommands:
         assert "SUITE_CONFIG" in result.output
         assert "--provider" in result.output
         assert "--device" in result.output
+        assert "--component" in result.output
+        assert "--all" in result.output
 
     def test_suite_dispatch_missing_config_shows_error(self):
         """mgym suite dispatch without config should error."""
@@ -301,7 +303,19 @@ class TestSuiteCommands:
 
         runner.invoke(
             app,
-            ["suite", "dispatch", str(config_file), "-p", "local", "-d", "aer_simulator"],
+            [
+                "suite",
+                "dispatch",
+                str(config_file),
+                "-p",
+                "local",
+                "-d",
+                "aer_simulator",
+                "-c",
+                "qft",
+                "--component",
+                "wit",
+            ],
         )
 
         mock_dispatch.assert_called_once()
@@ -309,6 +323,24 @@ class TestSuiteCommands:
         assert args.suite_config == str(config_file)
         assert args.provider == "local"
         assert args.device == "aer_simulator"
+        assert args.components == ["qft", "wit"]
+        assert args.all_components is False
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.dispatch_suite")
+    def test_suite_dispatch_forwards_all_opt_in(self, mock_dispatch, mock_jm, tmp_path):
+        config_file = tmp_path / "suite.json"
+        config_file.write_text("{}")
+
+        runner.invoke(
+            app,
+            ["suite", "dispatch", str(config_file), "--all"],
+        )
+
+        mock_dispatch.assert_called_once()
+        args = mock_dispatch.call_args[0][0]
+        assert args.components is None
+        assert args.all_components is True
 
     def test_suite_poll_help(self):
         """mgym suite poll --help should show usage."""

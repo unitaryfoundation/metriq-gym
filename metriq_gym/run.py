@@ -24,8 +24,9 @@ from metriq_gym.resource_estimation import (
     quantinuum_hqc_formula,
 )
 from metriq_gym.suite_parser import parse_suite_file
-from metriq_gym.exceptions import QBraidSetupError
+from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
 from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_filename
+from metriq_gym.platform import canonical_provider_name
 
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ def load_provider(provider_name: str):
     """
     from qbraid.runtime import load_provider as _load_provider
 
-    return _load_provider(provider_name)
+    return _load_provider(canonical_provider_name(provider_name))
 
 
 def get_providers() -> list[str]:
@@ -74,7 +75,7 @@ def load_job(job_id: str, *, provider: str, **kwargs):
     """
     from qbraid.runtime import load_job as _load_job
 
-    return _load_job(job_id, provider=provider, **kwargs)
+    return _load_job(job_id, provider=canonical_provider_name(provider), **kwargs)
 
 
 def job_status(quantum_job):
@@ -101,6 +102,35 @@ COMMON_SUITE_METADATA = {
     "timestamp": ("timestamp",),
     "app_version": ("app_version",),
 }
+
+
+def _braket_region_from_arn(device_name: str) -> str | None:
+    """Return the region encoded in an Amazon Braket device ARN."""
+    arn_fields = device_name.split(":", 5)
+    if len(arn_fields) != 6:
+        return None
+
+    arn_prefix, _partition, service, region, _account, _resource = arn_fields
+    if arn_prefix != "arn" or service != "braket":
+        return None
+    return region or None
+
+
+def _get_device_with_arn_region(provider, device_name: str):
+    """Initialize Braket using its ARN region without changing process configuration."""
+    region = _braket_region_from_arn(device_name)
+    if region is None:
+        return provider.get_device(device_name)
+
+    previous_region = os.environ.get("AWS_REGION")
+    os.environ["AWS_REGION"] = region
+    try:
+        return provider.get_device(device_name)
+    finally:
+        if previous_region is None:
+            os.environ.pop("AWS_REGION", None)
+        else:
+            os.environ["AWS_REGION"] = previous_region
 
 
 def setup_device(provider_name: str, device_name: str):
@@ -137,7 +167,7 @@ def setup_device(provider_name: str, device_name: str):
         raise QBraidSetupError("Device not found")
 
     try:
-        device = provider.get_device(device_name)
+        device = _get_device_with_arn_region(provider, device_name)
     except QbraidError:
         devices = ", ".join([device.id for device in provider.get_devices()])
         logger.error(
@@ -145,6 +175,9 @@ def setup_device(provider_name: str, device_name: str):
         )
         logger.error(f"Devices available: {devices}")
         raise QBraidSetupError("Device not found")
+    from metriq_gym.qplatform.device import prepare_device_for_dispatch
+
+    prepare_device_for_dispatch(device)
 
     from metriq_gym.provider_hooks import apply_device_hook
 
@@ -156,6 +189,25 @@ def setup_device(provider_name: str, device_name: str):
 def setup_benchmark(args, params, job_type: JobType) -> "Benchmark":
     reg = _lazy_registry()
     return reg.BENCHMARK_HANDLERS[job_type](args, params)
+
+
+def validate_benchmark_device_capacity(params, device) -> None:
+    """Validate explicit benchmark width before constructing its handler."""
+    config = params.model_dump(exclude_none=True)
+    requested_qubits = next(
+        (
+            config[field]
+            for field in ("num_qubits", "width", "num_qubits_in_chain")
+            if isinstance(config.get(field), int)
+        ),
+        None,
+    )
+    if requested_qubits is None:
+        return
+
+    from metriq_gym.qplatform.device import validate_qubit_capacity
+
+    validate_qubit_capacity(device, requested_qubits)
 
 
 def setup_job_data_class(job_type: JobType) -> type["BenchmarkData"]:
@@ -203,6 +255,12 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     job_type = JobType(params.benchmark_name)
 
+    try:
+        validate_benchmark_device_capacity(params, device)
+    except DeviceCapacityError as exc:
+        print(f"✗ {params.benchmark_name}: {exc}")
+        return
+
     print(f"Dispatching {params.benchmark_name}...")
 
     handler: Benchmark = setup_benchmark(args, params, job_type)
@@ -243,23 +301,53 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     Note: Continues processing remaining configs if individual configs fail.
     """
+    config_file = args.suite_config
+
+    try:
+        suite = parse_suite_file(config_file)
+    except FileNotFoundError:
+        print(f"✗ {config_file}: Configuration file or bundled suite not found")
+        return
+    except Exception as exc:
+        print(f"✗ {config_file}: Invalid suite configuration: {type(exc).__name__}: {exc}")
+        return
+
+    if not suite.benchmarks:
+        print(f"✗ {config_file}: No benchmarks found in the suite")
+        return
+
+    requested_components = getattr(args, "components", None) or []
+    if isinstance(requested_components, str):
+        requested_components = [requested_components]
+    all_components = getattr(args, "all_components", False)
+
+    if requested_components and all_components:
+        print("✗ --component and --all cannot be used together")
+        return
+
+    if requested_components:
+        try:
+            selected_benchmarks = suite.select_components(requested_components)
+        except ValueError as exc:
+            print(f"✗ {exc}")
+            return
+    elif suite.full_suite_warning and not all_components:
+        print(f"WARNING: {suite.full_suite_warning}")
+        print("Full suite dispatch was not started.")
+        print(f"Available components: {', '.join(suite.component_names)}")
+        print("Choose one with --component NAME (repeatable), or use --all to opt in.")
+        return
+    else:
+        selected_benchmarks = suite.benchmarks
+
+    if all_components and suite.full_suite_warning:
+        print(f"WARNING: {suite.full_suite_warning}")
+
     print(f"Starting suite dispatch on {args.provider}:{args.device}...")
 
     try:
         device = setup_device(args.provider, args.device)
     except QBraidSetupError:
-        return
-
-    config_file = args.suite_config
-
-    if not os.path.exists(config_file):
-        print(f"✗ {config_file}: Configuration file not found")
-        return
-
-    # Load and validate the benchmark configuration
-    suite = parse_suite_file(config_file)
-    if not suite.benchmarks:
-        print(f"✗ {config_file}: No benchmarks found in the suite")
         return
 
     # Lazy import once per function call
@@ -269,7 +357,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     successful_jobs = []
 
     suite_id = str(uuid.uuid4())
-    for benchmark_entry in suite.benchmarks:
+    for benchmark_entry in selected_benchmarks:
         try:
             params = validate_and_create_model(benchmark_entry.config)
 
@@ -282,6 +370,8 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                 continue
 
             job_type = JobType(params.benchmark_name)
+
+            validate_benchmark_device_capacity(params, device)
 
             print(
                 f"Dispatching {benchmark_entry.name} ({params.benchmark_name}) from {suite.name}..."
@@ -323,7 +413,9 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"  {result}")
 
     print(f"\nDispatch complete for suite {suite.name} with metriq-gym Suite ID {suite_id}")
-    print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(suite.benchmarks)} benchmarks.")
+    print(
+        f"\nSuccessfully dispatched {len(successful_jobs)}/{len(selected_benchmarks)} benchmarks."
+    )
     if successful_jobs:
         print("Use 'mgym suite poll' or 'mgym job poll' to check suite/job status.")
 
@@ -883,6 +975,14 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
         return
 
     job_type = JobType(params.benchmark_name)
+
+    if device is not None:
+        try:
+            validate_benchmark_device_capacity(params, device)
+        except DeviceCapacityError as exc:
+            print(f"✗ {job_type.value}: {exc}")
+            return
+
     benchmark: Benchmark = setup_benchmark(args, params, job_type)
 
     try:

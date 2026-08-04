@@ -1,18 +1,22 @@
 from dataclasses import dataclass
 from datetime import datetime
 import logging
+import os
 import pytest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 import json
 from pydantic import BaseModel
 from qbraid import QbraidError
-from qbraid.runtime import JobStatus
+from qbraid.runtime import BraketDevice, JobStatus
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
 from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, BenchmarkScore
 from metriq_gym.run import (
+    load_provider,
     setup_device,
+    validate_benchmark_device_capacity,
     dispatch_job,
+    dispatch_suite,
     fetch_result,
     estimate_job,
     _export_raw_debug_data,
@@ -20,7 +24,7 @@ from metriq_gym.run import (
 )
 from metriq_gym.job_manager import MetriqGymJob, JobManager
 from metriq_gym.constants import JobType
-from metriq_gym.exceptions import QBraidSetupError
+from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
 from metriq_gym.resource_estimation import (
     GateCounts,
     CircuitEstimate,
@@ -77,6 +81,90 @@ def test_setup_device_success(mock_provider, mock_device, patch_load_provider):
 
     mock_provider.get_device.assert_called_once_with(backend_name)
     assert device == mock_device
+
+
+@pytest.mark.parametrize("configured_region", [None, "eu-west-2"])
+def test_setup_device_uses_braket_arn_region_temporarily(
+    configured_region, mock_provider, mock_device, patch_load_provider, monkeypatch
+):
+    arn = "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1"
+    observed_regions = []
+
+    if configured_region is None:
+        monkeypatch.delenv("AWS_REGION", raising=False)
+    else:
+        monkeypatch.setenv("AWS_REGION", configured_region)
+
+    def get_device(device_name):
+        observed_regions.append(os.environ.get("AWS_REGION"))
+        assert device_name == arn
+        return mock_device
+
+    mock_provider.get_device.side_effect = get_device
+
+    device = setup_device("aws", arn)
+
+    assert device == mock_device
+    assert observed_regions == ["us-east-1"]
+    assert os.environ.get("AWS_REGION") == configured_region
+
+
+def test_setup_device_disables_validation_for_braket_without_parsed_capabilities(
+    mock_provider, patch_load_provider, caplog
+):
+    device = MagicMock(spec=BraketDevice)
+    device.id = "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1"
+    device._device = SimpleNamespace(properties=None)
+    mock_provider.get_device.return_value = device
+    caplog.set_level(logging.WARNING)
+
+    result = setup_device("aws", device.id)
+
+    assert result == device
+    device.set_options.assert_called_once_with(validate=False)
+    assert "could not be parsed" in caplog.text
+
+
+def test_setup_device_keeps_validation_for_braket_with_parsed_capabilities(
+    mock_provider, patch_load_provider
+):
+    device = MagicMock(spec=BraketDevice)
+    device.id = "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1"
+    device._device = SimpleNamespace(properties=object())
+    mock_provider.get_device.return_value = device
+
+    result = setup_device("aws", device.id)
+
+    assert result == device
+    device.set_options.assert_not_called()
+
+
+@pytest.mark.parametrize("provider_alias", ["aws", "braket"])
+def test_load_provider_uses_canonical_aws_provider(provider_alias, monkeypatch):
+    loaded_providers = []
+    provider = object()
+    monkeypatch.setattr(
+        "qbraid.runtime.load_provider",
+        lambda provider_name: loaded_providers.append(provider_name) or provider,
+    )
+
+    assert load_provider(provider_alias) is provider
+    assert loaded_providers == ["aws"]
+
+
+@pytest.mark.parametrize("provider_alias", ["aws", "braket"])
+def test_setup_device_delegates_provider_alias_to_load_provider(
+    provider_alias, mock_provider, mock_device, monkeypatch
+):
+    loaded_providers = []
+    mock_provider.get_device.return_value = mock_device
+    monkeypatch.setattr(
+        "metriq_gym.run.load_provider",
+        lambda provider: loaded_providers.append(provider) or mock_provider,
+    )
+
+    assert setup_device(provider_alias, "device-arn") == mock_device
+    assert loaded_providers == [provider_alias]
 
 
 @patch("metriq_gym.run.get_providers")
@@ -179,6 +267,238 @@ def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, 
         assert "Configuration file not found" in captured.out
 
 
+def test_dispatch_suite_skips_benchmark_exceeding_device_capacity(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = tmp_path / "oversized_suite.json"
+    suite_file.write_text(
+        json.dumps(
+            {
+                "name": "oversized_suite",
+                "benchmarks": [
+                    {
+                        "name": "LR_QAOA_1D_50",
+                        "config": {
+                            "benchmark_name": "Linear Ramp QAOA",
+                            "graph_type": "1D",
+                            "num_qubits": 50,
+                        },
+                    }
+                ],
+            }
+        )
+    )
+    device = SimpleNamespace(
+        id="arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1",
+        num_qubits=36,
+    )
+    args = SimpleNamespace(
+        provider="aws",
+        device=device.id,
+        suite_config=str(suite_file),
+    )
+    registry = MagicMock()
+    registry.get_available_benchmarks.return_value = ["Linear Ramp QAOA"]
+    setup_benchmark_mock = MagicMock(
+        side_effect=AssertionError("setup_benchmark must not be called")
+    )
+
+    monkeypatch.setattr("metriq_gym.run.setup_device", lambda *_: device)
+    monkeypatch.setattr("metriq_gym.run._lazy_registry", lambda: registry)
+    monkeypatch.setattr("metriq_gym.run.setup_benchmark", setup_benchmark_mock)
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "Requested 50 qubits" in output
+    assert "supports only 36" in output
+    assert "Successfully dispatched 0/1 benchmarks" in output
+    setup_benchmark_mock.assert_not_called()
+    mock_job_manager.add_job.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "width_field",
+    [
+        {"num_qubits": 50},
+        {"width": 50},
+        {"num_qubits_in_chain": 50},
+    ],
+)
+def test_validate_benchmark_device_capacity_recognizes_width_fields(width_field):
+    params = SimpleNamespace(model_dump=lambda **_: width_field)
+    device = SimpleNamespace(id="small-device", num_qubits=36)
+
+    with pytest.raises(DeviceCapacityError, match="Requested 50 qubits"):
+        validate_benchmark_device_capacity(params, device)
+
+
+def _write_component_suite(tmp_path, *, guarded: bool = True):
+    suite = {
+        "name": "component_suite",
+        "benchmarks": [
+            {
+                "name": "qft_small",
+                "component": "qft",
+                "config": {"benchmark_name": "WIT", "num_qubits": 7, "shots": 10},
+            },
+            {
+                "name": "wit",
+                "component": "wit",
+                "config": {"benchmark_name": "WIT", "num_qubits": 7, "shots": 10},
+            },
+            {
+                "name": "qft_large",
+                "component": "qft",
+                "config": {"benchmark_name": "WIT", "num_qubits": 7, "shots": 10},
+            },
+        ],
+    }
+    if guarded:
+        suite["full_suite_warning"] = "This test suite is expensive."
+
+    suite_file = tmp_path / "component_suite.json"
+    suite_file.write_text(json.dumps(suite))
+    return suite_file
+
+
+def _patch_successful_suite_dispatch(monkeypatch):
+    device = SimpleNamespace(id="test-device", num_qubits=200)
+    setup_device_mock = MagicMock(return_value=device)
+    registry = MagicMock()
+    registry.get_available_benchmarks.return_value = ["WIT"]
+    handler = MagicMock()
+    handler.dispatch_handler.return_value = BenchmarkData(provider_job_ids=["provider-job-id"])
+    setup_benchmark_mock = MagicMock(return_value=handler)
+
+    monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
+    monkeypatch.setattr("metriq_gym.run._lazy_registry", lambda: registry)
+    monkeypatch.setattr("metriq_gym.run.setup_benchmark", setup_benchmark_mock)
+    return setup_device_mock, setup_benchmark_mock
+
+
+def test_dispatch_guarded_suite_requires_selection_before_device_setup(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = _write_component_suite(tmp_path)
+    setup_device_mock = MagicMock()
+    monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "WARNING: This test suite is expensive." in output
+    assert "Full suite dispatch was not started" in output
+    assert "qft, wit" in output
+    setup_device_mock.assert_not_called()
+    mock_job_manager.add_job.assert_not_called()
+
+
+def test_dispatch_suite_selects_all_entries_in_component(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = _write_component_suite(tmp_path)
+    _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+        components=["qft"],
+        all_components=False,
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "qft_small" in output
+    assert "qft_large" in output
+    assert "Dispatching wit" not in output
+    assert "Successfully dispatched 2/2 benchmarks" in output
+    assert setup_benchmark_mock.call_count == 2
+    assert mock_job_manager.add_job.call_count == 2
+
+
+def test_dispatch_suite_all_explicitly_opts_into_guarded_suite(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = _write_component_suite(tmp_path)
+    _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+        components=None,
+        all_components=True,
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "WARNING: This test suite is expensive." in output
+    assert "Successfully dispatched 3/3 benchmarks" in output
+    assert setup_benchmark_mock.call_count == 3
+    assert mock_job_manager.add_job.call_count == 3
+
+
+def test_dispatch_legacy_suite_still_runs_all_without_all_flag(
+    tmp_path, monkeypatch, mock_job_manager, capsys
+):
+    suite_file = _write_component_suite(tmp_path, guarded=False)
+    _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    output = capsys.readouterr().out
+    assert "Successfully dispatched 3/3 benchmarks" in output
+    assert setup_benchmark_mock.call_count == 3
+    assert mock_job_manager.add_job.call_count == 3
+
+
+@pytest.mark.parametrize(
+    ("components", "all_components", "expected_error"),
+    [
+        (["missing"], False, "Unknown component(s): missing"),
+        (["qft"], True, "--component and --all cannot be used together"),
+        (["qft", "QFT"], False, "Duplicate component selection"),
+    ],
+)
+def test_dispatch_suite_rejects_invalid_selection_before_device_setup(
+    tmp_path,
+    monkeypatch,
+    mock_job_manager,
+    capsys,
+    components,
+    all_components,
+    expected_error,
+):
+    suite_file = _write_component_suite(tmp_path)
+    setup_device_mock = MagicMock()
+    monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
+    args = SimpleNamespace(
+        provider="ibm",
+        device="ibm_device",
+        suite_config=str(suite_file),
+        components=components,
+        all_components=all_components,
+    )
+
+    dispatch_suite(args, mock_job_manager)
+
+    assert expected_error in capsys.readouterr().out
+    setup_device_mock.assert_not_called()
+    mock_job_manager.add_job.assert_not_called()
+
+
 def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
     class DummyParams(BaseModel):
         benchmark_name: str = "WIT"
@@ -191,7 +511,11 @@ def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
     monkeypatch.setattr("metriq_gym.run.load_and_validate", lambda *_: DummyParams())
     monkeypatch.setattr(
         "metriq_gym.run.setup_device",
-        lambda *_, **__: SimpleNamespace(id="H1-1", profile=SimpleNamespace(basis_gates=[])),
+        lambda *_, **__: SimpleNamespace(
+            id="H1-1",
+            num_qubits=20,
+            profile=SimpleNamespace(basis_gates=[]),
+        ),
     )
 
     # Mock the registry
