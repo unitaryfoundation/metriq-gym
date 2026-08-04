@@ -1313,13 +1313,12 @@ dependencies = [
     { name = "pyqpanda3" },
     { name = "python-dotenv" },
     { name = "pytket-qiskit" },
-    { name = "qbraid", extra = ["azure", "braket", "ionq", "qiskit"] },
+    { name = "qbraid", extra = ["azure", "braket", "ionq", "qiskit", "quantinuum"] },
     { name = "qbraid-core" },
     { name = "qiskit", extra = ["qasm3-import"] },
     { name = "qiskit-aer" },
     { name = "qiskit-experiments" },
     { name = "qiskit-ibm-runtime" },
-    { name = "qnexus" },
     { name = "rustworkx" },
     { name = "scipy" },
     { name = "tabulate" },
@@ -1363,13 +1362,12 @@ requires-dist = [
     { name = "pyqpanda3", specifier = ">=0.3.2" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.78.0" },
-    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit"], specifier = ">=0.12.2,<0.13.0" },
+    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit", "quantinuum"], specifier = ">=0.12.2,<0.13.0" },
     { name = "qbraid-core", specifier = ">=0.1.45,<0.4.0" },
     { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
     { name = "qiskit-experiments", specifier = ">=0.9.0,<0.15.0" },
     { name = "qiskit-ibm-runtime", specifier = ">=0.41.1,<0.49.0" },
-    { name = "qnexus", specifier = ">=0.39.0,<1.0.0" },
     { name = "rustworkx", specifier = ">=0.17.1,<0.19.0" },
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
     { name = "tabulate", specifier = ">=0.9.0,<0.11.0" },
@@ -2405,6 +2403,10 @@ qiskit = [
     { name = "qiskit" },
     { name = "qiskit-ibm-runtime" },
     { name = "qiskit-qasm3-import" },
+]
+quantinuum = [
+    { name = "pytket" },
+    { name = "qnexus" },
 ]
 
 [[package]]
