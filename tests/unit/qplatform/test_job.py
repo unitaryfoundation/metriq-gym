@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from qbraid.runtime import QuantumJob, QiskitJob, AzureQuantumJob
 from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo, total_execution_time
-from metriq_gym.quantinuum.job import QuantinuumJob
+from qbraid.runtime.quantinuum import QuantinuumJob
 from qbraid.runtime.enums import JobStatus
 from datetime import datetime, timedelta
 from types import SimpleNamespace

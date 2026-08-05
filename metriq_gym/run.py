@@ -188,8 +188,16 @@ def setup_benchmark(args, params, job_type: JobType) -> "Benchmark":
 
 def validate_benchmark_device_capacity(params, device) -> None:
     """Validate explicit benchmark width before constructing its handler."""
-    requested_qubits = params.model_dump(exclude_none=True).get("num_qubits")
-    if not isinstance(requested_qubits, int):
+    config = params.model_dump(exclude_none=True)
+    requested_qubits = next(
+        (
+            config[field]
+            for field in ("num_qubits", "width", "num_qubits_in_chain")
+            if isinstance(config.get(field), int)
+        ),
+        None,
+    )
+    if requested_qubits is None:
         return
 
     from metriq_gym.qplatform.device import validate_qubit_capacity
@@ -288,23 +296,53 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     Note: Continues processing remaining configs if individual configs fail.
     """
+    config_file = args.suite_config
+
+    try:
+        suite = parse_suite_file(config_file)
+    except FileNotFoundError:
+        print(f"✗ {config_file}: Configuration file or bundled suite not found")
+        return
+    except Exception as exc:
+        print(f"✗ {config_file}: Invalid suite configuration: {type(exc).__name__}: {exc}")
+        return
+
+    if not suite.benchmarks:
+        print(f"✗ {config_file}: No benchmarks found in the suite")
+        return
+
+    requested_components = getattr(args, "components", None) or []
+    if isinstance(requested_components, str):
+        requested_components = [requested_components]
+    all_components = getattr(args, "all_components", False)
+
+    if requested_components and all_components:
+        print("✗ --component and --all cannot be used together")
+        return
+
+    if requested_components:
+        try:
+            selected_benchmarks = suite.select_components(requested_components)
+        except ValueError as exc:
+            print(f"✗ {exc}")
+            return
+    elif suite.full_suite_warning and not all_components:
+        print(f"WARNING: {suite.full_suite_warning}")
+        print("Full suite dispatch was not started.")
+        print(f"Available components: {', '.join(suite.component_names)}")
+        print("Choose one with --component NAME (repeatable), or use --all to opt in.")
+        return
+    else:
+        selected_benchmarks = suite.benchmarks
+
+    if all_components and suite.full_suite_warning:
+        print(f"WARNING: {suite.full_suite_warning}")
+
     print(f"Starting suite dispatch on {args.provider}:{args.device}...")
 
     try:
         device = setup_device(args.provider, args.device)
     except QBraidSetupError:
-        return
-
-    config_file = args.suite_config
-
-    if not os.path.exists(config_file):
-        print(f"✗ {config_file}: Configuration file not found")
-        return
-
-    # Load and validate the benchmark configuration
-    suite = parse_suite_file(config_file)
-    if not suite.benchmarks:
-        print(f"✗ {config_file}: No benchmarks found in the suite")
         return
 
     # Lazy import once per function call
@@ -314,7 +352,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     successful_jobs = []
 
     suite_id = str(uuid.uuid4())
-    for benchmark_entry in suite.benchmarks:
+    for benchmark_entry in selected_benchmarks:
         try:
             params = validate_and_create_model(benchmark_entry.config)
 
@@ -370,7 +408,9 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"  {result}")
 
     print(f"\nDispatch complete for suite {suite.name} with metriq-gym Suite ID {suite_id}")
-    print(f"\nSuccessfully dispatched {len(successful_jobs)}/{len(suite.benchmarks)} benchmarks.")
+    print(
+        f"\nSuccessfully dispatched {len(successful_jobs)}/{len(selected_benchmarks)} benchmarks."
+    )
     if successful_jobs:
         print("Use 'mgym suite poll' or 'mgym job poll' to check suite/job status.")
 
