@@ -128,7 +128,7 @@ include = [
 ]
 
 [tool.setuptools.package-data]
-metriq_gym = ["schemas/*.json", "suites/*.json"]
+metriq_gym = ["schemas/*.json", "suites/*.json", "dashboard/*.html"]
 
 [tool.setuptools]
 include-package-data = true

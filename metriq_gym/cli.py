@@ -53,6 +53,16 @@ app.add_typer(job_app, name="job")
 app.add_typer(suite_app, name="suite")
 
 
+@app.command("dashboard")
+def dashboard(
+    port: Annotated[int, typer.Option(help="Port to serve the dashboard on")] = 8787,
+) -> None:
+    """Launch the local jobs dashboard web UI."""
+    from metriq_gym.dashboard.server import main as dashboard_main
+
+    dashboard_main(port=port)
+
+
 def _show_help_and_exit_if_no_subcommand(ctx: typer.Context) -> None:
     """Show help and exit successfully when invoked without a subcommand."""
     if ctx.invoked_subcommand is None:

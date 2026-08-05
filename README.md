@@ -77,6 +77,18 @@ Explore more generic examples in the ready-made JSON schemas under
 canonical configurations used for Metriq Score 1.0; the score definition is in
 ``metriq_gym/suites/metriq_score_1_0.json``.
 
+## Jobs dashboard
+
+A local web view of your dispatched jobs — lifecycle status, per-device suite coverage,
+and poll/upload/delete actions:
+
+```sh
+mgym dashboard
+```
+
+Then open http://localhost:8787. The dashboard reads your local job database; provider
+APIs are only contacted when you click Poll.
+
 ## Documentation
 
 - [Quickstart Guide](https://unitaryfoundation.github.io/metriq-gym/getting-started/quickstart/) - Get up and running quickly
