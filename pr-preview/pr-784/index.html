@@ -987,9 +987,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="benchmarks/overview/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -1003,7 +1020,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="suites/metriq-score-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metriq Score 1.0 Suite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1416,7 +1505,10 @@
 <a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">  </span>expectation_value:<span class="w"> </span><span class="m">0</span>.996337890625<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>.0006673812593654682
 <a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">  </span>score:<span class="w"> </span><span class="m">0</span>.996337890625<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>.0006673812593654682
 </code></pre></div></p>
-<p>Explore more examples in the ready-made JSON schemas under <code>metriq_gym/schemas/examples/</code>.</p>
+<p>Explore more generic examples in the ready-made JSON schemas under
+<code>metriq_gym/schemas/examples/</code>. These editable examples are not the
+canonical configurations used for Metriq Score 1.0; the score definition is in
+<code>metriq_gym/suites/metriq_score_1_0.json</code>.</p>
 <h2 id="jobs-dashboard">Jobs dashboard<a class="headerlink" href="#jobs-dashboard" title="Permanent link">&para;</a></h2>
 <p>A local web view of your dispatched jobs — lifecycle status, per-device suite coverage,
 and poll/upload/delete actions:</p>

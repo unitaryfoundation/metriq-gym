@@ -1019,9 +1019,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../benchmarks/overview/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -1035,7 +1052,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../suites/metriq-score-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metriq Score 1.0 Suite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1425,7 +1514,9 @@
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Example configurations for all benchmarks are available in the <code>metriq_gym/schemas/examples/</code> directory.</p>
+<p>Generic example configurations for all benchmarks are available in the
+<code>metriq_gym/schemas/examples/</code> directory. They are learning templates, not
+the canonical configurations used to calculate Metriq Score 1.0.</p>
 </div>
 <h3 id="2-dispatch-the-benchmark">2. Dispatch the Benchmark<a class="headerlink" href="#2-dispatch-the-benchmark" title="Permanent link">&para;</a></h3>
 <p>Run the benchmark on the local Aer simulator:</p>
@@ -1448,6 +1539,8 @@
 <li>Adjust qubit counts or shots</li>
 <li>Supply provider-specific options</li>
 </ul>
+<p>For score-compatible parameters and scale datapoints, use the
+<a href="../../suites/metriq-score-1.0/">Metriq Score 1.0 suite</a> instead of an example.</p>
 <p>Example WIT configuration:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;benchmark_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WIT&quot;</span><span class="p">,</span>
