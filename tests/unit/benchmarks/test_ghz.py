@@ -7,6 +7,7 @@ from qiskit import QuantumCircuit
 
 from metriq_gym.benchmarks.ghz import (
     GHZBenchmark,
+    bisection_sizes,
     GHZResult,
     _bfs_edges,
     _select_flag_qubits,
@@ -378,3 +379,102 @@ class TestGHZResult:
         assert "population" in vals
         assert "coherence" in vals
         assert "fidelity" in vals
+
+
+class TestBisectionSizes:
+    def test_halving_grid(self):
+        assert bisection_sizes(156, 5) == [156, 78, 39, 19, 9]
+
+    def test_device_at_lower_bound(self):
+        assert bisection_sizes(5, 5) == [5]
+
+    def test_device_below_lower_bound_raises(self):
+        with pytest.raises(ValueError, match="below the search lower bound"):
+            bisection_sizes(4, 5)
+
+    def test_all_sizes_at_least_min(self):
+        for total in (7, 31, 100, 1000):
+            sizes = bisection_sizes(total, 5)
+            assert sizes[0] == total
+            assert all(s >= 5 for s in sizes)
+            assert sizes == sorted(sizes, reverse=True)
+
+
+class TestSizeSearchPoll:
+    def _dfe_counts(self, n: int, fidelity_high: bool) -> list[dict[str, int]]:
+        """Synthesize DFE counts: ideal GHZ when high, maximally mixed when low."""
+        if fidelity_high:
+            z = {"0" * n: 500, "1" * n: 500}
+            # X-basis: all even-parity outcomes
+            x = {"0" * n: 500, "0" * (n - 2) + "11": 500}
+        else:
+            # Population 0 (no all-zero/all-one outcomes) and coherence 0
+            # (even and odd X-basis parity equally likely).
+            z = {"0" * (n - 1) + "1": 1000}
+            x = {"0" * n: 500, "0" * (n - 1) + "1": 500}
+        return [z, x]
+
+    def _make_benchmark(self):
+        from argparse import Namespace
+
+        return GHZBenchmark(args=Namespace(), params=Namespace())
+
+    def test_largest_passing_size_found(self):
+        from metriq_gym.benchmarks.ghz import GHZData
+
+        # Device of 8: sizes [8, 4]; 8 fails, 4 passes.
+        counts = self._dfe_counts(8, False) + self._dfe_counts(4, True)
+        job_data = GHZData(
+            provider_job_ids=["x"],
+            num_qubits=8,
+            method="dfe",
+            search_sizes=[8, 4],
+            search_circuit_counts=[2, 2],
+            search_phases=[[], []],
+            fidelity_threshold=0.5,
+        )
+        result = self._make_benchmark()._poll_size_search(job_data, counts, "dfe", 0)
+        assert result.largest_passing_size is not None
+        assert result.largest_passing_size.value == 4
+        assert result.device_fraction is not None
+        assert result.device_fraction.value == pytest.approx(0.5)
+        assert result.search_sizes == [8, 4]
+        assert result.search_fidelities[0] < 0.5 < result.search_fidelities[1]
+        # Headline fidelity describes the passing size.
+        assert result.fidelity.value == pytest.approx(result.search_fidelities[1])
+        assert result.compute_score().value == 4
+
+    def test_no_size_passes(self):
+        from metriq_gym.benchmarks.ghz import GHZData
+
+        counts = self._dfe_counts(8, False) + self._dfe_counts(4, False)
+        job_data = GHZData(
+            provider_job_ids=["x"],
+            num_qubits=8,
+            method="dfe",
+            search_sizes=[8, 4],
+            search_circuit_counts=[2, 2],
+            search_phases=[[], []],
+            fidelity_threshold=0.5,
+        )
+        result = self._make_benchmark()._poll_size_search(job_data, counts, "dfe", 0)
+        assert result.largest_passing_size.value == 0
+        assert result.device_fraction.value == 0
+        assert result.compute_score().value == 0
+
+    def test_full_device_passes(self):
+        from metriq_gym.benchmarks.ghz import GHZData
+
+        counts = self._dfe_counts(8, True) + self._dfe_counts(4, True)
+        job_data = GHZData(
+            provider_job_ids=["x"],
+            num_qubits=8,
+            method="dfe",
+            search_sizes=[8, 4],
+            search_circuit_counts=[2, 2],
+            search_phases=[[], []],
+            fidelity_threshold=0.5,
+        )
+        result = self._make_benchmark()._poll_size_search(job_data, counts, "dfe", 0)
+        assert result.largest_passing_size.value == 8
+        assert result.device_fraction.value == pytest.approx(1.0)

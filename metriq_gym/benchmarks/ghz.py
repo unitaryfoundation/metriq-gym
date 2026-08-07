@@ -7,6 +7,14 @@ Summary:
     oscillation curve fitting, or compressed sensing (parity samples at
     random phases, sparse spectrum recovery by L1 minimization).
 
+    Two modes:
+    - Fixed size (`num_qubits`): verify a GHZ state of one requested size.
+    - Size search (`size_search: true`): build GHZ states at halving sizes
+      from the device size down to `min_qubits` (e.g. 156, 78, 39, 19, 9),
+      all dispatched in a single job, and report the largest size whose
+      fidelity clears `fidelity_threshold`. With DFE this costs two circuits
+      per size, about 2*log2(N) circuits total.
+
 Result interpretation:
     - population: probability of measuring all-zero or all-one bitstrings (Z basis).
     - coherence: off-diagonal element magnitude, measured via X-basis parity
@@ -17,6 +25,10 @@ Result interpretation:
     - recovered_frequency (compressed sensing only): dominant frequency of the
       parity signal, which equals N only if the full N-qubit GHZ state was
       actually prepared; a partially entangled state shows a lower frequency.
+    - largest_passing_size / device_fraction (size search only): the largest
+      searched size with fidelity above the threshold, and that size divided
+      by the device size. Per-size fidelities are reported in search_sizes /
+      search_fidelities so no resolution is lost to the threshold.
 
 References:
     - Moses et al., "A Race-Track Trapped-Ion Quantum Processor",
@@ -64,6 +76,13 @@ class GHZData(BenchmarkData):
     method: str = "dfe"
     phases: list[float] = field(default_factory=list)
     num_flag_qubits: int = 0
+    # Size-search mode: the halving size grid, how many circuits belong to
+    # each size (in dispatch order), the per-size phase grids, and the
+    # fidelity threshold a size must clear. Empty lists mean fixed-size mode.
+    search_sizes: list[int] = field(default_factory=list)
+    search_circuit_counts: list[int] = field(default_factory=list)
+    search_phases: list[list[float]] = field(default_factory=list)
+    fidelity_threshold: float = 0.5
 
 
 class GHZResult(BenchmarkResult):
@@ -78,8 +97,35 @@ class GHZResult(BenchmarkResult):
             "None for other methods."
         ),
     )
+    largest_passing_size: BenchmarkScore | None = Field(
+        default=None,
+        description=(
+            "Size search only: largest searched GHZ size whose fidelity clears "
+            "the threshold (0 when no size passes)."
+        ),
+    )
+    device_fraction: BenchmarkScore | None = Field(
+        default=None,
+        description="Size search only: largest_passing_size divided by the device size.",
+    )
+    search_sizes: list[int] | None = Field(
+        default=None,
+        description="Size search only: the searched sizes, largest first.",
+    )
+    search_fidelities: list[float] | None = Field(
+        default=None,
+        description="Size search only: fidelity per searched size, aligned with search_sizes.",
+    )
+    search_uncertainties: list[float] | None = Field(
+        default=None,
+        description="Size search only: fidelity uncertainty per searched size.",
+    )
 
     def compute_score(self) -> BenchmarkScore:
+        # In size-search mode the headline number is the largest passing size,
+        # matching the shape of BSEQ's largest_connected_size.
+        if self.largest_passing_size is not None:
+            return self.largest_passing_size
         return self.fidelity
 
 
@@ -457,6 +503,53 @@ def estimate_fidelity_compressed_sensing(
     return population, coherence, p_err, c_err, recovered_frequency
 
 
+def bisection_sizes(device_size: int, min_qubits: int) -> list[int]:
+    """Halving size grid from the device size down to min_qubits, largest first.
+
+    E.g. device_size=156, min_qubits=5 -> [156, 78, 39, 19, 9]. Every size is
+    dispatched in one job, so the cost is logarithmic in the device size while
+    still bracketing the largest buildable GHZ state to within a factor of two.
+    """
+    if device_size < min_qubits:
+        raise ValueError(
+            f"Device exposes {device_size} qubits, below the search lower bound "
+            f"of {min_qubits}"
+        )
+    sizes: list[int] = []
+    n = device_size
+    while n >= min_qubits:
+        sizes.append(n)
+        n //= 2
+    return sizes
+
+
+def estimate_fidelity_for_method(
+    method: str,
+    counts: list[dict[str, int]],
+    phases: list[float],
+    n: int,
+    num_flag_qubits: int,
+) -> tuple[float, float, float, float, int | None]:
+    """Estimate (population, coherence, p_err, c_err, recovered_frequency) for one size.
+
+    ``counts`` holds the measurement counts for this size's circuits in
+    dispatch order (Z-basis circuit first, then the method's other circuits).
+    ``recovered_frequency`` is None for methods other than compressed sensing.
+    """
+    if method == "dfe":
+        pop, coh, p_err, c_err = estimate_fidelity_dfe(counts[0], counts[1], n, num_flag_qubits)
+        return pop, coh, p_err, c_err, None
+    if method == "compressed_sensing":
+        pop, coh, p_err, c_err, recovered = estimate_fidelity_compressed_sensing(
+            counts[0], list(counts[1:]), phases, n, num_flag_qubits
+        )
+        return pop, coh, p_err, c_err, recovered
+    pop, coh, p_err, c_err = estimate_fidelity_oscillation(
+        counts[0], list(counts[1:]), phases, n, num_flag_qubits
+    )
+    return pop, coh, p_err, c_err, None
+
+
 # ---------------------------------------------------------------------------
 # Benchmark handler
 # ---------------------------------------------------------------------------
@@ -484,27 +577,54 @@ class GHZBenchmark(Benchmark):
 
     def _build_circuits(
         self, device: "QuantumDevice"
-    ) -> tuple[list[QuantumCircuit], list[int], list[int], list[float]]:
+    ) -> tuple[list[QuantumCircuit], list[float], list[int], list[int], list[list[float]]]:
+        """Build circuits for either mode.
+
+        Returns (circuits, phases, search_sizes, search_circuit_counts,
+        search_phases). The search lists are empty in fixed-size mode; phases
+        is empty in search mode (the per-size grids live in search_phases).
+        """
         graph = connectivity_graph(device)
-        num_qubits = self.params.num_qubits
         method = getattr(self.params, "method", "dfe")
         num_flag_qubits = getattr(self.params, "num_flag_qubits", 0)
 
-        # Drawn once and returned so that dispatch stores exactly the phases
-        # the circuits were built with (they are random for compressed_sensing).
-        phases = self._phase_grid(method, num_qubits)
+        if bool(getattr(self.params, "size_search", False)):
+            min_qubits = getattr(self.params, "min_qubits", None) or 5
+            sizes = bisection_sizes(graph.num_nodes(), min_qubits)
+            circuits: list[QuantumCircuit] = []
+            circuit_counts: list[int] = []
+            search_phases: list[list[float]] = []
+            for size in sizes:
+                # Drawn per size so dispatch stores exactly the phases the
+                # circuits were built with (random for compressed_sensing).
+                phases = self._phase_grid(method, size)
+                size_circuits, _, _ = build_ghz_circuits(
+                    graph=graph,
+                    num_qubits=size,
+                    method=method,
+                    phases=phases or None,
+                    num_flag_qubits=num_flag_qubits,
+                )
+                circuits.extend(size_circuits)
+                circuit_counts.append(len(size_circuits))
+                search_phases.append(phases)
+            return circuits, [], sizes, circuit_counts, search_phases
 
-        circuits, data_qubits, flag_qubits = build_ghz_circuits(
+        num_qubits = self.params.num_qubits
+        phases = self._phase_grid(method, num_qubits)
+        circuits, _, _ = build_ghz_circuits(
             graph=graph,
             num_qubits=num_qubits,
             method=method,
             phases=phases or None,
             num_flag_qubits=num_flag_qubits,
         )
-        return circuits, data_qubits, flag_qubits, phases
+        return circuits, phases, [], [], []
 
     def dispatch_handler(self, device: "QuantumDevice") -> GHZData:
-        circuits, _data_qubits, _flag_qubits, phases = self._build_circuits(device)
+        circuits, phases, search_sizes, search_circuit_counts, search_phases = (
+            self._build_circuits(device)
+        )
         method = getattr(self.params, "method", "dfe")
         num_flag_qubits = getattr(self.params, "num_flag_qubits", 0)
 
@@ -515,10 +635,14 @@ class GHZBenchmark(Benchmark):
 
         return GHZData.from_quantum_job(
             quantum_job,
-            num_qubits=self.params.num_qubits,
+            num_qubits=search_sizes[0] if search_sizes else self.params.num_qubits,
             method=method,
             phases=phases,
             num_flag_qubits=num_flag_qubits,
+            search_sizes=search_sizes,
+            search_circuit_counts=search_circuit_counts,
+            search_phases=search_phases,
+            fidelity_threshold=getattr(self.params, "fidelity_threshold", None) or 0.5,
             input_two_qubit_gate_counts=counts,
             transpiled_two_qubit_gate_counts=counts,
         )
@@ -530,27 +654,16 @@ class GHZBenchmark(Benchmark):
         quantum_jobs: list["QuantumJob"],
     ) -> GHZResult:
         all_counts = flatten_counts(result_data)
-        n = job_data.num_qubits
         method = job_data.method
         num_flags = job_data.num_flag_qubits
 
-        recovered_frequency: int | None = None
-        if method == "dfe":
-            z_counts, x_counts = all_counts[0], all_counts[1]
-            pop, coh, p_err, c_err = estimate_fidelity_dfe(z_counts, x_counts, n, num_flags)
-        elif method == "compressed_sensing":
-            z_counts = all_counts[0]
-            osc_counts = list(all_counts[1:])
-            pop, coh, p_err, c_err, recovered_frequency = estimate_fidelity_compressed_sensing(
-                z_counts, osc_counts, job_data.phases, n, num_flags
-            )
-        else:
-            z_counts = all_counts[0]
-            osc_counts = list(all_counts[1:])
-            pop, coh, p_err, c_err = estimate_fidelity_oscillation(
-                z_counts, osc_counts, job_data.phases, n, num_flags
-            )
+        if job_data.search_sizes:
+            return self._poll_size_search(job_data, all_counts, method, num_flags)
 
+        n = job_data.num_qubits
+        pop, coh, p_err, c_err, recovered_frequency = estimate_fidelity_for_method(
+            method, all_counts, job_data.phases, n, num_flags
+        )
         fidelity = (pop + coh) / 2
         f_err = np.sqrt(p_err**2 + c_err**2) / 2
 
@@ -561,6 +674,61 @@ class GHZBenchmark(Benchmark):
             recovered_frequency=recovered_frequency,
         )
 
+    def _poll_size_search(
+        self,
+        job_data: GHZData,
+        all_counts: list[dict[str, int]],
+        method: str,
+        num_flags: int,
+    ) -> GHZResult:
+        sizes = job_data.search_sizes
+        threshold = job_data.fidelity_threshold
+        per_size: list[tuple[float, float, float, float, int | None]] = []
+        offset = 0
+        for i, size in enumerate(sizes):
+            count = job_data.search_circuit_counts[i]
+            counts_slice = all_counts[offset : offset + count]
+            offset += count
+            phases = job_data.search_phases[i] if job_data.search_phases else []
+            per_size.append(
+                estimate_fidelity_for_method(method, counts_slice, phases, size, num_flags)
+            )
+
+        fidelities = [(pop + coh) / 2 for pop, coh, _, _, _ in per_size]
+        uncertainties = [
+            float(np.sqrt(p_err**2 + c_err**2) / 2) for _, _, p_err, c_err, _ in per_size
+        ]
+
+        # Sizes are searched largest-first; the first one clearing the
+        # threshold is the largest passing size.
+        passing_index: int | None = None
+        for i, fid in enumerate(fidelities):
+            if fid > threshold:
+                passing_index = i
+                break
+
+        device_size = sizes[0]
+        largest_passing = sizes[passing_index] if passing_index is not None else 0
+        # Headline population/coherence/fidelity describe the largest passing
+        # size; when nothing passes, the smallest size attempted (the one most
+        # likely to have succeeded).
+        headline = passing_index if passing_index is not None else len(sizes) - 1
+        pop, coh, p_err, c_err, recovered_frequency = per_size[headline]
+
+        return GHZResult(
+            population=BenchmarkScore(value=pop, uncertainty=p_err),
+            coherence=BenchmarkScore(value=coh, uncertainty=c_err),
+            fidelity=BenchmarkScore(
+                value=fidelities[headline], uncertainty=uncertainties[headline]
+            ),
+            recovered_frequency=recovered_frequency,
+            largest_passing_size=BenchmarkScore(value=largest_passing),
+            device_fraction=BenchmarkScore(value=largest_passing / device_size),
+            search_sizes=list(sizes),
+            search_fidelities=fidelities,
+            search_uncertainties=uncertainties,
+        )
+
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
-        circuits, _, _, _ = self._build_circuits(device)
+        circuits, _, _, _, _ = self._build_circuits(device)
         return [CircuitBatch(circuits=circuits, shots=self.params.shots)]

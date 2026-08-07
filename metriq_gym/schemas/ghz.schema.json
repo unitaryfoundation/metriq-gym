@@ -12,9 +12,30 @@
     },
     "num_qubits": {
       "type": "integer",
-      "description": "Number of data qubits for the GHZ state.",
+      "description": "Number of data qubits for the GHZ state. Required unless size_search is true, in which case it is ignored and the sizes come from the device.",
       "minimum": 2,
       "examples": [4, 10, 20]
+    },
+    "size_search": {
+      "type": "boolean",
+      "description": "Search GHZ sizes by progressive bisection instead of verifying one fixed size: build GHZ states at halving sizes from the device size down to min_qubits (e.g. 156, 78, 39, 19, 9), dispatch them all in a single job, and report the largest size whose fidelity clears fidelity_threshold (largest_passing_size, which becomes the score) plus per-size fidelities. With DFE this costs two circuits per size, about 2*log2(N) circuits total.",
+      "default": false,
+      "examples": [true]
+    },
+    "min_qubits": {
+      "type": "integer",
+      "description": "Lower bound for size_search; halving stops before going below this size. Ignored in fixed-size mode.",
+      "default": 5,
+      "minimum": 2,
+      "examples": [5]
+    },
+    "fidelity_threshold": {
+      "type": "number",
+      "description": "Fidelity a searched size must exceed to count as passing in size_search. Ignored in fixed-size mode.",
+      "default": 0.5,
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "examples": [0.5]
     },
     "shots": {
       "type": "integer",
@@ -48,5 +69,17 @@
       "examples": [0, 2]
     }
   },
-  "required": ["benchmark_name", "num_qubits"]
+  "required": ["benchmark_name"],
+  "if": {
+    "properties": {
+      "size_search": {
+        "const": true
+      }
+    },
+    "required": ["size_search"]
+  },
+  "then": {},
+  "else": {
+    "required": ["num_qubits"]
+  }
 }
