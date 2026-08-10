@@ -1,13 +1,16 @@
 from argparse import Namespace
+import itertools
 
 import numpy as np
 import pytest
 import rustworkx as rx
 from qiskit import QuantumCircuit
+from qiskit_aer import AerSimulator
 
 from metriq_gym.benchmarks.ghz import (
     GHZBenchmark,
     bisection_sizes,
+    dfe_sampling_is_adequate,
     GHZResult,
     _bfs_edges,
     _select_flag_qubits,
@@ -32,9 +35,12 @@ class TestBfsEdges:
         graph = rx.generators.complete_graph(6)
         edges = _bfs_edges(graph, root=0, num_qubits=6)
         assert len(edges) == 5
-        # On complete graph, BFS from 0 gives star: 0->1, 0->2, ..., 0->5
-        for ctrl, _targ in edges:
-            assert ctrl == 0
+        # A dissemination tree doubles the prepared set each round instead of
+        # driving every CNOT from qubit 0, so the controls are not all the root.
+        assert len({ctrl for ctrl, _ in edges}) > 1
+        # Every target is newly prepared exactly once.
+        targets = [t for _, t in edges]
+        assert len(set(targets)) == len(targets)
 
     def test_partial_qubits(self):
         graph = rx.generators.path_graph(10)
@@ -49,13 +55,24 @@ class TestBfsEdges:
 
 
 class TestSelectFlagQubits:
-    def test_selects_neighbors_outside_data(self):
-        # Path graph: 0-1-2-3-4
+    def test_skips_candidates_with_one_data_neighbour(self):
+        # Path graph 0-1-2-3-4: qubit 3 touches only data qubit 2, so a ZZ
+        # check is impossible there and it must not be used as a flag. A
+        # single CNOT would copy the logical value and dephase the GHZ state.
         graph = rx.generators.path_graph(5)
-        data = {0, 1, 2}
-        flags = _select_flag_qubits(graph, data, num_flags=1)
+        flags = _select_flag_qubits(graph, {0, 1, 2}, num_flags=1)
+        assert flags == []
+
+    def test_selects_flag_with_two_data_controls(self):
+        # Cycle 0-1-2-3-0 with data {0, 2}: qubit 1 neighbours both.
+        graph = rx.PyGraph()
+        graph.add_nodes_from(range(4))
+        graph.add_edges_from_no_data([(0, 1), (1, 2), (2, 3), (3, 0)])
+        flags = _select_flag_qubits(graph, {0, 2}, num_flags=1)
         assert len(flags) == 1
-        assert flags[0] == 3  # neighbor of 2, not in data
+        flag, (ctrl_a, ctrl_b) = flags[0]
+        assert flag in (1, 3)
+        assert {ctrl_a, ctrl_b} == {0, 2}
 
     def test_no_flags_requested(self):
         graph = rx.generators.path_graph(5)
@@ -106,14 +123,28 @@ class TestBuildGhzCircuits:
             build_ghz_circuits(graph, num_qubits=4, method="compressed_sensing")
 
     def test_with_flag_qubits(self):
-        graph = rx.generators.path_graph(6)
+        # Square 0-1-2-3-0 plus an ancilla 4 joined to both 0 and 2, so a real
+        # ZZ check exists. On a path graph no candidate has two data
+        # neighbours and none is selected, see the flag-selection tests.
+        graph = rx.PyGraph()
+        graph.add_nodes_from(range(5))
+        graph.add_edges_from_no_data([(0, 1), (1, 2), (2, 3), (3, 0), (0, 4), (2, 4)])
         circuits, data_qubits, flag_qubits = build_ghz_circuits(
             graph, num_qubits=4, method="dfe", num_flag_qubits=1
         )
         assert len(circuits) == 2
         assert len(data_qubits) == 4
-        assert len(flag_qubits) == 1
-        assert flag_qubits[0] not in data_qubits
+        assert flag_qubits == [4]
+        assert 4 not in data_qubits
+        data_neighbours = [n for n in graph.neighbors(4) if n in set(data_qubits)]
+        assert len(data_neighbours) == 2
+
+    def test_layout_is_deterministic(self):
+        # rustworkx neighbour order is not stable, so the selection must sort;
+        # otherwise the same device yields different GHZ layouts run to run.
+        graph = rx.generators.heavy_hex_graph(5)
+        runs = [build_ghz_circuits(graph, num_qubits=10, method="dfe")[1] for _ in range(5)]
+        assert all(r == runs[0] for r in runs)
 
     def test_unknown_method_raises(self):
         graph = rx.generators.complete_graph(4)
@@ -383,7 +414,7 @@ class TestGHZResult:
 
 class TestBisectionSizes:
     def test_halving_grid(self):
-        assert bisection_sizes(156, 5) == [156, 78, 39, 19, 9]
+        assert bisection_sizes(156, 5) == [156, 78, 39, 19, 9, 5]
 
     def test_device_at_lower_bound(self):
         assert bisection_sizes(5, 5) == [5]
@@ -478,3 +509,102 @@ class TestSizeSearchPoll:
         result = self._make_benchmark()._poll_size_search(job_data, counts, "dfe", 0)
         assert result.largest_passing_size.value == 8
         assert result.device_fraction.value == pytest.approx(1.0)
+
+
+class TestSeparableStateNotCertified:
+    """A product state has full global X parity but no entanglement.
+
+    |+>^N measures deterministically to all-zero in the X basis, so the raw
+    parity is 1. Reporting that as the GHZ coherence gave fidelity 0.504 for
+    N=8, which cleared the 0.5 size-search threshold on a state containing no
+    entanglement at all.
+    """
+
+    def _plus_state_counts(self, n: int, shots: int):
+        z = {"".join(bits): shots // 2**n for bits in itertools.product("01", repeat=n)}
+        x = {"0" * n: shots}
+        return z, x
+
+    def test_plus_state_reports_true_fidelity(self):
+        n = 8
+        z, x = self._plus_state_counts(n, 2**n * 4)
+        pop, coh, _, _ = estimate_fidelity_dfe(z, x, n, 0)
+        fidelity = (pop + coh) / 2
+        # <GHZ|+^N>^2 = 2^(1-N)
+        assert fidelity == pytest.approx(2 ** (1 - n), abs=1e-9)
+        assert fidelity < 0.5
+
+    def test_ideal_ghz_still_certified(self):
+        n = 8
+        shots = 1000
+        z = {"0" * n: shots // 2, "1" * n: shots // 2}
+        x = {"0" * n: shots}
+        pop, coh, _, _ = estimate_fidelity_dfe(z, x, n, 0)
+        assert pop == pytest.approx(1.0)
+        assert coh == pytest.approx(1.0)
+
+    def test_sampling_adequacy_gate(self):
+        # The correction is estimated from observed Z frequencies, so it stops
+        # being a valid bound once 2^n outruns the shots.
+        assert dfe_sampling_is_adequate(8, 1000) is True
+        assert dfe_sampling_is_adequate(50, 1000) is False
+
+
+class TestFlagChecksPreserveIdealState:
+    def test_path_flag_does_not_dephase(self):
+        # A flag with one data neighbour copies the logical value; measuring it
+        # collapsed the ideal GHZ to fidelity ~0.5. No flag is now selected.
+        graph = rx.generators.path_graph(6)
+        circuits, data_qubits, flag_qubits = build_ghz_circuits(
+            graph, num_qubits=4, method="dfe", num_flag_qubits=1
+        )
+        assert flag_qubits == []
+        sim = AerSimulator()
+        counts = [sim.run(c, shots=8192).result().get_counts() for c in circuits]
+        pop, coh, _, _ = estimate_fidelity_dfe(counts[0], counts[1], 4, len(flag_qubits))
+        assert (pop + coh) / 2 == pytest.approx(1.0, abs=0.02)
+
+
+class TestPreparationDepth:
+    def test_all_to_all_is_logarithmic(self):
+        # A fixed-root star runs every CNOT off qubit 0 and serialises.
+        n = 16
+        graph = rx.generators.complete_graph(n)
+        circuits, _, _ = build_ghz_circuits(graph, num_qubits=n, method="dfe")
+        assert circuits[0].depth() < n // 2
+
+    def test_path_still_builds(self):
+        graph = rx.generators.path_graph(8)
+        circuits, data_qubits, _ = build_ghz_circuits(graph, num_qubits=8, method="dfe")
+        assert len(data_qubits) == 8
+
+
+class TestPhaseGridAliasing:
+    def _bench(self, **kw):
+        return GHZBenchmark(args=Namespace(), params=Namespace(**kw))
+
+    def test_default_scales_with_n(self):
+        grid = self._bench(num_phases=None)._phase_grid("parity_oscillation", 100)
+        assert len(grid) > 2 * 100
+
+    def test_aliasing_value_rejected(self):
+        # At 20 uniform angles cos(100 phi) and cos(80 phi) are identical.
+        with pytest.raises(ValueError, match="aliasing"):
+            self._bench(num_phases=20)._phase_grid("parity_oscillation", 100)
+
+    def test_small_state_keeps_previous_default(self):
+        assert len(self._bench(num_phases=None)._phase_grid("parity_oscillation", 4)) == 20
+
+
+class TestSizeSearchDefaults:
+    def _bench(self, **kw):
+        return GHZBenchmark(args=Namespace(), params=Namespace(**kw))
+
+    def test_size_search_defaults_to_compressed_sensing(self):
+        assert self._bench(size_search=True, method=None)._resolved_method() == "compressed_sensing"
+
+    def test_fixed_size_defaults_to_dfe(self):
+        assert self._bench(size_search=False, method=None)._resolved_method() == "dfe"
+
+    def test_explicit_method_respected(self):
+        assert self._bench(size_search=True, method="dfe")._resolved_method() == "dfe"

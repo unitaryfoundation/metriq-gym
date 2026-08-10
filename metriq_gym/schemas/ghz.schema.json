@@ -14,20 +14,28 @@
       "type": "integer",
       "description": "Number of data qubits for the GHZ state. Required unless size_search is true, in which case it is ignored and the sizes come from the device.",
       "minimum": 2,
-      "examples": [4, 10, 20]
+      "examples": [
+        4,
+        10,
+        20
+      ]
     },
     "size_search": {
       "type": "boolean",
       "description": "Search GHZ sizes by progressive bisection instead of verifying one fixed size: build GHZ states at halving sizes from the device size down to min_qubits (e.g. 156, 78, 39, 19, 9), dispatch them all in a single job, and report the largest size whose fidelity clears fidelity_threshold (largest_passing_size, which becomes the score) plus per-size fidelities. With DFE this costs two circuits per size, about 2*log2(N) circuits total.",
       "default": false,
-      "examples": [true]
+      "examples": [
+        true
+      ]
     },
     "min_qubits": {
       "type": "integer",
       "description": "Lower bound for size_search; halving stops before going below this size. Ignored in fixed-size mode.",
       "default": 5,
       "minimum": 2,
-      "examples": [5]
+      "examples": [
+        5
+      ]
     },
     "fidelity_threshold": {
       "type": "number",
@@ -35,51 +43,85 @@
       "default": 0.5,
       "exclusiveMinimum": 0,
       "maximum": 1,
-      "examples": [0.5]
+      "examples": [
+        0.5
+      ]
     },
     "shots": {
       "type": "integer",
       "description": "Number of measurement shots per circuit.",
       "default": 1000,
       "minimum": 1,
-      "examples": [1000, 10000]
+      "examples": [
+        1000,
+        10000
+      ]
     },
     "method": {
       "type": "string",
-      "description": "Verification method: 'dfe' (2 circuits, fast, lower-bound fidelity), 'parity_oscillation' (many circuits on a uniform grid over [0, 2π), curve-fit amplitude), or 'compressed_sensing' (~5·ln(N) circuits at random phases on [0, 2π); coherence and the dominant oscillation frequency are recovered by LASSO over a cosine basis, so it also witnesses the actual GHZ size).",
-      "enum": ["dfe", "parity_oscillation", "compressed_sensing"],
-      "default": "dfe"
+      "description": "Verification method: 'dfe' (2 circuits; the global X parity is corrected by the largest possible non-GHZ complementary-pair contribution estimated from the Z distribution, which is only valid while 2^N stays within the shot count), 'parity_oscillation' (uniform grid over [0, 2pi), needs more than 2N points to avoid aliasing), or 'compressed_sensing' (~5*ln(N) random phases, LASSO over a cosine basis; also witnesses the actual GHZ size). When omitted, defaults to 'dfe' for a fixed size and 'compressed_sensing' for size_search, where the largest sizes put DFE past its sampling limit.",
+      "enum": [
+        "dfe",
+        "parity_oscillation",
+        "compressed_sensing"
+      ]
     },
     "num_phases": {
       "type": "integer",
-      "description": "Number of phase points for the oscillation-style methods. Ignored for DFE. Defaults to 20 for parity_oscillation (dense enough to fit cos(Nφ+θ)) and to ceil(5·ln(N)), at least 6, for compressed_sensing.",
+      "description": "Number of phase points for the oscillation-style methods. Ignored for DFE. parity_oscillation defaults to max(20, 2N+1) and rejects values at or below 2N, which alias; compressed_sensing defaults to ceil(5*ln(N)), at least 6.",
       "minimum": 5,
-      "examples": [8, 20, 50]
+      "examples": [
+        8,
+        20,
+        50
+      ]
     },
     "seed": {
       "type": "integer",
       "description": "Seed for the random phase draw used by compressed_sensing, for reproducible dispatches. Ignored by other methods.",
-      "examples": [42]
+      "examples": [
+        42
+      ]
     },
     "num_flag_qubits": {
       "type": "integer",
       "description": "Number of flag qubits for error detection via ZZ stabilizer checks. Set to 0 to disable.",
       "default": 0,
       "minimum": 0,
-      "examples": [0, 2]
+      "examples": [
+        0,
+        2
+      ]
+    },
+    "confidence_sigma": {
+      "type": "number",
+      "description": "Size search only: how many standard deviations a size's fidelity must clear fidelity_threshold by before it counts as passing. Keeps the discrete size score from flipping between runs when a size sits at the boundary. Set to 0 to threshold on the point estimate.",
+      "default": 1.0,
+      "minimum": 0,
+      "examples": [
+        0,
+        1,
+        2
+      ]
     }
   },
-  "required": ["benchmark_name"],
+  "required": [
+    "benchmark_name"
+  ],
   "if": {
     "properties": {
       "size_search": {
         "const": true
       }
     },
-    "required": ["size_search"]
+    "required": [
+      "size_search"
+    ]
   },
   "then": {},
   "else": {
-    "required": ["num_qubits"]
+    "required": [
+      "num_qubits"
+    ]
   }
 }

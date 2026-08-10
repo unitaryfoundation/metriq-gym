@@ -1,26 +1,33 @@
 """GHZ state preparation and verification benchmark.
 
 Summary:
-    Constructs a GHZ state on the device using a BFS spanning tree of the
-    device's connectivity graph, then estimates fidelity via one of three
-    verification methods: direct fidelity estimation (DFE), parity
-    oscillation curve fitting, or compressed sensing (parity samples at
-    random phases, sparse spectrum recovery by L1 minimization).
+    Constructs a GHZ state on the device using a binary dissemination tree over
+    the device's connectivity graph (logarithmic depth where connectivity
+    allows), then estimates fidelity via one of three verification methods:
+    direct fidelity estimation (DFE), parity oscillation curve fitting, or
+    compressed sensing (parity samples at random phases, sparse spectrum
+    recovery by L1 minimization).
 
     Two modes:
     - Fixed size (`num_qubits`): verify a GHZ state of one requested size.
     - Size search (`size_search: true`): build GHZ states at halving sizes
       from the device size down to `min_qubits` (e.g. 156, 78, 39, 19, 9),
       all dispatched in a single job, and report the largest size whose
-      fidelity clears `fidelity_threshold`. With DFE this costs two circuits
-      per size, about 2*log2(N) circuits total.
+      fidelity clears `fidelity_threshold` by `confidence_sigma` standard
+      deviations. Defaults to compressed sensing: DFE bounds the non-GHZ
+      parity contribution from the observed Z distribution, and that bound
+      stops holding once 2^N outruns the shot count, which the larger searched
+      sizes always do.
 
 Result interpretation:
     - population: probability of measuring all-zero or all-one bitstrings (Z basis).
-    - coherence: off-diagonal element magnitude, measured via X-basis parity
-      (DFE, fidelity lower bound), fitted amplitude of the parity oscillation
-      curve, or amplitude of the N-qubit frequency component recovered by
-      LASSO from random-phase parity samples (compressed sensing).
+    - coherence: off-diagonal element magnitude. DFE takes the global X parity
+      and subtracts the largest contribution the non-GHZ complementary pairs
+      could have made, since X^(x)N connects every bitstring to its complement
+      and not only 0...0 to 1...1; without that subtraction a product state
+      such as |+>^(x)N reports coherence 1. The oscillation methods instead
+      isolate the N-qubit Fourier component, by curve fit or by LASSO over
+      random-phase parity samples.
     - fidelity: (population + coherence) / 2.
     - recovered_frequency (compressed sensing only): dominant frequency of the
       parity signal, which equals N only if the full N-qubit GHZ state was
@@ -33,13 +40,12 @@ Result interpretation:
 References:
     - Moses et al., "A Race-Track Trapped-Ion Quantum Processor",
       Phys. Rev. X 13, 041052 (2023). [arXiv:2305.03828]
-    - Russo et al., "Compressed Sensing Verification of Large Entangled States",
-      arXiv:2409.15302 (2024).
+    - "Compressed sensing verification of large entangled states",
+      arXiv:2604.27824.
 """
 
 import logging
 import math
-from collections import deque
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -81,6 +87,8 @@ class GHZData(BenchmarkData):
     # fidelity threshold a size must clear. Empty lists mean fixed-size mode.
     search_sizes: list[int] = field(default_factory=list)
     search_circuit_counts: list[int] = field(default_factory=list)
+    search_flag_counts: list[int] = field(default_factory=list)
+    confidence_sigma: float = 1.0
     search_phases: list[list[float]] = field(default_factory=list)
     fidelity_threshold: float = 0.5
 
@@ -134,33 +142,78 @@ class GHZResult(BenchmarkResult):
 # ---------------------------------------------------------------------------
 
 
-def _bfs_edges(graph, root: int, num_qubits: int) -> list[tuple[int, int]]:
-    """BFS spanning tree edges from root, limited to num_qubits nodes."""
-    visited = {root}
-    queue = deque([root])
-    edges: list[tuple[int, int]] = []
+def _dissemination_rounds(graph, root: int, num_qubits: int) -> list[list[tuple[int, int]]]:
+    """Binary dissemination tree from root, as rounds of disjoint CNOT edges.
 
-    while queue and len(visited) < num_qubits:
-        node = queue.popleft()
-        for neighbor in graph.neighbors(node):
-            if neighbor not in visited and len(visited) < num_qubits:
-                visited.add(neighbor)
-                queue.append(neighbor)
-                edges.append((node, neighbor))
+    Every qubit already holding the state copies it to one unused neighbour per
+    round, so the prepared set doubles each round and the edges within a round
+    act on disjoint qubits. That gives depth logarithmic in num_qubits on
+    well-connected devices (a star, i.e. one control for every CNOT, is linear),
+    and degrades to the old chain on a path graph where no other option exists.
+    """
+    prepared = [root]
+    visited = {root}
+    rounds: list[list[tuple[int, int]]] = []
+
+    while len(visited) < num_qubits:
+        round_edges: list[tuple[int, int]] = []
+        # Snapshot: qubits prepared in this round only spread on the next one.
+        for node in list(prepared):
+            if len(visited) >= num_qubits:
+                break
+            # Sorted: rustworkx does not guarantee a stable neighbour order, so
+            # without this the selected data qubits (and therefore the whole
+            # layout) can differ between identical runs.
+            for neighbor in sorted(graph.neighbors(node)):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    prepared.append(neighbor)
+                    round_edges.append((node, neighbor))
+                    break
+        if not round_edges:
+            break
+        rounds.append(round_edges)
+
+    return rounds
+
+
+def _bfs_edges(graph, root: int, num_qubits: int) -> list[tuple[int, int]]:
+    """Flattened dissemination-tree edges from root, limited to num_qubits nodes."""
+    edges: list[tuple[int, int]] = []
+    for round_edges in _dissemination_rounds(graph, root, num_qubits):
+        edges.extend(round_edges)
 
     return edges
 
 
 def _select_flag_qubits(
     graph, data_qubits: set[int], num_flags: int
-) -> list[int]:
-    """Select flag qubits: nodes adjacent to data qubits but not in the data set."""
+) -> list[tuple[int, tuple[int, int]]]:
+    """Select flag qubits together with the two data qubits each one checks.
+
+    A ZZ stabilizer check needs exactly two data controls: the flag then records
+    the parity of that pair, which is 0 for every GHZ basis state. A flag with a
+    single data neighbour would instead copy the logical value and dephase the
+    state, so candidates with fewer than two data neighbours are skipped.
+
+    Returns (flag, (control_a, control_b)) pairs.
+    """
+    if num_flags <= 0:
+        return []
+    selected: list[tuple[int, tuple[int, int]]] = []
     candidates = set()
     for dq in data_qubits:
-        for neighbor in graph.neighbors(dq):
+        for neighbor in sorted(graph.neighbors(dq)):
             if neighbor not in data_qubits:
                 candidates.add(neighbor)
-    return sorted(candidates)[:num_flags]
+    for flag in sorted(candidates):
+        if len(selected) >= num_flags:
+            break
+        data_neighbors = sorted(n for n in graph.neighbors(flag) if n in data_qubits)
+        if len(data_neighbors) < 2:
+            continue
+        selected.append((flag, (data_neighbors[0], data_neighbors[1])))
+    return selected
 
 
 def build_ghz_circuits(
@@ -203,8 +256,9 @@ def build_ghz_circuits(
             f"be disconnected"
         )
 
-    # Select flag qubits from neighbors not in data set
-    flag_qubits = _select_flag_qubits(graph, set(data_qubits), num_flag_qubits)
+    # Select flag qubits, each with the two data qubits whose ZZ parity it checks.
+    flag_checks = _select_flag_qubits(graph, set(data_qubits), num_flag_qubits)
+    flag_qubits = [flag for flag, _ in flag_checks]
 
     n_total = total_device_qubits
     n_clbits = len(data_qubits) + len(flag_qubits)
@@ -214,15 +268,14 @@ def build_ghz_circuits(
         qc = QuantumCircuit(n_total, n_clbits)
         # Hadamard on root
         qc.h(data_qubits[0])
-        # CNOT chain from BFS edges
+        # CNOT dissemination tree
         for ctrl, targ in bfs:
             qc.cx(ctrl, targ)
         qc.barrier()
-        # ZZ flag operations
-        for flag in flag_qubits:
-            for neighbor in graph.neighbors(flag):
-                if neighbor in set(data_qubits):
-                    qc.cx(neighbor, flag)
+        # ZZ stabilizer checks: exactly two data controls per flag.
+        for flag, (ctrl_a, ctrl_b) in flag_checks:
+            qc.cx(ctrl_a, flag)
+            qc.cx(ctrl_b, flag)
         return qc
 
     def _add_measurements(qc: QuantumCircuit) -> None:
@@ -292,6 +345,49 @@ def post_select_results(counts: dict[str, int], num_flag_qubits: int) -> dict[st
     return post_selected
 
 
+def complementary_pair_bound(z_ps: dict[str, int], n: int, total_z: int) -> float:
+    """Bound the non-GHZ contribution to the global X parity.
+
+    ``X^{\\otimes N}`` connects every bitstring to its complement, so its
+    expectation is ``2 * sum_pairs Re(rho[x, x_bar])`` over all complementary
+    pairs, not just the GHZ pair ``{0...0, 1...1}``. Positivity of rho gives
+    ``|Re(rho[x, x_bar])| <= sqrt(P(x) P(x_bar))``, so this returns
+
+        sum_{pairs != GHZ pair} sqrt(P(x) P(x_bar))
+
+    estimated from the Z-basis distribution. Subtracting twice this from the
+    measured parity leaves a valid lower bound on the GHZ coherence.
+
+    The estimate is only trustworthy when the Z distribution is adequately
+    sampled; see :func:`dfe_sampling_is_adequate`.
+    """
+    zero, one = "0" * n, "1" * n
+    seen: set[str] = set()
+    bound = 0.0
+    for bitstring, count in z_ps.items():
+        if bitstring in (zero, one) or bitstring in seen:
+            continue
+        complement = bitstring.translate(str.maketrans("01", "10"))
+        seen.add(bitstring)
+        seen.add(complement)
+        p = count / total_z
+        p_comp = z_ps.get(complement, 0) / total_z
+        bound += math.sqrt(p * p_comp)
+    return bound
+
+
+def dfe_sampling_is_adequate(n: int, shots: int) -> bool:
+    """Whether the Z distribution can support the complementary-pair bound.
+
+    The bound in :func:`complementary_pair_bound` is estimated from observed
+    Z-basis frequencies. Once 2^n greatly exceeds the shot count, complementary
+    pairs are essentially never both observed, the bound collapses toward zero
+    and stops being a valid lower bound. Require at least one expected shot per
+    computational basis state.
+    """
+    return n <= 30 and (2**n) <= shots
+
+
 def estimate_fidelity_dfe(
     z_counts: dict[str, int],
     x_counts: dict[str, int],
@@ -299,6 +395,10 @@ def estimate_fidelity_dfe(
     num_flag_qubits: int,
 ) -> tuple[float, float, float, float]:
     """Estimate GHZ fidelity using direct fidelity estimation.
+
+    The coherence is the global X parity corrected by the largest possible
+    contribution from non-GHZ complementary pairs, so a separable state such
+    as ``|+>^{\\otimes N}`` (parity 1, no entanglement) is not certified.
 
     Returns: (population, coherence, population_err, coherence_err)
     """
@@ -314,13 +414,18 @@ def estimate_fidelity_dfe(
     population = (z_ps.get("0" * n, 0) + z_ps.get("1" * n, 0)) / total_z
     p_err = np.sqrt(population * (1 - population) / total_z)
 
-    # Use the magnitude of the X-basis parity. The signed value distinguishes
-    # GHZ+ from GHZ-, but for a fidelity *lower bound* of the form
+    # Magnitude of the X-basis parity. The signed value distinguishes GHZ+ from
+    # GHZ-, but for a fidelity lower bound of the form
     # (population + coherence) / 2 we want the off-diagonal magnitude so that
     # GHZ-like states with a relative phase are not penalized.
     even_x = sum(c for b, c in x_ps.items() if b.count("1") % 2 == 0)
-    coherence = abs((2 * even_x - total_x) / total_x)
-    c_err = np.sqrt((1 - coherence**2) / total_x)
+    raw_parity = abs((2 * even_x - total_x) / total_x)
+
+    # Subtract the maximum the other complementary pairs could have
+    # contributed. Without this, |+>^N reports coherence 1 despite carrying no
+    # entanglement at all.
+    coherence = max(0.0, raw_parity - 2.0 * complementary_pair_bound(z_ps, n, total_z))
+    c_err = np.sqrt(max(0.0, 1 - coherence**2) / total_x)
 
     return population, coherence, p_err, c_err
 
@@ -441,7 +546,7 @@ def estimate_fidelity_compressed_sensing(
     dominant frequency overall is also returned: it equals n only if the full
     GHZ state was prepared, so it acts as a witness of the actual GHZ size
     (a k-qubit entangled core oscillates at frequency k, not n).
-    See Russo et al., arXiv:2409.15302.
+    See arXiv:2604.27824.
 
     Returns: (population, coherence, population_err, coherence_err, recovered_frequency)
     """
@@ -477,13 +582,26 @@ def estimate_fidelity_compressed_sensing(
     coeffs = _lasso_spectrum(dictionary, signal)
 
     # Debias: LASSO shrinks the surviving coefficients toward zero, so refit
-    # ordinary least squares on the recovered support (skipped when the
-    # support is not overdetermined, where the refit would just interpolate).
+    # ordinary least squares on the recovered support (the relaxed-lasso
+    # estimator), plus frequency n so the coherence is always defined.
+    #
+    # arXiv:2604.27824 refits only the dominant recovered frequency because it
+    # reads only that amplitude. This implementation reads the amplitude at
+    # frequency n, which is a different column whenever the state is partially
+    # entangled, so truncating the refit to a subset of the recovered support
+    # biases what remains: on the cos(10 phi) cos^2(phi) signal, whose exact
+    # amplitudes are 1/4, 1/2, 1/4 at frequencies 8, 10, 12, dropping the
+    # frequency-8 column pushes the frequency-12 amplitude from 0.25 to 0.32,
+    # since the discarded energy has nowhere else to go. Refitting the full
+    # support recovers 0.25. Skipped when the system is not overdetermined.
     support = np.flatnonzero(np.abs(coeffs) > 1e-8)
     if 0 < support.size < M:
-        refit, *_ = np.linalg.lstsq(dictionary[:, support], signal, rcond=None)
-        coeffs = np.zeros_like(coeffs)
-        coeffs[support] = refit
+        coherence_cols = [c for c in (2 * n - 1, 2 * n) if c < dictionary.shape[1]]
+        refit_cols = sorted(set(support.tolist()) | set(coherence_cols))
+        if len(refit_cols) < M:
+            refit, *_ = np.linalg.lstsq(dictionary[:, refit_cols], signal, rcond=None)
+            coeffs = np.zeros_like(coeffs)
+            coeffs[refit_cols] = refit
 
     # Fold cos/sin coefficient pairs into per-frequency amplitudes.
     amplitudes = np.empty(n + 1)
@@ -520,6 +638,11 @@ def bisection_sizes(device_size: int, min_qubits: int) -> list[int]:
     while n >= min_qubits:
         sizes.append(n)
         n //= 2
+    # Halving can step over the lower bound (9 -> 4 with min_qubits 5), which
+    # would report zero when min_qubits itself would have passed. Costs at most
+    # one extra size.
+    if sizes[-1] != min_qubits:
+        sizes.append(min_qubits)
     return sizes
 
 
@@ -567,7 +690,22 @@ class GHZBenchmark(Benchmark):
         """
         num_phases = getattr(self.params, "num_phases", None)
         if method == "parity_oscillation":
-            return np.linspace(0, 2 * np.pi, num_phases or 20, endpoint=False).tolist()
+            # The parity signal oscillates at frequency n, so a uniform grid
+            # needs strictly more than 2n points to avoid aliasing: at 20
+            # uniform angles cos(100 phi) and cos(80 phi) are pointwise
+            # identical, which would read a large state's coherence off the
+            # wrong Fourier component.
+            min_phases = 2 * n + 1
+            if num_phases is None:
+                num_phases = max(20, min_phases)
+            elif num_phases < min_phases:
+                raise ValueError(
+                    f"parity_oscillation with num_qubits={n} needs at least "
+                    f"{min_phases} uniform phases to avoid aliasing, got {num_phases}; "
+                    f"raise num_phases or use compressed_sensing, which needs only "
+                    f"about 5*ln(n) random phases"
+                )
+            return np.linspace(0, 2 * np.pi, num_phases, endpoint=False).tolist()
         if method == "compressed_sensing":
             if num_phases is None:
                 num_phases = max(6, math.ceil(5 * math.log(n)))
@@ -575,30 +713,63 @@ class GHZBenchmark(Benchmark):
             return rng.uniform(0.0, 2 * np.pi, num_phases).tolist()
         return []
 
+    def _resolved_method(self) -> str:
+        """Verification method, defaulting per mode.
+
+        Size search defaults to compressed sensing rather than DFE. DFE bounds
+        the non-GHZ parity contribution from the observed Z distribution, and
+        that bound stops being valid once 2^n outruns the shot count, which the
+        largest searched sizes always do.
+        """
+        method = getattr(self.params, "method", None)
+        if method:
+            return str(method)
+        return "compressed_sensing" if getattr(self.params, "size_search", False) else "dfe"
+
     def _build_circuits(
         self, device: "QuantumDevice"
-    ) -> tuple[list[QuantumCircuit], list[float], list[int], list[int], list[list[float]]]:
+    ) -> tuple[
+        list[QuantumCircuit], list[float], int, list[int], list[int], list[list[float]], list[int]
+    ]:
         """Build circuits for either mode.
 
-        Returns (circuits, phases, search_sizes, search_circuit_counts,
-        search_phases). The search lists are empty in fixed-size mode; phases
-        is empty in search mode (the per-size grids live in search_phases).
+        Returns (circuits, phases, num_flags, search_sizes,
+        search_circuit_counts, search_phases, search_flag_counts). The search
+        lists are empty in fixed-size mode; phases is empty in search mode
+        (the per-size grids live in search_phases).
+
+        Flag counts are the number of flags actually selected, which can be
+        fewer than requested (or zero at the full device size, where no spare
+        qubits remain). Polling must strip exactly the bits that were measured.
         """
         graph = connectivity_graph(device)
-        method = getattr(self.params, "method", "dfe")
+        method = self._resolved_method()
         num_flag_qubits = getattr(self.params, "num_flag_qubits", 0)
 
         if bool(getattr(self.params, "size_search", False)):
             min_qubits = getattr(self.params, "min_qubits", None) or 5
             sizes = bisection_sizes(graph.num_nodes(), min_qubits)
+            if method == "dfe":
+                shots = getattr(self.params, "shots", 0) or 0
+                unsound = [s for s in sizes if not dfe_sampling_is_adequate(s, shots)]
+                if unsound:
+                    logger.warning(
+                        "GHZ size search with method='dfe' at sizes %s: 2^n exceeds "
+                        "the %d shots, so the complementary-pair correction cannot be "
+                        "estimated and the reported fidelity is not a valid lower "
+                        "bound. Use compressed_sensing for these sizes.",
+                        unsound,
+                        shots,
+                    )
             circuits: list[QuantumCircuit] = []
             circuit_counts: list[int] = []
             search_phases: list[list[float]] = []
+            flag_counts: list[int] = []
             for size in sizes:
                 # Drawn per size so dispatch stores exactly the phases the
                 # circuits were built with (random for compressed_sensing).
                 phases = self._phase_grid(method, size)
-                size_circuits, _, _ = build_ghz_circuits(
+                size_circuits, _, size_flags = build_ghz_circuits(
                     graph=graph,
                     num_qubits=size,
                     method=method,
@@ -608,25 +779,31 @@ class GHZBenchmark(Benchmark):
                 circuits.extend(size_circuits)
                 circuit_counts.append(len(size_circuits))
                 search_phases.append(phases)
-            return circuits, [], sizes, circuit_counts, search_phases
+                flag_counts.append(len(size_flags))
+            return circuits, [], 0, sizes, circuit_counts, search_phases, flag_counts
 
         num_qubits = self.params.num_qubits
         phases = self._phase_grid(method, num_qubits)
-        circuits, _, _ = build_ghz_circuits(
+        circuits, _, flags = build_ghz_circuits(
             graph=graph,
             num_qubits=num_qubits,
             method=method,
             phases=phases or None,
             num_flag_qubits=num_flag_qubits,
         )
-        return circuits, phases, [], [], []
+        return circuits, phases, len(flags), [], [], [], []
 
     def dispatch_handler(self, device: "QuantumDevice") -> GHZData:
-        circuits, phases, search_sizes, search_circuit_counts, search_phases = (
-            self._build_circuits(device)
-        )
-        method = getattr(self.params, "method", "dfe")
-        num_flag_qubits = getattr(self.params, "num_flag_qubits", 0)
+        (
+            circuits,
+            phases,
+            num_flags,
+            search_sizes,
+            search_circuit_counts,
+            search_phases,
+            search_flag_counts,
+        ) = self._build_circuits(device)
+        method = self._resolved_method()
 
         quantum_job = device.run(circuits, shots=self.params.shots)
 
@@ -638,11 +815,18 @@ class GHZBenchmark(Benchmark):
             num_qubits=search_sizes[0] if search_sizes else self.params.num_qubits,
             method=method,
             phases=phases,
-            num_flag_qubits=num_flag_qubits,
+            # Store the flags actually measured, not the number requested.
+            num_flag_qubits=num_flags,
             search_sizes=search_sizes,
             search_circuit_counts=search_circuit_counts,
             search_phases=search_phases,
+            search_flag_counts=search_flag_counts,
             fidelity_threshold=getattr(self.params, "fidelity_threshold", None) or 0.5,
+            confidence_sigma=(
+                getattr(self.params, "confidence_sigma", None)
+                if getattr(self.params, "confidence_sigma", None) is not None
+                else 1.0
+            ),
             input_two_qubit_gate_counts=counts,
             transpiled_two_qubit_gate_counts=counts,
         )
@@ -683,6 +867,7 @@ class GHZBenchmark(Benchmark):
     ) -> GHZResult:
         sizes = job_data.search_sizes
         threshold = job_data.fidelity_threshold
+        sigma = job_data.confidence_sigma
         per_size: list[tuple[float, float, float, float, int | None]] = []
         offset = 0
         for i, size in enumerate(sizes):
@@ -690,8 +875,13 @@ class GHZBenchmark(Benchmark):
             counts_slice = all_counts[offset : offset + count]
             offset += count
             phases = job_data.search_phases[i] if job_data.search_phases else []
+            # Flags are selected per size, so strip exactly the bits measured
+            # for this size rather than a single global count.
+            size_flags = (
+                job_data.search_flag_counts[i] if job_data.search_flag_counts else num_flags
+            )
             per_size.append(
-                estimate_fidelity_for_method(method, counts_slice, phases, size, num_flags)
+                estimate_fidelity_for_method(method, counts_slice, phases, size, size_flags)
             )
 
         fidelities = [(pop + coh) / 2 for pop, coh, _, _, _ in per_size]
@@ -700,10 +890,12 @@ class GHZBenchmark(Benchmark):
         ]
 
         # Sizes are searched largest-first; the first one clearing the
-        # threshold is the largest passing size.
+        # threshold is the largest passing size. Require the threshold to be
+        # cleared by sigma standard deviations so a size sitting right at the
+        # boundary does not flip the discrete score between runs.
         passing_index: int | None = None
         for i, fid in enumerate(fidelities):
-            if fid > threshold:
+            if fid - sigma * uncertainties[i] > threshold:
                 passing_index = i
                 break
 
@@ -730,5 +922,5 @@ class GHZBenchmark(Benchmark):
         )
 
     def estimate_resources_handler(self, device: "QuantumDevice") -> list[CircuitBatch]:
-        circuits, _, _, _, _ = self._build_circuits(device)
+        circuits, *_ = self._build_circuits(device)
         return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
