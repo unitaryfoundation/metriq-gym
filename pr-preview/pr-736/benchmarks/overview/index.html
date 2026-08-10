@@ -1141,6 +1141,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metriq_gym.benchmarks.ghz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ghz
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1609,6 +1620,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metriq_gym.benchmarks.ghz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ghz
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1705,6 +1727,10 @@
 <tr>
 <td><a href="#metriq_gym.benchmarks.clops">CLOPS</a></td>
 <td>Circuit layer operations per second to measure device speed</td>
+</tr>
+<tr>
+<td><a href="#metriq_gym.benchmarks.ghz">GHZ</a></td>
+<td>GHZ state fidelity, at a fixed size or by searching for the largest one the device can build</td>
 </tr>
 </tbody>
 </table>
@@ -2225,6 +2251,100 @@ compilation, communication, and execution overhead.</p>
   <ul>
 <li><a href="https://arxiv.org/abs/2110.14108">Wack et al., "Quality, Speed, and Scale: three key attributes to measure the performance of near-term quantum computers", arXiv:2110.14108</a>.</li>
 <li><a href="https://github.com/qiskit-community/qiskit-device-benchmarking">Qiskit Device Benchmarking CLOPS</a>.</li>
+</ul>
+</details>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="metriq_gym.benchmarks.ghz" class="doc doc-heading">
+            <code>ghz</code>
+
+
+<a href="#metriq_gym.benchmarks.ghz" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>GHZ state preparation and verification benchmark.</p>
+
+
+<details class="summary" open>
+  <summary>Summary</summary>
+  <p>Constructs a GHZ state on the device using a binary dissemination tree over
+the device's connectivity graph (logarithmic depth where connectivity
+allows), then estimates fidelity via one of three verification methods:
+direct fidelity estimation (DFE), parity oscillation curve fitting, or
+compressed sensing (parity samples at random phases, sparse spectrum
+recovery by L1 minimization).</p>
+<p>Two modes:
+- Fixed size (<code>num_qubits</code>): verify a GHZ state of one requested size.
+- Size search (<code>size_search: true</code>): build GHZ states at halving sizes
+  from the device size down to <code>min_qubits</code> (e.g. 156, 78, 39, 19, 9),
+  all dispatched in a single job, and report the largest size whose
+  fidelity clears <code>fidelity_threshold</code> by <code>confidence_sigma</code> standard
+  deviations. Defaults to compressed sensing: DFE bounds the non-GHZ
+  parity contribution from the observed Z distribution, and that bound
+  stops holding once 2^N outruns the shot count, which the larger searched
+  sizes always do.</p>
+</details>
+
+<details class="result-interpretation" open>
+  <summary>Result interpretation</summary>
+  <ul>
+<li>population: probability of measuring all-zero or all-one bitstrings (Z basis).</li>
+<li>coherence: off-diagonal element magnitude. DFE takes the global X parity
+  and subtracts the largest contribution the non-GHZ complementary pairs
+  could have made, since X^(x)N connects every bitstring to its complement
+  and not only 0...0 to 1...1; without that subtraction a product state
+  such as |+&gt;^(x)N reports coherence 1. The oscillation methods instead
+  isolate the N-qubit Fourier component, by curve fit or by LASSO over
+  random-phase parity samples.</li>
+<li>fidelity: (population + coherence) / 2.</li>
+<li>recovered_frequency (compressed sensing only): dominant frequency of the
+  parity signal, which equals N only if the full N-qubit GHZ state was
+  actually prepared; a partially entangled state shows a lower frequency.</li>
+<li>largest_passing_size / device_fraction (size search only): the largest
+  searched size with fidelity above the threshold, and that size divided
+  by the device size. Per-size fidelities are reported in search_sizes /
+  search_fidelities so no resolution is lost to the threshold.</li>
+</ul>
+</details>
+
+<details class="references" open>
+  <summary>References</summary>
+  <ul>
+<li>Moses et al., "A Race-Track Trapped-Ion Quantum Processor",
+  Phys. Rev. X 13, 041052 (2023). [arXiv:2305.03828]</li>
+<li>"Compressed sensing verification of large entangled states",
+  arXiv:2604.27824.</li>
 </ul>
 </details>
 
