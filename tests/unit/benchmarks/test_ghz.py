@@ -608,3 +608,46 @@ class TestSizeSearchDefaults:
 
     def test_explicit_method_respected(self):
         assert self._bench(size_search=True, method="dfe")._resolved_method() == "dfe"
+
+
+class TestFlagCoverage:
+    """Flag pairs are chosen to cover distinct data qubits.
+
+    Picking the two lowest-indexed neighbours of the lowest-indexed candidates
+    re-checks the same corner of the register: on the graph below that leaves
+    half the chain unwatched no matter how many flags are requested.
+    """
+
+    def _graph(self):
+        # Data 0..5. Ancillas 10 and 11 both bridge (0,1); 12 bridges (2,3);
+        # 13 bridges (4,5).
+        graph = rx.PyGraph()
+        graph.add_nodes_from(range(14))
+        graph.add_edges_from_no_data(
+            [(10, 0), (10, 1), (11, 0), (11, 1), (12, 2), (12, 3), (13, 4), (13, 5)]
+        )
+        return graph
+
+    def test_second_flag_covers_new_data_qubits(self):
+        selected = _select_flag_qubits(self._graph(), {0, 1, 2, 3, 4, 5}, num_flags=2)
+        covered = set()
+        for _flag, pair in selected:
+            covered.update(pair)
+        # Index-greedy would take flags 10 and 11, both checking (0, 1).
+        assert len(selected) == 2
+        assert covered == {0, 1, 2, 3}
+
+    def test_three_flags_cover_whole_chain(self):
+        selected = _select_flag_qubits(self._graph(), {0, 1, 2, 3, 4, 5}, num_flags=3)
+        covered = set()
+        for _flag, pair in selected:
+            covered.update(pair)
+        assert covered == {0, 1, 2, 3, 4, 5}
+
+    def test_every_pair_is_two_data_neighbours(self):
+        graph = self._graph()
+        data = {0, 1, 2, 3, 4, 5}
+        for flag, (ctrl_a, ctrl_b) in _select_flag_qubits(graph, data, num_flags=3):
+            assert ctrl_a != ctrl_b
+            assert {ctrl_a, ctrl_b} <= data
+            assert {ctrl_a, ctrl_b} <= set(graph.neighbors(flag))

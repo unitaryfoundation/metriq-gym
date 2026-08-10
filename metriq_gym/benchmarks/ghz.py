@@ -196,23 +196,47 @@ def _select_flag_qubits(
     single data neighbour would instead copy the logical value and dephase the
     state, so candidates with fewer than two data neighbours are skipped.
 
+    Pairs are chosen for coverage rather than by taking whichever two neighbours
+    come first, following arXiv:2604.27824. Selecting greedily by index tends to
+    re-check the same corner of the register, so k flags can end up watching far
+    fewer than 2k data qubits and whole stretches of the chain go unchecked.
+    Each step therefore picks the (flag, pair) that adds the most data qubits not
+    already covered, falling back to already-covered pairs only once nothing new
+    is reachable.
+
     Returns (flag, (control_a, control_b)) pairs.
     """
     if num_flags <= 0:
         return []
-    selected: list[tuple[int, tuple[int, int]]] = []
-    candidates = set()
+
+    # Candidate flags: outside the data set, with at least two data neighbours.
+    candidates: dict[int, list[int]] = {}
     for dq in data_qubits:
         for neighbor in sorted(graph.neighbors(dq)):
-            if neighbor not in data_qubits:
-                candidates.add(neighbor)
-    for flag in sorted(candidates):
-        if len(selected) >= num_flags:
+            if neighbor in data_qubits or neighbor in candidates:
+                continue
+            data_neighbors = sorted(n for n in graph.neighbors(neighbor) if n in data_qubits)
+            if len(data_neighbors) >= 2:
+                candidates[neighbor] = data_neighbors
+
+    selected: list[tuple[int, tuple[int, int]]] = []
+    covered: set[int] = set()
+    while len(selected) < num_flags and candidates:
+        best: tuple[int, int, tuple[int, int]] | None = None
+        for flag in sorted(candidates):
+            data_neighbors = candidates[flag]
+            for i in range(len(data_neighbors)):
+                for j in range(i + 1, len(data_neighbors)):
+                    pair = (data_neighbors[i], data_neighbors[j])
+                    gain = len(set(pair) - covered)
+                    if best is None or gain > best[0]:
+                        best = (gain, flag, pair)
+        if best is None:
             break
-        data_neighbors = sorted(n for n in graph.neighbors(flag) if n in data_qubits)
-        if len(data_neighbors) < 2:
-            continue
-        selected.append((flag, (data_neighbors[0], data_neighbors[1])))
+        _, flag, pair = best
+        selected.append((flag, pair))
+        covered.update(pair)
+        del candidates[flag]
     return selected
 
 
