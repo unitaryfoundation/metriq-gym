@@ -72,7 +72,22 @@ Results:
   score: 0.996337890625 ± 0.0006673812593654682
 ```
 
-Explore more examples in the ready-made JSON schemas under ``metriq_gym/schemas/examples/``.
+Explore more generic examples in the ready-made JSON schemas under
+``metriq_gym/schemas/examples/``. These editable examples are not the
+canonical configurations used for Metriq Score 1.0; the score definition is in
+``metriq_gym/suites/metriq_score_1_0.json``.
+
+## Jobs dashboard
+
+A local web view of your dispatched jobs — lifecycle status, per-device suite coverage,
+and poll/upload/delete actions:
+
+```sh
+mgym dashboard
+```
+
+Then open http://localhost:8787. The dashboard reads your local job database; provider
+APIs are only contacted when you click Poll.
 
 ## Documentation
 

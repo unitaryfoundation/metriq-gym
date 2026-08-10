@@ -1,20 +1,32 @@
 repos:
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  # Ruff version (keep in sync with the version in pyproject.toml)
-  rev: v0.13.2
+- repo: local
   hooks:
-    # Run the linter.
     - id: ruff
-      args: [ --fix ]
-    # Run the formatter.
-    - id: ruff-format
+      name: ruff
+      entry: uv run ruff check --fix
+      language: system
+      types_or: [python, pyi]
+      stages: [pre-commit]
 
-- repo: https://github.com/pre-commit/mirrors-mypy
-  # MyPy version (keep in sync with the version in pyproject.toml)
-  rev: v1.15.0  
-  hooks:
+    - id: ruff-format
+      name: ruff-format
+      entry: uv run ruff format
+      language: system
+      types_or: [python, pyi]
+      stages: [pre-commit]
+
     - id: mypy
-      additional_dependencies: ['types-tabulate']
-      args: [--config-file=pyproject.toml]
+      name: mypy
+      entry: uv run mypy --config-file=pyproject.toml
+      language: system
+      types_or: [python, pyi]
       pass_filenames: true
+      stages: [pre-commit]
+
+    - id: deptry
+      name: deptry
+      entry: uv run deptry .
+      language: system
+      pass_filenames: false
+      files: ^(metriq_gym/.*\.py|tests/.*\.py|docs/generate_cli_docs\.py|pyproject\.toml|uv\.lock)$
       stages: [pre-commit]

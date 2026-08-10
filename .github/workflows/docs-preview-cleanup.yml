@@ -1,0 +1,30 @@
+name: Cleanup Documentation Preview
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-cleanup-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write preview metadata
+        run: |
+          mkdir -p preview-metadata
+          printf '%s\n' "${{ github.event.pull_request.number }}" > preview-metadata/pr-number.txt
+          printf '%s\n' "${{ github.event.action }}" > preview-metadata/pr-action.txt
+
+      - name: Upload preview metadata
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-preview-metadata
+          path: preview-metadata/
+          retention-days: 3

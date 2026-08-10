@@ -43,15 +43,49 @@ LATEST_JOB_ID = "latest"
 app = typer.Typer(
     name="mgym",
     help="Metriq-Gym CLI — dispatch, poll, and upload results for quantum benchmarks",
-    no_args_is_help=True,
 )
 
 # Sub-apps for job and suite commands
-job_app = typer.Typer(help="Job operations", no_args_is_help=True)
-suite_app = typer.Typer(help="Suite operations", no_args_is_help=True)
+job_app = typer.Typer(help="Job operations")
+suite_app = typer.Typer(help="Suite operations")
 
 app.add_typer(job_app, name="job")
 app.add_typer(suite_app, name="suite")
+
+
+@app.command("dashboard")
+def dashboard(
+    port: Annotated[int, typer.Option(help="Port to serve the dashboard on")] = 8787,
+) -> None:
+    """Launch the local jobs dashboard web UI."""
+    from metriq_gym.dashboard.server import main as dashboard_main
+
+    dashboard_main(port=port)
+
+
+def _show_help_and_exit_if_no_subcommand(ctx: typer.Context) -> None:
+    """Show help and exit successfully when invoked without a subcommand."""
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        raise typer.Exit(code=0)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context) -> None:
+    """Show top-level help when mgym is invoked without a command."""
+    _show_help_and_exit_if_no_subcommand(ctx)
+
+
+@job_app.callback(invoke_without_command=True)
+def job_main(ctx: typer.Context) -> None:
+    """Show job help when mgym job is invoked without a subcommand."""
+    _show_help_and_exit_if_no_subcommand(ctx)
+
+
+@suite_app.callback(invoke_without_command=True)
+def suite_main(ctx: typer.Context) -> None:
+    """Show suite help when mgym suite is invoked without a subcommand."""
+    _show_help_and_exit_if_no_subcommand(ctx)
 
 
 def list_jobs(
@@ -124,7 +158,7 @@ ProviderOption = Annotated[
     typer.Option(
         "--provider",
         "-p",
-        help="Provider name (e.g., ibm, braket, azure, ionq, local)",
+        help="Provider name (e.g., ibm, aws, azure, ionq, local; braket aliases aws)",
     ),
 ]
 
@@ -369,9 +403,27 @@ def job_replay(
 
 @suite_app.command("dispatch")
 def suite_dispatch(
-    suite_config: Annotated[str, typer.Argument(help="Path to suite configuration file")],
+    suite_config: Annotated[
+        str,
+        typer.Argument(help="Path to suite configuration file or bundled suite name"),
+    ],
     provider: ProviderOption = None,
     device: DeviceOption = None,
+    components: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            "--component",
+            "-c",
+            help="Component to dispatch; repeat the option to select multiple components",
+        ),
+    ] = None,
+    all_components: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Explicitly dispatch every component, including guarded full suites",
+        ),
+    ] = False,
 ) -> None:
     """Dispatch a suite of benchmark jobs to a quantum device."""
     from metriq_gym.run import dispatch_suite as _dispatch_suite
@@ -380,6 +432,8 @@ def suite_dispatch(
     args.suite_config = suite_config
     args.provider = provider
     args.device = device
+    args.components = components
+    args.all_components = all_components
 
     job_manager = JobManager()
     _dispatch_suite(args, job_manager)

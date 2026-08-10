@@ -14,7 +14,7 @@ from metriq_gym.cli import app
 
 
 # Disable Rich markup/colors for consistent test output across environments
-runner = CliRunner(mix_stderr=False, env={"NO_COLOR": "1", "TERM": "dumb"})
+runner = CliRunner(env={"NO_COLOR": "1", "TERM": "dumb"})
 
 
 class TestMainApp:
@@ -49,6 +49,14 @@ class TestJobCommands:
         assert "delete" in result.output
         assert "upload" in result.output
         assert "estimate" in result.output
+
+    def test_job_no_args_shows_help(self):
+        """Running mgym job without args should show help."""
+        result = runner.invoke(app, ["job"], color=False)
+        assert result.exit_code == 0
+        assert "dispatch" in result.output
+        assert "poll" in result.output
+        assert "Job operations" in result.output
 
     def test_job_dispatch_help(self):
         """mgym job dispatch --help should show usage."""
@@ -260,6 +268,14 @@ class TestSuiteCommands:
         assert "delete" in result.output
         assert "upload" in result.output
 
+    def test_suite_no_args_shows_help(self):
+        """Running mgym suite without args should show help."""
+        result = runner.invoke(app, ["suite"], color=False)
+        assert result.exit_code == 0
+        assert "dispatch" in result.output
+        assert "poll" in result.output
+        assert "Suite operations" in result.output
+
     def test_suite_dispatch_help(self):
         """mgym suite dispatch --help should show usage."""
         result = runner.invoke(app, ["suite", "dispatch", "--help"], color=False)
@@ -267,6 +283,8 @@ class TestSuiteCommands:
         assert "SUITE_CONFIG" in result.output
         assert "--provider" in result.output
         assert "--device" in result.output
+        assert "--component" in result.output
+        assert "--all" in result.output
 
     def test_suite_dispatch_missing_config_shows_error(self):
         """mgym suite dispatch without config should error."""
@@ -285,7 +303,19 @@ class TestSuiteCommands:
 
         runner.invoke(
             app,
-            ["suite", "dispatch", str(config_file), "-p", "local", "-d", "aer_simulator"],
+            [
+                "suite",
+                "dispatch",
+                str(config_file),
+                "-p",
+                "local",
+                "-d",
+                "aer_simulator",
+                "-c",
+                "qft",
+                "--component",
+                "wit",
+            ],
         )
 
         mock_dispatch.assert_called_once()
@@ -293,6 +323,24 @@ class TestSuiteCommands:
         assert args.suite_config == str(config_file)
         assert args.provider == "local"
         assert args.device == "aer_simulator"
+        assert args.components == ["qft", "wit"]
+        assert args.all_components is False
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.dispatch_suite")
+    def test_suite_dispatch_forwards_all_opt_in(self, mock_dispatch, mock_jm, tmp_path):
+        config_file = tmp_path / "suite.json"
+        config_file.write_text("{}")
+
+        runner.invoke(
+            app,
+            ["suite", "dispatch", str(config_file), "--all"],
+        )
+
+        mock_dispatch.assert_called_once()
+        args = mock_dispatch.call_args[0][0]
+        assert args.components is None
+        assert args.all_components is True
 
     def test_suite_poll_help(self):
         """mgym suite poll --help should show usage."""

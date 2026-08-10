@@ -1,0 +1,314 @@
+{
+  "name": "metriq_score_1_0",
+  "version": "1.0",
+  "description": "Version 1.0 of the canonical Metriq benchmark suite.",
+  "references": [
+    "https://arxiv.org/abs/2603.08680v1"
+  ],
+  "full_suite_warning": "The complete Metriq Score 1.0 suite dispatches 22 hardware benchmark jobs. It can consume substantial device quota, runtime, and money.",
+  "benchmarks": [
+    {
+      "name": "bseq",
+      "component": "bseq",
+      "config": {
+        "benchmark_name": "BSEQ",
+        "shots": 1000
+      }
+    },
+    {
+      "name": "eplg_100q_chain",
+      "component": "eplg",
+      "config": {
+        "benchmark_name": "EPLG",
+        "num_qubits_in_chain": 100,
+        "lengths": [
+          2,
+          4,
+          8,
+          16,
+          30,
+          50,
+          70,
+          100,
+          150,
+          200,
+          300,
+          500
+        ],
+        "num_samples": 10,
+        "shots": 1000,
+        "seed": 12345,
+        "two_qubit_gate": "cz",
+        "one_qubit_basis_gates": [
+          "rz",
+          "rx",
+          "x"
+        ],
+        "decompose_clifford_ops": false,
+        "constrain_rb_offset_b": false
+      }
+    },
+    {
+      "name": "mirror_circuits_8q_64l",
+      "component": "mirror-circuits",
+      "config": {
+        "benchmark_name": "Mirror Circuits",
+        "width": 8,
+        "num_layers": 64,
+        "two_qubit_gate_prob": 0.5,
+        "two_qubit_gate_name": "CNOT",
+        "shots": 1000,
+        "num_circuits": 10
+      }
+    },
+    {
+      "name": "mirror_circuits_16q_32l",
+      "component": "mirror-circuits",
+      "config": {
+        "benchmark_name": "Mirror Circuits",
+        "width": 16,
+        "num_layers": 32,
+        "two_qubit_gate_prob": 0.5,
+        "two_qubit_gate_name": "CNOT",
+        "shots": 1000,
+        "num_circuits": 10
+      }
+    },
+    {
+      "name": "mirror_circuits_24q_16l",
+      "component": "mirror-circuits",
+      "config": {
+        "benchmark_name": "Mirror Circuits",
+        "width": 24,
+        "num_layers": 16,
+        "two_qubit_gate_prob": 0.5,
+        "two_qubit_gate_name": "CNOT",
+        "shots": 1000,
+        "num_circuits": 10
+      }
+    },
+    {
+      "name": "mirror_circuits_32q_8l",
+      "component": "mirror-circuits",
+      "config": {
+        "benchmark_name": "Mirror Circuits",
+        "width": 32,
+        "num_layers": 8,
+        "two_qubit_gate_prob": 0.5,
+        "two_qubit_gate_name": "CNOT",
+        "shots": 1000,
+        "num_circuits": 10
+      }
+    },
+    {
+      "name": "mirror_circuits_64q_4l",
+      "component": "mirror-circuits",
+      "config": {
+        "benchmark_name": "Mirror Circuits",
+        "width": 64,
+        "num_layers": 4,
+        "two_qubit_gate_prob": 0.5,
+        "two_qubit_gate_name": "CNOT",
+        "shots": 1000,
+        "num_circuits": 10
+      }
+    },
+    {
+      "name": "mirror_circuits_128q_2l",
+      "component": "mirror-circuits",
+      "config": {
+        "benchmark_name": "Mirror Circuits",
+        "width": 128,
+        "num_layers": 2,
+        "two_qubit_gate_prob": 0.5,
+        "two_qubit_gate_name": "CNOT",
+        "shots": 1000,
+        "num_circuits": 10
+      }
+    },
+    {
+      "name": "clops_100q_twirled_session",
+      "component": "clops",
+      "config": {
+        "benchmark_name": "CLOPS",
+        "num_qubits": 100,
+        "num_layers": 100,
+        "num_circuits": 1000,
+        "shots": 100,
+        "seed": 12345,
+        "two_qubit_gate": "cz",
+        "mode": "twirled",
+        "use_session": true
+      }
+    },
+    {
+      "name": "qml_kernel_10q",
+      "component": "qml-kernel",
+      "config": {
+        "benchmark_name": "QML Kernel",
+        "num_qubits": 10,
+        "shots": 1000
+      }
+    },
+    {
+      "name": "qml_kernel_20q",
+      "component": "qml-kernel",
+      "config": {
+        "benchmark_name": "QML Kernel",
+        "num_qubits": 20,
+        "shots": 1000
+      }
+    },
+    {
+      "name": "qml_kernel_30q",
+      "component": "qml-kernel",
+      "config": {
+        "benchmark_name": "QML Kernel",
+        "num_qubits": 30,
+        "shots": 1000
+      }
+    },
+    {
+      "name": "qml_kernel_50q",
+      "component": "qml-kernel",
+      "config": {
+        "benchmark_name": "QML Kernel",
+        "num_qubits": 50,
+        "shots": 1000
+      }
+    },
+    {
+      "name": "wit_7q",
+      "component": "wit",
+      "config": {
+        "benchmark_name": "WIT",
+        "num_qubits": 7,
+        "shots": 8192
+      }
+    },
+    {
+      "name": "lr_qaoa_1d_10q",
+      "component": "lr-qaoa",
+      "config": {
+        "benchmark_name": "Linear Ramp QAOA",
+        "graph_type": "1D",
+        "num_qubits": 10,
+        "qaoa_layers": [
+          10
+        ],
+        "delta_beta": 0.3,
+        "delta_gamma": 0.6,
+        "shots": 1000,
+        "trials": 10,
+        "num_random_trials": 25,
+        "confidence_level": 0.999,
+        "seed": 123
+      }
+    },
+    {
+      "name": "lr_qaoa_1d_20q",
+      "component": "lr-qaoa",
+      "config": {
+        "benchmark_name": "Linear Ramp QAOA",
+        "graph_type": "1D",
+        "num_qubits": 20,
+        "qaoa_layers": [
+          10
+        ],
+        "delta_beta": 0.3,
+        "delta_gamma": 0.6,
+        "shots": 1000,
+        "trials": 10,
+        "num_random_trials": 25,
+        "confidence_level": 0.999,
+        "seed": 123
+      }
+    },
+    {
+      "name": "lr_qaoa_1d_50q",
+      "component": "lr-qaoa",
+      "config": {
+        "benchmark_name": "Linear Ramp QAOA",
+        "graph_type": "1D",
+        "num_qubits": 50,
+        "qaoa_layers": [
+          10
+        ],
+        "delta_beta": 0.3,
+        "delta_gamma": 0.6,
+        "shots": 1000,
+        "trials": 10,
+        "num_random_trials": 25,
+        "confidence_level": 0.999,
+        "seed": 123
+      }
+    },
+    {
+      "name": "lr_qaoa_1d_100q",
+      "component": "lr-qaoa",
+      "config": {
+        "benchmark_name": "Linear Ramp QAOA",
+        "graph_type": "1D",
+        "num_qubits": 100,
+        "qaoa_layers": [
+          10
+        ],
+        "delta_beta": 0.3,
+        "delta_gamma": 0.6,
+        "shots": 1000,
+        "trials": 10,
+        "num_random_trials": 25,
+        "confidence_level": 0.999,
+        "seed": 123
+      }
+    },
+    {
+      "name": "qft_4q",
+      "component": "qft",
+      "config": {
+        "benchmark_name": "Quantum Fourier Transform",
+        "shots": 1000,
+        "num_qubits": 4,
+        "max_circuits": 3,
+        "method": 1,
+        "use_midcircuit_measurement": false
+      }
+    },
+    {
+      "name": "qft_8q",
+      "component": "qft",
+      "config": {
+        "benchmark_name": "Quantum Fourier Transform",
+        "shots": 1000,
+        "num_qubits": 8,
+        "max_circuits": 3,
+        "method": 1,
+        "use_midcircuit_measurement": false
+      }
+    },
+    {
+      "name": "qft_12q",
+      "component": "qft",
+      "config": {
+        "benchmark_name": "Quantum Fourier Transform",
+        "shots": 1000,
+        "num_qubits": 12,
+        "max_circuits": 3,
+        "method": 1,
+        "use_midcircuit_measurement": false
+      }
+    },
+    {
+      "name": "qft_20q",
+      "component": "qft",
+      "config": {
+        "benchmark_name": "Quantum Fourier Transform",
+        "shots": 1000,
+        "num_qubits": 20,
+        "max_circuits": 3,
+        "method": 1,
+        "use_midcircuit_measurement": false
+      }
+    }
+  ]
+}

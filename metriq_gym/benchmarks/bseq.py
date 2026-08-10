@@ -50,7 +50,7 @@ from metriq_gym.helpers.graph_helpers import (
     largest_connected_size,
 )
 from metriq_gym.qplatform.device import connectivity_graph
-from metriq_gym.resource_estimation import CircuitBatch
+from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
@@ -203,6 +203,12 @@ class BSEQ(Benchmark):
         topology_graph = connectivity_graph(device)
         circuit_sets, coloring = build_bseq_circuits(topology_graph, max_colors)
 
+        # Flatten the per-color circuit sets into one flat list, one entry per
+        # circuit in submission order (the per-color grouping is recoverable from
+        # coloring if a consumer needs it). No local transpilation pass, so
+        # transpiled counts mirror the input.
+        counts = [count_two_qubit_gates(c) for circ_set in circuit_sets for c in circ_set]
+
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
             device.run(circ_set, shots=shots) for circ_set in circuit_sets
         ]
@@ -215,6 +221,8 @@ class BSEQ(Benchmark):
 
         return BSEQData(
             provider_job_ids=provider_job_ids,
+            input_two_qubit_gate_counts=counts,
+            transpiled_two_qubit_gate_counts=counts,
             shots=shots,
             num_qubits=device.num_qubits,
             topology_graph=topology_graph,

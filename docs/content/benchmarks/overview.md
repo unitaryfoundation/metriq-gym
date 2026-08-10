@@ -22,7 +22,12 @@ mgym job poll <JOB_ID>
 All benchmarks use JSON configuration files:
 
 - **Schemas**: `metriq_gym/schemas/*.schema.json` - Define parameters, types, and allowed values
-- **Examples**: `metriq_gym/schemas/examples/*.example.json` - Ready-to-run configurations
+- **Examples**: `metriq_gym/schemas/examples/*.example.json` - Generic, editable
+  configurations for learning and ad hoc runs
+- **Canonical score suite**: `metriq_gym/suites/metriq_score_1_0.json` - Exact
+  configurations and scale datapoints for [Metriq Score 1.0](../suites/metriq-score-1.0.md)
+
+Example files are not canonical Metriq Score configurations.
 
 ## Available Benchmarks
 

@@ -22,6 +22,51 @@ from typer.models import OptionInfo
 from metriq_gym.cli import job_app, suite_app
 
 
+SUITE_DISPATCH_GUIDE = """### Bundled suites and JSON files
+
+The suite argument accepts either a path to a JSON file or the name of a suite
+bundled with metriq-gym. For example, `metriq_score_1_0` resolves to the
+versioned Metriq Score 1.0 definition from any working directory.
+
+### Dispatch selected components
+
+Use `--component` (or `-c`) to dispatch one component and all of its configured
+scale points:
+
+```bash
+mgym suite dispatch metriq_score_1_0 \\
+    --component qft --provider <provider> --device <device>
+```
+
+The option is repeatable:
+
+```bash
+mgym suite dispatch metriq_score_1_0 \\
+    -c bseq -c wit --provider <provider> --device <device>
+```
+
+Unknown or repeated component names are rejected before provider
+initialization.
+
+### Dispatch a complete guarded suite
+
+Some suite definitions require an explicit `--all` opt-in before every
+configured job is dispatched:
+
+```bash
+mgym suite dispatch metriq_score_1_0 \\
+    --all --provider <provider> --device <device>
+```
+
+Without `--component` or `--all`, a guarded suite prints its runtime and cost
+warning, lists the available components, and exits before provider
+initialization.
+
+See [Metriq Score 1.0 Suite](../suites/metriq-score-1.0.md) for the versioned
+component and scale-point reference.
+"""
+
+
 def extract_param_info(annotation, default):
     """Extract parameter info from Typer's Annotated type."""
     if get_origin(annotation) is Annotated:
@@ -81,7 +126,7 @@ def extract_param_info(annotation, default):
     }
 
 
-def generate_command_docs(cmd_info, parent_name: str) -> str:
+def generate_command_docs(cmd_info, parent_name: str, extra_content: str | None = None) -> str:
     """Generate markdown documentation for a single command."""
     callback = cmd_info.callback
     name = cmd_info.name
@@ -171,11 +216,21 @@ def generate_command_docs(cmd_info, parent_name: str) -> str:
             lines.append(f"| `{opt_str}` | {type_name} | {help_text} | `{default}` |")
         lines.append("")
 
+    if extra_content:
+        lines.append(extra_content.rstrip())
+        lines.append("")
+
     lines.append("---\n")
     return "\n".join(lines)
 
 
-def generate_app_docs(subapp, app_name: str, title: str, description: str) -> str:
+def generate_app_docs(
+    subapp,
+    app_name: str,
+    title: str,
+    description: str,
+    command_extras: dict[str, str] | None = None,
+) -> str:
     """Generate documentation for all commands in a sub-app."""
     lines = [
         f"# {title}\n",
@@ -183,7 +238,8 @@ def generate_app_docs(subapp, app_name: str, title: str, description: str) -> st
     ]
 
     for cmd_info in subapp.registered_commands:
-        lines.append(generate_command_docs(cmd_info, app_name))
+        extra_content = (command_extras or {}).get(cmd_info.name)
+        lines.append(generate_command_docs(cmd_info, app_name, extra_content))
 
     return "\n".join(lines)
 
@@ -226,6 +282,7 @@ def main():
         "suite",
         "Suite Commands",
         "Commands for dispatching, monitoring, and managing benchmark suites.",
+        command_extras={"dispatch": SUITE_DISPATCH_GUIDE},
     )
     (content_dir / "suite-commands.md").write_text(suite_docs)
     print(f"Generated {content_dir / 'suite-commands.md'}")

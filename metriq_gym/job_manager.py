@@ -14,6 +14,7 @@ from typing import Any, Sequence
 from tabulate import tabulate
 from metriq_gym.constants import JobType
 from metriq_gym.paths import get_data_db_path
+from metriq_gym.platform import canonical_device_name, canonical_provider_name
 
 
 logger = logging.getLogger(__name__)
@@ -37,19 +38,20 @@ class MetriqGymJob:
     runtime_seconds: float | None = None
 
     def __post_init__(self) -> None:
-        """Keep platform and provider/device fields in sync on initialization.
+        """Populate the canonical dataset platform without rewriting runtime identifiers.
 
-        - If platform is missing, populate from provider_name/device_name.
-        - If platform exists but lacks keys, backfill them from provider/device fields.
+        ``provider_name`` and ``device_name`` retain the values needed to address the
+        runtime provider and device. The corresponding ``platform`` values are stable
+        dataset keys and may intentionally omit runtime details such as an AWS region.
         """
-        plat = self.platform or {}
-        if not plat:
-            plat = {"provider": self.provider_name, "device": self.device_name}
-        else:
-            if "provider" not in plat:
-                plat["provider"] = self.provider_name
-            if "device" not in plat:
-                plat["device"] = self.device_name
+        plat = dict(self.platform or {})
+        platform_provider = canonical_provider_name(str(plat.get("provider") or self.provider_name))
+        platform_device = canonical_device_name(
+            platform_provider,
+            str(plat.get("device") or self.device_name),
+        )
+        plat["provider"] = platform_provider
+        plat["device"] = platform_device
         self.platform = plat
 
     def num_qubits(self) -> int | None:

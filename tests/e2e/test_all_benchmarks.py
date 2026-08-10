@@ -18,10 +18,15 @@ def store_env(monkeypatch, tmp_path):
 
 def get_example_files():
     """Return all .json files in the examples directory."""
-    # Exclude LR QAOA native layout which won't work with the fully connected
-    # AER simulator device. Other LR QAOA examples should sufficiently exercise
-    # that benchmark.
-    excluded_files = {"lr_qaoa_native_layout.example.json"}
+    # Exclude benchmarks that cannot run on the local simulator:
+    # - lr_qaoa_native_layout: incompatible with the fully connected AER device.
+    # - qat_ole.example.json: fetches a 156-qubit circuit from the Quantum
+    #   Advantage Tracker and requires IBM Eagle/Heron class hardware. The
+    #   small fixture (qat_ole.small.example.json) runs locally and is included.
+    excluded_files = {
+        "lr_qaoa_native_layout.example.json",
+        "qat_ole.example.json",
+    }
     res = [f for f in EXAMPLES_DIR.glob("*.json") if f.name not in excluded_files]
     return res
 
