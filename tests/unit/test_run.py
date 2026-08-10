@@ -12,6 +12,7 @@ from qbraid.runtime import BraketDevice, JobStatus
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
 from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, BenchmarkScore
 from metriq_gym.run import (
+    main,
     load_provider,
     setup_device,
     validate_benchmark_device_capacity,
@@ -36,6 +37,16 @@ from metriq_gym.resource_estimation import (
 class FakeDevice:
     def __init__(self, id):
         self.id = id
+
+
+def test_main_loads_dotenv_from_working_directory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("MGYM_DOTENV_TEST", raising=False)
+    monkeypatch.setattr("metriq_gym.run.typer_app", lambda: None)
+    (tmp_path / ".env").write_text("MGYM_DOTENV_TEST=loaded\n")
+
+    assert main() == 0
+    assert os.environ["MGYM_DOTENV_TEST"] == "loaded"
 
 
 @pytest.fixture

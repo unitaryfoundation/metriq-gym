@@ -7,7 +7,7 @@ import os
 import sys
 import logging
 import uuid
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from tabulate import tabulate
 from typing import Any, TYPE_CHECKING, Optional
@@ -990,7 +990,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
 
 
 def main() -> int:
-    load_dotenv()
+    load_dotenv(find_dotenv(usecwd=True))
     typer_app()
     return 0
 
