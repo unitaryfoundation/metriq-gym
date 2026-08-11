@@ -6,3 +6,7 @@
 	path = submodules/QC-App-Oriented-Benchmarks
 	url = https://github.com/SRI-International/QC-App-Oriented-Benchmarks.git
 	branch = qedc-app-bms
+[submodule "submodules/QSC-Applications"]
+	path = submodules/QSC-Applications
+	url = git@github.com:hamiltonke/QSC-Applications.git
+	branch = release/v0.1

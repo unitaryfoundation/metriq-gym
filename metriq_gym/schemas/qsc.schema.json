@@ -1,75 +1,114 @@
 {
-    "$id": "metriq-gym/qsc.schema.json",
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "Quantum Simulation Circuits (QSC)",
-    "description": "QSC benchmark schema: Hamiltonian time-evolution simulation using Trotter decomposition with ground-state preparation and Pauli-basis measurement.",
-    "type": "object",
-    "properties": {
-      "benchmark_name": {
-        "type": "string",
-        "const": "QSC",
-        "description": "Name of the benchmark. Must be 'QSC' for this schema."
-      },
-      "num_qubits": {
-        "type": "integer",
-        "description": "Number of qubits (lattice sites) in the Hamiltonian.",
-        "minimum": 2,
-        "default": 5,
-        "examples": [3, 5, 8]
-      },
-      "delta": {
-        "type": "number",
-        "description": "Anisotropy parameter (Delta) for the ZZ coupling term in the Hamiltonian.",
-        "default": 0.25,
-        "examples": [0.25, 0.5, 1.0]
-      },
-      "j_coupling": {
-        "type": "number",
-        "description": "Exchange coupling strength (J) for XX, YY, and ZZ interactions.",
-        "default": 0.23,
-        "examples": [0.23, 1.0]
-      },
-      "hx": {
-        "type": "number",
-        "description": "Transverse field strength applied to each qubit.",
-        "default": 0.5,
-        "examples": [0.5, 1.0]
-      },
-      "trotter_order": {
-        "type": "integer",
-        "description": "Order of the Suzuki-Trotter decomposition.",
-        "minimum": 1,
-        "default": 2,
-        "examples": [1, 2, 4]
-      },
-      "trotter_steps": {
-        "type": "integer",
-        "description": "Number of Trotter repetitions (steps).",
-        "minimum": 1,
-        "default": 1,
-        "examples": [1, 2, 5]
-      },
-      "evolution_time": {
-        "type": "number",
-        "description": "Duration of Hamiltonian time evolution (T).",
-        "minimum": 0,
-        "default": 2.0,
-        "examples": [0.5, 1.0, 2.0, 3.0]
-      },
-      "pauli_basis": {
-        "type": "string",
-        "description": "Pauli basis for perturbation and measurement. One of 'X', 'Y', or 'Z'.",
-        "enum": ["X", "Y", "Z"],
-        "default": "X",
-        "examples": ["X", "Y", "Z"]
-      },
-      "shots": {
-        "type": "integer",
-        "description": "Number of measurement shots (repetitions).",
-        "default": 1000,
-        "minimum": 1,
-        "examples": [1000, 8192]
-      }
+  "$id": "metriq-gym/qsc.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Quantum Simulation Circuits (QSC)",
+  "description": "QSC benchmark schema: dynamical structure factor of a 1-D transverse-field Ising chain via a Ramsey-type protocol. Ground-state preparation, single-site Pauli perturbation, Hamiltonian evolution, and Pauli-basis measurement, swept over evolution time. Circuit construction and post-processing come from QSC-Applications (submodules/QSC-Applications).",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "QSC",
+      "description": "Name of the benchmark. Must be 'QSC' for this schema."
     },
-    "required": ["benchmark_name"]
-  }
+    "hamiltonian": {
+      "type": "string",
+      "enum": ["TFIM", "BAEZ"],
+      "default": "BAEZ",
+      "description": "Hamiltonian family. 'TFIM' is ZZ coupling with an X transverse field; 'BAEZ' is XX coupling with a Z transverse field, following doi/10.1073/pnas.2006103117."
+    },
+    "num_qubits": {
+      "type": "integer",
+      "description": "Number of lattice sites in the chain.",
+      "minimum": 2,
+      "default": 5,
+      "examples": [4, 5, 11]
+    },
+    "pauli_terms": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["XX", "Z"],
+      "description": "Hamiltonian terms. Two-character entries are applied to every neighbouring pair, one-character entries to every site. Note that 'BAEZ' overrides this with ['XX','Z'].",
+      "examples": [["XX", "Z"], ["ZZ", "X"]]
+    },
+    "coefs": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "default": { "XX": 3.141592653589793, "Z": -18.84955592153876 },
+      "description": "Coefficient for each Pauli term, keyed by the term string."
+    },
+    "is_periodic": {
+      "type": "boolean",
+      "default": false,
+      "description": "Closed (periodic) or open boundary conditions. 'BAEZ' supports open boundaries only."
+    },
+    "dynamics": {
+      "type": "string",
+      "enum": ["exact_dynamics", "approx_dynamics"],
+      "default": "approx_dynamics",
+      "description": "Whether to exponentiate the Hamiltonian exactly or synthesize an approximate evolution circuit."
+    },
+    "approx_name": {
+      "type": "string",
+      "enum": ["lie", "trotter", "qdrift"],
+      "default": "trotter",
+      "description": "Approximation used when dynamics is 'approx_dynamics'."
+    },
+    "trotter_order": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 2,
+      "description": "Order of the Suzuki-Trotter decomposition.",
+      "examples": [1, 2, 4]
+    },
+    "trotter_reps": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 2,
+      "description": "Repetitions per evolution step.",
+      "examples": [1, 2, 5]
+    },
+    "experiment_class": {
+      "type": "string",
+      "enum": ["DFS-CS", "DFS-FULL"],
+      "default": "DFS-CS",
+      "description": "'DFS-CS' perturbs only the center site (12 circuits per time step). 'DFS-FULL' sweeps every site, so the batch grows with the chain length."
+    },
+    "strength": {
+      "type": "number",
+      "default": 1.0,
+      "description": "Perturbation angle as a fraction of pi."
+    },
+    "time_steps": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 3,
+      "description": "Number of evolution times sampled on [0, T], endpoint inclusive, where T is set by the chain length.",
+      "examples": [3, 20, 40]
+    },
+    "perturbation_basis": {
+      "type": "string",
+      "enum": ["X", "Y", "Z"],
+      "default": "X",
+      "description": "Pauli basis (alpha) of the perturbation selected when computing the Green's function."
+    },
+    "measurement_basis": {
+      "type": "string",
+      "enum": ["X", "Y", "Z"],
+      "default": "X",
+      "description": "Pauli basis (beta) measured when computing the Green's function."
+    },
+    "output_dir": {
+      "type": "string",
+      "default": "/tmp/qsc",
+      "description": "Directory QSC-Applications writes its experiment list and metadata to during circuit construction."
+    },
+    "shots": {
+      "type": "integer",
+      "default": 1000,
+      "minimum": 1,
+      "description": "Number of measurement shots per circuit.",
+      "examples": [1000, 2048]
+    }
+  },
+  "required": ["benchmark_name"]
+}
