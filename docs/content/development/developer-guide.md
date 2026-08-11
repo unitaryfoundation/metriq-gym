@@ -119,8 +119,7 @@ metriq-gym/
 │   ├── benchmarks/      # Benchmark implementations
 │   ├── exporters/       # Result export (JSON, GitHub PR)
 │   ├── local/           # Local simulator provider
-│   ├── origin/          # OriginQ provider
-│   ├── quantinuum/      # Quantinuum provider
+│   ├── qplatform/       # Provider-specific device/job helpers
 │   ├── schemas/         # JSON schemas and examples
 │   ├── cli.py           # CLI argument parsing
 │   ├── constants.py     # JobType enum, schema mapping

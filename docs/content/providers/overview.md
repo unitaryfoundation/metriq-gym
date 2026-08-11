@@ -7,7 +7,7 @@ Metriq-Gym supports multiple quantum hardware providers through a unified interf
 We chose qBraid Runtime as our provider abstraction layer for several reasons:
 
 - **Unified interface**: qBraid provides consistent APIs for common device operations (transpilation, job submission, result retrieval) across different providers, reducing provider-specific code paths that could introduce variability in benchmark execution.
-- **Extensibility**: The provider interface is straightforward to extend. We've used it to add support for providers that qBraid doesn't natively support, including OriginQ and Quantinuum (via NEXUS).
+- **Extensibility**: The provider interface is straightforward to extend. We've used it to add support for providers that qBraid doesn't natively support, and the OriginQ and Quantinuum (via NEXUS) integrations that started out that way have since been upstreamed into qBraid.
 - **Transpilation consistency**: Using a common transpilation pipeline helps ensure that circuit transformations are applied consistently across providers, which is important for fair benchmark comparisons.
 
 Note that benchmarks executed through qBraid may differ slightly from those run through native provider SDKs due to differences in transpilation strategies or default settings. For reproducibility, Metriq-Gym records the software versions and configuration used for each benchmark run.
@@ -30,7 +30,7 @@ Metriq-Gym uses two types of provider integrations:
 
 ### qBraid-Managed Providers
 
-IBM, IonQ, Braket, and Azure use qBraid Runtime's native provider support:
+IBM, IonQ, Braket, Azure, Quantinuum (NEXUS), and OriginQ use qBraid Runtime's native provider support:
 
 ```python
 from qbraid.runtime import load_provider
@@ -39,14 +39,12 @@ provider = load_provider("ibm")
 
 ### Custom Providers
 
-Local, Quantinuum (NEXUS), and OriginQ use custom provider implementations registered via entry points:
+The local simulator provider is implemented in metriq-gym and registered via entry points:
 
 ```python
 # Registered in pyproject.toml
 [project.entry-points."qbraid.providers"]
 local = "metriq_gym.local.provider:LocalProvider"
-quantinuum = "metriq_gym.quantinuum.provider:QuantinuumProvider"
-origin = "metriq_gym.origin.provider:OriginProvider"
 ```
 
 ## Credential Configuration
