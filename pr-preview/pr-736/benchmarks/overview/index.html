@@ -2331,6 +2331,11 @@ recovery by L1 minimization).</p>
 <li>recovered_frequency (compressed sensing only): dominant frequency of the
   parity signal, which equals N only if the full N-qubit GHZ state was
   actually prepared; a partially entangled state shows a lower frequency.</li>
+<li>phase_offset (compressed sensing only): phase θ of the off-diagonal
+  element, i.e. the state (|0...0&gt; + e^{iθ}|1...1&gt;)/√2. Zero for an ideal
+  GHZ; a nonzero value exposes coherent errors (residual Z rotations,
+  frame misalignment) that leave the coherence magnitude unchanged. None
+  when the coherence is at the noise floor, where the angle is undefined.</li>
 <li>largest_passing_size / device_fraction (size search only): the largest
   searched size with fidelity above the threshold, and that size divided
   by the device size. Per-size fidelities are reported in search_sizes /
