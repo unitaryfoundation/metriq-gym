@@ -3,9 +3,10 @@
 Summary:
     Constructs a GHZ state on the device using a binary dissemination tree over
     the device's connectivity graph (logarithmic depth where connectivity
-    allows), then estimates fidelity via one of three verification methods:
-    direct fidelity estimation (DFE), parity oscillation curve fitting, or
-    compressed sensing (parity samples at random phases, sparse spectrum
+    allows), then estimates fidelity via one of four verification methods:
+    direct fidelity estimation (DFE, uniform sampling of the GHZ stabilizer
+    group), the two-setting Z/X lower bound, parity oscillation curve fitting,
+    or compressed sensing (parity samples at random phases, sparse spectrum
     recovery by L1 minimization).
 
     Two modes:
@@ -14,20 +15,24 @@ Summary:
       from the device size down to `min_qubits` (e.g. 156, 78, 39, 19, 9),
       all dispatched in a single job, and report the largest size whose
       fidelity clears `fidelity_threshold` by `confidence_sigma` standard
-      deviations. Defaults to compressed sensing: DFE bounds the non-GHZ
-      parity contribution from the observed Z distribution, and that bound
-      stops holding once 2^N outruns the shot count, which the larger searched
-      sizes always do.
+      deviations. Defaults to compressed sensing: the two-setting bound
+      corrects for the non-GHZ parity contribution using the observed Z
+      distribution, and that correction stops holding once 2^N outruns the
+      shot count, which the larger searched sizes always do.
 
 Result interpretation:
     - population: probability of measuring all-zero or all-one bitstrings (Z basis).
-    - coherence: off-diagonal element magnitude. DFE takes the global X parity
-      and subtracts the largest contribution the non-GHZ complementary pairs
-      could have made, since X^(x)N connects every bitstring to its complement
-      and not only 0...0 to 1...1; without that subtraction a product state
-      such as |+>^(x)N reports coherence 1. The oscillation methods instead
-      isolate the N-qubit Fourier component, by curve fit or by LASSO over
-      random-phase parity samples.
+    - coherence: off-diagonal element. DFE averages uniformly sampled
+      off-diagonal stabilizers X^(x)N·Z_s, an unbiased estimate of
+      2·Re(rho[0...0, 1...1]) with pure finite-sampling error (the diagonal
+      half of the stabilizer group averages exactly to the population, so the
+      Z circuit covers it with no sampling). two_setting_bound takes the
+      global X parity and subtracts the largest contribution the non-GHZ
+      complementary pairs could have made, since X^(x)N connects every
+      bitstring to its complement and not only 0...0 to 1...1; without that
+      subtraction a product state such as |+>^(x)N reports coherence 1. The
+      oscillation methods instead isolate the N-qubit Fourier component, by
+      curve fit or by LASSO over random-phase parity samples.
     - fidelity: (population + coherence) / 2.
     - recovered_frequency (compressed sensing only): dominant frequency of the
       parity signal, which equals N only if the full N-qubit GHZ state was
@@ -47,6 +52,10 @@ References:
       Phys. Rev. X 13, 041052 (2023). [arXiv:2305.03828]
     - "Compressed sensing verification of large entangled states",
       arXiv:2604.27824.
+    - Flammia & Liu, "Direct Fidelity Estimation from Few Pauli Measurements",
+      Phys. Rev. Lett. 106, 230501 (2011). [arXiv:1104.4695]
+    - da Silva, Landon-Cardinal & Poulin, "Practical Characterization of
+      Quantum Devices without Tomography", Phys. Rev. Lett. 107, 210404 (2011).
 """
 
 import logging
@@ -86,6 +95,10 @@ class GHZData(BenchmarkData):
     num_qubits: int = 0
     method: str = "dfe"
     phases: list[float] = field(default_factory=list)
+    # DFE: sampled off-diagonal stabilizers, each the list of data-qubit
+    # positions measured in the Y basis (the support of the Z string s in
+    # X^(x)N·Z_s). Polling needs them for the (-1)^{|s|/2} signs.
+    stabilizers: list[list[int]] = field(default_factory=list)
     num_flag_qubits: int = 0
     # Size-search mode: the halving size grid, how many circuits belong to
     # each size (in dispatch order), the per-size phase grids, and the
@@ -95,6 +108,7 @@ class GHZData(BenchmarkData):
     search_flag_counts: list[int] = field(default_factory=list)
     confidence_sigma: float = 1.0
     search_phases: list[list[float]] = field(default_factory=list)
+    search_stabilizers: list[list[list[int]]] = field(default_factory=list)
     fidelity_threshold: float = 0.5
 
 
@@ -262,11 +276,37 @@ def _select_flag_qubits(
     return selected
 
 
+def sample_ghz_stabilizers(
+    n: int, num_stabilizers: int, seed: int | None = None
+) -> list[list[int]]:
+    """Uniformly sample off-diagonal GHZ stabilizers for DFE.
+
+    The off-diagonal half of the GHZ stabilizer group is {X^(x)N·Z_s} with s
+    ranging over the 2^(n-1) even-weight bitstrings. As a Pauli,
+    X^(x)N·Z_s = (-1)^(|s|/2) times a tensor with Y inside the support of s
+    and X outside it. Each sample is returned as the sorted list of data-qubit
+    positions in s, i.e. the qubits to measure in the Y basis.
+
+    Uniformity: a uniform draw over all 2^n strings, with one uniformly chosen
+    bit flipped when the weight is odd, lands on every even-weight string with
+    equal probability.
+    """
+    rng = np.random.default_rng(seed)
+    samples: list[list[int]] = []
+    for _ in range(num_stabilizers):
+        bits = rng.integers(0, 2, size=n)
+        if int(bits.sum()) % 2:
+            bits[int(rng.integers(0, n))] ^= 1
+        samples.append([int(i) for i in np.flatnonzero(bits)])
+    return samples
+
+
 def build_ghz_circuits(
     graph,
     num_qubits: int,
     method: str = "dfe",
     phases: list[float] | None = None,
+    stabilizers: list[list[int]] | None = None,
     num_flag_qubits: int = 0,
 ) -> tuple[list[QuantumCircuit], list[int], list[int]]:
     """Build GHZ verification circuits using BFS on the device connectivity graph.
@@ -330,7 +370,7 @@ def build_ghz_circuits(
         if flag_qubits:
             qc.measure(flag_qubits, list(range(len(data_qubits), n_clbits)))
 
-    if method == "dfe":
+    if method == "two_setting_bound":
         # Z-basis circuit
         z_qc = _make_ghz_circuit()
         _add_measurements(z_qc)
@@ -342,6 +382,30 @@ def build_ghz_circuits(
         _add_measurements(x_qc)
 
         return [z_qc, x_qc], data_qubits, flag_qubits
+
+    elif method == "dfe":
+        if stabilizers is None:
+            raise ValueError("stabilizers required for dfe method")
+
+        # Z-basis circuit: covers the diagonal half of the stabilizer group.
+        z_qc = _make_ghz_circuit()
+        _add_measurements(z_qc)
+
+        # One circuit per sampled off-diagonal stabilizer X^(x)N·Z_s: qubits
+        # in the support of s are measured in the Y basis (Sdg; H; measure Z),
+        # the rest in X (H; measure Z).
+        stab_circuits = []
+        for y_positions in stabilizers:
+            y_set = set(y_positions)
+            stab_qc = _make_ghz_circuit()
+            for i, dq in enumerate(data_qubits):
+                if i in y_set:
+                    stab_qc.sdg(dq)
+                stab_qc.h(dq)
+            _add_measurements(stab_qc)
+            stab_circuits.append(stab_qc)
+
+        return [z_qc] + stab_circuits, data_qubits, flag_qubits
 
     elif method in ("parity_oscillation", "compressed_sensing"):
         if phases is None:
@@ -405,7 +469,7 @@ def complementary_pair_bound(z_ps: dict[str, int], n: int, total_z: int) -> floa
     measured parity leaves a valid lower bound on the GHZ coherence.
 
     The estimate is only trustworthy when the Z distribution is adequately
-    sampled; see :func:`dfe_sampling_is_adequate`.
+    sampled; see :func:`two_setting_sampling_is_adequate`.
     """
     zero, one = "0" * n, "1" * n
     seen: set[str] = set()
@@ -422,7 +486,7 @@ def complementary_pair_bound(z_ps: dict[str, int], n: int, total_z: int) -> floa
     return bound
 
 
-def dfe_sampling_is_adequate(n: int, shots: int) -> bool:
+def two_setting_sampling_is_adequate(n: int, shots: int) -> bool:
     """Whether the Z distribution can support the complementary-pair bound.
 
     The bound in :func:`complementary_pair_bound` is estimated from observed
@@ -434,14 +498,17 @@ def dfe_sampling_is_adequate(n: int, shots: int) -> bool:
     return n <= 30 and (2**n) <= shots
 
 
-def estimate_fidelity_dfe(
+def estimate_fidelity_two_setting_bound(
     z_counts: dict[str, int],
     x_counts: dict[str, int],
     n: int,
     num_flag_qubits: int,
 ) -> tuple[float, float, float, float]:
-    """Estimate GHZ fidelity using direct fidelity estimation.
+    """Estimate a GHZ fidelity lower bound from two settings (Z and X).
 
+    Not direct fidelity estimation: X^(x)N is a single element of the
+    stabilizer group, so this yields a conservative bound rather than an
+    unbiased estimate — see :func:`estimate_fidelity_dfe` for the real thing.
     The coherence is the global X parity corrected by the largest possible
     contribution from non-GHZ complementary pairs, so a separable state such
     as ``|+>^{\\otimes N}`` (parity 1, no entanglement) is not certified.
@@ -474,6 +541,74 @@ def estimate_fidelity_dfe(
     c_err = np.sqrt(max(0.0, 1 - coherence**2) / total_x)
 
     return population, coherence, p_err, c_err
+
+
+def estimate_fidelity_dfe(
+    z_counts: dict[str, int],
+    stab_counts_list: list[dict[str, int]],
+    stabilizers: list[list[int]],
+    n: int,
+    num_flag_qubits: int,
+) -> tuple[float, float, float, float]:
+    """Estimate GHZ fidelity by direct fidelity estimation (Flammia-Liu).
+
+    For a stabilizer state, F = 2^-N · sum over the stabilizer group of <S>,
+    estimated by uniform sampling. The GHZ group structure makes both halves
+    cheap:
+
+    - Diagonal half (even-weight Z strings): the character sum over the
+      even-weight subgroup vanishes except on 0^N and 1^N, so its exact
+      average IS the population — the single Z circuit covers it with no
+      sampling at all.
+    - Off-diagonal half (X^(x)N·Z_s): each sampled element is measured by one
+      X/Y-basis circuit; averaging the signed parities (-1)^(|s|/2)·parity
+      gives an unbiased estimate of the true coherence 2·Re(rho[0^N, 1^N]).
+
+    Unlike the two-setting bound there is no Z-distribution correction and no
+    shot-count validity limit; the error is pure finite sampling. The
+    coherence is signed: a GHZ state with relative phase pi honestly scores
+    fidelity 0 against GHZ+, where the two-setting bound's |parity| would
+    report 1.
+
+    Returns: (population, coherence, population_err, coherence_err)
+    """
+    z_ps = post_select_results(z_counts, num_flag_qubits)
+    total_z = sum(z_ps.values())
+    if total_z == 0 or not stab_counts_list:
+        return 0.0, 0.0, 0.0, 0.0
+
+    population = (z_ps.get("0" * n, 0) + z_ps.get("1" * n, 0)) / total_z
+    p_err = np.sqrt(population * (1 - population) / total_z)
+
+    values: list[float] = []
+    shot_vars: list[float] = []
+    for y_positions, counts in zip(stabilizers, stab_counts_list):
+        ps = post_select_results(counts, num_flag_qubits)
+        total = sum(ps.values())
+        if total == 0:
+            continue
+        even = sum(c for b, c in ps.items() if b.count("1") % 2 == 0)
+        parity = (2 * even - total) / total
+        # X·Z = -iY on each qubit in s, so X^(x)N·Z_s = (-1)^(|s|/2) × the
+        # measured X/Y tensor; |s| is even by construction.
+        sign = 1.0 if len(y_positions) % 4 == 0 else -1.0
+        values.append(sign * parity)
+        shot_vars.append((1 - parity**2) / total)
+
+    if not values:
+        return population, 0.0, float(p_err), 0.0
+
+    ell = len(values)
+    coherence = float(np.mean(values))
+    # The spread across sampled stabilizers captures both the stabilizer
+    # sampling variance and shot noise, but underestimates when all sampled
+    # values happen to coincide, so the propagated shot noise is kept as a
+    # floor. ell == 1 has no spread and falls back to shot noise alone.
+    shot_var = float(np.sum(shot_vars)) / ell**2
+    sample_var = float(np.var(values, ddof=1)) / ell if ell > 1 else 0.0
+    c_err = float(np.sqrt(max(sample_var, shot_var)))
+
+    return population, coherence, float(p_err), c_err
 
 
 def estimate_fidelity_oscillation(
@@ -713,17 +848,26 @@ def estimate_fidelity_for_method(
     phases: list[float],
     n: int,
     num_flag_qubits: int,
+    stabilizers: list[list[int]] | None = None,
 ) -> tuple[float, float, float, float, int | None, float | None, float | None]:
     """Estimate (population, coherence, p_err, c_err, recovered_frequency,
     phase_offset, phase_offset_err) for one size.
 
     ``counts`` holds the measurement counts for this size's circuits in
     dispatch order (Z-basis circuit first, then the method's other circuits).
-    ``recovered_frequency`` and the phase fields are None for methods other
-    than compressed sensing.
+    ``stabilizers`` carries the sampled Y-basis supports for dfe and is
+    ignored by other methods. ``recovered_frequency`` and the phase fields are
+    None for methods other than compressed sensing.
     """
+    if method == "two_setting_bound":
+        pop, coh, p_err, c_err = estimate_fidelity_two_setting_bound(
+            counts[0], counts[1], n, num_flag_qubits
+        )
+        return pop, coh, p_err, c_err, None, None, None
     if method == "dfe":
-        pop, coh, p_err, c_err = estimate_fidelity_dfe(counts[0], counts[1], n, num_flag_qubits)
+        pop, coh, p_err, c_err = estimate_fidelity_dfe(
+            counts[0], list(counts[1:]), stabilizers or [], n, num_flag_qubits
+        )
         return pop, coh, p_err, c_err, None, None, None
     if method == "compressed_sensing":
         return estimate_fidelity_compressed_sensing(
@@ -775,13 +919,26 @@ class GHZBenchmark(Benchmark):
             return rng.uniform(0.0, 2 * np.pi, num_phases).tolist()
         return []
 
+    def _stabilizer_sample(self, method: str, n: int) -> list[list[int]]:
+        """Sampled off-diagonal stabilizers for dfe; empty for other methods.
+
+        ell = O(1/eps^2) independent of n (Flammia-Liu); the default of 10
+        keeps the circuit count comparable to compressed sensing. Pass `seed`
+        for a reproducible draw.
+        """
+        if method != "dfe":
+            return []
+        num_stabilizers = getattr(self.params, "num_stabilizers", None) or 10
+        return sample_ghz_stabilizers(n, num_stabilizers, getattr(self.params, "seed", None))
+
     def _resolved_method(self) -> str:
         """Verification method, defaulting per mode.
 
-        Size search defaults to compressed sensing rather than DFE. DFE bounds
-        the non-GHZ parity contribution from the observed Z distribution, and
-        that bound stops being valid once 2^n outruns the shot count, which the
-        largest searched sizes always do.
+        Size search defaults to compressed sensing rather than the two-setting
+        bound: the bound corrects for the non-GHZ parity contribution using
+        the observed Z distribution, and that correction stops being valid
+        once 2^n outruns the shot count, which the largest searched sizes
+        always do.
         """
         method = getattr(self.params, "method", None)
         if method:
@@ -791,14 +948,23 @@ class GHZBenchmark(Benchmark):
     def _build_circuits(
         self, device: "QuantumDevice"
     ) -> tuple[
-        list[QuantumCircuit], list[float], int, list[int], list[int], list[list[float]], list[int]
+        list[QuantumCircuit],
+        list[float],
+        list[list[int]],
+        int,
+        list[int],
+        list[int],
+        list[list[float]],
+        list[list[list[int]]],
+        list[int],
     ]:
         """Build circuits for either mode.
 
-        Returns (circuits, phases, num_flags, search_sizes,
-        search_circuit_counts, search_phases, search_flag_counts). The search
-        lists are empty in fixed-size mode; phases is empty in search mode
-        (the per-size grids live in search_phases).
+        Returns (circuits, phases, stabilizers, num_flags, search_sizes,
+        search_circuit_counts, search_phases, search_stabilizers,
+        search_flag_counts). The search lists are empty in fixed-size mode;
+        phases/stabilizers are empty in search mode (the per-size draws live
+        in search_phases/search_stabilizers).
 
         Flag counts are the number of flags actually selected, which can be
         fewer than requested (or zero at the full device size, where no spare
@@ -811,58 +977,76 @@ class GHZBenchmark(Benchmark):
         if bool(getattr(self.params, "size_search", False)):
             min_qubits = getattr(self.params, "min_qubits", None) or 5
             sizes = bisection_sizes(graph.num_nodes(), min_qubits)
-            if method == "dfe":
+            if method == "two_setting_bound":
                 shots = getattr(self.params, "shots", 0) or 0
-                unsound = [s for s in sizes if not dfe_sampling_is_adequate(s, shots)]
+                unsound = [s for s in sizes if not two_setting_sampling_is_adequate(s, shots)]
                 if unsound:
                     logger.warning(
-                        "GHZ size search with method='dfe' at sizes %s: 2^n exceeds "
-                        "the %d shots, so the complementary-pair correction cannot be "
-                        "estimated and the reported fidelity is not a valid lower "
-                        "bound. Use compressed_sensing for these sizes.",
+                        "GHZ size search with method='two_setting_bound' at sizes %s: "
+                        "2^n exceeds the %d shots, so the complementary-pair correction "
+                        "cannot be estimated and the reported fidelity is not a valid "
+                        "lower bound. Use compressed_sensing or dfe for these sizes.",
                         unsound,
                         shots,
                     )
             circuits: list[QuantumCircuit] = []
             circuit_counts: list[int] = []
             search_phases: list[list[float]] = []
+            search_stabilizers: list[list[list[int]]] = []
             flag_counts: list[int] = []
             for size in sizes:
-                # Drawn per size so dispatch stores exactly the phases the
-                # circuits were built with (random for compressed_sensing).
+                # Drawn per size so dispatch stores exactly the phases and
+                # stabilizers the circuits were built with.
                 phases = self._phase_grid(method, size)
+                stabilizers = self._stabilizer_sample(method, size)
                 size_circuits, _, size_flags = build_ghz_circuits(
                     graph=graph,
                     num_qubits=size,
                     method=method,
                     phases=phases or None,
+                    stabilizers=stabilizers or None,
                     num_flag_qubits=num_flag_qubits,
                 )
                 circuits.extend(size_circuits)
                 circuit_counts.append(len(size_circuits))
                 search_phases.append(phases)
+                search_stabilizers.append(stabilizers)
                 flag_counts.append(len(size_flags))
-            return circuits, [], 0, sizes, circuit_counts, search_phases, flag_counts
+            return (
+                circuits,
+                [],
+                [],
+                0,
+                sizes,
+                circuit_counts,
+                search_phases,
+                search_stabilizers,
+                flag_counts,
+            )
 
         num_qubits = self.params.num_qubits
         phases = self._phase_grid(method, num_qubits)
+        stabilizers = self._stabilizer_sample(method, num_qubits)
         circuits, _, flags = build_ghz_circuits(
             graph=graph,
             num_qubits=num_qubits,
             method=method,
             phases=phases or None,
+            stabilizers=stabilizers or None,
             num_flag_qubits=num_flag_qubits,
         )
-        return circuits, phases, len(flags), [], [], [], []
+        return circuits, phases, stabilizers, len(flags), [], [], [], [], []
 
     def dispatch_handler(self, device: "QuantumDevice") -> GHZData:
         (
             circuits,
             phases,
+            stabilizers,
             num_flags,
             search_sizes,
             search_circuit_counts,
             search_phases,
+            search_stabilizers,
             search_flag_counts,
         ) = self._build_circuits(device)
         method = self._resolved_method()
@@ -877,11 +1061,13 @@ class GHZBenchmark(Benchmark):
             num_qubits=search_sizes[0] if search_sizes else self.params.num_qubits,
             method=method,
             phases=phases,
+            stabilizers=stabilizers,
             # Store the flags actually measured, not the number requested.
             num_flag_qubits=num_flags,
             search_sizes=search_sizes,
             search_circuit_counts=search_circuit_counts,
             search_phases=search_phases,
+            search_stabilizers=search_stabilizers,
             search_flag_counts=search_flag_counts,
             fidelity_threshold=getattr(self.params, "fidelity_threshold", None) or 0.5,
             confidence_sigma=(
@@ -908,7 +1094,9 @@ class GHZBenchmark(Benchmark):
 
         n = job_data.num_qubits
         pop, coh, p_err, c_err, recovered_frequency, phase, phase_err = (
-            estimate_fidelity_for_method(method, all_counts, job_data.phases, n, num_flags)
+            estimate_fidelity_for_method(
+                method, all_counts, job_data.phases, n, num_flags, job_data.stabilizers
+            )
         )
         fidelity = (pop + coh) / 2
         f_err = np.sqrt(p_err**2 + c_err**2) / 2
@@ -941,13 +1129,16 @@ class GHZBenchmark(Benchmark):
             counts_slice = all_counts[offset : offset + count]
             offset += count
             phases = job_data.search_phases[i] if job_data.search_phases else []
+            stabilizers = job_data.search_stabilizers[i] if job_data.search_stabilizers else []
             # Flags are selected per size, so strip exactly the bits measured
             # for this size rather than a single global count.
             size_flags = (
                 job_data.search_flag_counts[i] if job_data.search_flag_counts else num_flags
             )
             per_size.append(
-                estimate_fidelity_for_method(method, counts_slice, phases, size, size_flags)
+                estimate_fidelity_for_method(
+                    method, counts_slice, phases, size, size_flags, stabilizers
+                )
             )
 
         fidelities = [(pop + coh) / 2 for pop, coh, *_ in per_size]
