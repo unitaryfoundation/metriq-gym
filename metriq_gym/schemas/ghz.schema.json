@@ -94,16 +94,6 @@
         42
       ]
     },
-    "num_flag_qubits": {
-      "type": "integer",
-      "description": "Number of flag qubits for error detection via ZZ stabilizer checks. Set to 0 to disable.",
-      "default": 0,
-      "minimum": 0,
-      "examples": [
-        0,
-        2
-      ]
-    },
     "confidence_sigma": {
       "type": "number",
       "description": "Size search only: how many standard deviations a size's fidelity must clear fidelity_threshold by before it counts as passing. Keeps the discrete size score from flipping between runs when a size sits at the boundary. Set to 0 to threshold on the point estimate.",

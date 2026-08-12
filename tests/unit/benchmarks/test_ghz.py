@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 import rustworkx as rx
 from qiskit import QuantumCircuit
-from qiskit_aer import AerSimulator
 
 from metriq_gym.benchmarks.ghz import (
     GHZBenchmark,
@@ -13,13 +12,11 @@ from metriq_gym.benchmarks.ghz import (
     two_setting_sampling_is_adequate,
     GHZResult,
     _bfs_edges,
-    _select_flag_qubits,
     build_ghz_circuits,
     estimate_fidelity_compressed_sensing,
     estimate_fidelity_dfe,
     estimate_fidelity_oscillation,
     estimate_fidelity_two_setting_bound,
-    post_select_results,
     sample_ghz_stabilizers,
 )
 from metriq_gym.benchmarks.benchmark import BenchmarkScore
@@ -56,54 +53,18 @@ class TestBfsEdges:
         assert len(all_nodes) == 4
 
 
-class TestSelectFlagQubits:
-    def test_skips_candidates_with_one_data_neighbour(self):
-        # Path graph 0-1-2-3-4: qubit 3 touches only data qubit 2, so a ZZ
-        # check is impossible there and it must not be used as a flag. A
-        # single CNOT would copy the logical value and dephase the GHZ state.
-        graph = rx.generators.path_graph(5)
-        flags = _select_flag_qubits(graph, {0, 1, 2}, num_flags=1)
-        assert flags == []
-
-    def test_selects_flag_with_two_data_controls(self):
-        # Cycle 0-1-2-3-0 with data {0, 2}: qubit 1 neighbours both.
-        graph = rx.PyGraph()
-        graph.add_nodes_from(range(4))
-        graph.add_edges_from_no_data([(0, 1), (1, 2), (2, 3), (3, 0)])
-        flags = _select_flag_qubits(graph, {0, 2}, num_flags=1)
-        assert len(flags) == 1
-        flag, (ctrl_a, ctrl_b) = flags[0]
-        assert flag in (1, 3)
-        assert {ctrl_a, ctrl_b} == {0, 2}
-
-    def test_no_flags_requested(self):
-        graph = rx.generators.path_graph(5)
-        flags = _select_flag_qubits(graph, {0, 1, 2}, num_flags=0)
-        assert flags == []
-
-    def test_complete_graph_many_flags(self):
-        graph = rx.generators.complete_graph(8)
-        data = {0, 1, 2, 3}
-        flags = _select_flag_qubits(graph, data, num_flags=3)
-        assert len(flags) == 3
-        assert all(f not in data for f in flags)
-
-
 class TestBuildGhzCircuits:
     def test_two_setting_bound_returns_two_circuits(self):
         graph = rx.generators.complete_graph(4)
-        circuits, data_qubits, flag_qubits = build_ghz_circuits(
-            graph, num_qubits=4, method="two_setting_bound"
-        )
+        circuits, data_qubits = build_ghz_circuits(graph, num_qubits=4, method="two_setting_bound")
         assert len(circuits) == 2
         assert all(isinstance(c, QuantumCircuit) for c in circuits)
         assert len(data_qubits) == 4
-        assert flag_qubits == []
 
     def test_dfe_returns_one_circuit_per_stabilizer(self):
         graph = rx.generators.complete_graph(4)
         stabilizers = [[], [0, 1], [1, 2, 3, 0]]
-        circuits, data_qubits, _ = build_ghz_circuits(
+        circuits, data_qubits = build_ghz_circuits(
             graph, num_qubits=4, method="dfe", stabilizers=stabilizers
         )
         # 1 z-basis + one circuit per sampled stabilizer
@@ -125,7 +86,7 @@ class TestBuildGhzCircuits:
     def test_parity_oscillation_returns_correct_count(self):
         graph = rx.generators.complete_graph(4)
         phases = np.linspace(0, 2 * np.pi, 10, endpoint=False).tolist()
-        circuits, data_qubits, flag_qubits = build_ghz_circuits(
+        circuits, data_qubits = build_ghz_circuits(
             graph, num_qubits=4, method="parity_oscillation", phases=phases
         )
         # 1 z-basis + 10 oscillation circuits
@@ -136,7 +97,7 @@ class TestBuildGhzCircuits:
         graph = rx.generators.complete_graph(4)
         # CS uses a single-period grid; circuit shape matches parity_oscillation.
         phases = np.linspace(0, 2 * np.pi / 4, 6, endpoint=False).tolist()
-        circuits, data_qubits, flag_qubits = build_ghz_circuits(
+        circuits, data_qubits = build_ghz_circuits(
             graph, num_qubits=4, method="compressed_sensing", phases=phases
         )
         # 1 z-basis + 6 oscillation circuits
@@ -147,23 +108,6 @@ class TestBuildGhzCircuits:
         graph = rx.generators.complete_graph(4)
         with pytest.raises(ValueError, match="phases required"):
             build_ghz_circuits(graph, num_qubits=4, method="compressed_sensing")
-
-    def test_with_flag_qubits(self):
-        # Square 0-1-2-3-0 plus an ancilla 4 joined to both 0 and 2, so a real
-        # ZZ check exists. On a path graph no candidate has two data
-        # neighbours and none is selected, see the flag-selection tests.
-        graph = rx.PyGraph()
-        graph.add_nodes_from(range(5))
-        graph.add_edges_from_no_data([(0, 1), (1, 2), (2, 3), (3, 0), (0, 4), (2, 4)])
-        circuits, data_qubits, flag_qubits = build_ghz_circuits(
-            graph, num_qubits=4, method="two_setting_bound", num_flag_qubits=1
-        )
-        assert len(circuits) == 2
-        assert len(data_qubits) == 4
-        assert flag_qubits == [4]
-        assert 4 not in data_qubits
-        data_neighbours = [n for n in graph.neighbors(4) if n in set(data_qubits)]
-        assert len(data_neighbours) == 2
 
     def test_layout_is_deterministic(self):
         # rustworkx neighbour order is not stable, so the selection must sort;
@@ -199,29 +143,6 @@ class TestBuildGhzCircuits:
             build_ghz_circuits(graph, num_qubits=6, method="two_setting_bound")
 
 
-class TestPostSelectResults:
-    def test_no_flags(self):
-        counts = {"00": 50, "11": 50}
-        result = post_select_results(counts, num_flag_qubits=0)
-        assert result == counts
-
-    def test_filters_by_flag_qubits(self):
-        # Format: [flags][data] — flags on the left
-        counts = {
-            "000": 40,  # flag=0, data=00 -> keep
-            "011": 30,  # flag=0, data=11 -> keep
-            "100": 20,  # flag=1, data=00 -> discard
-            "111": 10,  # flag=1, data=11 -> discard
-        }
-        result = post_select_results(counts, num_flag_qubits=1)
-        assert result == {"00": 40, "11": 30}
-
-    def test_all_flagged_returns_empty(self):
-        counts = {"100": 50, "111": 50}
-        result = post_select_results(counts, num_flag_qubits=1)
-        assert result == {}
-
-
 class TestEstimateFidelityTwoSettingBound:
     def test_perfect_ghz(self):
         n = 3
@@ -232,9 +153,7 @@ class TestEstimateFidelityTwoSettingBound:
             "101": 250,
             "110": 250,
         }  # all even parity
-        pop, coh, p_err, c_err = estimate_fidelity_two_setting_bound(
-            z_counts, x_counts, n, num_flag_qubits=0
-        )
+        pop, coh, p_err, c_err = estimate_fidelity_two_setting_bound(z_counts, x_counts, n)
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0)
 
@@ -253,9 +172,7 @@ class TestEstimateFidelityTwoSettingBound:
             "100": 250,
             "111": 250,
         }  # all odd parity
-        pop, coh, _, _ = estimate_fidelity_two_setting_bound(
-            z_counts, x_counts, n, num_flag_qubits=0
-        )
+        pop, coh, _, _ = estimate_fidelity_two_setting_bound(z_counts, x_counts, n)
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0)
 
@@ -264,14 +181,12 @@ class TestEstimateFidelityTwoSettingBound:
         # Uniform distribution over all 4 bitstrings
         z_counts = {"00": 250, "01": 250, "10": 250, "11": 250}
         x_counts = {"00": 250, "01": 250, "10": 250, "11": 250}
-        pop, coh, _, _ = estimate_fidelity_two_setting_bound(
-            z_counts, x_counts, n, num_flag_qubits=0
-        )
+        pop, coh, _, _ = estimate_fidelity_two_setting_bound(z_counts, x_counts, n)
         assert pop == pytest.approx(0.5)
         assert coh == pytest.approx(0.0)
 
     def test_empty_counts_returns_zero(self):
-        pop, coh, p_err, c_err = estimate_fidelity_two_setting_bound({}, {}, 3, 0)
+        pop, coh, p_err, c_err = estimate_fidelity_two_setting_bound({}, {}, 3)
         assert pop == 0.0
         assert coh == 0.0
 
@@ -314,13 +229,13 @@ class TestEstimateFidelityDfe:
 
     def _run_dfe(self, n, stabilizers, inject_gate=None):
         graph = rx.generators.complete_graph(n)
-        circuits, data_qubits, _ = build_ghz_circuits(
+        circuits, data_qubits = build_ghz_circuits(
             graph, num_qubits=n, method="dfe", stabilizers=stabilizers
         )
         if inject_gate is not None:
             circuits = [self._inject_after_prep(qc, inject_gate, data_qubits[0]) for qc in circuits]
         counts = [self._exact_counts(qc) for qc in circuits]
-        return estimate_fidelity_dfe(counts[0], counts[1:], stabilizers, n, num_flag_qubits=0)
+        return estimate_fidelity_dfe(counts[0], counts[1:], stabilizers, n)
 
     def test_ideal_ghz_fidelity_one(self):
         # Include both sign classes: |s| % 4 == 0 (sign +1) and |s| % 4 == 2
@@ -355,13 +270,13 @@ class TestEstimateFidelityDfe:
         }  # uniform Z distribution of |+>^n
         # Each Y on |+> gives ±1 with equal probability: uniform parity.
         stab_counts = [{"0" * n: 500, "0" * (n - 1) + "1": 500} for _ in stabilizers]
-        pop, coh, _, _ = estimate_fidelity_dfe(z_counts, stab_counts, stabilizers, n, 0)
+        pop, coh, _, _ = estimate_fidelity_dfe(z_counts, stab_counts, stabilizers, n)
         assert pop == pytest.approx(2 ** (1 - n))
         assert coh == pytest.approx(0.0, abs=1e-9)
         assert (pop + coh) / 2 < 0.5
 
     def test_empty_counts_returns_zero(self):
-        pop, coh, p_err, c_err = estimate_fidelity_dfe({}, [], [], 3, 0)
+        pop, coh, p_err, c_err = estimate_fidelity_dfe({}, [], [], 3)
         assert pop == 0.0
         assert coh == 0.0
 
@@ -386,13 +301,13 @@ class TestEstimateFidelityOscillation:
 
         z_counts = {"0000": 500, "1111": 500}
         pop, coh, _, _ = estimate_fidelity_oscillation(
-            z_counts, osc_counts_list, phases.tolist(), n, num_flag_qubits=0
+            z_counts, osc_counts_list, phases.tolist(), n
         )
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0, abs=0.05)
 
     def test_empty_z_counts(self):
-        pop, coh, _, _ = estimate_fidelity_oscillation({}, [], [], 3, 0)
+        pop, coh, _, _ = estimate_fidelity_oscillation({}, [], [], 3)
         assert pop == 0.0
         assert coh == 0.0
 
@@ -423,7 +338,7 @@ class TestEstimateFidelityCompressedSensing:
 
         z_counts = {"0" * n: 1000, "1" * n: 1000}
         pop, coh, _p_err, c_err, freq, phase, phase_err = estimate_fidelity_compressed_sensing(
-            z_counts, osc_counts_list, phases, n, num_flag_qubits=0
+            z_counts, osc_counts_list, phases, n
         )
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0, abs=0.02)
@@ -442,7 +357,7 @@ class TestEstimateFidelityCompressedSensing:
         )
         z_counts = {"0" * n: 800, "1" * n: 200}
         pop, coh, _p_err, _c_err, freq, phase, _phase_err = estimate_fidelity_compressed_sensing(
-            z_counts, osc_counts_list, phases, n, num_flag_qubits=0
+            z_counts, osc_counts_list, phases, n
         )
         # Population reflects whatever Z-basis stats the user provided.
         assert pop == pytest.approx(1.0)
@@ -465,7 +380,7 @@ class TestEstimateFidelityCompressedSensing:
         )
         z_counts = {"0" * n: 500, "1" * n: 500}
         _pop, coh, _p_err, _c_err, freq, _phase, _phase_err = estimate_fidelity_compressed_sensing(
-            z_counts, osc_counts_list, phases, n, num_flag_qubits=0
+            z_counts, osc_counts_list, phases, n
         )
         assert freq == k
         assert coh == pytest.approx(0.25, abs=0.03)
@@ -477,7 +392,7 @@ class TestEstimateFidelityCompressedSensing:
         osc_counts_list = [{"000": 500, "001": 500} for _ in phases]
         z_counts = {"000": 250, "001": 250, "010": 250, "011": 250}
         pop, coh, _p_err, _c_err, freq, phase, phase_err = estimate_fidelity_compressed_sensing(
-            z_counts, osc_counts_list, phases, n, num_flag_qubits=0
+            z_counts, osc_counts_list, phases, n
         )
         assert coh == pytest.approx(0.0, abs=0.02)
         assert pop == pytest.approx(0.25)
@@ -487,9 +402,7 @@ class TestEstimateFidelityCompressedSensing:
         assert phase_err is None
 
     def test_empty_z_counts(self):
-        pop, coh, _, _, freq, phase, phase_err = estimate_fidelity_compressed_sensing(
-            {}, [], [], 3, 0
-        )
+        pop, coh, _, _, freq, phase, phase_err = estimate_fidelity_compressed_sensing({}, [], [], 3)
         assert pop == 0.0
         assert coh == 0.0
         assert freq == 0
@@ -508,8 +421,8 @@ class TestEstimateFidelityCompressedSensing:
         n = 3
         graph = rx.generators.path_graph(n)
         phases = self._random_phases(9)
-        circuits, data_qubits, _flags = build_ghz_circuits(
-            graph, num_qubits=n, method="compressed_sensing", phases=phases, num_flag_qubits=0
+        circuits, data_qubits = build_ghz_circuits(
+            graph, num_qubits=n, method="compressed_sensing", phases=phases
         )
 
         def exact_counts(qc, shots=200_000):
@@ -530,9 +443,7 @@ class TestEstimateFidelityCompressedSensing:
         z_counts = exact_counts(circuits[0])
         osc_counts = [exact_counts(inject_after_prep(qc)) for qc in circuits[1:]]
 
-        *_, phase, phase_err = estimate_fidelity_compressed_sensing(
-            z_counts, osc_counts, phases, n, num_flag_qubits=0
-        )
+        *_, phase, phase_err = estimate_fidelity_compressed_sensing(z_counts, osc_counts, phases, n)
         assert phase == pytest.approx(delta, abs=0.05)
         assert phase_err is not None and phase_err >= 0.0
 
@@ -644,7 +555,7 @@ class TestSizeSearchPoll:
             search_phases=[[], []],
             fidelity_threshold=0.5,
         )
-        result = self._make_benchmark()._poll_size_search(job_data, counts, "two_setting_bound", 0)
+        result = self._make_benchmark()._poll_size_search(job_data, counts, "two_setting_bound")
         assert result.largest_passing_size is not None
         assert result.largest_passing_size.value == 4
         assert result.device_fraction is not None
@@ -668,7 +579,7 @@ class TestSizeSearchPoll:
             search_phases=[[], []],
             fidelity_threshold=0.5,
         )
-        result = self._make_benchmark()._poll_size_search(job_data, counts, "two_setting_bound", 0)
+        result = self._make_benchmark()._poll_size_search(job_data, counts, "two_setting_bound")
         assert result.largest_passing_size.value == 0
         assert result.device_fraction.value == 0
         assert result.compute_score().value == 0
@@ -686,7 +597,7 @@ class TestSizeSearchPoll:
             search_phases=[[], []],
             fidelity_threshold=0.5,
         )
-        result = self._make_benchmark()._poll_size_search(job_data, counts, "two_setting_bound", 0)
+        result = self._make_benchmark()._poll_size_search(job_data, counts, "two_setting_bound")
         assert result.largest_passing_size.value == 8
         assert result.device_fraction.value == pytest.approx(1.0)
 
@@ -708,7 +619,7 @@ class TestSeparableStateNotCertified:
     def test_plus_state_reports_true_fidelity(self):
         n = 8
         z, x = self._plus_state_counts(n, 2**n * 4)
-        pop, coh, _, _ = estimate_fidelity_two_setting_bound(z, x, n, 0)
+        pop, coh, _, _ = estimate_fidelity_two_setting_bound(z, x, n)
         fidelity = (pop + coh) / 2
         # <GHZ|+^N>^2 = 2^(1-N)
         assert fidelity == pytest.approx(2 ** (1 - n), abs=1e-9)
@@ -719,7 +630,7 @@ class TestSeparableStateNotCertified:
         shots = 1000
         z = {"0" * n: shots // 2, "1" * n: shots // 2}
         x = {"0" * n: shots}
-        pop, coh, _, _ = estimate_fidelity_two_setting_bound(z, x, n, 0)
+        pop, coh, _, _ = estimate_fidelity_two_setting_bound(z, x, n)
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0)
 
@@ -730,36 +641,17 @@ class TestSeparableStateNotCertified:
         assert two_setting_sampling_is_adequate(50, 1000) is False
 
 
-class TestFlagChecksPreserveIdealState:
-    def test_path_flag_does_not_dephase(self):
-        # A flag with one data neighbour copies the logical value; measuring it
-        # collapsed the ideal GHZ to fidelity ~0.5. No flag is now selected.
-        graph = rx.generators.path_graph(6)
-        circuits, data_qubits, flag_qubits = build_ghz_circuits(
-            graph, num_qubits=4, method="two_setting_bound", num_flag_qubits=1
-        )
-        assert flag_qubits == []
-        sim = AerSimulator()
-        counts = [sim.run(c, shots=8192).result().get_counts() for c in circuits]
-        pop, coh, _, _ = estimate_fidelity_two_setting_bound(
-            counts[0], counts[1], 4, len(flag_qubits)
-        )
-        assert (pop + coh) / 2 == pytest.approx(1.0, abs=0.02)
-
-
 class TestPreparationDepth:
     def test_all_to_all_is_logarithmic(self):
         # A fixed-root star runs every CNOT off qubit 0 and serialises.
         n = 16
         graph = rx.generators.complete_graph(n)
-        circuits, _, _ = build_ghz_circuits(graph, num_qubits=n, method="two_setting_bound")
+        circuits, _ = build_ghz_circuits(graph, num_qubits=n, method="two_setting_bound")
         assert circuits[0].depth() < n // 2
 
     def test_path_still_builds(self):
         graph = rx.generators.path_graph(8)
-        circuits, data_qubits, _ = build_ghz_circuits(
-            graph, num_qubits=8, method="two_setting_bound"
-        )
+        circuits, data_qubits = build_ghz_circuits(graph, num_qubits=8, method="two_setting_bound")
         assert len(data_qubits) == 8
 
 
@@ -792,46 +684,3 @@ class TestSizeSearchDefaults:
 
     def test_explicit_method_respected(self):
         assert self._bench(size_search=True, method="dfe")._resolved_method() == "dfe"
-
-
-class TestFlagCoverage:
-    """Flag pairs are chosen to cover distinct data qubits.
-
-    Picking the two lowest-indexed neighbours of the lowest-indexed candidates
-    re-checks the same corner of the register: on the graph below that leaves
-    half the chain unwatched no matter how many flags are requested.
-    """
-
-    def _graph(self):
-        # Data 0..5. Ancillas 10 and 11 both bridge (0,1); 12 bridges (2,3);
-        # 13 bridges (4,5).
-        graph = rx.PyGraph()
-        graph.add_nodes_from(range(14))
-        graph.add_edges_from_no_data(
-            [(10, 0), (10, 1), (11, 0), (11, 1), (12, 2), (12, 3), (13, 4), (13, 5)]
-        )
-        return graph
-
-    def test_second_flag_covers_new_data_qubits(self):
-        selected = _select_flag_qubits(self._graph(), {0, 1, 2, 3, 4, 5}, num_flags=2)
-        covered = set()
-        for _flag, pair in selected:
-            covered.update(pair)
-        # Index-greedy would take flags 10 and 11, both checking (0, 1).
-        assert len(selected) == 2
-        assert covered == {0, 1, 2, 3}
-
-    def test_three_flags_cover_whole_chain(self):
-        selected = _select_flag_qubits(self._graph(), {0, 1, 2, 3, 4, 5}, num_flags=3)
-        covered = set()
-        for _flag, pair in selected:
-            covered.update(pair)
-        assert covered == {0, 1, 2, 3, 4, 5}
-
-    def test_every_pair_is_two_data_neighbours(self):
-        graph = self._graph()
-        data = {0, 1, 2, 3, 4, 5}
-        for flag, (ctrl_a, ctrl_b) in _select_flag_qubits(graph, data, num_flags=3):
-            assert ctrl_a != ctrl_b
-            assert {ctrl_a, ctrl_b} <= data
-            assert {ctrl_a, ctrl_b} <= set(graph.neighbors(flag))
