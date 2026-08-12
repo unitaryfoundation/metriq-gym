@@ -2300,9 +2300,10 @@ compilation, communication, and execution overhead.</p>
   <summary>Summary</summary>
   <p>Constructs a GHZ state on the device using a binary dissemination tree over
 the device's connectivity graph (logarithmic depth where connectivity
-allows), then estimates fidelity via one of three verification methods:
-direct fidelity estimation (DFE), parity oscillation curve fitting, or
-compressed sensing (parity samples at random phases, sparse spectrum
+allows), then estimates fidelity via one of four verification methods:
+direct fidelity estimation (DFE, uniform sampling of the GHZ stabilizer
+group), the two-setting Z/X lower bound, parity oscillation curve fitting,
+or compressed sensing (parity samples at random phases, sparse spectrum
 recovery by L1 minimization).</p>
 <p>Two modes:
 - Fixed size (<code>num_qubits</code>): verify a GHZ state of one requested size.
@@ -2310,23 +2311,27 @@ recovery by L1 minimization).</p>
   from the device size down to <code>min_qubits</code> (e.g. 156, 78, 39, 19, 9),
   all dispatched in a single job, and report the largest size whose
   fidelity clears <code>fidelity_threshold</code> by <code>confidence_sigma</code> standard
-  deviations. Defaults to compressed sensing: DFE bounds the non-GHZ
-  parity contribution from the observed Z distribution, and that bound
-  stops holding once 2^N outruns the shot count, which the larger searched
-  sizes always do.</p>
+  deviations. Defaults to compressed sensing: the two-setting bound
+  corrects for the non-GHZ parity contribution using the observed Z
+  distribution, and that correction stops holding once 2^N outruns the
+  shot count, which the larger searched sizes always do.</p>
 </details>
 
 <details class="result-interpretation" open>
   <summary>Result interpretation</summary>
   <ul>
 <li>population: probability of measuring all-zero or all-one bitstrings (Z basis).</li>
-<li>coherence: off-diagonal element magnitude. DFE takes the global X parity
-  and subtracts the largest contribution the non-GHZ complementary pairs
-  could have made, since X^(x)N connects every bitstring to its complement
-  and not only 0...0 to 1...1; without that subtraction a product state
-  such as |+&gt;^(x)N reports coherence 1. The oscillation methods instead
-  isolate the N-qubit Fourier component, by curve fit or by LASSO over
-  random-phase parity samples.</li>
+<li>coherence: off-diagonal element. DFE averages uniformly sampled
+  off-diagonal stabilizers X^(x)N·Z_s, an unbiased estimate of
+  2·Re(rho[0...0, 1...1]) with pure finite-sampling error (the diagonal
+  half of the stabilizer group averages exactly to the population, so the
+  Z circuit covers it with no sampling). two_setting_bound takes the
+  global X parity and subtracts the largest contribution the non-GHZ
+  complementary pairs could have made, since X^(x)N connects every
+  bitstring to its complement and not only 0...0 to 1...1; without that
+  subtraction a product state such as |+&gt;^(x)N reports coherence 1. The
+  oscillation methods instead isolate the N-qubit Fourier component, by
+  curve fit or by LASSO over random-phase parity samples.</li>
 <li>fidelity: (population + coherence) / 2.</li>
 <li>recovered_frequency (compressed sensing only): dominant frequency of the
   parity signal, which equals N only if the full N-qubit GHZ state was
@@ -2350,6 +2355,10 @@ recovery by L1 minimization).</p>
   Phys. Rev. X 13, 041052 (2023). [arXiv:2305.03828]</li>
 <li>"Compressed sensing verification of large entangled states",
   arXiv:2604.27824.</li>
+<li>Flammia &amp; Liu, "Direct Fidelity Estimation from Few Pauli Measurements",
+  Phys. Rev. Lett. 106, 230501 (2011). [arXiv:1104.4695]</li>
+<li>da Silva, Landon-Cardinal &amp; Poulin, "Practical Characterization of
+  Quantum Devices without Tomography", Phys. Rev. Lett. 107, 210404 (2011).</li>
 </ul>
 </details>
 
