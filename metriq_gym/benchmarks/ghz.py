@@ -32,6 +32,11 @@ Result interpretation:
     - recovered_frequency (compressed sensing only): dominant frequency of the
       parity signal, which equals N only if the full N-qubit GHZ state was
       actually prepared; a partially entangled state shows a lower frequency.
+    - phase_offset (compressed sensing only): phase θ of the off-diagonal
+      element, i.e. the state (|0...0> + e^{iθ}|1...1>)/√2. Zero for an ideal
+      GHZ; a nonzero value exposes coherent errors (residual Z rotations,
+      frame misalignment) that leave the coherence magnitude unchanged. None
+      when the coherence is at the noise floor, where the angle is undefined.
     - largest_passing_size / device_fraction (size search only): the largest
       searched size with fidelity above the threshold, and that size divided
       by the device size. Per-size fidelities are reported in search_sizes /
@@ -95,8 +100,12 @@ class GHZData(BenchmarkData):
 
 class GHZResult(BenchmarkResult):
     population: BenchmarkScore = Field(description="Z-basis population of |0...0> + |1...1>")
-    coherence: BenchmarkScore = Field(description="Off-diagonal coherence (X-basis parity or oscillation amplitude)")
-    fidelity: BenchmarkScore = Field(description="GHZ state fidelity lower bound: (population + coherence) / 2")
+    coherence: BenchmarkScore = Field(
+        description="Off-diagonal coherence (X-basis parity or oscillation amplitude)"
+    )
+    fidelity: BenchmarkScore = Field(
+        description="GHZ state fidelity lower bound: (population + coherence) / 2"
+    )
     recovered_frequency: int | None = Field(
         default=None,
         description=(
@@ -104,6 +113,19 @@ class GHZResult(BenchmarkResult):
             "equals num_qubits only if the full GHZ state was prepared. "
             "None for other methods."
         ),
+    )
+    phase_offset: float | None = Field(
+        default=None,
+        description=(
+            "Phase θ of the GHZ off-diagonal element recovered by compressed "
+            "sensing, i.e. the prepared state is (|0...0> + e^{iθ}|1...1>)/√2. "
+            "Zero for an ideal GHZ; nonzero values indicate coherent errors. "
+            "None for other methods or when the coherence is at the noise floor."
+        ),
+    )
+    phase_offset_err: float | None = Field(
+        default=None,
+        description="Uncertainty on phase_offset (c_err / coherence); None when phase_offset is None.",
     )
     largest_passing_size: BenchmarkScore | None = Field(
         default=None,
@@ -557,7 +579,7 @@ def estimate_fidelity_compressed_sensing(
     phases: list[float],
     n: int,
     num_flag_qubits: int,
-) -> tuple[float, float, float, float, int]:
+) -> tuple[float, float, float, float, int, float | None, float | None]:
     """Estimate GHZ fidelity via compressed sensing.
 
     Samples the parity signal at M random phases on [0, 2π) and recovers its
@@ -572,13 +594,21 @@ def estimate_fidelity_compressed_sensing(
     (a k-qubit entangled core oscillates at frequency k, not n).
     See arXiv:2604.27824.
 
-    Returns: (population, coherence, population_err, coherence_err, recovered_frequency)
+    The frequency-n quadrature coefficients also encode the phase θ of the
+    off-diagonal element — the prepared state is (|0...0> + e^{iθ}|1...1>)/√2 —
+    which is recovered at no extra cost. The measured per-qubit operator is
+    cos(φ)X − sin(φ)Y (Rz(φ) then H then a Z measurement), so the coherence
+    signal is A·cos(nφ + θ) and θ = atan2(−b_n, a_n). The angle is undefined
+    when the amplitude sits at the noise floor, so it is None there.
+
+    Returns: (population, coherence, population_err, coherence_err,
+    recovered_frequency, phase_offset, phase_offset_err)
     """
     z_ps = post_select_results(z_counts, num_flag_qubits)
     total_z = sum(z_ps.values())
 
     if total_z == 0:
-        return 0.0, 0.0, 0.0, 0.0, 0
+        return 0.0, 0.0, 0.0, 0.0, 0, None, None
 
     population = (z_ps.get("0" * n, 0) + z_ps.get("1" * n, 0)) / total_z
     p_err = np.sqrt(population * (1 - population) / total_z)
@@ -599,7 +629,7 @@ def estimate_fidelity_compressed_sensing(
 
     M = len(parities)
     if M == 0:
-        return population, 0.0, p_err, 0.0, 0
+        return population, 0.0, p_err, 0.0, 0, None, None
 
     dictionary = _cosine_dictionary(np.asarray(phases), n)
     signal = np.asarray(parities)
@@ -642,7 +672,15 @@ def estimate_fidelity_compressed_sensing(
     # the total parity variance.
     c_err = (np.sqrt(2.0) / M) * float(np.sqrt(np.sum(parity_vars)))
 
-    return population, coherence, p_err, c_err, recovered_frequency
+    # Phase of the frequency-n component (see docstring for the convention).
+    # Undefined when the amplitude is within noise of zero: atan2 of noise.
+    phase_offset: float | None = None
+    phase_offset_err: float | None = None
+    if coherence > max(2.0 * c_err, 1e-9):
+        phase_offset = float(np.arctan2(-coeffs[2 * n], coeffs[2 * n - 1]))
+        phase_offset_err = float(c_err / coherence)
+
+    return population, coherence, p_err, c_err, recovered_frequency, phase_offset, phase_offset_err
 
 
 def bisection_sizes(device_size: int, min_qubits: int) -> list[int]:
@@ -654,8 +692,7 @@ def bisection_sizes(device_size: int, min_qubits: int) -> list[int]:
     """
     if device_size < min_qubits:
         raise ValueError(
-            f"Device exposes {device_size} qubits, below the search lower bound "
-            f"of {min_qubits}"
+            f"Device exposes {device_size} qubits, below the search lower bound of {min_qubits}"
         )
     sizes: list[int] = []
     n = device_size
@@ -676,25 +713,26 @@ def estimate_fidelity_for_method(
     phases: list[float],
     n: int,
     num_flag_qubits: int,
-) -> tuple[float, float, float, float, int | None]:
-    """Estimate (population, coherence, p_err, c_err, recovered_frequency) for one size.
+) -> tuple[float, float, float, float, int | None, float | None, float | None]:
+    """Estimate (population, coherence, p_err, c_err, recovered_frequency,
+    phase_offset, phase_offset_err) for one size.
 
     ``counts`` holds the measurement counts for this size's circuits in
     dispatch order (Z-basis circuit first, then the method's other circuits).
-    ``recovered_frequency`` is None for methods other than compressed sensing.
+    ``recovered_frequency`` and the phase fields are None for methods other
+    than compressed sensing.
     """
     if method == "dfe":
         pop, coh, p_err, c_err = estimate_fidelity_dfe(counts[0], counts[1], n, num_flag_qubits)
-        return pop, coh, p_err, c_err, None
+        return pop, coh, p_err, c_err, None, None, None
     if method == "compressed_sensing":
-        pop, coh, p_err, c_err, recovered = estimate_fidelity_compressed_sensing(
+        return estimate_fidelity_compressed_sensing(
             counts[0], list(counts[1:]), phases, n, num_flag_qubits
         )
-        return pop, coh, p_err, c_err, recovered
     pop, coh, p_err, c_err = estimate_fidelity_oscillation(
         counts[0], list(counts[1:]), phases, n, num_flag_qubits
     )
-    return pop, coh, p_err, c_err, None
+    return pop, coh, p_err, c_err, None, None, None
 
 
 # ---------------------------------------------------------------------------
@@ -869,8 +907,8 @@ class GHZBenchmark(Benchmark):
             return self._poll_size_search(job_data, all_counts, method, num_flags)
 
         n = job_data.num_qubits
-        pop, coh, p_err, c_err, recovered_frequency = estimate_fidelity_for_method(
-            method, all_counts, job_data.phases, n, num_flags
+        pop, coh, p_err, c_err, recovered_frequency, phase, phase_err = (
+            estimate_fidelity_for_method(method, all_counts, job_data.phases, n, num_flags)
         )
         fidelity = (pop + coh) / 2
         f_err = np.sqrt(p_err**2 + c_err**2) / 2
@@ -880,6 +918,8 @@ class GHZBenchmark(Benchmark):
             coherence=BenchmarkScore(value=coh, uncertainty=c_err),
             fidelity=BenchmarkScore(value=fidelity, uncertainty=f_err),
             recovered_frequency=recovered_frequency,
+            phase_offset=phase,
+            phase_offset_err=phase_err,
         )
 
     def _poll_size_search(
@@ -892,7 +932,9 @@ class GHZBenchmark(Benchmark):
         sizes = job_data.search_sizes
         threshold = job_data.fidelity_threshold
         sigma = job_data.confidence_sigma
-        per_size: list[tuple[float, float, float, float, int | None]] = []
+        per_size: list[
+            tuple[float, float, float, float, int | None, float | None, float | None]
+        ] = []
         offset = 0
         for i, size in enumerate(sizes):
             count = job_data.search_circuit_counts[i]
@@ -908,9 +950,9 @@ class GHZBenchmark(Benchmark):
                 estimate_fidelity_for_method(method, counts_slice, phases, size, size_flags)
             )
 
-        fidelities = [(pop + coh) / 2 for pop, coh, _, _, _ in per_size]
+        fidelities = [(pop + coh) / 2 for pop, coh, *_ in per_size]
         uncertainties = [
-            float(np.sqrt(p_err**2 + c_err**2) / 2) for _, _, p_err, c_err, _ in per_size
+            float(np.sqrt(p_err**2 + c_err**2) / 2) for _, _, p_err, c_err, *_ in per_size
         ]
 
         # Sizes are searched largest-first; the first one clearing the
@@ -929,7 +971,7 @@ class GHZBenchmark(Benchmark):
         # size; when nothing passes, the smallest size attempted (the one most
         # likely to have succeeded).
         headline = passing_index if passing_index is not None else len(sizes) - 1
-        pop, coh, p_err, c_err, recovered_frequency = per_size[headline]
+        pop, coh, p_err, c_err, recovered_frequency, phase, phase_err = per_size[headline]
 
         return GHZResult(
             population=BenchmarkScore(value=pop, uncertainty=p_err),
@@ -938,6 +980,8 @@ class GHZBenchmark(Benchmark):
                 value=fidelities[headline], uncertainty=uncertainties[headline]
             ),
             recovered_frequency=recovered_frequency,
+            phase_offset=phase,
+            phase_offset_err=phase_err,
             largest_passing_size=BenchmarkScore(value=largest_passing),
             device_fraction=BenchmarkScore(value=largest_passing / device_size),
             search_sizes=list(sizes),

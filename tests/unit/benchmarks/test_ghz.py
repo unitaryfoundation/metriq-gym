@@ -295,13 +295,16 @@ class TestEstimateFidelityCompressedSensing:
         )
 
         z_counts = {"0" * n: 1000, "1" * n: 1000}
-        pop, coh, _p_err, c_err, freq = estimate_fidelity_compressed_sensing(
+        pop, coh, _p_err, c_err, freq, phase, phase_err = estimate_fidelity_compressed_sensing(
             z_counts, osc_counts_list, phases, n, num_flag_qubits=0
         )
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0, abs=0.02)
         assert freq == n
         assert c_err >= 0.0
+        # An ideal GHZ signal cos(nφ) carries no phase offset.
+        assert phase == pytest.approx(0.0, abs=0.05)
+        assert phase_err is not None and phase_err >= 0.0
 
     def test_recovers_amplitude_below_one(self):
         n = 5
@@ -311,7 +314,7 @@ class TestEstimateFidelityCompressedSensing:
             n, phases, shots=5000, parity_fn=lambda phi: target_amplitude * np.cos(n * phi + 0.7)
         )
         z_counts = {"0" * n: 800, "1" * n: 200}
-        pop, coh, _p_err, _c_err, freq = estimate_fidelity_compressed_sensing(
+        pop, coh, _p_err, _c_err, freq, phase, _phase_err = estimate_fidelity_compressed_sensing(
             z_counts, osc_counts_list, phases, n, num_flag_qubits=0
         )
         # Population reflects whatever Z-basis stats the user provided.
@@ -319,6 +322,8 @@ class TestEstimateFidelityCompressedSensing:
         # CS estimates magnitude regardless of phase offset.
         assert coh == pytest.approx(target_amplitude, abs=0.03)
         assert freq == n
+        # The signal cos(nφ + 0.7) carries phase offset 0.7.
+        assert phase == pytest.approx(0.7, abs=0.05)
 
     def test_broken_ghz_recovers_actual_size(self):
         # Intended 12-qubit GHZ but only a 10-qubit entangled core, with the
@@ -332,7 +337,7 @@ class TestEstimateFidelityCompressedSensing:
             n, phases, shots=100_000, parity_fn=lambda phi: np.cos(k * phi) * np.cos(phi) ** 2
         )
         z_counts = {"0" * n: 500, "1" * n: 500}
-        _pop, coh, _p_err, _c_err, freq = estimate_fidelity_compressed_sensing(
+        _pop, coh, _p_err, _c_err, freq, _phase, _phase_err = estimate_fidelity_compressed_sensing(
             z_counts, osc_counts_list, phases, n, num_flag_qubits=0
         )
         assert freq == k
@@ -344,18 +349,65 @@ class TestEstimateFidelityCompressedSensing:
         # P(φ) = 0 for every phase ⇒ empty spectrum.
         osc_counts_list = [{"000": 500, "001": 500} for _ in phases]
         z_counts = {"000": 250, "001": 250, "010": 250, "011": 250}
-        pop, coh, _p_err, _c_err, freq = estimate_fidelity_compressed_sensing(
+        pop, coh, _p_err, _c_err, freq, phase, phase_err = estimate_fidelity_compressed_sensing(
             z_counts, osc_counts_list, phases, n, num_flag_qubits=0
         )
         assert coh == pytest.approx(0.0, abs=0.02)
         assert pop == pytest.approx(0.25)
         assert freq == 0
+        # No signal means the phase is undefined, not atan2 of noise.
+        assert phase is None
+        assert phase_err is None
 
     def test_empty_z_counts(self):
-        pop, coh, _, _, freq = estimate_fidelity_compressed_sensing({}, [], [], 3, 0)
+        pop, coh, _, _, freq, phase, phase_err = estimate_fidelity_compressed_sensing(
+            {}, [], [], 3, 0
+        )
         assert pop == 0.0
         assert coh == 0.0
         assert freq == 0
+        assert phase is None
+        assert phase_err is None
+
+    @pytest.mark.parametrize("delta", [0.9, -1.3])
+    def test_phase_offset_sign_convention_from_circuits(self, delta):
+        # Inject rz(delta) on one data qubit right after GHZ preparation,
+        # turning the state into (|000> + e^{i·delta}|111>)/√2. The recovered
+        # phase offset must come back as +delta — this pins the sign convention
+        # against the actual measurement circuits rather than a synthetic
+        # signal that would bake the convention into the test itself.
+        from qiskit.quantum_info import Statevector
+
+        n = 3
+        graph = rx.generators.path_graph(n)
+        phases = self._random_phases(9)
+        circuits, data_qubits, _flags = build_ghz_circuits(
+            graph, num_qubits=n, method="compressed_sensing", phases=phases, num_flag_qubits=0
+        )
+
+        def exact_counts(qc, shots=200_000):
+            bare = qc.remove_final_measurements(inplace=False)
+            probs = Statevector(bare).probabilities_dict()
+            return {b: int(round(p * shots)) for b, p in probs.items()}
+
+        def inject_after_prep(qc):
+            injected = qc.copy_empty_like()
+            done = False
+            for inst in qc.data:
+                if not done and inst.operation.name == "rz":
+                    injected.rz(delta, data_qubits[0])
+                    done = True
+                injected.append(inst)
+            return injected
+
+        z_counts = exact_counts(circuits[0])
+        osc_counts = [exact_counts(inject_after_prep(qc)) for qc in circuits[1:]]
+
+        *_, phase, phase_err = estimate_fidelity_compressed_sensing(
+            z_counts, osc_counts, phases, n, num_flag_qubits=0
+        )
+        assert phase == pytest.approx(delta, abs=0.05)
+        assert phase_err is not None and phase_err >= 0.0
 
 
 class TestPhaseGrid:
