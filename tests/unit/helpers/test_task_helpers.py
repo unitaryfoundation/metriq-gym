@@ -57,7 +57,29 @@ def test_flatten_counts_empty():
     assert flat_counts == []
 
 
-def test_flatten_counts_none():
+def test_flatten_counts_none_raises():
     result_data = [GateModelResultData(measurement_counts=None)]
-    flat_counts = flatten_counts(result_data)
-    assert flat_counts == []
+    with pytest.raises(ValueError, match="no measurement counts or probabilities"):
+        flatten_counts(result_data)
+
+
+def test_flatten_counts_probabilities_only_raises():
+    """Regression test for #799: a provider (e.g. OriginQ simulators) that returns
+    probabilities instead of sampled counts must fail loudly, not silently drop the
+    result and let the benchmark report a fabricated 0.0 score."""
+    result_data = [
+        GateModelResultData(measurement_counts=None, measurement_probabilities={"1001": 1.0})
+    ]
+    with pytest.raises(ValueError, match="returned measurement probabilities instead"):
+        flatten_counts(result_data)
+
+
+def test_flatten_counts_partial_none_raises():
+    """One good result and one result with no counts must still raise, not silently
+    return only the good result's counts."""
+    result_data = [
+        GateModelResultData(measurement_counts=MeasCount({"00": 50, "11": 50})),
+        GateModelResultData(measurement_counts=None),
+    ]
+    with pytest.raises(ValueError):
+        flatten_counts(result_data)
