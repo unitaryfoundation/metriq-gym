@@ -76,6 +76,10 @@ class EPLGResult(BenchmarkResult):
 # =============================================================================
 
 
+# VF2 is a backtracking graph-matching algorithm. Here it looks for a simple
+# path graph inside the device's connectivity graph.
+# Reference:
+# https://networkx.org/documentation/stable/reference/algorithms/isomorphism.vf2.html
 _VF2_SEARCH_ATTEMPTS = 5
 _VF2_CALL_LIMIT = 100_000
 
@@ -85,7 +89,7 @@ def _randomized_graph_copy(
     edges: set[tuple[int, int]],
     rng: random.Random,
 ) -> rx.PyGraph:
-    """Copy a graph with seed-shuffled node IDs for reproducible VF2 search."""
+    """Copy a graph with seed-shuffled node IDs for reproducible fallback search."""
     shuffled_nodes = node_indices.copy()
     rng.shuffle(shuffled_nodes)
 
@@ -109,7 +113,7 @@ def _vf2_random_chain(
     length: int,
     rng: random.Random,
 ) -> list[int] | None:
-    """Find any seeded-random path using bounded VF2 subgraph matching."""
+    """Use the bounded VF2 search described above to find a seeded-random path."""
     path_graph = rx.generators.path_graph(length)
 
     for _ in range(_VF2_SEARCH_ATTEMPTS):
@@ -149,8 +153,9 @@ def random_chain_from_graph(
     """Sample a seeded random simple path of given length from a graph.
 
     The fast greedy search is retained for stable results on topologies where
-    it already succeeds. A bounded VF2 search is used as a fallback when the
-    greedy walk repeatedly traps itself on a graph that still has a valid path.
+    it already succeeds. A bounded graph-matching search is used as a fallback
+    when the greedy walk repeatedly traps itself on a graph that still has a
+    valid path.
 
     Args:
         graph: Connectivity graph (undirected).
