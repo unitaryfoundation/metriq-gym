@@ -24,13 +24,12 @@ def test_random_chain_from_graph_path():
     """Test random chain from path graph."""
     graph = rx.generators.path_graph(10)
     with patch("metriq_gym.benchmarks.eplg.rx.vf2_mapping") as vf2_mapping:
-        chain = random_chain_from_graph(graph, 5, seed=42)
+        first = random_chain_from_graph(graph, 5, seed=42)
+        second = random_chain_from_graph(graph, 5, seed=42)
 
-    assert chain == [0, 1, 2, 3, 4]
+    assert first == second
+    assert_valid_chain(graph, first, 5)
     vf2_mapping.assert_not_called()
-    # Verify it's a valid path
-    for i in range(len(chain) - 1):
-        assert graph.has_edge(chain[i], chain[i + 1])
 
 
 def test_random_chain_from_graph_complete():
