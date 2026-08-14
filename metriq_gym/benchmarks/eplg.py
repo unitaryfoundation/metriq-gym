@@ -76,29 +76,128 @@ class EPLGResult(BenchmarkResult):
 # =============================================================================
 
 
+# VF2 is a backtracking graph-matching algorithm. Here it looks for a simple
+# path graph inside the device's connectivity graph.
+# Reference:
+# https://networkx.org/documentation/stable/reference/algorithms/isomorphism.vf2.html
+_VF2_SEARCH_ATTEMPTS = 5
+_VF2_CALL_LIMIT = 100_000
+
+
+def _randomized_graph_copy(
+    node_indices: list[int],
+    edges: set[tuple[int, int]],
+    rng: random.Random,
+) -> rx.PyGraph:
+    """Copy a graph with seed-shuffled node IDs for reproducible fallback search."""
+    shuffled_nodes = node_indices.copy()
+    rng.shuffle(shuffled_nodes)
+
+    randomized_graph = rx.PyGraph(multigraph=False)
+    randomized_index = {
+        original_index: randomized_graph.add_node(original_index)
+        for original_index in shuffled_nodes
+    }
+
+    shuffled_edges = sorted(edges)
+    rng.shuffle(shuffled_edges)
+    randomized_graph.add_edges_from_no_data(
+        [(randomized_index[source], randomized_index[target]) for source, target in shuffled_edges]
+    )
+    return randomized_graph
+
+
+def _vf2_random_chain(
+    node_indices: list[int],
+    edges: set[tuple[int, int]],
+    length: int,
+    rng: random.Random,
+) -> list[int] | None:
+    """Use the bounded VF2 search described above to find a seeded-random path."""
+    path_graph = rx.generators.path_graph(length)
+
+    for _ in range(_VF2_SEARCH_ATTEMPTS):
+        randomized_graph = _randomized_graph_copy(node_indices, edges, rng)
+        mapping = next(
+            rx.vf2_mapping(
+                randomized_graph,
+                path_graph,
+                id_order=False,
+                subgraph=True,
+                induced=False,
+                call_limit=_VF2_CALL_LIMIT,
+            ),
+            None,
+        )
+        if mapping is None or len(mapping) != length:
+            continue
+
+        chain = [
+            randomized_graph[graph_index]
+            for graph_index, _ in sorted(mapping.items(), key=lambda item: item[1])
+        ]
+        if len(set(chain)) == length and all(
+            tuple(sorted((source, target))) in edges for source, target in zip(chain, chain[1:])
+        ):
+            return chain
+
+    return None
+
+
 def random_chain_from_graph(
     graph: rx.PyGraph,
     length: int,
     seed: int | None = None,
     restarts: int = 200,
 ) -> list[int]:
-    """Sample a random simple path of given length from a graph.
+    """Sample a seeded random simple path of given length from a graph.
+
+    The fast greedy search is retained for stable results on topologies where
+    it already succeeds. A bounded graph-matching search is used as a fallback
+    when the greedy walk repeatedly traps itself on a graph that still has a
+    valid path.
 
     Args:
         graph: Connectivity graph (undirected).
         length: Desired chain length (number of nodes).
         seed: Random seed.
-        restarts: Number of random restart attempts.
+        restarts: Number of greedy random restart attempts before the bounded fallback.
 
     Returns:
         List of qubit indices forming the chain.
     """
+    if length < 1:
+        raise ValueError(f"Chain length must be positive; received {length}.")
+    if restarts < 0:
+        raise ValueError(f"Restarts must be non-negative; received {restarts}.")
+
     rng = random.Random(seed)
 
-    allowed = {tuple(sorted(e)) for e in graph.edge_list()}
+    allowed: set[tuple[int, int]] = {
+        (min(source, target), max(source, target))
+        for source, target in graph.edge_list()
+        if source != target
+    }
+    node_indices = sorted(graph.node_indices())
+    n_nodes = len(node_indices)
 
-    n_nodes = graph.num_nodes()
-    adj: dict[int, list[int]] = {i: [] for i in range(n_nodes)}
+    if length > n_nodes:
+        raise ValueError(
+            f"Cannot sample a chain of length={length}: the connectivity graph "
+            f"has only {n_nodes} nodes."
+        )
+    if length == 1:
+        return [rng.choice(node_indices)]
+
+    largest_component = max((len(component) for component in rx.connected_components(graph)))
+    if largest_component < length:
+        raise ValueError(
+            f"Cannot sample a chain of length={length}: the largest connected component "
+            f"has only {largest_component} nodes (graph: {n_nodes} nodes, "
+            f"{len(allowed)} edges)."
+        )
+
+    adj: dict[int, list[int]] = {node_index: [] for node_index in node_indices}
     for u, v in allowed:
         adj[u].append(v)
         adj[v].append(u)
@@ -137,7 +236,18 @@ def random_chain_from_graph(
         if len(path) == length:
             return path
 
-    raise RuntimeError(f"Failed to sample chain of length={length} after {restarts} restarts.")
+    fallback_chain = _vf2_random_chain(node_indices, allowed, length, rng)
+    if fallback_chain is not None:
+        return fallback_chain
+
+    raise RuntimeError(
+        f"Could not find a simple chain of length={length} in a graph with {n_nodes} nodes "
+        f"and {len(allowed)} edges after {restarts} greedy restarts and "
+        f"{_VF2_SEARCH_ATTEMPTS} bounded path-search attempts "
+        f"({_VF2_CALL_LIMIT} states each). A sufficiently long path may not exist, or the "
+        "search budget may have been exhausted; try a shorter chain or inspect the "
+        "gate-specific connectivity graph."
+    )
 
 
 # =============================================================================

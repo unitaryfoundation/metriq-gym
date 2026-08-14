@@ -192,10 +192,10 @@ class _DummyResult(BenchmarkResult):
 
 
 class TestExporterSurfacesCounts:
-    def _job(self, data: dict) -> MetriqGymJob:
+    def _job(self, data: dict, job_type: JobType = JobType.CLOPS) -> MetriqGymJob:
         return MetriqGymJob(
             id="job",
-            job_type=JobType.CLOPS,
+            job_type=job_type,
             params={"shots": 10},
             data=data,
             provider_name="provider",
@@ -217,8 +217,16 @@ class TestExporterSurfacesCounts:
             "transpiled_two_qubit_gate_counts": [4, 4],
         }
 
+    def test_qubit_chain_present_in_export(self):
+        job = self._job(
+            {"provider_job_ids": ["q"], "qubit_chain": [2, 4, 6]},
+            job_type=JobType.EPLG,
+        )
+        record = DictExporter(job, _DummyResult(metric=1.0)).export()
+        assert record["circuit_metadata"] == {"qubit_chain": [2, 4, 6]}
+
     def test_no_circuit_metadata_when_absent(self):
-        # Backward compatibility: records without the counts emit no new block.
+        # Backward compatibility: records without supported metadata emit no new block.
         job = self._job({"provider_job_ids": ["q"]})
         record = DictExporter(job, _DummyResult(metric=1.0)).export()
         assert "circuit_metadata" not in record
