@@ -36,7 +36,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 from qiskit import QuantumCircuit
 
 from metriq_gym.benchmarks.benchmark import (
@@ -77,24 +76,6 @@ def _load_qsc() -> tuple[ModuleType, ModuleType]:
     from src.utils import postprocessing_utils  # noqa: PLC0415
 
     return experiment_facade, postprocessing_utils
-
-
-def _ground_state_prep_gate(hamiltonian, num_qubits: int):
-    """Build a state-preparation instruction for the Hamiltonian ground state.
-
-    QSC-Applications intends to do this in QiskitGroundStatePrep, but that path
-    does not currently work: build_experiments never calls _get_state_prep_gate,
-    and _get_state_prep_gate itself references a method that does not exist. The
-    result is that every circuit it builds starts from |0...0> rather than the
-    ground state. Until that is fixed upstream we build the gate here and inject
-    it, which is what _ground_state_circuit is meant to do.
-    """
-    eigenvalues, eigenvectors = np.linalg.eigh(hamiltonian.to_matrix())
-    ground_state = eigenvectors[:, int(np.argmin(eigenvalues))]
-
-    circuit = QuantumCircuit(num_qubits, name="ground_state_prep")
-    circuit.initialize(ground_state.tolist(), range(num_qubits))
-    return circuit.decompose().to_instruction()
 
 
 # ---------------------------------------------------------------------------
@@ -166,9 +147,6 @@ class QSC(Benchmark):
             state_prep_kwargs={"sites": params.num_qubits, "spec": "ground_state"},
             dynamics_kwargs=self._dynamics_kwargs(),
             implementation_kwargs={"shots": params.shots},
-        )
-        simulation._state_prep_gate = _ground_state_prep_gate(
-            simulation.hamiltonian, params.num_qubits
         )
         return simulation
 

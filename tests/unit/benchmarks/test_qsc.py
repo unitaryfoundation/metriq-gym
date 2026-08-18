@@ -5,7 +5,7 @@ import pytest
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
 
-from metriq_gym.benchmarks.qsc import QSC, QSCData, QSCResult, _ground_state_prep_gate
+from metriq_gym.benchmarks.qsc import QSC, QSCData, QSCResult
 from metriq_gym.schema_validator import load_and_validate
 
 EXAMPLE = "metriq_gym/schemas/examples/qsc.example.json"
@@ -16,18 +16,28 @@ def benchmark():
     return QSC(argparse.Namespace(), load_and_validate(EXAMPLE))
 
 
-def test_ground_state_prep_gate_prepares_the_ground_state():
-    from qiskit.quantum_info import SparsePauliOp
+def test_prepared_state_is_the_hamiltonian_ground_state(benchmark):
+    """The first instruction must prepare the ground state, not |0...0>.
 
-    hamiltonian = SparsePauliOp(["XXI", "IXX", "ZII", "IZI", "IIZ"], [1.0, 1.0, -2.0, -2.0, -2.0])
-    gate = _ground_state_prep_gate(hamiltonian, 3)
+    Regression guard: QSC-Applications previously left the prep gate unset, so
+    every circuit silently started from the product state.
+    """
+    simulation = benchmark._facade()
+    simulation.build_experiments(
+        experiment_kwargs={
+            "experiment_class": benchmark.params.experiment_class,
+            "strength": benchmark.params.strength,
+            "time_steps": 1,
+            "output_dir": benchmark.params.output_dir,
+        }
+    )
+    n = benchmark.params.num_qubits
+    probe = QuantumCircuit(n)
+    probe.append(simulation._state_prep_gate, range(n))
+    prepared = Statevector(probe).data
 
-    circuit = QuantumCircuit(3)
-    circuit.append(gate, range(3))
-    prepared = Statevector(circuit).data
-
-    eigenvalues, eigenvectors = np.linalg.eigh(hamiltonian.to_matrix())
-    overlap = abs(np.vdot(eigenvectors[:, 0], prepared)) ** 2
+    eigenvalues, eigenvectors = np.linalg.eigh(simulation.hamiltonian.to_matrix())
+    overlap = abs(np.vdot(eigenvectors[:, int(np.argmin(eigenvalues))], prepared)) ** 2
     assert overlap == pytest.approx(1.0, abs=1e-9)
 
 
@@ -38,14 +48,9 @@ def test_batch_size_is_twelve_circuits_per_time_step(benchmark):
 
 
 def test_every_circuit_starts_from_the_ground_state(benchmark):
-    """Regression guard for the upstream prep gate never being applied.
-
-    QSC-Applications leaves `_state_prep_gate` at None, which silently starts
-    every circuit from |0...0>. The benchmark injects the gate instead, so it
-    must appear in every circuit it builds.
-    """
+    """Every circuit in the batch carries the prep gate, not just the first."""
     for circuit in benchmark._build_circuits(None):
-        assert "ground_state_prep" in [item.operation.name for item in circuit.data]
+        assert "prep_vector" in [item.operation.name for item in circuit.data]
 
 
 def test_circuit_names_encode_the_experiment(benchmark):
