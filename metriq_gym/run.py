@@ -585,8 +585,11 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     )
     branch_name = getattr(args, "branch_name", None)
     pr_title = getattr(args, "pr_title", None)
-    if pr_title is None and outcome is not None:
-        pr_title = f"mgym upload: {metriq_job.job_type.value} on {provider}/{device} ({outcome})"
+    if outcome is not None:
+        if pr_title is None:
+            pr_title = f"mgym upload: {metriq_job.job_type.value} on {provider}/{device} ({outcome})"
+        elif not pr_title.endswith(f"({outcome})"):
+            pr_title = f"{pr_title} ({outcome})"
         print(f"Uploading as '{outcome}' outcome record (no results).")
     pr_body = getattr(args, "pr_body", None)
     commit_message = getattr(args, "commit_message", None)
