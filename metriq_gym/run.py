@@ -14,7 +14,7 @@ from typing import Any, TYPE_CHECKING, Optional
 from metriq_gym import __version__
 from metriq_gym.cli import list_jobs, prompt_for_job, app as typer_app
 from metriq_gym.job_manager import JobManager, MetriqGymJob
-from metriq_gym.qplatform.job import total_execution_time
+from metriq_gym.qplatform.job import failed_jobs_summary, total_execution_time
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import JobType
 from metriq_gym.resource_estimation import (
@@ -259,29 +259,86 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"Dispatching {params.benchmark_name}...")
 
     handler: Benchmark = setup_benchmark(args, params, job_type)
-    job_data: BenchmarkData = handler.dispatch_handler(device)
+    try:
+        job_data: BenchmarkData = handler.dispatch_handler(device)
+    except Exception as exc:
+        job_id = _record_dispatch_failure(job_manager, args, device, job_type, params, exc)
+        print(f"✗ {params.benchmark_name} failed to dispatch: {type(exc).__name__}: {exc}")
+        print(f"  Recorded as failed metriq-gym Job ID: {job_id}")
+        print(_OUTCOME_UPLOAD_HINT)
+        logger.debug("Dispatch failure traceback", exc_info=True)
+        return
 
+    job_id = job_manager.add_job(_new_job(args, device, job_type, params, data=asdict(job_data)))
+
+    print(f"✓ {params.benchmark_name} dispatched with metriq-gym Job ID: {job_id}")
+
+
+_OUTCOME_UPLOAD_HINT = (
+    "  Use 'mgym job upload <id>' to report the failure to metriq-data, or "
+    "'mgym job upload <id> --outcome unsupported --reason \"...\"' if the device "
+    "cannot run this benchmark instance."
+)
+
+
+def _new_job(
+    args: argparse.Namespace,
+    device,
+    job_type: JobType,
+    params,
+    *,
+    data: dict[str, Any],
+    suite_id: str | None = None,
+    suite_name: str | None = None,
+) -> MetriqGymJob:
     # Lazy import to avoid heavy modules during CLI cold start
     from metriq_gym.qplatform.device import normalized_metadata
 
-    job_id = job_manager.add_job(
-        MetriqGymJob(
-            id=str(uuid.uuid4()),
-            job_type=job_type,
-            params=params.model_dump(exclude_none=True),
-            data=asdict(job_data),
-            provider_name=args.provider,
-            device_name=args.device,
-            platform={
-                "provider": args.provider,
-                "device": args.device,
-                "device_metadata": normalized_metadata(device),
-            },
-            dispatch_time=datetime.now(),
-        )
+    return MetriqGymJob(
+        id=str(uuid.uuid4()),
+        suite_id=suite_id,
+        suite_name=suite_name,
+        job_type=job_type,
+        params=params.model_dump(exclude_none=True),
+        data=data,
+        provider_name=args.provider,
+        device_name=args.device,
+        platform={
+            "provider": args.provider,
+            "device": args.device,
+            "device_metadata": normalized_metadata(device),
+        },
+        dispatch_time=datetime.now(),
     )
 
-    print(f"✓ {params.benchmark_name} dispatched with metriq-gym Job ID: {job_id}")
+
+def _record_dispatch_failure(
+    job_manager: JobManager,
+    args: argparse.Namespace,
+    device,
+    job_type: JobType,
+    params,
+    exc: BaseException,
+    *,
+    suite_id: str | None = None,
+    suite_name: str | None = None,
+) -> str:
+    """Persist a job whose submission to the device raised.
+
+    The attempt is kept (with the verbatim error) so it can later be uploaded as an
+    outcome record instead of silently disappearing. No provider job ids exist.
+    """
+    job = _new_job(
+        args,
+        device,
+        job_type,
+        params,
+        data={"provider_job_ids": []},
+        suite_id=suite_id,
+        suite_name=suite_name,
+    )
+    job.record_error("dispatch", exc)
+    return job_manager.add_job(job)
 
 
 def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -345,11 +402,9 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     except QBraidSetupError:
         return
 
-    # Lazy import once per function call
-    from metriq_gym.qplatform.device import normalized_metadata
-
     results = []
     successful_jobs = []
+    failed_jobs = []
 
     suite_id = str(uuid.uuid4())
     for benchmark_entry in selected_benchmarks:
@@ -373,24 +428,35 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             )
 
             handler: Benchmark = setup_benchmark(args, params, job_type)
-            job_data: BenchmarkData = handler.dispatch_handler(device)
-
-            job_id = job_manager.add_job(
-                MetriqGymJob(
+            try:
+                job_data: BenchmarkData = handler.dispatch_handler(device)
+            except Exception as exc:
+                job_id = _record_dispatch_failure(
+                    job_manager,
+                    args,
+                    device,
+                    job_type,
+                    params,
+                    exc,
                     suite_id=suite_id,
                     suite_name=suite.name,
-                    id=str(uuid.uuid4()),
-                    job_type=job_type,
-                    params=params.model_dump(exclude_none=True),
+                )
+                results.append(
+                    f"✗ {benchmark_entry.name} from {suite.name} failed: "
+                    f"{type(exc).__name__}: {exc} (recorded as failed Job ID: {job_id})"
+                )
+                failed_jobs.append(job_id)
+                continue
+
+            job_id = job_manager.add_job(
+                _new_job(
+                    args,
+                    device,
+                    job_type,
+                    params,
                     data=asdict(job_data),
-                    provider_name=args.provider,
-                    device_name=args.device,
-                    platform={
-                        "provider": args.provider,
-                        "device": args.device,
-                        "device_metadata": normalized_metadata(device),
-                    },
-                    dispatch_time=datetime.now(),
+                    suite_id=suite_id,
+                    suite_name=suite.name,
                 )
             )
 
@@ -413,6 +479,11 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     )
     if successful_jobs:
         print("Use 'mgym suite poll' or 'mgym job poll' to check suite/job status.")
+    if failed_jobs:
+        print(
+            f"{len(failed_jobs)} benchmark(s) failed at dispatch and were recorded as failed jobs."
+        )
+        print(_OUTCOME_UPLOAD_HINT)
 
 
 def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -422,7 +493,11 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     print("Polling job...")
     fetch_output = fetch_result(metriq_job, args, job_manager)
     if fetch_output is None:
-        print(f"Job {metriq_job.id} is not yet completed or has no results.")
+        if metriq_job.failed:
+            print(f"Job {metriq_job.id} failed and has no results.")
+            print(_OUTCOME_UPLOAD_HINT)
+        else:
+            print(f"Job {metriq_job.id} is not yet completed or has no results.")
         return
     export_job_result(
         args,
@@ -433,17 +508,68 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     )
 
 
+def _resolve_upload_outcome(
+    args: argparse.Namespace, metriq_job: MetriqGymJob, has_result: bool
+) -> tuple[str | None, str | None] | None:
+    """Decide which record an upload produces for ``metriq_job``.
+
+    Returns ``(outcome, reason)`` where ``outcome`` is None for a completed run, or
+    None (after printing why) when nothing should be uploaded.
+    """
+    from metriq_gym.exporters.base_exporter import HUMAN_OUTCOMES, RECORD_OUTCOMES
+
+    outcome = getattr(args, "outcome", None)
+    reason = getattr(args, "reason", None)
+    if outcome is not None and outcome not in RECORD_OUTCOMES:
+        print(f"Error: --outcome must be one of {', '.join(RECORD_OUTCOMES)}; got '{outcome}'.")
+        return None
+    if outcome in HUMAN_OUTCOMES and not reason:
+        print(f"Error: --outcome {outcome} requires --reason explaining the classification.")
+        return None
+    if reason and outcome is None:
+        print("Error: --reason requires --outcome.")
+        return None
+
+    if has_result:
+        if outcome is not None:
+            print(
+                f"Job {metriq_job.id} completed with results; refusing to upload it as "
+                f"'{outcome}'. Upload the results instead (completed records supersede "
+                "outcome records)."
+            )
+            return None
+        return (None, None)
+
+    if outcome is None:
+        if not metriq_job.failed:
+            print(f"Job {metriq_job.id} is not yet completed or has no results.")
+            return None
+        outcome = "error"
+    elif not metriq_job.failed:
+        print(
+            f"Warning: job {metriq_job.id} has no recorded failure; uploading it as "
+            f"'{outcome}' on your say-so."
+        )
+    return (outcome, reason)
+
+
 def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    """Upload a job's results to a GitHub repo by opening a Pull Request."""
+    """Upload a job's results to a GitHub repo by opening a Pull Request.
+
+    A job that failed (at dispatch or as reported by the provider) is uploaded as an
+    ``outcome: "error"`` record carrying the captured error. ``--outcome unsupported``
+    / ``not_applicable`` with ``--reason`` reclassifies such a job by hand.
+    """
     metriq_job = prompt_for_job(args.job_id, job_manager)
     if not metriq_job:
         return
     print("Preparing job upload...")
     fetch_output = fetch_result(metriq_job, args, job_manager)
-    if fetch_output is None:
-        print(f"Job {metriq_job.id} is not yet completed or has no results.")
+    resolved = _resolve_upload_outcome(args, metriq_job, has_result=fetch_output is not None)
+    if resolved is None:
         return
-    result = fetch_output.result
+    outcome, reason = resolved
+    result = fetch_output.result if fetch_output is not None else None
 
     repo = getattr(args, "repo", None)
     if not repo:
@@ -459,6 +585,9 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     )
     branch_name = getattr(args, "branch_name", None)
     pr_title = getattr(args, "pr_title", None)
+    if pr_title is None and outcome is not None:
+        pr_title = f"mgym upload: {metriq_job.job_type.value} on {provider}/{device} ({outcome})"
+        print(f"Uploading as '{outcome}' outcome record (no results).")
     pr_body = getattr(args, "pr_body", None)
     commit_message = getattr(args, "commit_message", None)
     clone_dir = getattr(args, "clone_dir", None)
@@ -467,7 +596,9 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     # Write this job's record to a dedicated JSON file in the target directory
     from metriq_gym.exporters.dict_exporter import DictExporter
 
-    record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
+    record = DictExporter(metriq_job, result, outcome=outcome, outcome_reason=reason).export() | {
+        "params": metriq_job.params
+    }
 
     try:
         from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
@@ -506,14 +637,21 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not jobs:
         print(f"No jobs found for suite ID {args.suite_id}.")
         return
+    completed_jobs: list[MetriqGymJob] = []
     results: list[Any] = []
     for metriq_job in jobs:
         fetch_output = fetch_result(metriq_job, args, job_manager)
         if fetch_output is None:
+            if metriq_job.failed:
+                # Failed jobs have nothing to tabulate; report and keep going so one
+                # broken benchmark does not hide the rest of the suite.
+                print(f"Job {metriq_job.id} ({metriq_job.job_type.value}) failed; skipping.")
+                continue
             print(f"Job {metriq_job.id} is not yet completed or has no results.")
             return
+        completed_jobs.append(metriq_job)
         results.append(fetch_output.result)
-    export_suite_results(args, jobs, results)
+    export_suite_results(args, completed_jobs, results)
 
 
 def _get_nested(mapping: dict[str, Any], path: tuple[str, ...]) -> Any | None:
@@ -567,11 +705,17 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print("Error: --repo not provided and MGYM_UPLOAD_REPO not set.")
         return
 
-    # Ensure all results are available first
+    # Ensure every job is either completed or has a recorded failure. Failed jobs are
+    # uploaded as ``outcome: "error"`` records so a broken benchmark does not block the
+    # rest of the suite; still-pending jobs do.
     results: list[Any] = []
     for metriq_job in jobs:
         fetch_output = fetch_result(metriq_job, args, job_manager)
         if fetch_output is None:
+            if metriq_job.failed:
+                print(f"Job {metriq_job.id} failed; it will be uploaded as an 'error' outcome.")
+                results.append(None)
+                continue
             print(f"Job {metriq_job.id} is not yet completed or has no results.")
             return
         results.append(fetch_output.result)
@@ -841,6 +985,12 @@ def fetch_result(
         cached_result = job_result_type.model_validate(metriq_job.result_data)
         return FetchResultOutput(result=cached_result, raw_results=None, from_cache=True)
 
+    if not metriq_job.data.get("provider_job_ids") and metriq_job.error is not None:
+        # Dispatch raised before anything reached the device: there is no benchmark
+        # data to reconstruct and nothing to poll.
+        print(f"Job failed at {metriq_job.error.get('source')}: {metriq_job.error.get('message')}")
+        return None
+
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
     handler: Benchmark = setup_benchmark(
         args, validate_and_create_model(metriq_job.params), job_type
@@ -874,6 +1024,16 @@ def fetch_result(
         job_manager.update_job(metriq_job)
         return FetchResultOutput(result=result, raw_results=result_data, from_cache=False)
     else:
+        failure = failed_jobs_summary(quantum_jobs)
+        if failure is not None:
+            # Terminal failure reported by the provider: keep the verbatim reason on
+            # the job so it can be uploaded as evidence on an outcome record.
+            metriq_job.record_error("poll", failure)
+            job_manager.update_job(metriq_job)
+            print("Job failed. Provider reported:")
+            for line in failure.splitlines():
+                print(f"- {line}")
+            return None
         print("Job is not yet completed. Current status of tasks:")
         for task in quantum_jobs:
             info = job_status(task)

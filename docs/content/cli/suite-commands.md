@@ -153,4 +153,8 @@ mgym suite upload [suite_id] [OPTIONS]
 | `--clone-dir` | STR | Working directory to clone into (env: `MGYM_UPLOAD_CLONE_DIR`) | `None` |
 | `--dry-run` | BOOL | Do not push or open a PR; print actions only | `False` |
 
+Jobs in the suite that failed (dispatch raised, or the provider reported a failure)
+are included as `outcome: "error"` records with the captured error, so one failed
+benchmark does not block the upload. Jobs that are still pending do.
+
 ---

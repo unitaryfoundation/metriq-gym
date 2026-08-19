@@ -167,3 +167,83 @@ def test_total_execution_time_skips_unreported():
     result = total_execution_time([job_not_impl, job_value_error, job_valid])
 
     assert result == pytest.approx(4.2)
+
+
+# --- failure_reason / failed_jobs_summary -----------------------------------------
+
+
+def test_failure_reason_braket_uses_task_failure_reason():
+    from qbraid.runtime import BraketQuantumTask
+    from metriq_gym.qplatform.job import failure_reason
+
+    task = object.__new__(BraketQuantumTask)
+    task._task = SimpleNamespace(
+        metadata=lambda: {"failureReason": "Error occurred during compilation"}
+    )
+    assert failure_reason(task) == "Error occurred during compilation"
+
+
+def test_failure_reason_qiskit_uses_error_message():
+    from metriq_gym.qplatform.job import failure_reason
+
+    job = object.__new__(QiskitJob)
+    job._job = SimpleNamespace(error_message=lambda: "Circuit too deep")
+    assert failure_reason(job) == "Circuit too deep"
+
+
+def test_failure_reason_azure_combines_code_and_message():
+    from metriq_gym.qplatform.job import failure_reason
+
+    job = object.__new__(AzureQuantumJob)
+    job._job = SimpleNamespace(
+        details=SimpleNamespace(error_data=SimpleNamespace(code="InvalidInput", message="bad"))
+    )
+    assert failure_reason(job) == "InvalidInput: bad"
+
+
+def test_failure_reason_quantinuum_uses_last_message():
+    from metriq_gym.qplatform.job import failure_reason
+
+    mock_ref = MagicMock()
+    mock_ref.last_message = "compile error"
+    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref):
+        job = QuantinuumJob(job_id="test-job-id")
+        assert failure_reason(job) == "compile error"
+
+
+def test_failure_reason_never_raises_and_unknown_types_return_none():
+    from metriq_gym.qplatform.job import failure_reason
+
+    job = object.__new__(QiskitJob)
+    job._job = SimpleNamespace(error_message=MagicMock(side_effect=RuntimeError("offline")))
+    assert failure_reason(job) is None
+
+    generic = MagicMock(spec=QuantumJob)
+    assert failure_reason(generic) is None
+
+
+def _qiskit_job_with(job_id: str, status: JobStatus, error_message=None) -> QiskitJob:
+    job = object.__new__(QiskitJob)
+    job._job_id = job_id  # backs the read-only ``id`` property
+    job.status = lambda status=status: status
+    job._job = SimpleNamespace(error_message=lambda: error_message)
+    return job
+
+
+def test_failed_jobs_summary_lists_only_terminal_failures():
+    from metriq_gym.qplatform.job import failed_jobs_summary
+
+    summary = failed_jobs_summary(
+        [
+            _qiskit_job_with("run-1", JobStatus.RUNNING),
+            _qiskit_job_with("fail-1", JobStatus.FAILED, "Circuit too deep"),
+            _qiskit_job_with("cancel-1", JobStatus.CANCELLED),
+        ]
+    )
+    assert summary == "fail-1: FAILED - Circuit too deep\ncancel-1: CANCELLED"
+
+
+def test_failed_jobs_summary_none_when_nothing_failed():
+    from metriq_gym.qplatform.job import failed_jobs_summary
+
+    assert failed_jobs_summary([_qiskit_job_with("q-1", JobStatus.QUEUED)]) is None

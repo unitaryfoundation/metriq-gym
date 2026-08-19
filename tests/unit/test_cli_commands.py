@@ -187,6 +187,8 @@ class TestJobCommands:
         assert "--commit-message" in result.output
         assert "--clone-dir" in result.output
         assert "--dry-run" in result.output
+        assert "--outcome" in result.output
+        assert "--reason" in result.output
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -198,6 +200,30 @@ class TestJobCommands:
         args = mock_upload.call_args[0][0]
         assert args.job_id == "latest"
         assert args.dry_run is True
+        assert args.outcome is None
+        assert args.reason is None
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
+    def test_job_upload_with_outcome_and_reason(self, mock_upload, mock_jm):
+        """mgym job upload --outcome/--reason should be forwarded to upload_job."""
+        runner.invoke(
+            app,
+            [
+                "job",
+                "upload",
+                "test-id",
+                "--outcome",
+                "unsupported",
+                "--reason",
+                "Compiler rejects 100q circuits",
+            ],
+        )
+
+        mock_upload.assert_called_once()
+        args = mock_upload.call_args[0][0]
+        assert args.outcome == "unsupported"
+        assert args.reason == "Compiler rejects 100q circuits"
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")

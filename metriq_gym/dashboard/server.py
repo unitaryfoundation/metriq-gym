@@ -147,6 +147,10 @@ def job_state(raw: dict, state: dict) -> tuple[str, int | None]:
         return "uploaded", None
     if raw.get("result_data") is not None:
         return "ready_to_upload", None
+    if raw.get("error") is not None:
+        # Failure recorded on the job itself (dispatch raised, or a poll saw a
+        # terminal provider failure); no need to wait for a dashboard poll.
+        return "failed", None
     poll = state["polls"].get(jid)
     if poll:
         s = poll["status"]
