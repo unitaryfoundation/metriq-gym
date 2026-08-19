@@ -985,10 +985,9 @@ def fetch_result(
         cached_result = job_result_type.model_validate(metriq_job.result_data)
         return FetchResultOutput(result=cached_result, raw_results=None, from_cache=True)
 
-    if not metriq_job.data.get("provider_job_ids") and metriq_job.error is not None:
-        # Dispatch raised before anything reached the device: there is no benchmark
-        # data to reconstruct and nothing to poll.
-        print(f"Job failed at {metriq_job.error.get('source')}: {metriq_job.error.get('message')}")
+    if metriq_job.failed:
+        error = metriq_job.error or {}
+        print(f"Job failed at {error.get('source')}: {error.get('message')}")
         return None
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
