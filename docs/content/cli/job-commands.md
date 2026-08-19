@@ -175,7 +175,13 @@ mgym job upload <JOB_ID> --outcome unsupported --reason "Compiler rejects 100-qu
 ```
 
 Completed jobs cannot be uploaded with `--outcome`; a completed record always
-supersedes outcome records for the same benchmark instance.
+supersedes outcome records for the same benchmark instance. `--outcome error` is
+reserved for captured failures and cannot be asserted by hand.
+
+Once a failure is recorded, `poll` and `upload` trust it without reconnecting to the
+provider (failed/cancelled statuses are terminal); pass `--no-cache` to `poll` to
+force a re-check. An upload with an explicit `--outcome` goes ahead even if the
+provider cannot be reached, attaching whatever error was recorded locally.
 
 ---
 

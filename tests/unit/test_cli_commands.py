@@ -227,6 +227,24 @@ class TestJobCommands:
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
+    def test_job_upload_outcome_is_case_insensitive(self, mock_upload, mock_jm):
+        runner.invoke(
+            app, ["job", "upload", "test-id", "--outcome", "Not_Applicable", "--reason", "r"]
+        )
+        mock_upload.assert_called_once()
+        assert mock_upload.call_args[0][0].outcome == "not_applicable"
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
+    def test_job_upload_rejects_unknown_outcome_at_cli(self, mock_upload, mock_jm):
+        result = runner.invoke(app, ["job", "upload", "test-id", "--outcome", "exploded"])
+        assert result.exit_code != 0
+        combined = (result.output or "") + (result.stderr or "")
+        assert "not one of" in combined
+        mock_upload.assert_not_called()
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
     def test_job_upload_with_all_options(self, mock_upload, mock_jm):
         """mgym job upload with all options should pass them correctly."""
         runner.invoke(

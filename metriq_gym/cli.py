@@ -21,6 +21,7 @@ import typer
 
 from tabulate import tabulate
 
+from metriq_gym.constants import RecordOutcome
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 
 
@@ -341,9 +342,10 @@ def job_upload(
         typer.Option("--dry-run", help="Do not push or open a PR; print actions only"),
     ] = False,
     outcome: Annotated[
-        Optional[str],
+        Optional[RecordOutcome],
         typer.Option(
             "--outcome",
+            case_sensitive=False,
             help=(
                 "Upload a non-completed outcome record instead of results: "
                 "'error' (default for failed jobs), 'unsupported' (device cannot run "

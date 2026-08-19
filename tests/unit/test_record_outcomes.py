@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from qbraid.runtime import JobStatus
 
 from metriq_gym.benchmarks.benchmark import BenchmarkData, BenchmarkResult, BenchmarkScore
-from metriq_gym.constants import JobType
+from metriq_gym.constants import JobType, RecordOutcome
 from metriq_gym.exporters.dict_exporter import DictExporter
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.run import (
@@ -149,8 +149,22 @@ def test_explicit_outcome_drops_results_even_if_result_given():
 
 
 def test_unknown_outcome_rejected():
-    with pytest.raises(ValueError, match="Unknown outcome"):
+    with pytest.raises(ValueError):
         DictExporter(_job(), None, outcome="exploded")
+
+
+def test_exporter_accepts_enum_and_value_and_serializes_plain_strings():
+    for outcome in (RecordOutcome.UNSUPPORTED, "unsupported"):
+        record = DictExporter(_job(), None, outcome=outcome, outcome_reason=" r ").export()
+        assert record["outcome"] == "unsupported"
+        assert type(record["outcome"]) is str
+        assert record["outcome_detail"] == {"reason": "r"}
+        json.dumps(record)
+
+
+def test_blank_reason_is_dropped():
+    record = DictExporter(_job(), None, outcome="unsupported", outcome_reason="   ").export()
+    assert record["outcome_detail"] is None
 
 
 def test_outcome_record_is_json_serializable():
@@ -266,7 +280,7 @@ def test_dispatch_job_records_failed_attempt(monkeypatch, tmp_path, capsys):
 def test_resolve_upload_outcome_failed_job_defaults_to_error():
     job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
     args = SimpleNamespace(outcome=None, reason=None)
-    assert _resolve_upload_outcome(args, job, has_result=False) == ("error", None)
+    assert _resolve_upload_outcome(args, job, has_result=False) == (RecordOutcome.ERROR, None)
 
 
 def test_resolve_upload_outcome_pending_job_refused(capsys):
@@ -292,8 +306,11 @@ def test_resolve_upload_outcome_human_outcomes_require_reason(outcome, capsys):
     args = SimpleNamespace(outcome=outcome, reason=None)
     assert _resolve_upload_outcome(args, job, has_result=False) is None
     assert "requires --reason" in capsys.readouterr().out
-    args.reason = "because"
-    assert _resolve_upload_outcome(args, job, has_result=False) == (outcome, "because")
+    args.reason = "  because  "
+    assert _resolve_upload_outcome(args, job, has_result=False) == (
+        RecordOutcome(outcome),
+        "because",
+    )
 
 
 def test_resolve_upload_outcome_rejects_unknown_value(capsys):
@@ -387,3 +404,214 @@ def test_upload_suite_includes_failed_jobs_as_error_outcomes(monkeypatch, tmp_pa
     assert records[1]["outcome"] == "error"
     assert records[1]["results"] is None
     assert records[1]["outcome_detail"]["error_message"] == "boom"
+
+
+# --- hardening ----------------------------------------------------------------
+
+
+def test_resolve_upload_outcome_accepts_enum_and_case_insensitive_strings():
+    job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
+    for raw in (RecordOutcome.UNSUPPORTED, "UNSUPPORTED", " unsupported "):
+        args = SimpleNamespace(outcome=raw, reason="r")
+        assert _resolve_upload_outcome(args, job, has_result=False) == (
+            RecordOutcome.UNSUPPORTED,
+            "r",
+        )
+
+
+def test_resolve_upload_outcome_blank_reason_counts_as_missing(capsys):
+    job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
+    args = SimpleNamespace(outcome="unsupported", reason="   ")
+    assert _resolve_upload_outcome(args, job, has_result=False) is None
+    assert "requires --reason" in capsys.readouterr().out
+
+
+def test_resolve_upload_outcome_refuses_hand_asserted_error_without_failure(capsys):
+    args = SimpleNamespace(outcome="error", reason=None)
+    assert _resolve_upload_outcome(args, _job(), has_result=False) is None
+    assert "no recorded failure" in capsys.readouterr().out
+
+
+def test_resolve_upload_outcome_human_outcome_on_pending_job_warns(capsys):
+    args = SimpleNamespace(outcome="not_applicable", reason="wrong device class")
+    assert _resolve_upload_outcome(args, _job(), has_result=False) == (
+        RecordOutcome.NOT_APPLICABLE,
+        "wrong device class",
+    )
+    assert "on your say-so" in capsys.readouterr().out
+
+
+def test_fetch_result_trusts_recorded_poll_failure_without_provider(monkeypatch, tmp_path, capsys):
+    job = _job(error={"source": "poll", "message": "pj-1: FAILED - boom", "timestamp": "t"})
+    jm = JobManager(jobs_file=tmp_path / "jobs.jsonl")
+    jm.add_job(job)
+    load_job = MagicMock(side_effect=AssertionError("must not poll provider"))
+    _patch_fetch(monkeypatch, load_job)
+
+    assert fetch_result(job, SimpleNamespace(no_cache=False, include_raw=False), jm) is None
+    assert "Job failed at poll" in capsys.readouterr().out
+    load_job.assert_not_called()
+
+
+def test_fetch_result_no_cache_repolls_poll_failed_job(monkeypatch, tmp_path):
+    job = _job(error={"source": "poll", "message": "pj-1: FAILED - boom", "timestamp": "t"})
+    jm = JobManager(jobs_file=tmp_path / "jobs.jsonl")
+    jm.add_job(job)
+    load_job = MagicMock(side_effect=lambda jid, **__: FailedQuantumJob(jid))
+    _patch_fetch(monkeypatch, load_job)
+    monkeypatch.setattr("metriq_gym.run.failed_jobs_summary", lambda qjobs: "pj-1: FAILED - again")
+
+    assert fetch_result(job, SimpleNamespace(no_cache=True, include_raw=False), jm) is None
+    load_job.assert_called_once()
+    assert job.error["message"] == "pj-1: FAILED - again"
+
+
+def test_fetch_result_no_cache_never_repolls_dispatch_failure(monkeypatch, tmp_path):
+    job = _job(
+        provider_job_ids=(),
+        error={"source": "dispatch", "message": "boom", "timestamp": "t"},
+    )
+    jm = JobManager(jobs_file=tmp_path / "jobs.jsonl")
+    jm.add_job(job)
+    load_job = MagicMock(side_effect=AssertionError("must not poll provider"))
+    _patch_fetch(monkeypatch, load_job)
+
+    assert fetch_result(job, SimpleNamespace(no_cache=True, include_raw=False), jm) is None
+    load_job.assert_not_called()
+
+
+def _upload_args(**overrides):
+    args = SimpleNamespace(
+        job_id="job-1",
+        repo="owner/repo",
+        dry_run=True,
+        no_cache=False,
+        include_raw=False,
+        outcome=None,
+        reason=None,
+    )
+    for k, v in overrides.items():
+        setattr(args, k, v)
+    return args
+
+
+def _install_fake_exporter(monkeypatch):
+    captured = {}
+
+    class FakeExporter:
+        def __init__(self, job, result):
+            captured["result"] = result
+
+        def export(self, **kwargs):
+            captured.update(kwargs)
+            return "DRY-RUN: ok"
+
+    monkeypatch.setattr("metriq_gym.exporters.github_pr_exporter.GitHubPRExporter", FakeExporter)
+    return captured
+
+
+def test_upload_job_provider_error_without_outcome_fails_cleanly(monkeypatch, tmp_path, capsys):
+    jm = JobManager(jobs_file=tmp_path / "jobs.jsonl")
+    jm.add_job(_job())
+    monkeypatch.setattr(
+        "metriq_gym.run.fetch_result", MagicMock(side_effect=RuntimeError("token expired"))
+    )
+    captured = _install_fake_exporter(monkeypatch)
+
+    upload_job(_upload_args(), jm)  # must not raise
+
+    out = capsys.readouterr().out
+    assert "Could not fetch status/results" in out
+    assert "token expired" in out
+    assert "payload" not in captured
+
+
+def test_upload_job_provider_error_with_explicit_outcome_still_uploads(
+    monkeypatch, tmp_path, capsys
+):
+    job = _job(error={"source": "poll", "message": "pj-1: FAILED - boom", "timestamp": "t"})
+    jm = JobManager(jobs_file=tmp_path / "jobs.jsonl")
+    jm.add_job(job)
+    monkeypatch.setattr(
+        "metriq_gym.run.fetch_result", MagicMock(side_effect=RuntimeError("token expired"))
+    )
+    captured = _install_fake_exporter(monkeypatch)
+
+    upload_job(_upload_args(outcome=RecordOutcome.UNSUPPORTED, reason="compiler limit"), jm)
+
+    out = capsys.readouterr().out
+    assert "Continuing with the requested --outcome" in out
+    assert captured["payload"]["outcome"] == "unsupported"
+    assert captured["payload"]["outcome_detail"]["error_message"] == "pj-1: FAILED - boom"
+    assert captured["pr_title"].endswith("(unsupported)")
+
+
+def test_upload_job_custom_title_gets_outcome_suffix(monkeypatch, tmp_path):
+    job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
+    jm = JobManager(jobs_file=tmp_path / "jobs.jsonl")
+    jm.add_job(job)
+    monkeypatch.setattr("metriq_gym.run.setup_job_data_class", lambda *_: DummyJobData)
+    monkeypatch.setattr("metriq_gym.run.setup_benchmark_result_class", lambda *_: DummyResult)
+    captured = _install_fake_exporter(monkeypatch)
+
+    upload_job(_upload_args(pr_title="My title"), jm)
+    assert captured["pr_title"] == "My title (error)"
+
+    upload_job(_upload_args(pr_title="My title (error)"), jm)
+    assert captured["pr_title"] == "My title (error)"
+
+
+def test_upload_job_exporter_failure_is_reported_not_raised(monkeypatch, tmp_path, capsys):
+    job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
+    jm = JobManager(jobs_file=tmp_path / "jobs.jsonl")
+    jm.add_job(job)
+    monkeypatch.setattr("metriq_gym.run.setup_job_data_class", lambda *_: DummyJobData)
+    monkeypatch.setattr("metriq_gym.run.setup_benchmark_result_class", lambda *_: DummyResult)
+
+    class BrokenExporter:
+        def __init__(self, job, result):
+            pass
+
+        def export(self, **kwargs):
+            raise RuntimeError("GitHub token not provided. Set GITHUB_TOKEN.")
+
+    monkeypatch.setattr("metriq_gym.exporters.github_pr_exporter.GitHubPRExporter", BrokenExporter)
+
+    upload_job(_upload_args(), jm)
+    out = capsys.readouterr().out
+    assert "✗ Upload failed: GitHub token not provided" in out
+
+
+def test_upload_suite_provider_error_fails_cleanly(monkeypatch, tmp_path, capsys):
+    jm = JobManager(jobs_file=tmp_path / "jobs.jsonl")
+    jm.add_job(_job(suite_id="suite-1"))
+    monkeypatch.setattr(
+        "metriq_gym.run.fetch_result", MagicMock(side_effect=RuntimeError("token expired"))
+    )
+    captured = _install_fake_exporter(monkeypatch)
+
+    upload_suite(
+        SimpleNamespace(
+            suite_id="suite-1", repo="owner/repo", dry_run=True, no_cache=False, include_raw=False
+        ),
+        jm,
+    )
+    assert "Could not fetch status/results" in capsys.readouterr().out
+    assert "payload" not in captured
+
+
+def test_malformed_error_field_is_normalized():
+    job = MetriqGymJob(
+        id="x",
+        job_type=JobType.WIT,
+        params={},
+        data={},
+        provider_name="p",
+        device_name="d",
+        dispatch_time=datetime.now(),
+        error="just a string",  # type: ignore[arg-type]
+    )
+    assert job.error == {"message": "just a string"}
+    assert job.failed
+    record = DictExporter(job, None).export()
+    assert record["outcome_detail"] == {"error_message": "just a string"}

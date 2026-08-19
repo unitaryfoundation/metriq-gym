@@ -16,7 +16,7 @@ from metriq_gym.cli import list_jobs, prompt_for_job, app as typer_app
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.qplatform.job import failed_jobs_summary, total_execution_time
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
-from metriq_gym.constants import JobType
+from metriq_gym.constants import HUMAN_OUTCOMES, JobType, RecordOutcome
 from metriq_gym.resource_estimation import (
     CircuitBatch,
     aggregate_resource_estimates,
@@ -510,21 +510,25 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
 def _resolve_upload_outcome(
     args: argparse.Namespace, metriq_job: MetriqGymJob, has_result: bool
-) -> tuple[str | None, str | None] | None:
+) -> tuple[RecordOutcome | None, str | None] | None:
     """Decide which record an upload produces for ``metriq_job``.
 
     Returns ``(outcome, reason)`` where ``outcome`` is None for a completed run, or
     None (after printing why) when nothing should be uploaded.
     """
-    from metriq_gym.exporters.base_exporter import HUMAN_OUTCOMES, RECORD_OUTCOMES
+    raw_outcome = getattr(args, "outcome", None)
+    reason = (getattr(args, "reason", None) or "").strip() or None
 
-    outcome = getattr(args, "outcome", None)
-    reason = getattr(args, "reason", None)
-    if outcome is not None and outcome not in RECORD_OUTCOMES:
-        print(f"Error: --outcome must be one of {', '.join(RECORD_OUTCOMES)}; got '{outcome}'.")
-        return None
+    outcome: RecordOutcome | None = None
+    if raw_outcome is not None:
+        try:
+            outcome = RecordOutcome(str(raw_outcome).strip().lower())
+        except ValueError:
+            choices = ", ".join(o.value for o in RecordOutcome)
+            print(f"Error: --outcome must be one of {choices}; got '{raw_outcome}'.")
+            return None
     if outcome in HUMAN_OUTCOMES and not reason:
-        print(f"Error: --outcome {outcome} requires --reason explaining the classification.")
+        print(f"Error: --outcome {outcome.value} requires --reason explaining the classification.")
         return None
     if reason and outcome is None:
         print("Error: --reason requires --outcome.")
@@ -534,8 +538,8 @@ def _resolve_upload_outcome(
         if outcome is not None:
             print(
                 f"Job {metriq_job.id} completed with results; refusing to upload it as "
-                f"'{outcome}'. Upload the results instead (completed records supersede "
-                "outcome records)."
+                f"'{outcome.value}'. Upload the results instead (completed records "
+                "supersede outcome records)."
             )
             return None
         return (None, None)
@@ -544,13 +548,39 @@ def _resolve_upload_outcome(
         if not metriq_job.failed:
             print(f"Job {metriq_job.id} is not yet completed or has no results.")
             return None
-        outcome = "error"
+        outcome = RecordOutcome.ERROR
     elif not metriq_job.failed:
+        if outcome is RecordOutcome.ERROR:
+            # 'error' is machine evidence, not a human claim: it needs a captured failure.
+            print(
+                f"Job {metriq_job.id} has no recorded failure; 'error' outcomes are "
+                "produced from captured dispatch/poll errors. Poll the job first."
+            )
+            return None
         print(
             f"Warning: job {metriq_job.id} has no recorded failure; uploading it as "
-            f"'{outcome}' on your say-so."
+            f"'{outcome.value}' on your say-so."
         )
     return (outcome, reason)
+
+
+def _fetch_result_for_upload(
+    metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
+) -> Optional[FetchResultOutput]:
+    """``fetch_result`` that degrades gracefully when the provider cannot be reached.
+
+    Failed jobs short-circuit inside ``fetch_result`` and never touch the provider. For
+    everything else, an exception (expired credentials, network, provider outage) is
+    reported as a plain message instead of a traceback so the command fails cleanly.
+    """
+    try:
+        return fetch_result(metriq_job, args, job_manager)
+    except Exception as exc:
+        print(
+            f"✗ Could not fetch status/results for job {metriq_job.id}: {type(exc).__name__}: {exc}"
+        )
+        logger.debug("fetch_result failure traceback", exc_info=True)
+        raise
 
 
 def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
@@ -564,7 +594,15 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not metriq_job:
         return
     print("Preparing job upload...")
-    fetch_output = fetch_result(metriq_job, args, job_manager)
+    try:
+        fetch_output = _fetch_result_for_upload(metriq_job, args, job_manager)
+    except Exception:
+        if getattr(args, "outcome", None) is None:
+            return
+        # An explicit outcome is a human claim about the attempt; it can still be
+        # uploaded when the provider is unreachable (any captured error is attached).
+        print("  Continuing with the requested --outcome using the locally recorded job.")
+        fetch_output = None
     resolved = _resolve_upload_outcome(args, metriq_job, has_result=fetch_output is not None)
     if resolved is None:
         return
@@ -586,11 +624,12 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     branch_name = getattr(args, "branch_name", None)
     pr_title = getattr(args, "pr_title", None)
     if outcome is not None:
+        suffix = f"({outcome.value})"
         if pr_title is None:
-            pr_title = f"mgym upload: {metriq_job.job_type.value} on {provider}/{device} ({outcome})"
-        elif not pr_title.endswith(f"({outcome})"):
-            pr_title = f"{pr_title} ({outcome})"
-        print(f"Uploading as '{outcome}' outcome record (no results).")
+            pr_title = f"mgym upload: {metriq_job.job_type.value} on {provider}/{device} {suffix}"
+        elif not pr_title.endswith(suffix):
+            pr_title = f"{pr_title} {suffix}"
+        print(f"Uploading as '{outcome.value}' outcome record (no results).")
     pr_body = getattr(args, "pr_body", None)
     commit_message = getattr(args, "commit_message", None)
     clone_dir = getattr(args, "clone_dir", None)
@@ -713,7 +752,10 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     # rest of the suite; still-pending jobs do.
     results: list[Any] = []
     for metriq_job in jobs:
-        fetch_output = fetch_result(metriq_job, args, job_manager)
+        try:
+            fetch_output = _fetch_result_for_upload(metriq_job, args, job_manager)
+        except Exception:
+            return
         if fetch_output is None:
             if metriq_job.failed:
                 print(f"Job {metriq_job.id} failed; it will be uploaded as an 'error' outcome.")
@@ -988,8 +1030,15 @@ def fetch_result(
         cached_result = job_result_type.model_validate(metriq_job.result_data)
         return FetchResultOutput(result=cached_result, raw_results=None, from_cache=True)
 
-    if metriq_job.failed:
-        error = metriq_job.error or {}
+    has_provider_jobs = bool(metriq_job.data.get("provider_job_ids"))
+    # ``getattr``: tests pass lightweight job stand-ins without the failure fields.
+    if getattr(metriq_job, "failed", False) and (
+        not has_provider_jobs or not getattr(args, "no_cache", False)
+    ):
+        # Failed/cancelled provider statuses are terminal, so the recorded failure is
+        # trusted without reconnecting to the provider (``--no-cache`` forces a
+        # re-poll). A dispatch failure has nothing to poll at all.
+        error = getattr(metriq_job, "error", None) or {}
         print(f"Job failed at {error.get('source')}: {error.get('message')}")
         return None
 

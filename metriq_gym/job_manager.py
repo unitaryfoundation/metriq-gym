@@ -55,6 +55,9 @@ class MetriqGymJob:
         plat["provider"] = platform_provider
         plat["device"] = platform_device
         self.platform = plat
+        # Tolerate hand-edited/legacy records: ``error`` must be a dict or None.
+        if self.error is not None and not isinstance(self.error, dict):
+            self.error = {"message": str(self.error)}
 
     def record_error(self, source: str, exc_or_message: BaseException | str) -> None:
         """Persist a captured failure on the job record.
