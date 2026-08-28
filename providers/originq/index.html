@@ -1718,7 +1718,7 @@
 </ol>
 <h3 id="2-configure-environment">2. Configure Environment<a class="headerlink" href="#2-configure-environment" title="Permanent link">&para;</a></h3>
 <p>Add to your <code>.env</code> file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">ORIGIN_API_KEY</span><span class="o">=</span><span class="s2">&quot;&lt;your-origin-api-token&gt;&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">ORIGIN_API_KEY</span><span class="o">=</span><span class="s2">"&lt;your-origin-api-token&gt;"</span>
 </code></pre></div>
 <h3 id="3-macos-setup">3. macOS Setup<a class="headerlink" href="#3-macos-setup" title="Permanent link">&para;</a></h3>
 <p>macOS users must install <code>libidn2</code> before using the OriginQ provider:</p>
@@ -1729,9 +1729,9 @@
 <p>To see currently available devices:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;origin&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">"origin"</span><span class="p">)</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">():</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 <p>OriginQ offers both hardware (including the Wukong quantum computer) and various simulators.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
@@ -1768,7 +1768,7 @@
 <h3 id="authentication-errors">Authentication Errors<a class="headerlink" href="#authentication-errors" title="Permanent link">&para;</a></h3>
 <p>Verify your API token is correctly set:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ORIGIN_API_KEY&quot;</span><span class="p">))</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ORIGIN_API_KEY"</span><span class="p">))</span>
 </code></pre></div>
 <h3 id="connection-issues">Connection Issues<a class="headerlink" href="#connection-issues" title="Permanent link">&para;</a></h3>
 <p>OriginQ services are based in China. Connection latency or timeouts may occur from other regions. Consider:
@@ -1779,8 +1779,8 @@
 <p>Wukong devices use a 2D grid topology. For topology-dependent benchmarks (BSEQ, Mirror Circuits), the provider automatically retrieves connectivity information.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">metriq_gym.run</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s1">&#39;origin&#39;</span><span class="p">)</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">device</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_device</span><span class="p">(</span><span class="s1">&#39;wukong_72&#39;</span><span class="p">)</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s1">'origin'</span><span class="p">)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">device</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_device</span><span class="p">(</span><span class="s1">'wukong_72'</span><span class="p">)</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Topology available via device.metadata</span>
 </code></pre></div>
 
