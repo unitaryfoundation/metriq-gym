@@ -797,6 +797,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#failed-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failed jobs
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1784,6 +1795,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#failed-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failed jobs
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2172,13 +2194,40 @@
 <td>Do not push or open a PR; print actions only</td>
 <td><code>False</code></td>
 </tr>
+<tr>
+<td><code>--outcome</code></td>
+<td>STR</td>
+<td>Upload a non-completed outcome record instead of results: <code>error</code>, <code>unsupported</code> or <code>not_applicable</code></td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>--reason</code></td>
+<td>STR</td>
+<td>Human-readable reason for the <code>--outcome</code> classification (required for <code>unsupported</code> / <code>not_applicable</code>)</td>
+<td><code>None</code></td>
+</tr>
 </tbody>
 </table>
+<h3 id="failed-jobs">Failed jobs<a class="headerlink" href="#failed-jobs" title="Permanent link">&para;</a></h3>
+<p>A job whose dispatch raised, or whose provider tasks ended in a failed/cancelled
+state, keeps the captured error on the job record (visible in <code>mgym job view</code>).
+Uploading such a job produces an <code>outcome: "error"</code> record with the verbatim error
+message instead of results. To assert that the device structurally cannot run the
+benchmark instance, reclassify it by hand:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>upload<span class="w"> </span>&lt;JOB_ID&gt;<span class="w"> </span>--outcome<span class="w"> </span>unsupported<span class="w"> </span>--reason<span class="w"> </span><span class="s2">"Compiler rejects 100-qubit LR-QAOA circuits"</span>
+</code></pre></div>
+<p>Completed jobs cannot be uploaded with <code>--outcome</code>; a completed record always
+supersedes outcome records for the same benchmark instance. <code>--outcome error</code> is
+reserved for captured failures and cannot be asserted by hand.</p>
+<p>Once a failure is recorded, <code>poll</code> and <code>upload</code> trust it without reconnecting to the
+provider (failed/cancelled statuses are terminal); pass <code>--no-cache</code> to <code>poll</code> to
+force a re-check. An upload with an explicit <code>--outcome</code> goes ahead even if the
+provider cannot be reached, attaching whatever error was recorded locally.</p>
 <hr />
 <h2 id="replay">replay<a class="headerlink" href="#replay" title="Permanent link">&para;</a></h2>
 <p>Replay benchmark computation from a debug file to recompute results locally.</p>
 <p>This command allows you to recompute benchmark results without access to the original quantum provider, using the raw measurement data captured with <code>--include-raw</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>&lt;debug_file&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>&lt;debug_file&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_6">Arguments<a class="headerlink" href="#arguments_6" title="Permanent link">&para;</a></h3>
 <table>
@@ -2222,7 +2271,7 @@
 <ol>
 <li>
 <p><strong>Capture raw data during poll:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>latest<span class="w"> </span>--json<span class="w"> </span>result.json<span class="w"> </span>--include-raw
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>poll<span class="w"> </span>latest<span class="w"> </span>--json<span class="w"> </span>result.json<span class="w"> </span>--include-raw
 </code></pre></div>
 <p>This creates <code>result.json</code> (results) and <code>result_debug.json</code> (debug data).</p>
 </li>
@@ -2232,10 +2281,10 @@
 </li>
 <li>
 <p><strong>Replay to recompute results:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>result_debug.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>result_debug.json
 </code></pre></div>
 <p>Or export to JSON:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>result_debug.json<span class="w"> </span>--json<span class="w"> </span>replayed.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>replay<span class="w"> </span>result_debug.json<span class="w"> </span>--json<span class="w"> </span>replayed.json
 </code></pre></div>
 </li>
 </ol>

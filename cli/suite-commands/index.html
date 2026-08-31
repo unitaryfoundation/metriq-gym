@@ -2002,6 +2002,9 @@ component and scale-point reference.</p>
 </tr>
 </tbody>
 </table>
+<p>Jobs in the suite that failed (dispatch raised, or the provider reported a failure)
+are included as <code>outcome: "error"</code> records with the captured error, so one failed
+benchmark does not block the upload. Jobs that are still pending do.</p>
 <hr />
 
 
