@@ -36,6 +36,8 @@ class MetriqGymJob:
     app_version: str | None = __version__
     result_data: dict[str, Any] | None = None
     runtime_seconds: float | None = None
+    # Captured failure for an attempt that did not complete (see ``record_error``).
+    error: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Populate the canonical dataset platform without rewriting runtime identifiers.
@@ -53,6 +55,31 @@ class MetriqGymJob:
         plat["provider"] = platform_provider
         plat["device"] = platform_device
         self.platform = plat
+        # Tolerate hand-edited/legacy records: ``error`` must be a dict or None.
+        if self.error is not None and not isinstance(self.error, dict):
+            self.error = {"message": str(self.error)}
+
+    def record_error(self, source: str, exc_or_message: BaseException | str) -> None:
+        """Persist a captured failure on the job record.
+
+        ``source`` says where the failure surfaced (``"dispatch"`` when submission to the
+        device raised, ``"poll"`` when the provider reported a terminal failure). The
+        verbatim message is kept so it can be uploaded as evidence on an outcome record.
+        """
+        if isinstance(exc_or_message, BaseException):
+            message = f"{type(exc_or_message).__name__}: {exc_or_message}"
+        else:
+            message = str(exc_or_message)
+        self.error = {
+            "source": source,
+            "message": message,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    @property
+    def failed(self) -> bool:
+        """True when a failure was recorded and no result has been obtained since."""
+        return self.error is not None and self.result_data is None
 
     def num_qubits(self) -> int | None:
         preferred_keys = ("num_qubits", "qubits", "width", "max_qubits")
@@ -120,11 +147,12 @@ class MetriqGymJob:
             ["provider_name", self.provider_name],
             ["device_name", self.device_name],
             ["platform", pprint.pformat(self.platform)],
-            ["provider_job_ids", pprint.pformat(self.data["provider_job_ids"])],
+            ["provider_job_ids", pprint.pformat(self.data.get("provider_job_ids"))],
             ["dispatch_time", self.dispatch_time.isoformat()],
             ["app_version", self.app_version],
             ["runtime_seconds", str(self.runtime_seconds)],
             ["result_data", pprint.pformat(self.result_data)],
+            ["error", pprint.pformat(self.error)],
         ]
         return tabulate(rows, tablefmt="fancy_grid")
 

@@ -21,6 +21,7 @@ import typer
 
 from tabulate import tabulate
 
+from metriq_gym.constants import RecordOutcome
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 
 
@@ -340,8 +341,28 @@ def job_upload(
         bool,
         typer.Option("--dry-run", help="Do not push or open a PR; print actions only"),
     ] = False,
+    outcome: Annotated[
+        Optional[RecordOutcome],
+        typer.Option(
+            "--outcome",
+            case_sensitive=False,
+            help=(
+                "Upload a non-completed outcome record instead of results: "
+                "'error' (default for failed jobs), 'unsupported' (device cannot run "
+                "this benchmark instance) or 'not_applicable'. The latter two require --reason."
+            ),
+        ),
+    ] = None,
+    reason: Annotated[
+        Optional[str],
+        typer.Option("--reason", help="Human-readable reason for the --outcome classification"),
+    ] = None,
 ) -> None:
-    """Upload job results to GitHub via pull request."""
+    """Upload job results to GitHub via pull request.
+
+    Failed jobs (dispatch raised, or the provider reported a failure) are uploaded as
+    'error' outcome records carrying the captured error message.
+    """
     from metriq_gym.run import upload_job as _upload_job
 
     args = argparse.Namespace()
@@ -355,6 +376,8 @@ def job_upload(
     args.commit_message = commit_message
     args.clone_dir = clone_dir
     args.dry_run = dry_run
+    args.outcome = outcome
+    args.reason = reason
 
     job_manager = JobManager()
     _upload_job(args, job_manager)

@@ -2,15 +2,55 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from metriq_gym.benchmarks.benchmark import BenchmarkResult
+from metriq_gym.constants import RecordOutcome
 from metriq_gym.job_manager import MetriqGymJob
 from metriq_gym.platform import canonical_device_name, canonical_provider_name
 
 
 class BaseExporter(ABC):
-    def __init__(self, metriq_gym_job: MetriqGymJob, result: BenchmarkResult):
+    def __init__(
+        self,
+        metriq_gym_job: MetriqGymJob,
+        result: BenchmarkResult | None,
+        *,
+        outcome: RecordOutcome | str | None = None,
+        outcome_reason: str | None = None,
+    ):
+        """
+        Args:
+            metriq_gym_job: The job being exported.
+            result: The benchmark result, or None for an attempt that produced none.
+            outcome: Explicit non-completed outcome (a ``RecordOutcome`` or its value).
+                When ``result`` is None and no outcome is given, ``RecordOutcome.ERROR``
+                is assumed. Unknown values raise ``ValueError``.
+            outcome_reason: Human-supplied reason stored in ``outcome_detail.reason``.
+        """
         self.metriq_gym_job = metriq_gym_job
         self.result = result
+        self.outcome: RecordOutcome | None = None if outcome is None else RecordOutcome(outcome)
+        self.outcome_reason = (outcome_reason or "").strip() or None
         super().__init__()
+
+    def _outcome_fields(self) -> dict[str, Any]:
+        """Outcome fields for a record that does not describe a completed run.
+
+        Returns an empty dict for completed runs. Otherwise the outcome is the one
+        given explicitly, or ``RecordOutcome.ERROR`` when the job simply has no
+        result. The captured job error (if any) is attached verbatim as evidence.
+        """
+        if self.outcome is None and self.result is not None:
+            return {}
+        detail: dict[str, Any] = {}
+        if self.outcome_reason:
+            detail["reason"] = self.outcome_reason
+        error = getattr(self.metriq_gym_job, "error", None)
+        if isinstance(error, dict):
+            if error.get("message"):
+                detail["error_message"] = str(error["message"])
+            if error.get("source"):
+                detail["source"] = str(error["source"])
+        outcome = self.outcome or RecordOutcome.ERROR
+        return {"outcome": outcome.value, "outcome_detail": detail or None}
 
     def _derive_device_metadata(self) -> dict[str, Any]:
         """Use metadata collected at dispatch time on the job object."""
@@ -24,9 +64,13 @@ class BaseExporter(ABC):
     def as_dict(self):
         # Preserve existing top-level fields.
         # For uploads/exports, include the full result payload (already contains score)
-        results_block = self.result.model_dump()
-        if results_block.get("score") is None:
-            results_block.pop("score", None)
+        outcome_fields = self._outcome_fields()
+        results_block: dict[str, Any] | None = None
+        # Non-completed outcomes carry no results payload.
+        if self.result is not None and not outcome_fields:
+            results_block = self.result.model_dump()
+            if results_block.get("score") is None:
+                results_block.pop("score", None)
         # Do not emit a separate uncertainties block; structured fields carry their own
         record = {
             "app_version": self.metriq_gym_job.app_version,
@@ -34,6 +78,7 @@ class BaseExporter(ABC):
             "suite_id": self.metriq_gym_job.suite_id,
             "job_type": self.metriq_gym_job.job_type.value,
             "results": results_block,
+            **outcome_fields,
         }
 
         runtime_seconds = getattr(self.metriq_gym_job, "runtime_seconds", None)
