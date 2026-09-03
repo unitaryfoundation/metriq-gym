@@ -28,7 +28,6 @@ References:
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-import networkx as nx
 import rustworkx as rx
 import numpy as np
 
@@ -78,7 +77,7 @@ class BSEQData(BenchmarkData):
 
     shots: int
     num_qubits: int
-    topology_graph: nx.Graph | None = None
+    topology_graph: rx.PyGraph | None = None
     coloring: GraphColoring | dict | None = None
 
 
