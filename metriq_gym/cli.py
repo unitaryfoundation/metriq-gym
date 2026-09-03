@@ -505,7 +505,11 @@ def suite_view(
 def suite_delete(
     suite_id: Annotated[Optional[str], typer.Argument(help="Suite ID to delete")] = None,
 ) -> None:
-    """Delete all jobs in a suite from the local database."""
+    """Delete all jobs in a suite from the local database.
+
+    Note: This only removes the jobs from local tracking. It does not cancel
+    jobs running on quantum hardware.
+    """
     from metriq_gym.run import delete_suite as _delete_suite
 
     args = argparse.Namespace()
