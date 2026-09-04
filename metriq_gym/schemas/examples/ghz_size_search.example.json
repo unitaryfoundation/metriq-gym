@@ -1,0 +1,8 @@
+{
+  "benchmark_name": "GHZ",
+  "size_search": true,
+  "shots": 1000,
+  "min_qubits": 5,
+  "fidelity_threshold": 0.5,
+  "seed": 42
+}
