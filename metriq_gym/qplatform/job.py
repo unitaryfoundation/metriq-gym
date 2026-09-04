@@ -8,7 +8,8 @@ from qbraid.runtime.enums import JobStatus
 from qiskit_ibm_runtime.execution_span import ExecutionSpans
 
 from metriq_gym.local.job import LocalAerJob
-from metriq_gym.quantinuum.job import QuantinuumJob
+from qbraid.runtime.quantinuum import QuantinuumJob
+from qbraid.runtime.quantinuum.job import QuantinuumJobError
 
 
 @singledispatch
@@ -42,7 +43,10 @@ def _(quantum_job: LocalAerJob) -> float:
 
 @execution_time.register
 def _(quantum_job: QuantinuumJob) -> float:
-    res = quantum_job.execution_time_s()
+    try:
+        res = quantum_job.execution_time_s()
+    except QuantinuumJobError as exc:
+        raise ValueError(str(exc)) from exc
     if res is None:
         raise ValueError("Execution time not available")
     return res
@@ -60,6 +64,83 @@ def total_execution_time(quantum_jobs: Iterable[QuantumJob]) -> float | None:
             continue
         total = t if total is None else total + t
     return total
+
+
+FAILED_STATUSES = frozenset({JobStatus.FAILED, JobStatus.CANCELLED})
+
+
+@singledispatch
+def failure_reason(quantum_job: QuantumJob) -> str | None:
+    """Best-effort, provider-agnostic error message for a failed job.
+
+    Returns None when the provider exposes no failure detail. Never raises: this is
+    called while recording a failure, and a broken accessor must not mask it.
+    """
+    return None
+
+
+@failure_reason.register
+def _(quantum_job: BraketQuantumTask) -> str | None:
+    try:
+        reason = quantum_job._task.metadata().get("failureReason")
+    except Exception:
+        return None
+    return str(reason) if reason else None
+
+
+@failure_reason.register
+def _(quantum_job: QiskitJob) -> str | None:
+    try:
+        reason = quantum_job._job.error_message()
+    except Exception:
+        return None
+    return str(reason) if reason else None
+
+
+@failure_reason.register
+def _(quantum_job: AzureQuantumJob) -> str | None:
+    try:
+        error_data = quantum_job._job.details.error_data
+    except Exception:
+        return None
+    if error_data is None:
+        return None
+    code = getattr(error_data, "code", None)
+    message = getattr(error_data, "message", None)
+    if code and message:
+        return f"{code}: {message}"
+    return str(message or code) if (message or code) else None
+
+
+@failure_reason.register
+def _(quantum_job: QuantinuumJob) -> str | None:
+    try:
+        reason = quantum_job._get_ref().last_message
+    except Exception:
+        return None
+    return str(reason) if reason else None
+
+
+def failed_jobs_summary(quantum_jobs: Iterable[QuantumJob]) -> str | None:
+    """Describe every task in a terminal failed/cancelled state, or None if there is none.
+
+    The summary is one line per failed task (``<id>: <STATUS> - <reason>``) so that it
+    can be stored verbatim as evidence on the job record.
+    """
+    lines: list[str] = []
+    for qjob in quantum_jobs:
+        try:
+            status = qjob.status()
+        except Exception:
+            continue
+        if status not in FAILED_STATUSES:
+            continue
+        line = f"{qjob.id}: {status.value}"
+        reason = failure_reason(qjob)
+        if reason:
+            line += f" - {reason}"
+        lines.append(line)
+    return "\n".join(lines) if lines else None
 
 
 @dataclass

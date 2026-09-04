@@ -14,14 +14,59 @@ mgym suite dispatch <suite_config> [OPTIONS]
 
 | Argument | Type | Description | Required |
 |----------|------|-------------|----------|
-| `SUITE_CONFIG` | STR | Path to suite configuration file | Yes |
+| `SUITE_CONFIG` | STR | Path to suite configuration file or bundled suite name | Yes |
 
 ### Options
 
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
-| `--provider, -p` | STR | Provider name (e.g., ibm, braket, azure, ionq, local) | `None` |
+| `--provider, -p` | STR | Provider name (e.g., ibm, aws, azure, ionq, local; braket aliases aws) | `None` |
 | `--device, -d` | STR | Device identifier | `None` |
+| `--component, -c` | LIST | Component to dispatch; repeat the option to select multiple components | `None` |
+| `--all` | BOOL | Explicitly dispatch every component, including guarded full suites | `False` |
+
+### Bundled suites and JSON files
+
+The suite argument accepts either a path to a JSON file or the name of a suite
+bundled with metriq-gym. For example, `metriq_score_1_0` resolves to the
+versioned Metriq Score 1.0 definition from any working directory.
+
+### Dispatch selected components
+
+Use `--component` (or `-c`) to dispatch one component and all of its configured
+scale points:
+
+```bash
+mgym suite dispatch metriq_score_1_0 \
+    --component qft --provider <provider> --device <device>
+```
+
+The option is repeatable:
+
+```bash
+mgym suite dispatch metriq_score_1_0 \
+    -c bseq -c wit --provider <provider> --device <device>
+```
+
+Unknown or repeated component names are rejected before provider
+initialization.
+
+### Dispatch a complete guarded suite
+
+Some suite definitions require an explicit `--all` opt-in before every
+configured job is dispatched:
+
+```bash
+mgym suite dispatch metriq_score_1_0 \
+    --all --provider <provider> --device <device>
+```
+
+Without `--component` or `--all`, a guarded suite prints its runtime and cost
+warning, lists the available components, and exits before provider
+initialization.
+
+See [Metriq Score 1.0 Suite](../suites/metriq-score-1.0.md) for the versioned
+component and scale-point reference.
 
 ---
 
@@ -107,5 +152,9 @@ mgym suite upload [suite_id] [OPTIONS]
 | `--commit-message` | STR | Commit message | `None` |
 | `--clone-dir` | STR | Working directory to clone into (env: `MGYM_UPLOAD_CLONE_DIR`) | `None` |
 | `--dry-run` | BOOL | Do not push or open a PR; print actions only | `False` |
+
+Jobs in the suite that failed (dispatch raised, or the provider reported a failure)
+are included as `outcome: "error"` records with the captured error, so one failed
+benchmark does not block the upload. Jobs that are still pending do.
 
 ---

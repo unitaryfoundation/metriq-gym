@@ -44,7 +44,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkScore,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
-from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.qplatform.device import connectivity_graph, validate_qubit_capacity
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
@@ -345,8 +345,9 @@ def calc_stats(data: LinearRampQAOAData, samples: list["MeasCount"]) -> Aggregat
         all(stat[ith_layer].confidence_pass for stat in trial_stats)
         for ith_layer in range(len(data.qaoa_layers))
     ]
+    # Floored at zero: performance at or below the random-sampling baseline scores 0.
     effective_approx_ratio = [
-        (r - data.approx_ratio_random_mean) / (1 - data.approx_ratio_random_mean)
+        max(0.0, (r - data.approx_ratio_random_mean) / (1 - data.approx_ratio_random_mean))
         for r in approx_ratio
     ]
 
@@ -373,6 +374,8 @@ class LinearRampQAOA(Benchmark):
             Tuple of (circuits_with_params, graph_info, optimal_sol, circuit_encoding).
         """
         num_qubits = self.params.num_qubits
+        validate_qubit_capacity(device, num_qubits)
+
         graph_type = self.params.graph_type
         qaoa_layers = self.params.qaoa_layers
         trials = self.params.trials

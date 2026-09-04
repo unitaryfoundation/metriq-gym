@@ -187,6 +187,8 @@ class TestJobCommands:
         assert "--commit-message" in result.output
         assert "--clone-dir" in result.output
         assert "--dry-run" in result.output
+        assert "--outcome" in result.output
+        assert "--reason" in result.output
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -198,6 +200,48 @@ class TestJobCommands:
         args = mock_upload.call_args[0][0]
         assert args.job_id == "latest"
         assert args.dry_run is True
+        assert args.outcome is None
+        assert args.reason is None
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
+    def test_job_upload_with_outcome_and_reason(self, mock_upload, mock_jm):
+        """mgym job upload --outcome/--reason should be forwarded to upload_job."""
+        runner.invoke(
+            app,
+            [
+                "job",
+                "upload",
+                "test-id",
+                "--outcome",
+                "unsupported",
+                "--reason",
+                "Compiler rejects 100q circuits",
+            ],
+        )
+
+        mock_upload.assert_called_once()
+        args = mock_upload.call_args[0][0]
+        assert args.outcome == "unsupported"
+        assert args.reason == "Compiler rejects 100q circuits"
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
+    def test_job_upload_outcome_is_case_insensitive(self, mock_upload, mock_jm):
+        runner.invoke(
+            app, ["job", "upload", "test-id", "--outcome", "Not_Applicable", "--reason", "r"]
+        )
+        mock_upload.assert_called_once()
+        assert mock_upload.call_args[0][0].outcome == "not_applicable"
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
+    def test_job_upload_rejects_unknown_outcome_at_cli(self, mock_upload, mock_jm):
+        result = runner.invoke(app, ["job", "upload", "test-id", "--outcome", "exploded"])
+        assert result.exit_code != 0
+        combined = (result.output or "") + (result.stderr or "")
+        assert "not one of" in combined
+        mock_upload.assert_not_called()
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -283,6 +327,8 @@ class TestSuiteCommands:
         assert "SUITE_CONFIG" in result.output
         assert "--provider" in result.output
         assert "--device" in result.output
+        assert "--component" in result.output
+        assert "--all" in result.output
 
     def test_suite_dispatch_missing_config_shows_error(self):
         """mgym suite dispatch without config should error."""
@@ -301,7 +347,19 @@ class TestSuiteCommands:
 
         runner.invoke(
             app,
-            ["suite", "dispatch", str(config_file), "-p", "local", "-d", "aer_simulator"],
+            [
+                "suite",
+                "dispatch",
+                str(config_file),
+                "-p",
+                "local",
+                "-d",
+                "aer_simulator",
+                "-c",
+                "qft",
+                "--component",
+                "wit",
+            ],
         )
 
         mock_dispatch.assert_called_once()
@@ -309,6 +367,24 @@ class TestSuiteCommands:
         assert args.suite_config == str(config_file)
         assert args.provider == "local"
         assert args.device == "aer_simulator"
+        assert args.components == ["qft", "wit"]
+        assert args.all_components is False
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.dispatch_suite")
+    def test_suite_dispatch_forwards_all_opt_in(self, mock_dispatch, mock_jm, tmp_path):
+        config_file = tmp_path / "suite.json"
+        config_file.write_text("{}")
+
+        runner.invoke(
+            app,
+            ["suite", "dispatch", str(config_file), "--all"],
+        )
+
+        mock_dispatch.assert_called_once()
+        args = mock_dispatch.call_args[0][0]
+        assert args.components is None
+        assert args.all_components is True
 
     def test_suite_poll_help(self):
         """mgym suite poll --help should show usage."""

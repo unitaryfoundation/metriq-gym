@@ -285,7 +285,12 @@ def build_ghz_circuits(
             f"be disconnected"
         )
 
-    n_total = total_device_qubits
+    # Size the register to the highest physical index in use rather than the
+    # whole device: qubit i still maps to physical qubit i (so the BFS layout
+    # is preserved on devices that pin by index), but backends that simulate
+    # every declared wire (e.g. the Quantinuum emulators) no longer pay for
+    # idle qubits. On an all-to-all device this is exactly num_qubits wide.
+    n_total = max(data_qubits) + 1
 
     def _make_ghz_circuit() -> QuantumCircuit:
         """Create base GHZ state preparation circuit."""

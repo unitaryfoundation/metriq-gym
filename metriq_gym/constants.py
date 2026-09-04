@@ -32,3 +32,20 @@ SCHEMA_MAPPING = {
     JobType.GHZ: "ghz.schema.json",
     JobType.QAT_OLE: "qat_ole.schema.json",
 }
+
+
+class RecordOutcome(StrEnum):
+    """Non-completed outcomes an uploaded record may declare.
+
+    Mirrors the metriq-data "Record outcomes" contract. A record without an outcome is
+    a completed run. ``ERROR`` is what a machine records for a failed attempt;
+    ``UNSUPPORTED`` and ``NOT_APPLICABLE`` are human classifications asserted at upload
+    time (see ``HUMAN_OUTCOMES``).
+    """
+
+    ERROR = "error"
+    UNSUPPORTED = "unsupported"
+    NOT_APPLICABLE = "not_applicable"
+
+
+HUMAN_OUTCOMES = frozenset({RecordOutcome.UNSUPPORTED, RecordOutcome.NOT_APPLICABLE})
