@@ -295,7 +295,10 @@ def build_ghz_circuits(
         # CNOT dissemination tree
         for ctrl, targ in bfs:
             qc.cx(ctrl, targ)
-        qc.barrier()
+        # Barrier only the data qubits: a full-width barrier marks every
+        # wire as used, so backends that drop idle wires (e.g. the Quantinuum
+        # transform) would otherwise submit a device-width circuit.
+        qc.barrier(data_qubits)
         return qc
 
     def _add_measurements(qc: QuantumCircuit) -> None:

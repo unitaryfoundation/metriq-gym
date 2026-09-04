@@ -89,7 +89,12 @@ class QuantinuumDevice(QuantumDevice):
         if isinstance(run_input, Circuit):
             return [run_input]
         if isinstance(run_input, QuantumCircuit):
-            return [qiskit_to_tk(run_input)]
+            tk_circuit = qiskit_to_tk(run_input)
+            # Benchmarks may allocate device-width registers to pin a layout;
+            # Quantinuum routes freely, so drop idle wires rather than have the
+            # emulator simulate every unused qubit.
+            tk_circuit.remove_blank_wires()
+            return [tk_circuit]
         raise TypeError(
             f"Unsupported run_input type {type(run_input)}; expected pytket.Circuit or qiskit.QuantumCircuit"
         )
