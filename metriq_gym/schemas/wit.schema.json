@@ -1,29 +1,33 @@
 {
-    "$id": "metriq-gym/wit.schema.json",
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "Wormhole-inspired teleportation (WIT)",
-    "description": "The WIT benchmark schema definition, describing the Wormhole-inspired teleportation benchmark configuration.",
-    "type": "object",
-    "properties": {
-      "benchmark_name": {
-        "type": "string",
-        "const": "WIT",
-        "description": "Name of the benchmark. Must be 'WIT' for this schema."
-      },
-      "shots": {
-        "type": "integer",
-        "description": "Number of measurement shots (repetitions) to use for the benchmark.",
-        "default": 1000,
-        "minimum": 1,
-        "examples": [1000]
-      },
-      "num_qubits": {
-        "type": "integer",
-        "description": "Number of qubits to use for the benchmark. Must be either 6 or 7.",
-        "enum": [6, 7],
-        "default": 6,
-        "examples": [6, 7]
-      }
+  "$id": "metriq-gym/wit.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Wormhole-inspired teleportation (WIT)",
+  "description": "The WIT benchmark schema definition, describing the Wormhole-inspired teleportation benchmark configuration.",
+  "type": "object",
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "const": "WIT",
+      "description": "Name of the benchmark. Must be 'WIT' for this schema."
     },
-    "required": ["benchmark_name"]
-  }
+    "shots": {
+      "$ref": "common.schema.json#/$defs/shots"
+    },
+    "num_qubits": {
+      "type": "integer",
+      "description": "Number of qubits to use for the benchmark. Must be either 6 or 7.",
+      "enum": [
+        6,
+        7
+      ],
+      "default": 6,
+      "examples": [
+        6,
+        7
+      ]
+    }
+  },
+  "required": [
+    "benchmark_name"
+  ]
+}

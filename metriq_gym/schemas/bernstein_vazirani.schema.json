@@ -12,39 +12,25 @@
       "description": "Name of the benchmark. Must be 'Bernstein-Vazirani' for this schema."
     },
     "shots": {
-      "type": "integer",
-      "description": "Number of measurement shots (repetitions) to use for each circuit in the benchmark.",
-      "default": 1000,
-      "minimum": 1,
-      "examples": [5000]
+      "$ref": "common.schema.json#/$defs/shots"
     },
     "min_qubits": {
       "type": "integer",
       "description": "Minimum number of qubits to start generating circuits for the benchmark.",
       "default": 2,
       "minimum": 2,
-      "examples": [4]
+      "examples": [
+        4
+      ]
     },
     "max_qubits": {
-      "type": "integer",
-      "description": "Maximum number of qubits to stop generating circuits for the benchmark.",
-      "default": 6,
-      "minimum": 2,
-      "examples": [7]
+      "$ref": "common.schema.json#/$defs/max_qubits"
     },
     "skip_qubits": {
-      "type": "integer",
-      "description": "The step size for generating circuits from the min to max qubit sizes. ",
-      "default": 1,
-      "minimum": 1,
-      "examples": [2]
+      "$ref": "common.schema.json#/$defs/skip_qubits"
     },
     "max_circuits": {
-      "type": "integer",
-      "description": "Maximum number of circuits generated for each qubit size in the benchmark.",
-      "default": 3,
-      "minimum": 1,
-      "examples": [9]
+      "$ref": "common.schema.json#/$defs/max_circuits"
     },
     "method": {
       "type": "integer",
@@ -52,17 +38,25 @@
       "default": 1,
       "minimum": 1,
       "maximum": 2,
-      "examples": [2]
+      "examples": [
+        2
+      ]
     },
     "input_value": {
       "type": "integer",
       "description": "Specifies the secret int for the benchmark; note that max_circuits must be 1 if this is used.",
-      "examples": [1]
+      "examples": [
+        1
+      ]
     }
   },
-  "required": ["benchmark_name"],
+  "required": [
+    "benchmark_name"
+  ],
   "if": {
-    "required": ["input_value"]
+    "required": [
+      "input_value"
+    ]
   },
   "then": {
     "properties": {

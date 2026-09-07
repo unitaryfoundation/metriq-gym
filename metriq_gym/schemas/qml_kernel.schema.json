@@ -1,6 +1,6 @@
 {
   "$id": "metriq-gym/qml_kernel.schema.json",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",  
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "QML Kernel",
   "description": "The QML Kernel benchmark schema definition, describing parameters for the QML Kernel benchmark.",
   "type": "object",
@@ -14,15 +14,16 @@
       "type": "integer",
       "description": "Number of qubits used in the QML Kernel circuit(s).",
       "minimum": 2,
-      "examples": [10]
+      "examples": [
+        10
+      ]
     },
     "shots": {
-      "type": "integer",
-      "description": "Number of measurement shots (repetitions) for the QML Kernel benchmark.",
-      "default": 1000,
-      "minimum": 1,
-      "examples": [1000]
+      "$ref": "common.schema.json#/$defs/shots"
     }
   },
-  "required": ["benchmark_name", "num_qubits"]
+  "required": [
+    "benchmark_name",
+    "num_qubits"
+  ]
 }

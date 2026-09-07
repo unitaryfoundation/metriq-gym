@@ -1,0 +1,44 @@
+{
+  "$id": "metriq-gym/common.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Common benchmark properties",
+  "description": "Property definitions shared across benchmark schemas. Reference these with $ref rather than restating them. Keywords given as siblings of the $ref override the shared definition, which is how a benchmark declares a different default without forking the whole property.",
+  "$defs": {
+    "shots": {
+      "type": "integer",
+      "description": "Number of measurement shots (repetitions) per circuit.",
+      "default": 1000,
+      "minimum": 1,
+      "examples": [
+        1000
+      ]
+    },
+    "max_qubits": {
+      "type": "integer",
+      "description": "Maximum number of qubits to stop generating circuits for the benchmark.",
+      "default": 6,
+      "minimum": 2,
+      "examples": [
+        7
+      ]
+    },
+    "skip_qubits": {
+      "type": "integer",
+      "description": "The step size for generating circuits from the min to max qubit sizes.",
+      "default": 1,
+      "minimum": 1,
+      "examples": [
+        2
+      ]
+    },
+    "max_circuits": {
+      "type": "integer",
+      "description": "Maximum number of circuits generated for each qubit size in the benchmark.",
+      "default": 3,
+      "minimum": 1,
+      "examples": [
+        9
+      ]
+    }
+  }
+}

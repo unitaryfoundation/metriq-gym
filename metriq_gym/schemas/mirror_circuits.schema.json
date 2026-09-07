@@ -14,7 +14,11 @@
       "type": "integer",
       "description": "Number of qubits to use for the mirror circuit. If not specified, uses all available qubits on the device.",
       "minimum": 2,
-      "examples": [4, 8, 16]
+      "examples": [
+        4,
+        8,
+        16
+      ]
     },
     "num_layers": {
       "type": "integer",
@@ -22,7 +26,11 @@
       "default": 3,
       "minimum": 1,
       "maximum": 500,
-      "examples": [3, 5, 10]
+      "examples": [
+        3,
+        5,
+        10
+      ]
     },
     "two_qubit_gate_prob": {
       "type": "number",
@@ -30,21 +38,27 @@
       "default": 0.5,
       "minimum": 0.0,
       "maximum": 1.0,
-      "examples": [0.3, 0.5, 0.8]
+      "examples": [
+        0.3,
+        0.5,
+        0.8
+      ]
     },
     "two_qubit_gate_name": {
       "type": "string",
       "description": "Type of two-qubit gate to use in the circuit.",
-      "enum": ["CNOT", "CZ"],
+      "enum": [
+        "CNOT",
+        "CZ"
+      ],
       "default": "CNOT",
-      "examples": ["CNOT", "CZ"]
+      "examples": [
+        "CNOT",
+        "CZ"
+      ]
     },
     "shots": {
-      "type": "integer",
-      "description": "Number of measurement shots (repetitions) for the benchmark.",
-      "default": 1000,
-      "minimum": 1,
-      "examples": [1000, 5000, 10000]
+      "$ref": "common.schema.json#/$defs/shots"
     },
     "num_circuits": {
       "type": "integer",
@@ -52,14 +66,24 @@
       "default": 10,
       "minimum": 1,
       "maximum": 1000,
-      "examples": [10, 50, 100]
+      "examples": [
+        10,
+        50,
+        100
+      ]
     },
     "seed": {
       "type": "integer",
       "description": "Optional random seed for reproducible circuit generation. If provided, circuits will be deterministic.",
       "minimum": 0,
-      "examples": [42, 123, 2024]
+      "examples": [
+        42,
+        123,
+        2024
+      ]
     }
   },
-  "required": ["benchmark_name"]
+  "required": [
+    "benchmark_name"
+  ]
 }

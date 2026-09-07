@@ -10,6 +10,7 @@ from importlib import resources
 from metriq_gym.constants import JobType, SCHEMA_MAPPING
 
 SCHEMA_DIR_NAME = "schemas"
+COMMON_SCHEMA_FILENAME = "common.schema.json"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_SCHEMA_DIR = os.path.join(CURRENT_DIR, SCHEMA_DIR_NAME)
 BENCHMARK_NAME_KEY = "benchmark_name"
@@ -43,6 +44,50 @@ def load_json_file(file_path: str) -> dict:
         return json.load(file)
 
 
+def _resolve_refs(node: Any, defs: dict[str, Any]) -> Any:
+    """Inline every local $ref against the shared definitions.
+
+    jsonschema resolves $ref on its own, but create_pydantic_model reads
+    field_schema["type"] directly and would raise KeyError on a bare reference.
+    Materializing the schema up front keeps both consumers working on the same
+    fully-expanded dict.
+
+    Keywords alongside a $ref override the referenced definition, which is how a
+    benchmark declares a different default without restating the property. This
+    is draft 2020-12 behaviour; all bundled schemas declare that dialect.
+    """
+    if isinstance(node, list):
+        return [_resolve_refs(item, defs) for item in node]
+    if not isinstance(node, dict):
+        return node
+
+    ref = node.get("$ref")
+    if isinstance(ref, str):
+        name = ref.rsplit("/", 1)[-1]
+        if name not in defs:
+            raise ValueError(f"Unknown schema reference: {ref}")
+        merged = dict(defs[name])
+        # Siblings win over the shared definition.
+        merged.update({k: v for k, v in node.items() if k != "$ref"})
+        return _resolve_refs(merged, defs)
+
+    return {key: _resolve_refs(value, defs) for key, value in node.items()}
+
+
+def load_common_defs(schema_dir: str = DEFAULT_SCHEMA_DIR) -> dict[str, Any]:
+    """Load the shared $defs used by benchmark schemas."""
+    if schema_dir != DEFAULT_SCHEMA_DIR:
+        candidate = os.path.join(schema_dir, COMMON_SCHEMA_FILENAME)
+        if not os.path.isfile(candidate):
+            return {}
+        return load_json_file(candidate).get("$defs", {})
+
+    resource_path = _schema_resource_path(COMMON_SCHEMA_FILENAME)
+    if resource_path is None:
+        return {}
+    return load_json_file(resource_path).get("$defs", {})
+
+
 def load_schema(benchmark_name: str, schema_dir: str = DEFAULT_SCHEMA_DIR) -> dict:
     """Load a JSON schema based on the benchmark name.
 
@@ -57,14 +102,14 @@ def load_schema(benchmark_name: str, schema_dir: str = DEFAULT_SCHEMA_DIR) -> di
         candidate = os.path.join(schema_dir, schema_filename)
         if not os.path.isfile(candidate):
             raise FileNotFoundError(f"Schema file not found: {candidate}")
-        return load_json_file(candidate)
+        return _resolve_refs(load_json_file(candidate), load_common_defs(schema_dir))
 
     resource_path = _schema_resource_path(schema_filename)
     if resource_path is None:
         raise FileNotFoundError(
             f"Schema file '{schema_filename}' not found in package resources or '{DEFAULT_SCHEMA_DIR}'."
         )
-    return load_json_file(resource_path)
+    return _resolve_refs(load_json_file(resource_path), load_common_defs(schema_dir))
 
 
 def create_pydantic_model(schema: dict[str, Any]) -> Any:
