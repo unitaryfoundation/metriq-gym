@@ -175,7 +175,11 @@ class JobManager:
         self._thread_lock = threading.RLock()
         self._lock_depth = 0
         self._lock_cm: Any = None
-        self._load_jobs(warn_if_empty=True)
+        # Under the lock as well: on Windows, Path.replace fails while another
+        # process holds the destination open, so an unlocked read here can make
+        # a concurrent writer's rewrite fail.
+        with self._db_lock():
+            self._load_jobs(warn_if_empty=True)
 
     @contextmanager
     def _db_lock(self):

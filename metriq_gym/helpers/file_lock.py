@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import logging
 import os
 import time
@@ -23,6 +24,16 @@ except ImportError:  # pragma: no cover - platform dependent
 logger = logging.getLogger(__name__)
 
 LOCK_SUFFIX = ".lock"
+# Raised when the lock is held elsewhere. Anything else (an unsupported
+# filesystem, a bad descriptor) is permanent and must not be retried.
+CONTENTION_ERRNOS = frozenset(
+    {
+        errno.EACCES,
+        errno.EAGAIN,
+        errno.EWOULDBLOCK,
+        errno.EDEADLK,
+    }
+)
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_POLL_INTERVAL = 0.05
 
@@ -87,7 +98,9 @@ def exclusive_lock(
             try:
                 _try_acquire(fd)
                 break
-            except OSError:
+            except OSError as exc:
+                if exc.errno not in CONTENTION_ERRNOS:
+                    raise
                 if time.monotonic() >= deadline:
                     raise TimeoutError(
                         f"Timed out after {timeout}s waiting for the lock on {lock_file}. "
