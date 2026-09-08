@@ -298,13 +298,11 @@ class TestMirrorCircuitsBenchmark:
 
     @pytest.fixture
     def benchmark(self, mock_params):
-        args = MagicMock()
-        return MirrorCircuits(args, mock_params)
+        return MirrorCircuits(mock_params)
 
     @pytest.fixture
     def benchmark_minimal(self, mock_params_minimal):
-        args = MagicMock()
-        return MirrorCircuits(args, mock_params_minimal)
+        return MirrorCircuits(mock_params_minimal)
 
     @patch("metriq_gym.benchmarks.mirror_circuits.connectivity_graph")
     @patch("metriq_gym.benchmarks.mirror_circuits.generate_mirror_circuit")
@@ -360,7 +358,7 @@ class TestMirrorCircuitsBenchmark:
         mock_params_with_width.seed = 42
         mock_params_with_width.width = 2
 
-        benchmark_with_width = MirrorCircuits(MagicMock(), mock_params_with_width)
+        benchmark_with_width = MirrorCircuits(mock_params_with_width)
 
         mock_generate_circuit.reset_mock()
 
@@ -382,7 +380,7 @@ class TestMirrorCircuitsBenchmark:
         mock_params_invalid.seed = 42
         mock_params_invalid.width = 10
 
-        benchmark_invalid = MirrorCircuits(MagicMock(), mock_params_invalid)
+        benchmark_invalid = MirrorCircuits(mock_params_invalid)
 
         with pytest.raises(ValueError, match="exceeds device capacity"):
             benchmark_invalid.dispatch_handler(mock_device)

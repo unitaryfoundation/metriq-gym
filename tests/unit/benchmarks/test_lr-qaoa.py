@@ -18,10 +18,7 @@ from metriq_gym.exceptions import DeviceCapacityError
 
 
 def test_lr_qaoa_rejects_oversized_workload_before_connectivity_lookup():
-    benchmark = LinearRampQAOA(
-        SimpleNamespace(),
-        SimpleNamespace(num_qubits=50),
-    )
+    benchmark = LinearRampQAOA(SimpleNamespace(num_qubits=50))
     device = SimpleNamespace(
         id="arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1",
         num_qubits=36,

@@ -181,9 +181,9 @@ def setup_device(provider_name: str, device_name: str):
     return device
 
 
-def setup_benchmark(args, params, job_type: JobType) -> "Benchmark":
+def setup_benchmark(params, job_type: JobType) -> "Benchmark":
     reg = _lazy_registry()
-    return reg.BENCHMARK_HANDLERS[job_type](args, params)
+    return reg.BENCHMARK_HANDLERS[job_type](params)
 
 
 def validate_benchmark_device_capacity(params, device) -> None:
@@ -258,7 +258,7 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     print(f"Dispatching {params.benchmark_name}...")
 
-    handler: Benchmark = setup_benchmark(args, params, job_type)
+    handler: Benchmark = setup_benchmark(params, job_type)
     try:
         job_data: BenchmarkData = handler.dispatch_handler(device)
     except Exception as exc:
@@ -427,7 +427,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                 f"Dispatching {benchmark_entry.name} ({params.benchmark_name}) from {suite.name}..."
             )
 
-            handler: Benchmark = setup_benchmark(args, params, job_type)
+            handler: Benchmark = setup_benchmark(params, job_type)
             try:
                 job_data: BenchmarkData = handler.dispatch_handler(device)
             except Exception as exc:
@@ -992,10 +992,8 @@ def replay_from_debug_file(debug_file: str) -> Optional["BenchmarkResult"]:
         return None
 
     # Create benchmark handler
-    # We need a minimal args namespace for setup_benchmark
-    args = argparse.Namespace()
     validated_params = validate_and_create_model(params)
-    handler: Benchmark = setup_benchmark(args, validated_params, job_type)
+    handler: Benchmark = setup_benchmark(validated_params, job_type)
 
     # Call poll_handler with empty quantum_jobs list
     # Note: CLOPS benchmark uses quantum_jobs for timing, which won't work in replay
@@ -1043,9 +1041,7 @@ def fetch_result(
         return None
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
-    handler: Benchmark = setup_benchmark(
-        args, validate_and_create_model(metriq_job.params), job_type
-    )
+    handler: Benchmark = setup_benchmark(validate_and_create_model(metriq_job.params), job_type)
     from qbraid.runtime import JobStatus
 
     quantum_jobs = [
@@ -1183,7 +1179,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
             print(f"✗ {job_type.value}: {exc}")
             return
 
-    benchmark: Benchmark = setup_benchmark(args, params, job_type)
+    benchmark: Benchmark = setup_benchmark(params, job_type)
 
     try:
         circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)

@@ -135,4 +135,4 @@ def test_eplg_warns_when_device_gate_support_cannot_be_confirmed():
             match="provider/device-specific.*change them to a native universal gate set",
         ),
     ):
-        EPLG(MagicMock(), params)._build_circuits(MagicMock())
+        EPLG(params)._build_circuits(MagicMock())

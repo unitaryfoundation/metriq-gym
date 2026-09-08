@@ -55,7 +55,7 @@ def _make_params(**overrides):
 def _make_clops(**param_overrides) -> Clops:
     args = argparse.Namespace()
     params = _make_params(**param_overrides)
-    return Clops(args, params)
+    return Clops(params)
 
 
 # ---------------------------------------------------------------------------
