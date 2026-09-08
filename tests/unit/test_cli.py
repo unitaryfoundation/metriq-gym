@@ -164,7 +164,10 @@ def test_job_poll_include_raw_flag():
     runner = CliRunner()
 
     with patch("metriq_gym.cli.JobManager") as mock_jm_class:
-        with patch("metriq_gym.run.fetch_result") as mock_fetch:
+        with (
+            patch("metriq_gym.run.fetch_result") as mock_fetch,
+            patch("metriq_gym.run.export_job_result") as mock_export,
+        ):
             # Setup mock job manager
             mock_jm = MagicMock()
             mock_jm_class.return_value = mock_jm
@@ -181,10 +184,9 @@ def test_job_poll_include_raw_flag():
             # Run CLI with --include-raw
             runner.invoke(app, ["job", "poll", "latest", "--include-raw"])
 
-            # Verify fetch_result was called with args that have include_raw=True
+            # include_raw is consumed by export_job_result, not fetch_result
             assert mock_fetch.called
-            args = mock_fetch.call_args[0][1]  # Second positional arg is args
-            assert args.include_raw is True
+            assert mock_export.call_args[0][1] is True
 
 
 REPLAY_DEBUG_DATA = {

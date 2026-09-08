@@ -13,7 +13,6 @@ Usage overview:
       mgym job upload latest --dry-run
 """
 
-import argparse
 import logging
 from typing import Annotated, Optional
 
@@ -187,13 +186,7 @@ def job_dispatch(
     """Dispatch a benchmark job to a quantum device or simulator."""
     from metriq_gym.run import dispatch_job as _dispatch_job
 
-    args = argparse.Namespace()
-    args.config = config
-    args.provider = provider
-    args.device = device
-
-    job_manager = JobManager()
-    _dispatch_job(args, job_manager)
+    _dispatch_job(config, provider, device, JobManager())
 
 
 @job_app.command("estimate")
@@ -209,12 +202,7 @@ def job_estimate(
     """
     from metriq_gym.run import estimate_job as _estimate_job
 
-    args = argparse.Namespace()
-    args.config = config
-    args.provider = provider
-    args.device = device
-
-    _estimate_job(args)
+    _estimate_job(config, provider, device)
 
 
 @job_app.command("poll")
@@ -241,15 +229,13 @@ def job_poll(
     """Poll job status and retrieve results when complete."""
     from metriq_gym.run import poll_job as _poll_job
 
-    args = argparse.Namespace()
-    args.job_id = job_id
-    args.no_cache = no_cache
-    args.include_raw = include_raw
-    if json_output is not None:
-        args.json = json_output
-
-    job_manager = JobManager()
-    _poll_job(args, job_manager)
+    _poll_job(
+        job_id,
+        JobManager(),
+        json=json_output,
+        no_cache=no_cache,
+        include_raw=include_raw,
+    )
 
 
 @job_app.command("view")
@@ -261,11 +247,7 @@ def job_view(
     """View job details and metadata."""
     from metriq_gym.run import view_job as _view_job
 
-    args = argparse.Namespace()
-    args.job_id = job_id
-
-    job_manager = JobManager()
-    _view_job(args, job_manager)
+    _view_job(job_id, JobManager())
 
 
 @job_app.command("delete")
@@ -279,11 +261,7 @@ def job_delete(
     """
     from metriq_gym.run import delete_job as _delete_job
 
-    args = argparse.Namespace()
-    args.job_id = job_id
-
-    job_manager = JobManager()
-    _delete_job(args, job_manager)
+    _delete_job(job_id, JobManager())
 
 
 @job_app.command("upload")
@@ -363,24 +341,20 @@ def job_upload(
     Failed jobs (dispatch raised, or the provider reported a failure) are uploaded as
     'error' outcome records carrying the captured error message.
     """
-    from metriq_gym.run import upload_job as _upload_job
+    from metriq_gym.run import UploadOptions, upload_job as _upload_job
 
-    args = argparse.Namespace()
-    args.job_id = job_id
-    args.repo = repo
-    args.base_branch = base_branch
-    args.upload_dir = upload_dir
-    args.branch_name = branch_name
-    args.pr_title = pr_title
-    args.pr_body = pr_body
-    args.commit_message = commit_message
-    args.clone_dir = clone_dir
-    args.dry_run = dry_run
-    args.outcome = outcome
-    args.reason = reason
-
-    job_manager = JobManager()
-    _upload_job(args, job_manager)
+    options = UploadOptions(
+        repo=repo,
+        base_branch=base_branch,
+        upload_dir=upload_dir,
+        branch_name=branch_name,
+        pr_title=pr_title,
+        pr_body=pr_body,
+        commit_message=commit_message,
+        clone_dir=clone_dir,
+        dry_run=dry_run,
+    )
+    _upload_job(job_id, JobManager(), outcome=outcome, reason=reason, options=options)
 
 
 @job_app.command("replay")
@@ -451,15 +425,14 @@ def suite_dispatch(
     """Dispatch a suite of benchmark jobs to a quantum device."""
     from metriq_gym.run import dispatch_suite as _dispatch_suite
 
-    args = argparse.Namespace()
-    args.suite_config = suite_config
-    args.provider = provider
-    args.device = device
-    args.components = components
-    args.all_components = all_components
-
-    job_manager = JobManager()
-    _dispatch_suite(args, job_manager)
+    _dispatch_suite(
+        suite_config,
+        provider,
+        device,
+        JobManager(),
+        components=components,
+        all_components=all_components,
+    )
 
 
 @suite_app.command("poll")
@@ -477,14 +450,7 @@ def suite_poll(
     """Poll suite jobs and retrieve results when complete."""
     from metriq_gym.run import poll_suite as _poll_suite
 
-    args = argparse.Namespace()
-    args.suite_id = suite_id
-    args.no_cache = no_cache
-    if json_output is not None:
-        args.json = json_output
-
-    job_manager = JobManager()
-    _poll_suite(args, job_manager)
+    _poll_suite(suite_id, JobManager(), json=json_output, no_cache=no_cache)
 
 
 @suite_app.command("view")
@@ -494,11 +460,7 @@ def suite_view(
     """View jobs in a suite."""
     from metriq_gym.run import view_suite as _view_suite
 
-    args = argparse.Namespace()
-    args.suite_id = suite_id
-
-    job_manager = JobManager()
-    _view_suite(args, job_manager)
+    _view_suite(suite_id, JobManager())
 
 
 @suite_app.command("delete")
@@ -512,11 +474,7 @@ def suite_delete(
     """
     from metriq_gym.run import delete_suite as _delete_suite
 
-    args = argparse.Namespace()
-    args.suite_id = suite_id
-
-    job_manager = JobManager()
-    _delete_suite(args, job_manager)
+    _delete_suite(suite_id, JobManager())
 
 
 @suite_app.command("upload")
@@ -576,19 +534,17 @@ def suite_upload(
     ] = False,
 ) -> None:
     """Upload suite results to GitHub via pull request."""
-    from metriq_gym.run import upload_suite as _upload_suite
+    from metriq_gym.run import UploadOptions, upload_suite as _upload_suite
 
-    args = argparse.Namespace()
-    args.suite_id = suite_id
-    args.repo = repo
-    args.base_branch = base_branch
-    args.upload_dir = upload_dir
-    args.branch_name = branch_name
-    args.pr_title = pr_title
-    args.pr_body = pr_body
-    args.commit_message = commit_message
-    args.clone_dir = clone_dir
-    args.dry_run = dry_run
-
-    job_manager = JobManager()
-    _upload_suite(args, job_manager)
+    options = UploadOptions(
+        repo=repo,
+        base_branch=base_branch,
+        upload_dir=upload_dir,
+        branch_name=branch_name,
+        pr_title=pr_title,
+        pr_body=pr_body,
+        commit_message=commit_message,
+        clone_dir=clone_dir,
+        dry_run=dry_run,
+    )
+    _upload_suite(suite_id, JobManager(), options=options)

@@ -89,10 +89,9 @@ class TestJobCommands:
         # The command should attempt to call dispatch_job
         # (may fail due to config validation, but the call is made)
         mock_dispatch.assert_called_once()
-        args = mock_dispatch.call_args[0][0]
-        assert args.config == str(config_file)
-        assert args.provider == "local"
-        assert args.device == "aer_simulator"
+        assert mock_dispatch.call_args[0][0] == str(config_file)
+        assert mock_dispatch.call_args[0][1] == "local"
+        assert mock_dispatch.call_args[0][2] == "aer_simulator"
 
     def test_job_poll_help(self):
         """mgym job poll --help should show usage."""
@@ -109,9 +108,8 @@ class TestJobCommands:
         runner.invoke(app, ["job", "poll", "latest"])
 
         mock_poll.assert_called_once()
-        args = mock_poll.call_args[0][0]
-        assert args.job_id == "latest"
-        assert args.no_cache is False
+        assert mock_poll.call_args[0][0] == "latest"
+        assert mock_poll.call_args[1]["no_cache"] is False
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.poll_job")
@@ -121,8 +119,7 @@ class TestJobCommands:
         runner.invoke(app, ["job", "poll", "latest", "--json", str(outfile)])
 
         mock_poll.assert_called_once()
-        args = mock_poll.call_args[0][0]
-        assert args.json == str(outfile)
+        assert mock_poll.call_args[1]["json"] == str(outfile)
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.poll_job")
@@ -131,8 +128,7 @@ class TestJobCommands:
         runner.invoke(app, ["job", "poll", "latest", "--no-cache"])
 
         mock_poll.assert_called_once()
-        args = mock_poll.call_args[0][0]
-        assert args.no_cache is True
+        assert mock_poll.call_args[1]["no_cache"] is True
 
     def test_job_view_help(self):
         """mgym job view --help should show usage."""
@@ -147,8 +143,7 @@ class TestJobCommands:
         runner.invoke(app, ["job", "view", "test-job-id"])
 
         mock_view.assert_called_once()
-        args = mock_view.call_args[0][0]
-        assert args.job_id == "test-job-id"
+        assert mock_view.call_args[0][0] == "test-job-id"
 
     def test_job_delete_help(self):
         """mgym job delete --help should show usage."""
@@ -163,8 +158,7 @@ class TestJobCommands:
         runner.invoke(app, ["job", "delete", "test-job-id"])
 
         mock_delete.assert_called_once()
-        args = mock_delete.call_args[0][0]
-        assert args.job_id == "test-job-id"
+        assert mock_delete.call_args[0][0] == "test-job-id"
 
     def test_job_estimate_help(self):
         """mgym job estimate --help should show usage."""
@@ -197,11 +191,10 @@ class TestJobCommands:
         runner.invoke(app, ["job", "upload", "latest", "--dry-run"])
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.job_id == "latest"
-        assert args.dry_run is True
-        assert args.outcome is None
-        assert args.reason is None
+        assert mock_upload.call_args[0][0] == "latest"
+        assert mock_upload.call_args[1]["options"].dry_run is True
+        assert mock_upload.call_args[1]["outcome"] is None
+        assert mock_upload.call_args[1]["reason"] is None
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -221,9 +214,8 @@ class TestJobCommands:
         )
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.outcome == "unsupported"
-        assert args.reason == "Compiler rejects 100q circuits"
+        assert mock_upload.call_args[1]["outcome"] == "unsupported"
+        assert mock_upload.call_args[1]["reason"] == "Compiler rejects 100q circuits"
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -232,7 +224,7 @@ class TestJobCommands:
             app, ["job", "upload", "test-id", "--outcome", "Not_Applicable", "--reason", "r"]
         )
         mock_upload.assert_called_once()
-        assert mock_upload.call_args[0][0].outcome == "not_applicable"
+        assert mock_upload.call_args[1]["outcome"] == "not_applicable"
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -274,17 +266,16 @@ class TestJobCommands:
         )
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.job_id == "test-id"
-        assert args.repo == "owner/repo"
-        assert args.base_branch == "develop"
-        assert args.upload_dir == "data/results"
-        assert args.branch_name == "feature-branch"
-        assert args.pr_title == "My PR"
-        assert args.pr_body == "PR description"
-        assert args.commit_message == "Add results"
-        assert args.clone_dir == "/tmp/clone"
-        assert args.dry_run is True
+        assert mock_upload.call_args[0][0] == "test-id"
+        assert mock_upload.call_args[1]["options"].repo == "owner/repo"
+        assert mock_upload.call_args[1]["options"].base_branch == "develop"
+        assert mock_upload.call_args[1]["options"].upload_dir == "data/results"
+        assert mock_upload.call_args[1]["options"].branch_name == "feature-branch"
+        assert mock_upload.call_args[1]["options"].pr_title == "My PR"
+        assert mock_upload.call_args[1]["options"].pr_body == "PR description"
+        assert mock_upload.call_args[1]["options"].commit_message == "Add results"
+        assert mock_upload.call_args[1]["options"].clone_dir == "/tmp/clone"
+        assert mock_upload.call_args[1]["options"].dry_run is True
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -293,10 +284,9 @@ class TestJobCommands:
         runner.invoke(app, ["job", "upload", "latest"])
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.repo == "unitaryfoundation/metriq-data"
-        assert args.base_branch == "main"
-        assert args.dry_run is False
+        assert mock_upload.call_args[1]["options"].repo == "unitaryfoundation/metriq-data"
+        assert mock_upload.call_args[1]["options"].base_branch == "main"
+        assert mock_upload.call_args[1]["options"].dry_run is False
 
 
 class TestSuiteCommands:
@@ -363,12 +353,11 @@ class TestSuiteCommands:
         )
 
         mock_dispatch.assert_called_once()
-        args = mock_dispatch.call_args[0][0]
-        assert args.suite_config == str(config_file)
-        assert args.provider == "local"
-        assert args.device == "aer_simulator"
-        assert args.components == ["qft", "wit"]
-        assert args.all_components is False
+        assert mock_dispatch.call_args[0][0] == str(config_file)
+        assert mock_dispatch.call_args[0][1] == "local"
+        assert mock_dispatch.call_args[0][2] == "aer_simulator"
+        assert mock_dispatch.call_args[1]["components"] == ["qft", "wit"]
+        assert mock_dispatch.call_args[1]["all_components"] is False
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.dispatch_suite")
@@ -382,9 +371,8 @@ class TestSuiteCommands:
         )
 
         mock_dispatch.assert_called_once()
-        args = mock_dispatch.call_args[0][0]
-        assert args.components is None
-        assert args.all_components is True
+        assert mock_dispatch.call_args[1]["components"] is None
+        assert mock_dispatch.call_args[1]["all_components"] is True
 
     def test_suite_poll_help(self):
         """mgym suite poll --help should show usage."""
@@ -401,8 +389,7 @@ class TestSuiteCommands:
         runner.invoke(app, ["suite", "poll", "test-suite-id"])
 
         mock_poll.assert_called_once()
-        args = mock_poll.call_args[0][0]
-        assert args.suite_id == "test-suite-id"
+        assert mock_poll.call_args[0][0] == "test-suite-id"
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.poll_suite")
@@ -412,10 +399,9 @@ class TestSuiteCommands:
         runner.invoke(app, ["suite", "poll", "test-suite", "--json", str(outfile), "--no-cache"])
 
         mock_poll.assert_called_once()
-        args = mock_poll.call_args[0][0]
-        assert args.suite_id == "test-suite"
-        assert args.json == str(outfile)
-        assert args.no_cache is True
+        assert mock_poll.call_args[0][0] == "test-suite"
+        assert mock_poll.call_args[1]["json"] == str(outfile)
+        assert mock_poll.call_args[1]["no_cache"] is True
 
     def test_suite_view_help(self):
         """mgym suite view --help should show usage."""
@@ -430,8 +416,7 @@ class TestSuiteCommands:
         runner.invoke(app, ["suite", "view", "test-suite-id"])
 
         mock_view.assert_called_once()
-        args = mock_view.call_args[0][0]
-        assert args.suite_id == "test-suite-id"
+        assert mock_view.call_args[0][0] == "test-suite-id"
 
     def test_suite_delete_help(self):
         """mgym suite delete --help should show usage."""
@@ -446,8 +431,7 @@ class TestSuiteCommands:
         runner.invoke(app, ["suite", "delete", "test-suite-id"])
 
         mock_delete.assert_called_once()
-        args = mock_delete.call_args[0][0]
-        assert args.suite_id == "test-suite-id"
+        assert mock_delete.call_args[0][0] == "test-suite-id"
 
     def test_suite_upload_help(self):
         """mgym suite upload --help should show all options."""
@@ -464,9 +448,8 @@ class TestSuiteCommands:
         runner.invoke(app, ["suite", "upload", "test-suite", "--dry-run"])
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.suite_id == "test-suite"
-        assert args.dry_run is True
+        assert mock_upload.call_args[0][0] == "test-suite"
+        assert mock_upload.call_args[1]["options"].dry_run is True
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_suite")
@@ -475,10 +458,9 @@ class TestSuiteCommands:
         runner.invoke(app, ["suite", "upload", "test-suite"])
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.repo == "unitaryfoundation/metriq-data"
-        assert args.base_branch == "main"
-        assert args.dry_run is False
+        assert mock_upload.call_args[1]["options"].repo == "unitaryfoundation/metriq-data"
+        assert mock_upload.call_args[1]["options"].base_branch == "main"
+        assert mock_upload.call_args[1]["options"].dry_run is False
 
 
 class TestEnvironmentVariables:
@@ -493,8 +475,7 @@ class TestEnvironmentVariables:
         runner.invoke(app, ["job", "upload", "latest"], env={"MGYM_UPLOAD_REPO": "custom/repo"})
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.repo == "custom/repo"
+        assert mock_upload.call_args[1]["options"].repo == "custom/repo"
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -507,8 +488,7 @@ class TestEnvironmentVariables:
         )
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.base_branch == "develop"
+        assert mock_upload.call_args[1]["options"].base_branch == "develop"
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -521,8 +501,7 @@ class TestEnvironmentVariables:
         )
 
         mock_upload.assert_called_once()
-        args = mock_upload.call_args[0][0]
-        assert args.repo == "cli/repo"
+        assert mock_upload.call_args[1]["options"].repo == "cli/repo"
 
 
 class TestPromptForJob:

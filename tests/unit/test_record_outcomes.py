@@ -20,6 +20,7 @@ from metriq_gym.constants import JobType, RecordOutcome
 from metriq_gym.exporters.dict_exporter import DictExporter
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 from metriq_gym.run import (
+    UploadOptions,
     _resolve_upload_outcome,
     dispatch_job,
     fetch_result,
@@ -193,9 +194,8 @@ def test_fetch_result_records_provider_failure_on_job(monkeypatch, tmp_path, cap
     monkeypatch.setattr(
         "metriq_gym.run.failed_jobs_summary", lambda qjobs: "pj-1: FAILED - compilation failed"
     )
-    args = SimpleNamespace(no_cache=False, include_raw=False)
 
-    assert fetch_result(job, args, jm) is None
+    assert fetch_result(job, jm) is None
 
     assert job.error["source"] == "poll"
     assert job.error["message"] == "pj-1: FAILED - compilation failed"
@@ -215,9 +215,8 @@ def test_fetch_result_pending_job_does_not_record_error(monkeypatch, tmp_path, c
         "metriq_gym.run.job_status",
         lambda task: SimpleNamespace(status=JobStatus.QUEUED, queue_position=None),
     )
-    args = SimpleNamespace(no_cache=False, include_raw=False)
 
-    assert fetch_result(job, args, jm) is None
+    assert fetch_result(job, jm) is None
     assert job.error is None
     assert "not yet completed" in capsys.readouterr().out
 
@@ -231,9 +230,8 @@ def test_fetch_result_short_circuits_dispatch_failure(monkeypatch, tmp_path, cap
     jm.add_job(job)
     load_job = MagicMock(side_effect=AssertionError("must not poll provider"))
     _patch_fetch(monkeypatch, load_job)
-    args = SimpleNamespace(no_cache=False, include_raw=False)
 
-    assert fetch_result(job, args, jm) is None
+    assert fetch_result(job, jm) is None
     assert "Job failed at dispatch" in capsys.readouterr().out
     load_job.assert_not_called()
 
@@ -260,8 +258,7 @@ def test_dispatch_job_records_failed_attempt(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr("metriq_gym.run.setup_benchmark", lambda *_, **__: handler)
     monkeypatch.setattr("metriq_gym.qplatform.device.normalized_metadata", lambda *_: {})
 
-    args = SimpleNamespace(config="wit.json", provider="aws", device=device.id)
-    dispatch_job(args, jm)
+    dispatch_job("wit.json", "aws", device.id, jm)
 
     out = capsys.readouterr().out
     assert "failed to dispatch" in out
@@ -279,43 +276,36 @@ def test_dispatch_job_records_failed_attempt(monkeypatch, tmp_path, capsys):
 
 def test_resolve_upload_outcome_failed_job_defaults_to_error():
     job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
-    args = SimpleNamespace(outcome=None, reason=None)
-    assert _resolve_upload_outcome(args, job, has_result=False) == (RecordOutcome.ERROR, None)
+    assert _resolve_upload_outcome(None, None, job, has_result=False) == (RecordOutcome.ERROR, None)
 
 
 def test_resolve_upload_outcome_pending_job_refused(capsys):
-    args = SimpleNamespace(outcome=None, reason=None)
-    assert _resolve_upload_outcome(args, _job(), has_result=False) is None
+    assert _resolve_upload_outcome(None, None, _job(), has_result=False) is None
     assert "not yet completed" in capsys.readouterr().out
 
 
 def test_resolve_upload_outcome_completed_job_is_plain_upload():
-    args = SimpleNamespace(outcome=None, reason=None)
-    assert _resolve_upload_outcome(args, _job(), has_result=True) == (None, None)
+    assert _resolve_upload_outcome(None, None, _job(), has_result=True) == (None, None)
 
 
 def test_resolve_upload_outcome_refuses_to_reclassify_completed_job(capsys):
-    args = SimpleNamespace(outcome="unsupported", reason="r")
-    assert _resolve_upload_outcome(args, _job(), has_result=True) is None
+    assert _resolve_upload_outcome("unsupported", "r", _job(), has_result=True) is None
     assert "refusing" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("outcome", ["unsupported", "not_applicable"])
 def test_resolve_upload_outcome_human_outcomes_require_reason(outcome, capsys):
     job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
-    args = SimpleNamespace(outcome=outcome, reason=None)
-    assert _resolve_upload_outcome(args, job, has_result=False) is None
+    assert _resolve_upload_outcome(outcome, None, job, has_result=False) is None
     assert "requires --reason" in capsys.readouterr().out
-    args.reason = "  because  "
-    assert _resolve_upload_outcome(args, job, has_result=False) == (
+    assert _resolve_upload_outcome(outcome, "  because  ", job, has_result=False) == (
         RecordOutcome(outcome),
         "because",
     )
 
 
 def test_resolve_upload_outcome_rejects_unknown_value(capsys):
-    args = SimpleNamespace(outcome="exploded", reason=None)
-    assert _resolve_upload_outcome(args, _job(), has_result=False) is None
+    assert _resolve_upload_outcome("exploded", None, _job(), has_result=False) is None
     assert "--outcome must be one of" in capsys.readouterr().out
 
 
@@ -341,16 +331,13 @@ def test_upload_job_failed_job_writes_error_outcome_record(monkeypatch, tmp_path
 
     monkeypatch.setattr("metriq_gym.exporters.github_pr_exporter.GitHubPRExporter", FakeExporter)
 
-    args = SimpleNamespace(
-        job_id="job-1",
-        repo="owner/repo",
-        dry_run=True,
-        no_cache=False,
-        include_raw=False,
+    upload_job(
+        "job-1",
+        jm,
         outcome="unsupported",
         reason="Device rejects barriers",
+        options=UploadOptions(repo="owner/repo", dry_run=True),
     )
-    upload_job(args, jm)
 
     out = capsys.readouterr().out
     assert "Uploading as 'unsupported' outcome record" in out
@@ -391,10 +378,7 @@ def test_upload_suite_includes_failed_jobs_as_error_outcomes(monkeypatch, tmp_pa
 
     monkeypatch.setattr("metriq_gym.exporters.github_pr_exporter.GitHubPRExporter", FakeExporter)
 
-    args = SimpleNamespace(
-        suite_id="suite-1", repo="owner/repo", dry_run=True, no_cache=False, include_raw=False
-    )
-    upload_suite(args, jm)
+    upload_suite("suite-1", jm, options=UploadOptions(repo="owner/repo", dry_run=True))
 
     assert "will be uploaded as an 'error' outcome" in capsys.readouterr().out
     records = captured["payload"]
@@ -412,8 +396,7 @@ def test_upload_suite_includes_failed_jobs_as_error_outcomes(monkeypatch, tmp_pa
 def test_resolve_upload_outcome_accepts_enum_and_case_insensitive_strings():
     job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
     for raw in (RecordOutcome.UNSUPPORTED, "UNSUPPORTED", " unsupported "):
-        args = SimpleNamespace(outcome=raw, reason="r")
-        assert _resolve_upload_outcome(args, job, has_result=False) == (
+        assert _resolve_upload_outcome(raw, "r", job, has_result=False) == (
             RecordOutcome.UNSUPPORTED,
             "r",
         )
@@ -421,20 +404,19 @@ def test_resolve_upload_outcome_accepts_enum_and_case_insensitive_strings():
 
 def test_resolve_upload_outcome_blank_reason_counts_as_missing(capsys):
     job = _job(error={"source": "poll", "message": "m", "timestamp": "t"})
-    args = SimpleNamespace(outcome="unsupported", reason="   ")
-    assert _resolve_upload_outcome(args, job, has_result=False) is None
+    assert _resolve_upload_outcome("unsupported", "   ", job, has_result=False) is None
     assert "requires --reason" in capsys.readouterr().out
 
 
 def test_resolve_upload_outcome_refuses_hand_asserted_error_without_failure(capsys):
-    args = SimpleNamespace(outcome="error", reason=None)
-    assert _resolve_upload_outcome(args, _job(), has_result=False) is None
+    assert _resolve_upload_outcome("error", None, _job(), has_result=False) is None
     assert "no recorded failure" in capsys.readouterr().out
 
 
 def test_resolve_upload_outcome_human_outcome_on_pending_job_warns(capsys):
-    args = SimpleNamespace(outcome="not_applicable", reason="wrong device class")
-    assert _resolve_upload_outcome(args, _job(), has_result=False) == (
+    assert _resolve_upload_outcome(
+        "not_applicable", "wrong device class", _job(), has_result=False
+    ) == (
         RecordOutcome.NOT_APPLICABLE,
         "wrong device class",
     )
@@ -448,7 +430,7 @@ def test_fetch_result_trusts_recorded_poll_failure_without_provider(monkeypatch,
     load_job = MagicMock(side_effect=AssertionError("must not poll provider"))
     _patch_fetch(monkeypatch, load_job)
 
-    assert fetch_result(job, SimpleNamespace(no_cache=False, include_raw=False), jm) is None
+    assert fetch_result(job, jm, no_cache=False) is None
     assert "Job failed at poll" in capsys.readouterr().out
     load_job.assert_not_called()
 
@@ -461,7 +443,7 @@ def test_fetch_result_no_cache_repolls_poll_failed_job(monkeypatch, tmp_path):
     _patch_fetch(monkeypatch, load_job)
     monkeypatch.setattr("metriq_gym.run.failed_jobs_summary", lambda qjobs: "pj-1: FAILED - again")
 
-    assert fetch_result(job, SimpleNamespace(no_cache=True, include_raw=False), jm) is None
+    assert fetch_result(job, jm, no_cache=True) is None
     load_job.assert_called_once()
     assert job.error["message"] == "pj-1: FAILED - again"
 
@@ -476,23 +458,14 @@ def test_fetch_result_no_cache_never_repolls_dispatch_failure(monkeypatch, tmp_p
     load_job = MagicMock(side_effect=AssertionError("must not poll provider"))
     _patch_fetch(monkeypatch, load_job)
 
-    assert fetch_result(job, SimpleNamespace(no_cache=True, include_raw=False), jm) is None
+    assert fetch_result(job, jm, no_cache=True) is None
     load_job.assert_not_called()
 
 
-def _upload_args(**overrides):
-    args = SimpleNamespace(
-        job_id="job-1",
-        repo="owner/repo",
-        dry_run=True,
-        no_cache=False,
-        include_raw=False,
-        outcome=None,
-        reason=None,
-    )
-    for k, v in overrides.items():
-        setattr(args, k, v)
-    return args
+def _upload(jm, *, job_id="job-1", outcome=None, reason=None, **option_overrides):
+    """Call upload_job with the defaults these tests share."""
+    options = UploadOptions(repo="owner/repo", dry_run=True, **option_overrides)
+    upload_job(job_id, jm, outcome=outcome, reason=reason, options=options)
 
 
 def _install_fake_exporter(monkeypatch):
@@ -518,7 +491,7 @@ def test_upload_job_provider_error_without_outcome_fails_cleanly(monkeypatch, tm
     )
     captured = _install_fake_exporter(monkeypatch)
 
-    upload_job(_upload_args(), jm)  # must not raise
+    _upload(jm)  # must not raise
 
     out = capsys.readouterr().out
     assert "Could not fetch status/results" in out
@@ -537,7 +510,7 @@ def test_upload_job_provider_error_with_explicit_outcome_still_uploads(
     )
     captured = _install_fake_exporter(monkeypatch)
 
-    upload_job(_upload_args(outcome=RecordOutcome.UNSUPPORTED, reason="compiler limit"), jm)
+    _upload(jm, outcome=RecordOutcome.UNSUPPORTED, reason="compiler limit")
 
     out = capsys.readouterr().out
     assert "Continuing with the requested --outcome" in out
@@ -554,10 +527,10 @@ def test_upload_job_custom_title_gets_outcome_suffix(monkeypatch, tmp_path):
     monkeypatch.setattr("metriq_gym.run.setup_benchmark_result_class", lambda *_: DummyResult)
     captured = _install_fake_exporter(monkeypatch)
 
-    upload_job(_upload_args(pr_title="My title"), jm)
+    _upload(jm, pr_title="My title")
     assert captured["pr_title"] == "My title (error)"
 
-    upload_job(_upload_args(pr_title="My title (error)"), jm)
+    _upload(jm, pr_title="My title (error)")
     assert captured["pr_title"] == "My title (error)"
 
 
@@ -577,7 +550,7 @@ def test_upload_job_exporter_failure_is_reported_not_raised(monkeypatch, tmp_pat
 
     monkeypatch.setattr("metriq_gym.exporters.github_pr_exporter.GitHubPRExporter", BrokenExporter)
 
-    upload_job(_upload_args(), jm)
+    _upload(jm)
     out = capsys.readouterr().out
     assert "✗ Upload failed: GitHub token not provided" in out
 
@@ -590,12 +563,7 @@ def test_upload_suite_provider_error_fails_cleanly(monkeypatch, tmp_path, capsys
     )
     captured = _install_fake_exporter(monkeypatch)
 
-    upload_suite(
-        SimpleNamespace(
-            suite_id="suite-1", repo="owner/repo", dry_run=True, no_cache=False, include_raw=False
-        ),
-        jm,
-    )
+    upload_suite("suite-1", jm, options=UploadOptions(repo="owner/repo", dry_run=True))
     assert "Could not fetch status/results" in capsys.readouterr().out
     assert "payload" not in captured
 
