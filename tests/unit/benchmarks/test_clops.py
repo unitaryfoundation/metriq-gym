@@ -1,6 +1,5 @@
 """Unit tests for CLOPS benchmark circuit construction and dispatch modes."""
 
-import argparse
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -53,7 +52,6 @@ def _make_params(**overrides):
 
 
 def _make_clops(**param_overrides) -> Clops:
-    args = argparse.Namespace()
     params = _make_params(**param_overrides)
     return Clops(params)
 
