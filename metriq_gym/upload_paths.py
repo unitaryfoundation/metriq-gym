@@ -3,7 +3,7 @@
 import re
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from metriq_gym.platform import canonical_device_name, canonical_provider_name
@@ -50,7 +50,8 @@ def _hash_label(payload: Any) -> str:
 
 
 def job_filename(job: "MetriqGymJob", *, payload: Any = None) -> str:
-    dispatch_time = job.dispatch_time or datetime.now()
+    """Use UTC for filenames, interpreting legacy naive dispatch times as local."""
+    dispatch_time = (job.dispatch_time or datetime.now(timezone.utc)).astimezone(timezone.utc)
 
     job_label = path_component(str(job.job_type.value))
     hash_label = _hash_label(payload) if payload is not None else None
@@ -62,9 +63,10 @@ def job_filename(job: "MetriqGymJob", *, payload: Any = None) -> str:
 def suite_filename(
     suite_name: str | None, dispatch_time: datetime | None = None, *, payload: Any = None
 ) -> str:
-    """Construct a filename for suite uploads using suite name and dispatch time."""
+    """Use UTC for suite filenames, interpreting legacy naive dispatch times as local."""
     suite_label = path_component(suite_name or "suite")
     hash_label = _hash_label(payload) if payload is not None else None
-    ts = (dispatch_time or datetime.now()).strftime("%Y-%m-%d_%H-%M-%S")
+    dispatch_time = (dispatch_time or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    ts = dispatch_time.strftime("%Y-%m-%d_%H-%M-%S")
     suffix = f"_{hash_label}" if hash_label else ""
     return f"{ts}_{suite_label}{suffix}.json"

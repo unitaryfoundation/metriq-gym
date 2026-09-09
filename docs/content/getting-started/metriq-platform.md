@@ -49,7 +49,7 @@ usually contains one record; suite uploads contain several.
 [
   {
     "app_version": "0.6.0",
-    "timestamp": "2026-01-16T15:42:18.173736",
+    "timestamp": "2026-01-16T15:42:18.173736+00:00",
     "suite_id": null,
     "job_type": "BSEQ",
     "results": {
@@ -86,7 +86,7 @@ report uncertainty on a metric use that same object shape for the metric itself.
 | Field | Description |
 |-------|-------------|
 | `app_version` | `metriq-gym` version that generated the record |
-| `timestamp` | ISO 8601 dispatch timestamp recorded by `metriq-gym` |
+| `timestamp` | ISO 8601 dispatch timestamp in UTC, with an explicit `+00:00` offset |
 | `suite_id` | Nullable suite identifier; `null` for single-job uploads |
 | `job_type` | Benchmark name, such as `BSEQ` or `WIT` |
 | `results` | Benchmark outputs. Metrics may be plain numbers or `{value, uncertainty}` objects; `results.score` is the summary score when the benchmark defines one |
@@ -94,6 +94,11 @@ report uncertainty on a metric use that same object shape for the metric itself.
 | `platform.device` | Device or backend identifier used for the run |
 | `platform.device_metadata` | Optional normalized metadata such as `num_qubits`, `simulator`, and backend `version` |
 | `params` | Validated benchmark configuration used to run the job |
+
+Upload filenames also use UTC. Older jobs saved without a timezone are interpreted
+in the machine's local timezone, using the offset at the dispatch date. Export those
+jobs with the same timezone used at dispatch; if it has changed, set `TZ` to the
+original timezone (for example, `TZ=Europe/Madrid mgym job upload <job-id>`).
 
 ## Contributing Quality Data
 
