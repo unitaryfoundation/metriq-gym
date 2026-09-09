@@ -1767,7 +1767,7 @@ usually contains one record; suite uploads contain several.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">[</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p">{</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">"app_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.6.0"</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-01-16T15:42:18.173736"</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-01-16T15:42:18.173736+00:00"</span><span class="p">,</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">"suite_id"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">"job_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BSEQ"</span><span class="p">,</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">"results"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1812,7 +1812,7 @@ report uncertainty on a metric use that same object shape for the metric itself.
 </tr>
 <tr>
 <td><code>timestamp</code></td>
-<td>ISO 8601 dispatch timestamp recorded by <code>metriq-gym</code></td>
+<td>ISO 8601 dispatch timestamp in UTC, with an explicit <code>+00:00</code> offset</td>
 </tr>
 <tr>
 <td><code>suite_id</code></td>
@@ -1844,6 +1844,10 @@ report uncertainty on a metric use that same object shape for the metric itself.
 </tr>
 </tbody>
 </table>
+<p>Upload filenames also use UTC. Older jobs saved without a timezone are interpreted
+in the machine's local timezone, using the offset at the dispatch date. Export those
+jobs with the same timezone used at dispatch; if it has changed, set <code>TZ</code> to the
+original timezone (for example, <code>TZ=Europe/Madrid mgym job upload &lt;job-id&gt;</code>).</p>
 <h2 id="contributing-quality-data">Contributing Quality Data<a class="headerlink" href="#contributing-quality-data" title="Permanent link">&para;</a></h2>
 <p>To ensure your results are valuable:</p>
 <h3 id="do">Do<a class="headerlink" href="#do" title="Permanent link">&para;</a></h3>
