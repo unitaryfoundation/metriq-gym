@@ -2,7 +2,7 @@
 
 import argparse
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import sys
 import logging
@@ -308,7 +308,7 @@ def _new_job(
             "device": args.device,
             "device_metadata": normalized_metadata(device),
         },
-        dispatch_time=datetime.now(),
+        dispatch_time=datetime.now(timezone.utc),
     )
 
 

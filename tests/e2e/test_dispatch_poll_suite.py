@@ -1,8 +1,11 @@
 import json
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+
+from metriq_gym.job_manager import JobManager
 
 
 @pytest.fixture(autouse=True)
@@ -12,7 +15,8 @@ def store_env(monkeypatch, tmp_path):
 
 
 @pytest.mark.e2e
-def test_dispatch_and_poll_suite_on_local_simulator(tmp_path):
+@pytest.mark.parametrize("local_timezone", ["Europe/Madrid", "America/New_York"], indirect=True)
+def test_dispatch_and_poll_suite_on_local_simulator(tmp_path, local_timezone):
     """
     End-to-end test of the CLI workflow for a suite with two jobs on the local simulator
         1. dispatch   -> returns a Metriq-Gym suite_id and two job_ids
@@ -24,6 +28,7 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path):
     # 1. Dispatch a suite with two benchmarks on the local Aer simulator
     # ------------------------------------------------------------------
     example_suite_cfg = Path(__file__).parent.resolve() / "test_suite.json"
+    before_dispatch = datetime.now(timezone.utc)
 
     dispatch_cmd = subprocess.run(
         [
@@ -40,6 +45,7 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path):
         text=True,
         check=True,
     )
+    after_dispatch = datetime.now(timezone.utc)
     assert "Dispatch complete for suite" in dispatch_cmd.stdout
 
     # Extract suite_id from output (assumes suite_id is printed in stdout)
@@ -49,6 +55,12 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path):
             suite_id = line.split()[-1].strip(".")
             break
     assert suite_id, "Suite ID not found in dispatch output"
+
+    jobs = JobManager().get_jobs_by_suite_id(suite_id)
+    assert len(jobs) == 2
+    for job in jobs:
+        assert job.dispatch_time.tzinfo is timezone.utc
+        assert before_dispatch <= job.dispatch_time <= after_dispatch
 
     # ------------------------------------------------------------------
     # 2. Poll the suite
@@ -84,7 +96,32 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path):
 
     with open(path_part) as f:
         arr = json.load(f)
-        assert isinstance(arr, list) and len(arr) >= 2
+    assert isinstance(arr, list) and len(arr) == 2
+    assert [record["timestamp"] for record in arr] == [
+        job.dispatch_time.isoformat() for job in jobs
+    ]
+    assert all(record["timestamp"].endswith("+00:00") for record in arr)
+    expected_prefix = jobs[0].dispatch_time.strftime("%Y-%m-%d_%H-%M-%S")
+    assert Path(path_part).name.startswith(f"{expected_prefix}_local_sim_suite_")
+
+    # Re-export the same suite using the naive local timestamps stored by older
+    # versions. Every record and the filename must still identify the same UTC time.
+    job_manager = JobManager()
+    for job in job_manager.get_jobs_by_suite_id(suite_id):
+        job.dispatch_time = job.dispatch_time.astimezone().replace(tzinfo=None)
+        job_manager.update_job(job)
+    legacy_upload = subprocess.run(
+        ["mgym", "suite", "upload", suite_id, "--dry-run"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    legacy_line = next(
+        line for line in legacy_upload.stdout.splitlines() if line.startswith("DRY-RUN:")
+    )
+    legacy_path = Path(legacy_line.split(" at ", 1)[1].split(";", 1)[0].strip())
+    assert json.loads(legacy_path.read_text()) == arr
+    assert legacy_path.name == Path(path_part).name
 
     # ------------------------------------------------------
     # 4. Delete the suite to clean up
