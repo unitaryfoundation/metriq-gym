@@ -112,7 +112,7 @@ class TestEPLGGateCounts:
         device = MagicMock()
         device.run.return_value = mock_job
 
-        result = EPLG(MagicMock(), params).dispatch_handler(device)
+        result = EPLG(params).dispatch_handler(device)
 
         assert isinstance(result, EPLGData)
         assert result.input_two_qubit_gate_counts == [1]
@@ -150,7 +150,7 @@ class TestEPLGGateCounts:
         device = MagicMock()
         device.run.return_value = mock_job
 
-        result = EPLG(MagicMock(), params).dispatch_handler(device)
+        result = EPLG(params).dispatch_handler(device)
 
         # Without local transpilation the submitted circuits are the logical ones.
         assert result.input_two_qubit_gate_counts == [2]
@@ -179,7 +179,7 @@ class TestClopsGateCounts:
         device = MagicMock()
         device.run.return_value = mock_job
 
-        result = Clops(MagicMock(), params).dispatch_handler(device)
+        result = Clops(params).dispatch_handler(device)
 
         assert isinstance(result, ClopsData)
         assert result.input_two_qubit_gate_counts == [4, 4]

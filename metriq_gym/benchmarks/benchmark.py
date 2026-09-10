@@ -1,4 +1,3 @@
-import argparse
 from typing import Iterable, TYPE_CHECKING, Protocol
 from abc import ABC
 
@@ -95,12 +94,7 @@ class BenchmarkResult(BaseModel, ABC):
 
 
 class Benchmark[BD: BenchmarkData, BR: BenchmarkResult]:
-    def __init__(
-        self,
-        args: argparse.Namespace,
-        params: BaseModel,
-    ):
-        self.args = args
+    def __init__(self, params: BaseModel):
         self.params: BaseModel = params
 
     def dispatch_handler(self, device: "QuantumDevice") -> BD:

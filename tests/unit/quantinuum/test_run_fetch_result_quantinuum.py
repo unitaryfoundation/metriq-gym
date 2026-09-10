@@ -72,8 +72,6 @@ def test_fetch_result_returns_handler_result_for_quantinuum(monkeypatch):
     # Job manager with no-op update
     mgr = types.SimpleNamespace(update_job=lambda *_: None)
 
-    # Create args with include_raw=False to avoid serialization issues with mocks
-    args = types.SimpleNamespace(include_raw=False, no_cache=False)
-    fetch_output = runmod.fetch_result(mjob, args, mgr)
+    fetch_output = runmod.fetch_result(mjob, mgr, no_cache=False)
     assert fetch_output.result.model_dump()["expectation_value"] == 0.2
     assert fetch_output.from_cache is False

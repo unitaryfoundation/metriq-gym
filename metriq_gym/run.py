@@ -1,6 +1,5 @@
 """Runtime entrypoints for dispatching and managing metriq-gym benchmarks via the CLI."""
 
-import argparse
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import os
@@ -10,7 +9,7 @@ import uuid
 from dotenv import find_dotenv, load_dotenv
 
 from tabulate import tabulate
-from typing import Any, TYPE_CHECKING, Optional
+from typing import Any, TYPE_CHECKING, Optional, cast
 from metriq_gym import __version__
 from metriq_gym.cli import list_jobs, prompt_for_job, app as typer_app
 from metriq_gym.job_manager import JobManager, MetriqGymJob
@@ -37,6 +36,21 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("metriq_gym")
 
 DEFAULT_UPLOAD_PR_LABELS = ["data", "source:metriq-gym"]
+
+
+@dataclass
+class UploadOptions:
+    """Pull-request options shared by job and suite upload."""
+
+    repo: str | None = None
+    base_branch: str = "main"
+    upload_dir: str | None = None
+    branch_name: str | None = None
+    pr_title: str | None = None
+    pr_body: str | None = None
+    commit_message: str | None = None
+    clone_dir: str | None = None
+    dry_run: bool = False
 
 
 @dataclass
@@ -133,7 +147,7 @@ def _get_device_with_arn_region(provider, device_name: str):
             os.environ["AWS_REGION"] = previous_region
 
 
-def setup_device(provider_name: str, device_name: str):
+def setup_device(provider_name: str | None, device_name: str | None):
     """
     Setup a QBraid device with id device_name from specified provider.
 
@@ -181,9 +195,9 @@ def setup_device(provider_name: str, device_name: str):
     return device
 
 
-def setup_benchmark(args, params, job_type: JobType) -> "Benchmark":
+def setup_benchmark(params, job_type: JobType) -> "Benchmark":
     reg = _lazy_registry()
-    return reg.BENCHMARK_HANDLERS[job_type](args, params)
+    return reg.BENCHMARK_HANDLERS[job_type](params)
 
 
 def validate_benchmark_device_capacity(params, device) -> None:
@@ -215,7 +229,9 @@ def setup_benchmark_result_class(job_type: JobType) -> type["BenchmarkResult"]:
     return reg.BENCHMARK_RESULT_CLASSES[job_type]
 
 
-def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
+def dispatch_job(
+    config: str, provider: str | None, device_name: str | None, job_manager: JobManager
+) -> None:
     """Dispatch a single benchmark configuration to a quantum device.
 
     Args:
@@ -224,14 +240,16 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     Note: Continues processing remaining configs if individual configs fail.
     """
-    print(f"Starting dispatch on {args.provider}:{args.device}...")
+    print(f"Starting dispatch on {provider}:{device_name}...")
 
     try:
-        device = setup_device(args.provider, args.device)
+        device = setup_device(provider, device_name)
     except QBraidSetupError:
         return
+    # setup_device rejects a missing provider or device, so both are set here.
+    provider, device_name = cast(str, provider), cast(str, device_name)
 
-    config_file = args.config
+    config_file = config
 
     if not os.path.exists(config_file):
         print(f"✗ {config_file}: Configuration file not found")
@@ -258,18 +276,22 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     print(f"Dispatching {params.benchmark_name}...")
 
-    handler: Benchmark = setup_benchmark(args, params, job_type)
+    handler: Benchmark = setup_benchmark(params, job_type)
     try:
         job_data: BenchmarkData = handler.dispatch_handler(device)
     except Exception as exc:
-        job_id = _record_dispatch_failure(job_manager, args, device, job_type, params, exc)
+        job_id = _record_dispatch_failure(
+            job_manager, provider, device_name, device, job_type, params, exc
+        )
         print(f"✗ {params.benchmark_name} failed to dispatch: {type(exc).__name__}: {exc}")
         print(f"  Recorded as failed metriq-gym Job ID: {job_id}")
         print(_OUTCOME_UPLOAD_HINT)
         logger.debug("Dispatch failure traceback", exc_info=True)
         return
 
-    job_id = job_manager.add_job(_new_job(args, device, job_type, params, data=asdict(job_data)))
+    job_id = job_manager.add_job(
+        _new_job(provider, device_name, device, job_type, params, data=asdict(job_data))
+    )
 
     print(f"✓ {params.benchmark_name} dispatched with metriq-gym Job ID: {job_id}")
 
@@ -282,7 +304,8 @@ _OUTCOME_UPLOAD_HINT = (
 
 
 def _new_job(
-    args: argparse.Namespace,
+    provider: str,
+    device_name: str,
     device,
     job_type: JobType,
     params,
@@ -301,11 +324,11 @@ def _new_job(
         job_type=job_type,
         params=params.model_dump(exclude_none=True),
         data=data,
-        provider_name=args.provider,
-        device_name=args.device,
+        provider_name=provider,
+        device_name=device_name,
         platform={
-            "provider": args.provider,
-            "device": args.device,
+            "provider": provider,
+            "device": device_name,
             "device_metadata": normalized_metadata(device),
         },
         dispatch_time=datetime.now(timezone.utc),
@@ -314,7 +337,8 @@ def _new_job(
 
 def _record_dispatch_failure(
     job_manager: JobManager,
-    args: argparse.Namespace,
+    provider: str,
+    device_name: str,
     device,
     job_type: JobType,
     params,
@@ -329,7 +353,8 @@ def _record_dispatch_failure(
     outcome record instead of silently disappearing. No provider job ids exist.
     """
     job = _new_job(
-        args,
+        provider,
+        device_name,
         device,
         job_type,
         params,
@@ -341,7 +366,15 @@ def _record_dispatch_failure(
     return job_manager.add_job(job)
 
 
-def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
+def dispatch_suite(
+    suite_config: str,
+    provider: str | None,
+    device_name: str | None,
+    job_manager: JobManager,
+    *,
+    components: list[str] | None = None,
+    all_components: bool = False,
+) -> None:
     """Dispatch multiple benchmark configurations to a quantum device.
 
     Enables comprehensive device characterization by running the same benchmark
@@ -353,7 +386,7 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     Note: Continues processing remaining configs if individual configs fail.
     """
-    config_file = args.suite_config
+    config_file = suite_config
 
     try:
         suite = parse_suite_file(config_file)
@@ -368,10 +401,9 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"✗ {config_file}: No benchmarks found in the suite")
         return
 
-    requested_components = getattr(args, "components", None) or []
+    requested_components = components or []
     if isinstance(requested_components, str):
         requested_components = [requested_components]
-    all_components = getattr(args, "all_components", False)
 
     if requested_components and all_components:
         print("✗ --component and --all cannot be used together")
@@ -395,12 +427,14 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     if all_components and suite.full_suite_warning:
         print(f"WARNING: {suite.full_suite_warning}")
 
-    print(f"Starting suite dispatch on {args.provider}:{args.device}...")
+    print(f"Starting suite dispatch on {provider}:{device_name}...")
 
     try:
-        device = setup_device(args.provider, args.device)
+        device = setup_device(provider, device_name)
     except QBraidSetupError:
         return
+    # setup_device rejects a missing provider or device, so both are set here.
+    provider, device_name = cast(str, provider), cast(str, device_name)
 
     results = []
     successful_jobs = []
@@ -427,13 +461,14 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
                 f"Dispatching {benchmark_entry.name} ({params.benchmark_name}) from {suite.name}..."
             )
 
-            handler: Benchmark = setup_benchmark(args, params, job_type)
+            handler: Benchmark = setup_benchmark(params, job_type)
             try:
                 job_data: BenchmarkData = handler.dispatch_handler(device)
             except Exception as exc:
                 job_id = _record_dispatch_failure(
                     job_manager,
-                    args,
+                    provider,
+                    device_name,
                     device,
                     job_type,
                     params,
@@ -450,7 +485,8 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
             job_id = job_manager.add_job(
                 _new_job(
-                    args,
+                    provider,
+                    device_name,
                     device,
                     job_type,
                     params,
@@ -486,12 +522,19 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(_OUTCOME_UPLOAD_HINT)
 
 
-def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    metriq_job = prompt_for_job(args.job_id, job_manager)
+def poll_job(
+    job_id: str | None,
+    job_manager: JobManager,
+    *,
+    json: str | None = None,
+    no_cache: bool = False,
+    include_raw: bool = False,
+) -> None:
+    metriq_job = prompt_for_job(job_id, job_manager)
     if not metriq_job:
         return
     print("Polling job...")
-    fetch_output = fetch_result(metriq_job, args, job_manager)
+    fetch_output = fetch_result(metriq_job, job_manager, no_cache=no_cache)
     if fetch_output is None:
         if metriq_job.failed:
             print(f"Job {metriq_job.id} failed and has no results.")
@@ -500,7 +543,8 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
             print(f"Job {metriq_job.id} is not yet completed or has no results.")
         return
     export_job_result(
-        args,
+        json,
+        include_raw,
         metriq_job,
         fetch_output.result,
         raw_results=fetch_output.raw_results,
@@ -509,15 +553,14 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
 
 def _resolve_upload_outcome(
-    args: argparse.Namespace, metriq_job: MetriqGymJob, has_result: bool
+    raw_outcome: str | None, reason: str | None, metriq_job: MetriqGymJob, has_result: bool
 ) -> tuple[RecordOutcome | None, str | None] | None:
     """Decide which record an upload produces for ``metriq_job``.
 
     Returns ``(outcome, reason)`` where ``outcome`` is None for a completed run, or
     None (after printing why) when nothing should be uploaded.
     """
-    raw_outcome = getattr(args, "outcome", None)
-    reason = (getattr(args, "reason", None) or "").strip() or None
+    reason = (reason or "").strip() or None
 
     outcome: RecordOutcome | None = None
     if raw_outcome is not None:
@@ -565,7 +608,7 @@ def _resolve_upload_outcome(
 
 
 def _fetch_result_for_upload(
-    metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
+    metriq_job: MetriqGymJob, job_manager: JobManager
 ) -> Optional[FetchResultOutput]:
     """``fetch_result`` that degrades gracefully when the provider cannot be reached.
 
@@ -574,7 +617,7 @@ def _fetch_result_for_upload(
     reported as a plain message instead of a traceback so the command fails cleanly.
     """
     try:
-        return fetch_result(metriq_job, args, job_manager)
+        return fetch_result(metriq_job, job_manager)
     except Exception as exc:
         print(
             f"✗ Could not fetch status/results for job {metriq_job.id}: {type(exc).__name__}: {exc}"
@@ -583,46 +626,54 @@ def _fetch_result_for_upload(
         raise
 
 
-def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
+def upload_job(
+    job_id: str | None,
+    job_manager: JobManager,
+    *,
+    outcome: str | None = None,
+    reason: str | None = None,
+    options: UploadOptions | None = None,
+) -> None:
     """Upload a job's results to a GitHub repo by opening a Pull Request.
 
     A job that failed (at dispatch or as reported by the provider) is uploaded as an
     ``outcome: "error"`` record carrying the captured error. ``--outcome unsupported``
     / ``not_applicable`` with ``--reason`` reclassifies such a job by hand.
     """
-    metriq_job = prompt_for_job(args.job_id, job_manager)
+    options = options or UploadOptions()
+    metriq_job = prompt_for_job(job_id, job_manager)
     if not metriq_job:
         return
     print("Preparing job upload...")
     try:
-        fetch_output = _fetch_result_for_upload(metriq_job, args, job_manager)
+        fetch_output = _fetch_result_for_upload(metriq_job, job_manager)
     except Exception:
-        if getattr(args, "outcome", None) is None:
+        if outcome is None:
             return
         # An explicit outcome is a human claim about the attempt; it can still be
         # uploaded when the provider is unreachable (any captured error is attached).
         print("  Continuing with the requested --outcome using the locally recorded job.")
         fetch_output = None
-    resolved = _resolve_upload_outcome(args, metriq_job, has_result=fetch_output is not None)
+    resolved = _resolve_upload_outcome(
+        outcome, reason, metriq_job, has_result=fetch_output is not None
+    )
     if resolved is None:
         return
     outcome, reason = resolved
     result = fetch_output.result if fetch_output is not None else None
 
-    repo = getattr(args, "repo", None)
+    repo = options.repo
     if not repo:
         print("Error: --repo not provided and MGYM_UPLOAD_REPO not set.")
         return
 
-    base_branch = getattr(args, "base_branch", "main")
+    base_branch = options.base_branch
     provider = metriq_job.provider_name
     device = metriq_job.device_name
     # Default upload dir: <root>/v<major.minor>/<provider>/<device>
-    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir(
-        __version__, provider, device
-    )
-    branch_name = getattr(args, "branch_name", None)
-    pr_title = getattr(args, "pr_title", None)
+    upload_dir = options.upload_dir or default_upload_dir(__version__, provider, device)
+    branch_name = options.branch_name
+    pr_title = options.pr_title
     if outcome is not None:
         suffix = f"({outcome.value})"
         if pr_title is None:
@@ -630,10 +681,10 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         elif not pr_title.endswith(suffix):
             pr_title = f"{pr_title} {suffix}"
         print(f"Uploading as '{outcome.value}' outcome record (no results).")
-    pr_body = getattr(args, "pr_body", None)
-    commit_message = getattr(args, "commit_message", None)
-    clone_dir = getattr(args, "clone_dir", None)
-    dry_run = getattr(args, "dry_run", False)
+    pr_body = options.pr_body
+    commit_message = options.commit_message
+    clone_dir = options.clone_dir
+    dry_run = options.dry_run
 
     # Write this job's record to a dedicated JSON file in the target directory
     from metriq_gym.exporters.dict_exporter import DictExporter
@@ -671,18 +722,24 @@ def upload_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"✗ Upload failed: {e}")
 
 
-def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
-    if not args.suite_id:
+def poll_suite(
+    suite_id: str | None,
+    job_manager: JobManager,
+    *,
+    json: str | None = None,
+    no_cache: bool = False,
+) -> None:
+    if not suite_id:
         print("Suite ID is required to poll suite results.")
         return
-    jobs = job_manager.get_jobs_by_suite_id(args.suite_id)
+    jobs = job_manager.get_jobs_by_suite_id(suite_id)
     if not jobs:
-        print(f"No jobs found for suite ID {args.suite_id}.")
+        print(f"No jobs found for suite ID {suite_id}.")
         return
     completed_jobs: list[MetriqGymJob] = []
     results: list[Any] = []
     for metriq_job in jobs:
-        fetch_output = fetch_result(metriq_job, args, job_manager)
+        fetch_output = fetch_result(metriq_job, job_manager, no_cache=no_cache)
         if fetch_output is None:
             if metriq_job.failed:
                 # Failed jobs have nothing to tabulate; report and keep going so one
@@ -693,7 +750,7 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             return
         completed_jobs.append(metriq_job)
         results.append(fetch_output.result)
-    export_suite_results(args, completed_jobs, results)
+    export_suite_results(json, completed_jobs, results)
 
 
 def _get_nested(mapping: dict[str, Any], path: tuple[str, ...]) -> Any | None:
@@ -713,7 +770,9 @@ def print_selected(d, selected_keys):
             print(f"{label}: {value}")
 
 
-def export_suite_results(args, jobs: list[MetriqGymJob], results: list["BenchmarkResult"]) -> None:
+def export_suite_results(
+    json_path: str | None, jobs: list[MetriqGymJob], results: list["BenchmarkResult"]
+) -> None:
     if not jobs:
         return
 
@@ -723,7 +782,7 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list["Benchmar
     for job, result in zip(jobs, results):
         records.append(DictExporter(job, result).export() | {"params": job.params})
 
-    if hasattr(args, "json"):
+    if json_path is not None:
         raise NotImplementedError("JSON export of suite results is not implemented yet.")
     else:
         print("\n--- Suite Metadata ---")
@@ -732,17 +791,23 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list["Benchmar
         print(tabulate_job_results(records))
 
 
-def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
+def upload_suite(
+    suite_id: str | None,
+    job_manager: JobManager,
+    *,
+    options: UploadOptions | None = None,
+) -> None:
     """Upload all jobs in a suite as a single JSON (array of job records) in one PR."""
-    if not args.suite_id:
+    options = options or UploadOptions()
+    if not suite_id:
         print("Suite ID is required to upload suite results.")
         return
-    jobs = job_manager.get_jobs_by_suite_id(args.suite_id)
+    jobs = job_manager.get_jobs_by_suite_id(suite_id)
     if not jobs:
-        print(f"No jobs found for suite ID {args.suite_id}.")
+        print(f"No jobs found for suite ID {suite_id}.")
         return
 
-    repo = getattr(args, "repo", None)
+    repo = options.repo
     if not repo:
         print("Error: --repo not provided and MGYM_UPLOAD_REPO not set.")
         return
@@ -753,7 +818,7 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     results: list[Any] = []
     for metriq_job in jobs:
         try:
-            fetch_output = _fetch_result_for_upload(metriq_job, args, job_manager)
+            fetch_output = _fetch_result_for_upload(metriq_job, job_manager)
         except Exception:
             return
         if fetch_output is None:
@@ -777,21 +842,17 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     device = jobs[0].device_name
     suite_name = jobs[0].suite_name
 
-    base_branch = getattr(args, "base_branch", "main")
-    upload_dir = getattr(args, "upload_dir", None) or default_upload_dir(
-        __version__, provider, device
-    )
-    branch_name = getattr(args, "branch_name", None) or f"mgym/upload-suite-{args.suite_id}"
+    base_branch = options.base_branch
+    upload_dir = options.upload_dir or default_upload_dir(__version__, provider, device)
+    branch_name = options.branch_name or f"mgym/upload-suite-{suite_id}"
     # Prefer suite name; avoid falling back to suite_id in the title
     suite_label = suite_name or "unnamed"
-    pr_title = getattr(args, "pr_title", None) or (
-        f"mgym upload: suite {suite_label} on {provider}/{device}"
-    )
-    pr_body = getattr(args, "pr_body", None)
+    pr_title = options.pr_title or (f"mgym upload: suite {suite_label} on {provider}/{device}")
+    pr_body = options.pr_body
     # Default commit message aligns with PR title to make browser compare pre-fill useful
-    commit_message = getattr(args, "commit_message", None) or pr_title
-    clone_dir = getattr(args, "clone_dir", None)
-    dry_run = getattr(args, "dry_run", False)
+    commit_message = options.commit_message or pr_title
+    clone_dir = options.clone_dir
+    dry_run = options.dry_run
 
     try:
         from metriq_gym.exporters.github_pr_exporter import GitHubPRExporter
@@ -856,7 +917,8 @@ def tabulate_job_results(records, sep=" +/- "):
 
 
 def export_job_result(
-    args: argparse.Namespace,
+    json_path: str | None,
+    include_raw: bool,
     metriq_job: MetriqGymJob,
     result: "BenchmarkResult",
     raw_results: list["GateModelResultData"] | None = None,
@@ -871,21 +933,20 @@ def export_job_result(
         raw_results: Optional raw measurement counts for debugging.
         from_cache: Whether result was loaded from cache (raw counts unavailable).
     """
-    include_raw = getattr(args, "include_raw", False)
     if include_raw and from_cache:
         print(
             "Warning: --include-raw requested but results are from cache. "
             "Raw counts not available. Use --no-cache to refetch from provider."
         )
 
-    if hasattr(args, "json"):
+    if json_path is not None:
         from metriq_gym.exporters.json_exporter import JsonExporter
 
-        JsonExporter(metriq_job, result).export(args.json)
+        JsonExporter(metriq_job, result).export(json_path)
 
         # Write raw debug data to separate file if requested
         if include_raw and raw_results is not None:
-            _export_raw_debug_data(args.json, metriq_job, raw_results)
+            _export_raw_debug_data(json_path, metriq_job, raw_results)
     else:
         from metriq_gym.exporters.cli_exporter import CliExporter
 
@@ -992,10 +1053,8 @@ def replay_from_debug_file(debug_file: str) -> Optional["BenchmarkResult"]:
         return None
 
     # Create benchmark handler
-    # We need a minimal args namespace for setup_benchmark
-    args = argparse.Namespace()
     validated_params = validate_and_create_model(params)
-    handler: Benchmark = setup_benchmark(args, validated_params, job_type)
+    handler: Benchmark = setup_benchmark(validated_params, job_type)
 
     # Call poll_handler with empty quantum_jobs list
     # Note: CLOPS benchmark uses quantum_jobs for timing, which won't work in replay
@@ -1010,7 +1069,7 @@ def replay_from_debug_file(debug_file: str) -> Optional["BenchmarkResult"]:
 
 
 def fetch_result(
-    metriq_job: MetriqGymJob, args: argparse.Namespace, job_manager: JobManager
+    metriq_job: MetriqGymJob, job_manager: JobManager, *, no_cache: bool = False
 ) -> Optional[FetchResultOutput]:
     """Fetch benchmark results, optionally including raw measurement counts.
 
@@ -1025,16 +1084,14 @@ def fetch_result(
     """
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
-    if metriq_job.result_data is not None and not getattr(args, "no_cache", False):
+    if metriq_job.result_data is not None and not no_cache:
         print("[Cached result data]")
         cached_result = job_result_type.model_validate(metriq_job.result_data)
         return FetchResultOutput(result=cached_result, raw_results=None, from_cache=True)
 
     has_provider_jobs = bool(metriq_job.data.get("provider_job_ids"))
     # ``getattr``: tests pass lightweight job stand-ins without the failure fields.
-    if getattr(metriq_job, "failed", False) and (
-        not has_provider_jobs or not getattr(args, "no_cache", False)
-    ):
+    if getattr(metriq_job, "failed", False) and (not has_provider_jobs or not no_cache):
         # Failed/cancelled provider statuses are terminal, so the recorded failure is
         # trusted without reconnecting to the provider (``--no-cache`` forces a
         # re-poll). A dispatch failure has nothing to poll at all.
@@ -1043,9 +1100,7 @@ def fetch_result(
         return None
 
     job_data: "BenchmarkData" = setup_job_data_class(job_type)(**metriq_job.data)
-    handler: Benchmark = setup_benchmark(
-        args, validate_and_create_model(metriq_job.params), job_type
-    )
+    handler: Benchmark = setup_benchmark(validate_and_create_model(metriq_job.params), job_type)
     from qbraid.runtime import JobStatus
 
     quantum_jobs = [
@@ -1096,26 +1151,26 @@ def fetch_result(
         return None
 
 
-def view_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    metriq_job = prompt_for_job(args.job_id, job_manager)
+def view_job(job_id: str | None, job_manager: JobManager) -> None:
+    metriq_job = prompt_for_job(job_id, job_manager)
     if metriq_job:
         print(metriq_job)
 
 
-def view_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
-    if not args.suite_id:
+def view_suite(suite_id: str | None, job_manager: JobManager) -> None:
+    if not suite_id:
         print("Suite ID is required to view suite jobs.")
         return
-    jobs = job_manager.get_jobs_by_suite_id(args.suite_id)
+    jobs = job_manager.get_jobs_by_suite_id(suite_id)
     if not jobs:
-        print(f"No jobs found for suite ID {args.suite_id}.")
+        print(f"No jobs found for suite ID {suite_id}.")
         return
-    print(f"Jobs for suite ID {args.suite_id}:")
+    print(f"Jobs for suite ID {suite_id}:")
     list_jobs(jobs, show_index=False, show_suite_id=False)
 
 
-def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
-    metriq_job = prompt_for_job(args.job_id, job_manager)
+def delete_job(job_id: str | None, job_manager: JobManager) -> None:
+    metriq_job = prompt_for_job(job_id, job_manager)
     if metriq_job:
         try:
             job_manager.delete_job(metriq_job.id)
@@ -1128,13 +1183,13 @@ def delete_job(args: argparse.Namespace, job_manager: JobManager) -> None:
         print("No job selected for deletion.")
 
 
-def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
-    if not args.suite_id:
+def delete_suite(suite_id: str | None, job_manager: JobManager) -> None:
+    if not suite_id:
         print("Suite ID is required to delete suite jobs.")
         return
-    jobs = job_manager.get_jobs_by_suite_id(args.suite_id)
+    jobs = job_manager.get_jobs_by_suite_id(suite_id)
     if not jobs:
-        print(f"No jobs found for suite ID {args.suite_id}.")
+        print(f"No jobs found for suite ID {suite_id}.")
         return
     for job in jobs:
         try:
@@ -1142,24 +1197,29 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             print(f"Job {job.id} deleted successfully.")
         except Exception as e:
             print(f"Failed to delete job {job.id}: {e}")
-    print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
+    print(f"All jobs for suite ID {suite_id} deleted successfully.")
 
 
-def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:
-    if not args.provider:
+def estimate_job(
+    config: str,
+    provider: str | None,
+    device_name: str | None,
+    _job_manager: JobManager | None = None,
+) -> None:
+    if not provider:
         print("Provider is required for resource estimation.")
         return
 
     device = None
-    if args.device:
+    if device:
         try:
-            device = setup_device(args.provider, args.device)
+            device = setup_device(provider, device_name)
         except QBraidSetupError:
             return
     else:
         print("No device specified; estimating resources without device-specific topology.")
 
-    config_file = args.config
+    config_file = config
 
     if not os.path.exists(config_file):
         print(f"✗ {config_file}: Configuration file not found")
@@ -1183,7 +1243,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
             print(f"✗ {job_type.value}: {exc}")
             return
 
-    benchmark: Benchmark = setup_benchmark(args, params, job_type)
+    benchmark: Benchmark = setup_benchmark(params, job_type)
 
     try:
         circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
@@ -1197,7 +1257,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
         print(f"✗ Failed to estimate resources: {exc}")
         return
 
-    print_resource_estimate(job_type, args.provider, args.device, resource_estimate)
+    print_resource_estimate(job_type, provider, device, resource_estimate)
 
 
 def main() -> int:

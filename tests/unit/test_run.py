@@ -276,10 +276,8 @@ def test_setup_device_empty_device(mock_provider, patch_load_provider, caplog):
 
 
 @patch("os.path.exists")
-def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, capsys):
+def test_dispatch_missing_config_file(mock_exists, mock_job_manager, capsys):
     """Test behavior when configuration file is missing."""
-    # Setup mocks
-    mock_args.benchmark_config = "missing.json"
     mock_exists.return_value = False  # Simulate missing files
 
     # Mock setup_device to avoid provider validation error
@@ -288,7 +286,7 @@ def test_dispatch_missing_config_file(mock_exists, mock_args, mock_job_manager, 
         mock_setup_device.return_value = mock_device
 
         # Execute function
-        dispatch_job(mock_args, mock_job_manager)
+        dispatch_job("missing.json", "ibm", "ibm_device", mock_job_manager)
 
         # Verify output shows file not found errors
         captured = capsys.readouterr()
@@ -320,11 +318,6 @@ def test_dispatch_suite_skips_benchmark_exceeding_device_capacity(
         id="arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1",
         num_qubits=36,
     )
-    args = SimpleNamespace(
-        provider="aws",
-        device=device.id,
-        suite_config=str(suite_file),
-    )
     registry = MagicMock()
     registry.get_available_benchmarks.return_value = ["Linear Ramp QAOA"]
     setup_benchmark_mock = MagicMock(
@@ -335,7 +328,7 @@ def test_dispatch_suite_skips_benchmark_exceeding_device_capacity(
     monkeypatch.setattr("metriq_gym.run._lazy_registry", lambda: registry)
     monkeypatch.setattr("metriq_gym.run.setup_benchmark", setup_benchmark_mock)
 
-    dispatch_suite(args, mock_job_manager)
+    dispatch_suite(str(suite_file), "aws", device.id, mock_job_manager)
 
     output = capsys.readouterr().out
     assert "Requested 50 qubits" in output
@@ -411,13 +404,8 @@ def test_dispatch_guarded_suite_requires_selection_before_device_setup(
     suite_file = _write_component_suite(tmp_path)
     setup_device_mock = MagicMock()
     monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
-    args = SimpleNamespace(
-        provider="ibm",
-        device="ibm_device",
-        suite_config=str(suite_file),
-    )
 
-    dispatch_suite(args, mock_job_manager)
+    dispatch_suite(str(suite_file), "ibm", "ibm_device", mock_job_manager)
 
     output = capsys.readouterr().out
     assert "WARNING: This test suite is expensive." in output
@@ -432,15 +420,12 @@ def test_dispatch_suite_selects_all_entries_in_component(
 ):
     suite_file = _write_component_suite(tmp_path)
     _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
-    args = SimpleNamespace(
-        provider="ibm",
-        device="ibm_device",
-        suite_config=str(suite_file),
+    extra = dict(
         components=["qft"],
         all_components=False,
     )
 
-    dispatch_suite(args, mock_job_manager)
+    dispatch_suite(str(suite_file), "ibm", "ibm_device", mock_job_manager, **extra)
 
     output = capsys.readouterr().out
     assert "qft_small" in output
@@ -456,15 +441,12 @@ def test_dispatch_suite_all_explicitly_opts_into_guarded_suite(
 ):
     suite_file = _write_component_suite(tmp_path)
     _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
-    args = SimpleNamespace(
-        provider="ibm",
-        device="ibm_device",
-        suite_config=str(suite_file),
+    extra = dict(
         components=None,
         all_components=True,
     )
 
-    dispatch_suite(args, mock_job_manager)
+    dispatch_suite(str(suite_file), "ibm", "ibm_device", mock_job_manager, **extra)
 
     output = capsys.readouterr().out
     assert "WARNING: This test suite is expensive." in output
@@ -478,13 +460,8 @@ def test_dispatch_legacy_suite_still_runs_all_without_all_flag(
 ):
     suite_file = _write_component_suite(tmp_path, guarded=False)
     _, setup_benchmark_mock = _patch_successful_suite_dispatch(monkeypatch)
-    args = SimpleNamespace(
-        provider="ibm",
-        device="ibm_device",
-        suite_config=str(suite_file),
-    )
 
-    dispatch_suite(args, mock_job_manager)
+    dispatch_suite(str(suite_file), "ibm", "ibm_device", mock_job_manager)
 
     output = capsys.readouterr().out
     assert "Successfully dispatched 3/3 benchmarks" in output
@@ -512,15 +489,12 @@ def test_dispatch_suite_rejects_invalid_selection_before_device_setup(
     suite_file = _write_component_suite(tmp_path)
     setup_device_mock = MagicMock()
     monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
-    args = SimpleNamespace(
-        provider="ibm",
-        device="ibm_device",
-        suite_config=str(suite_file),
+    extra = dict(
         components=components,
         all_components=all_components,
     )
 
-    dispatch_suite(args, mock_job_manager)
+    dispatch_suite(str(suite_file), "ibm", "ibm_device", mock_job_manager, **extra)
 
     assert expected_error in capsys.readouterr().out
     setup_device_mock.assert_not_called()
@@ -582,13 +556,7 @@ def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
     monkeypatch.setattr("metriq_gym.run.aggregate_resource_estimates", fake_aggregate)
     monkeypatch.setattr("metriq_gym.run.print_resource_estimate", lambda *_: None)
 
-    args = SimpleNamespace(
-        config="foo.json",
-        provider="quantinuum",
-        device="H1-1",
-    )
-
-    estimate_job(args, MagicMock())
+    estimate_job("foo.json", "quantinuum", "H1-1", MagicMock())
 
     expected = quantinuum_hqc_formula(GateCounts(), 16, 6)
     assert abs(captured["hqc"] - expected) < 1e-6
@@ -647,13 +615,7 @@ def test_estimate_job_without_device_wit(monkeypatch, capsys):
 
     monkeypatch.setattr("metriq_gym.run.aggregate_resource_estimates", fake_aggregate)
 
-    args = SimpleNamespace(
-        config="foo.json",
-        provider="quantinuum",
-        device=None,
-    )
-
-    estimate_job(args, MagicMock())
+    estimate_job("foo.json", "quantinuum", None, MagicMock())
 
     output = capsys.readouterr().out
     assert "Resource estimate for WIT" in output
@@ -681,13 +643,7 @@ def test_estimate_job_requires_device(monkeypatch, capsys):
     )
     monkeypatch.setattr("metriq_gym.run.setup_benchmark", lambda *_, **__: mock_benchmark)
 
-    args = SimpleNamespace(
-        config="foo.json",
-        provider="aws",
-        device=None,
-    )
-
-    estimate_job(args, MagicMock())
+    estimate_job("foo.json", "aws", None, MagicMock())
 
     output = capsys.readouterr().out
     assert "✗ BSEQ" in output
@@ -745,9 +701,7 @@ def test_fetch_result_uses_cache_when_no_flag(monkeypatch):
     job = _make_cached_job(EXPECTED_CACHED_VALUE)
     jm = JobManager()
     jm.jobs.append(job)
-    args = MagicMock()
-    args.no_cache = False
-    args.include_raw = False
+    no_cache = False
 
     import metriq_gym.run as run_mod
 
@@ -761,7 +715,7 @@ def test_fetch_result_uses_cache_when_no_flag(monkeypatch):
     )
     monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
 
-    fetch_output = fetch_result(job, args, jm)
+    fetch_output = fetch_result(job, jm, no_cache=no_cache)
     assert fetch_output.result.value == EXPECTED_CACHED_VALUE
     assert fetch_output.from_cache is True
 
@@ -772,9 +726,7 @@ def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
     job = _make_cached_job(CACHED_VALUE)
     jm = JobManager()
     jm.jobs.append(job)
-    args = MagicMock()
-    args.no_cache = True
-    args.include_raw = False
+    no_cache = True
 
     import metriq_gym.run as run_mod
 
@@ -788,7 +740,7 @@ def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
     )
     monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
 
-    fetch_output = fetch_result(job, args, jm)
+    fetch_output = fetch_result(job, jm, no_cache=no_cache)
     assert fetch_output.result.value == EXPECTED_FRESH_VALUE, (
         "Should fetch fresh value when --no-cache specified"
     )
@@ -807,9 +759,7 @@ def test_fetch_result_includes_raw_counts_when_flag_set(monkeypatch):
     job.result_data = None
     jm = JobManager()
     jm.jobs.append(job)
-    args = MagicMock()
-    args.no_cache = False
-    args.include_raw = True
+    no_cache = False
 
     # Create a fake quantum job that returns real GateModelResultData
     class FakeQuantumJobWithRealData:
@@ -846,7 +796,7 @@ def test_fetch_result_includes_raw_counts_when_flag_set(monkeypatch):
     )
     monkeypatch.setattr(run_mod, "validate_and_create_model", lambda params: params)
 
-    fetch_output = fetch_result(job, args, jm)
+    fetch_output = fetch_result(job, jm, no_cache=no_cache)
     assert fetch_output.raw_results is not None
     assert len(fetch_output.raw_results) == 1
     # Check that the first result is a GateModelResultData and has the expected measurement_counts
