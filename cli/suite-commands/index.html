@@ -713,6 +713,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#export-results-to-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export results to JSON
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1605,6 +1616,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#export-results-to-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export results to JSON
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1863,10 +1885,19 @@ component and scale-point reference.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="export-results-to-json">Export results to JSON<a class="headerlink" href="#export-results-to-json" title="Permanent link">&para;</a></h3>
+<p>Write the suite's completed results to a file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>poll<span class="w"> </span>&lt;suite_id&gt;<span class="w"> </span>--json<span class="w"> </span>suite-results.json
+</code></pre></div>
+<p>The file contains a JSON array in suite job order. Each record uses the same
+format as a completed job in <code>mgym suite upload</code>, including metadata, parameters,
+results, and a UTC timestamp. Without <code>--json</code>, results are displayed as a table.</p>
+<p>Failed jobs are reported and skipped. If any job is still pending, or no
+completed jobs remain, no file is written.</p>
 <hr />
 <h2 id="view">view<a class="headerlink" href="#view" title="Permanent link">&para;</a></h2>
 <p>View jobs in a suite.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>view<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>view<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_2">Arguments<a class="headerlink" href="#arguments_2" title="Permanent link">&para;</a></h3>
 <table>
@@ -1890,7 +1921,7 @@ component and scale-point reference.</p>
 <hr />
 <h2 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">&para;</a></h2>
 <p>Delete all jobs in a suite from the local database.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>delete<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>delete<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_3">Arguments<a class="headerlink" href="#arguments_3" title="Permanent link">&para;</a></h3>
 <table>
@@ -1914,7 +1945,7 @@ component and scale-point reference.</p>
 <hr />
 <h2 id="upload">upload<a class="headerlink" href="#upload" title="Permanent link">&para;</a></h2>
 <p>Upload suite results to GitHub via pull request.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>upload<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>upload<span class="w"> </span><span class="o">[</span>suite_id<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_4">Arguments<a class="headerlink" href="#arguments_4" title="Permanent link">&para;</a></h3>
 <table>
