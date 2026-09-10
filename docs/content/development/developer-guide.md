@@ -239,8 +239,47 @@ mgym job dispatch metriq_gym/schemas/examples/wit.example.json \
 Releases are managed by maintainers:
 
 1. Version is determined by `setuptools_scm` from git tags
-2. CI builds and publishes to PyPI
+2. CI builds and tests the wheel and source distribution before publishing to PyPI
 3. Documentation is deployed to GitHub Pages
+
+### Distribution checks
+
+The `Distribution Tests` workflow runs on pull requests and pushes to `main`.
+Both publishing workflows also call it: a failed build, metadata check, install,
+or simulator smoke test prevents publishing. Release builds must have the same
+version as their tag after Python version normalization (for example,
+`v0.5.1-alpha` becomes `0.5.1a0`). PyPI and TestPyPI receive the exact artifacts
+that passed these checks.
+
+The wheel is installed in fresh environments on Linux and macOS with Python
+3.12 and 3.13. The source distribution is independently installed on Linux with
+Python 3.12. These installs resolve the dependencies declared in the package,
+without the development environment or `uv.lock`.
+
+The smoke script runs outside the checkout and checks the installed version,
+CLI entry point, JSON schemas, bundled suites, dashboard HTML, and benchmark
+modules from the submodules. It then dispatches and polls a small local Aer job
+and a two-job suite, checking their JSON results. No provider credentials are
+needed.
+
+To reproduce a wheel check locally on Linux or macOS:
+
+```bash
+uv build
+smoke_dir=$(mktemp -d)
+uv venv "$smoke_dir/venv" --python 3.12
+uv pip install --python "$smoke_dir/venv/bin/python" dist/*.whl
+uv pip check --python "$smoke_dir/venv/bin/python"
+cp scripts/smoke_distribution.py "$smoke_dir/"
+(
+    cd "$smoke_dir"
+    unset PYTHONPATH
+    ./venv/bin/python -I smoke_distribution.py
+)
+```
+
+Repeat with a fresh environment and `dist/*.tar.gz` to check the source
+distribution. OpenCL must be installed, as for the regular test workflow.
 
 ### Tag naming requirement
 

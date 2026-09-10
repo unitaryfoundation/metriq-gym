@@ -724,7 +724,11 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list["Benchmar
         records.append(DictExporter(job, result).export() | {"params": job.params})
 
     if hasattr(args, "json"):
-        raise NotImplementedError("JSON export of suite results is not implemented yet.")
+        import json
+
+        with open(args.json, "w") as json_file:
+            json.dump(records, json_file, indent=4)
+        print(f"Results exported to {args.json}")
     else:
         print("\n--- Suite Metadata ---")
         print_selected(records[0], COMMON_SUITE_METADATA)
