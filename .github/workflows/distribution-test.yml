@@ -42,12 +42,15 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.release-tag }}
         run: |
-          python - <<'PY'
+          uv run --no-project --with packaging python - <<'PY'
           import email
           import os
           import pathlib
+          import re
           import tarfile
           import zipfile
+
+          from packaging.version import Version
 
           wheel, = pathlib.Path("dist").glob("*.whl")
           sdist, = pathlib.Path("dist").glob("*.tar.gz")
@@ -61,7 +64,9 @@ jobs:
           assert wheel_version and wheel_version == sdist_version, (wheel_version, sdist_version)
           tag = os.environ["RELEASE_TAG"]
           if tag:
-              assert tag == f"v{wheel_version}", (tag, wheel_version)
+              assert re.match(r"v[0-9]", tag), f"Invalid release tag: {tag}"
+              # Preserve accepted prerelease spellings, e.g. v0.5.1-alpha -> 0.5.1a0.
+              assert Version(tag[1:]) == Version(wheel_version), (tag, wheel_version)
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"version={wheel_version}\n")
           PY

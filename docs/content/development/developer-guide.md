@@ -247,8 +247,9 @@ Releases are managed by maintainers:
 The `Distribution Tests` workflow runs on pull requests and pushes to `main`.
 Both publishing workflows also call it: a failed build, metadata check, install,
 or simulator smoke test prevents publishing. Release builds must have the same
-version as their tag. PyPI and TestPyPI receive the exact artifacts that passed
-these checks.
+version as their tag after Python version normalization (for example,
+`v0.5.1-alpha` becomes `0.5.1a0`). PyPI and TestPyPI receive the exact artifacts
+that passed these checks.
 
 The wheel is installed in fresh environments on Linux and macOS with Python
 3.12 and 3.13. The source distribution is independently installed on Linux with
