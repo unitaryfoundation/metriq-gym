@@ -20,8 +20,8 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path, local_timezone):
     """
     End-to-end test of the CLI workflow for a suite with two jobs on the local simulator
         1. dispatch   -> returns a Metriq-Gym suite_id and two job_ids
-        2. poll       -> succeeds immediately for the local simulator
-        3. validate   -> JSON result file contains results for both jobs
+        2. poll       -> displays results and exports both jobs to JSON
+        3. upload     -> dry-run payload matches the JSON polling export
     """
 
     # ------------------------------------------------------------------
@@ -74,6 +74,16 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path, local_timezone):
 
     assert "Suite Results" in poll_cmd.stdout, "Suite results not found in poll output"
 
+    json_path = tmp_path / "suite-results.json"
+    subprocess.run(
+        ["mgym", "suite", "poll", suite_id, "--json", str(json_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    poll_records = json.loads(json_path.read_text())
+    assert isinstance(poll_records, list) and len(poll_records) == 2
+
     # ------------------------------------------------------
     # 3. Dry-run suite upload (single PR, no network/git)
     # ------------------------------------------------------
@@ -96,7 +106,7 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path, local_timezone):
 
     with open(path_part) as f:
         arr = json.load(f)
-    assert isinstance(arr, list) and len(arr) == 2
+    assert arr == poll_records
     assert [record["timestamp"] for record in arr] == [
         job.dispatch_time.isoformat() for job in jobs
     ]
@@ -110,6 +120,14 @@ def test_dispatch_and_poll_suite_on_local_simulator(tmp_path, local_timezone):
     for job in job_manager.get_jobs_by_suite_id(suite_id):
         job.dispatch_time = job.dispatch_time.astimezone().replace(tzinfo=None)
         job_manager.update_job(job)
+    legacy_json_path = tmp_path / "legacy-suite-results.json"
+    subprocess.run(
+        ["mgym", "suite", "poll", suite_id, "--json", str(legacy_json_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert json.loads(legacy_json_path.read_text()) == poll_records
     legacy_upload = subprocess.run(
         ["mgym", "suite", "upload", suite_id, "--dry-run"],
         capture_output=True,
