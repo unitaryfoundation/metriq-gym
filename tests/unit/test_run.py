@@ -740,11 +740,11 @@ def _make_cached_job(val: int) -> MetriqGymJob:
     )
 
 
-def test_fetch_result_uses_cache_when_no_flag(monkeypatch):
+def test_fetch_result_uses_cache_when_no_flag(monkeypatch, tmp_path):
     EXPECTED_CACHED_VALUE = 7
     job = _make_cached_job(EXPECTED_CACHED_VALUE)
-    jm = JobManager()
-    jm.jobs.append(job)
+    jm = JobManager(jobs_file=tmp_path / "localdb.jsonl")
+    jm.add_job(job)
     args = MagicMock()
     args.no_cache = False
     args.include_raw = False
@@ -766,12 +766,12 @@ def test_fetch_result_uses_cache_when_no_flag(monkeypatch):
     assert fetch_output.from_cache is True
 
 
-def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
+def test_fetch_result_bypasses_cache_with_flag(monkeypatch, tmp_path):
     EXPECTED_FRESH_VALUE = 42
     CACHED_VALUE = 7
     job = _make_cached_job(CACHED_VALUE)
-    jm = JobManager()
-    jm.jobs.append(job)
+    jm = JobManager(jobs_file=tmp_path / "localdb.jsonl")
+    jm.add_job(job)
     args = MagicMock()
     args.no_cache = True
     args.include_raw = False
@@ -798,15 +798,15 @@ def test_fetch_result_bypasses_cache_with_flag(monkeypatch):
     )
 
 
-def test_fetch_result_includes_raw_counts_when_flag_set(monkeypatch):
+def test_fetch_result_includes_raw_counts_when_flag_set(monkeypatch, tmp_path):
     """Test that raw counts are returned when include_raw=True."""
     # ...existing code...
 
     EXPECTED_VALUE = 42
     job = _make_cached_job(None)  # No cache, force fresh fetch
     job.result_data = None
-    jm = JobManager()
-    jm.jobs.append(job)
+    jm = JobManager(jobs_file=tmp_path / "localdb.jsonl")
+    jm.add_job(job)
     args = MagicMock()
     args.no_cache = False
     args.include_raw = True
