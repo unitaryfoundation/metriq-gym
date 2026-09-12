@@ -458,6 +458,7 @@ def test_get_devices_listed_fake_backend_constructs_aer_on_submit():
         patch("metriq_gym.local.provider.QiskitRuntimeService") as mock_service,
         patch("metriq_gym.local.provider.FakeProviderForBackendV2") as mock_fake_provider,
         patch("metriq_gym.local.provider.AerSimulator") as mock_aer,
+        patch("metriq_gym.local.device.transpile", side_effect=lambda circuits, **_: circuits),
     ):
         mock_service.side_effect = ValueError("Not configured")
         mock_fake_provider.return_value.backends.return_value = [mock_backend]

@@ -1,0 +1,6 @@
+{
+  "benchmark_name": "GHZ",
+  "num_qubits": 8,
+  "shots": 1000,
+  "method": "dfe"
+}

@@ -14,6 +14,7 @@ from metriq_gym.benchmarks.wit import WIT, WITData, WITResult
 from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData, QEDCResult
 from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData, LinearRampQAOAResult
 from metriq_gym.benchmarks.eplg import EPLG, EPLGData, EPLGResult
+from metriq_gym.benchmarks.ghz import GHZBenchmark, GHZData, GHZResult
 from metriq_gym.benchmarks.qat_ole import QATOLE, QATOLEData, QATOLEResult
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
@@ -28,6 +29,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.HIDDEN_SHIFT: QEDCBenchmark,
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCBenchmark,
     JobType.LR_QAOA: LinearRampQAOA,
+    JobType.GHZ: GHZBenchmark,
     JobType.QAT_OLE: QATOLE,
 }
 
@@ -43,6 +45,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.HIDDEN_SHIFT: QEDCData,
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCData,
     JobType.LR_QAOA: LinearRampQAOAData,
+    JobType.GHZ: GHZData,
     JobType.QAT_OLE: QATOLEData,
 }
 
@@ -58,6 +61,7 @@ BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.HIDDEN_SHIFT: QEDCResult,
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCResult,
     JobType.LR_QAOA: LinearRampQAOAResult,
+    JobType.GHZ: GHZResult,
     JobType.QAT_OLE: QATOLEResult,
 }
 
