@@ -52,6 +52,7 @@ nav:
   - Development:
     - Developer Guide: development/developer-guide.md
     - Adding New Benchmarks: development/adding-benchmarks.md
+    - Adding Provider Support: development/adding-providers.md
     - API Reference: development/api-reference.md
 
 plugins:
