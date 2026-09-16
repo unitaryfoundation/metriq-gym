@@ -41,6 +41,7 @@ Example files are not canonical Metriq Score configurations.
 | [QML Kernel](#metriq_gym.benchmarks.qml_kernel) | Quantum machine learning kernel accuracy |
 | [QED-C Benchmarks](#metriq_gym.benchmarks.qedc_benchmarks) | Application-oriented benchmarks (BV, QFT, etc.) |
 | [CLOPS](#metriq_gym.benchmarks.clops) | Circuit layer operations per second to measure device speed |
+| [GHZ](#metriq_gym.benchmarks.ghz) | GHZ state fidelity, at a fixed size or by searching for the largest one the device can build |
 
 ---
 
@@ -94,6 +95,13 @@ Example files are not canonical Metriq Score configurations.
       heading_level: 3
 
 ::: metriq_gym.benchmarks.clops
+    options:
+      show_root_heading: true
+      show_root_full_path: false
+      members: false
+      heading_level: 3
+
+::: metriq_gym.benchmarks.ghz
     options:
       show_root_heading: true
       show_root_full_path: false
