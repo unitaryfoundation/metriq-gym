@@ -4,37 +4,30 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
-  build-and-publish:
+  distributions:
     if: github.event.release.prerelease == true
-    name: Build and publish Python distributions to TestPyPI
+    uses: ./.github/workflows/distribution-test.yml
+    with:
+      release-tag: ${{ github.event.release.tag_name }}
+
+  publish:
+    needs: distributions
+    name: Publish tested distributions to TestPyPI
     runs-on: ubuntu-latest
     environment: testpypi
     permissions:
       id-token: write  # This is required for trusted publishing
 
     steps:
-      - name: Checkout repo + submodules
-        uses: actions/checkout@v7
+      - name: Download tested distributions
+        uses: actions/download-artifact@v8
         with:
-          submodules: recursive
-          fetch-depth: 0  # fetch full history and tags for versioning
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: "0.8.22"
-
-      - name: Sync dependencies
-        run: uv sync --group dev --frozen
-
-      - name: Build package
-        run: uv build
+          name: python-distributions
+          path: dist
 
       - name: Publish package distributions to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1

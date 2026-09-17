@@ -67,6 +67,23 @@ component and scale-point reference.
 """
 
 
+SUITE_POLL_GUIDE = """### Export results to JSON
+
+Write the suite's completed results to a file:
+
+```bash
+mgym suite poll <suite_id> --json suite-results.json
+```
+
+The file contains a JSON array in suite job order. Each record uses the same
+format as a completed job in `mgym suite upload`, including metadata, parameters,
+results, and a UTC timestamp. Without `--json`, results are displayed as a table.
+
+Failed jobs are reported and skipped. If any job is still pending, or no
+completed jobs remain, no file is written.
+"""
+
+
 def extract_param_info(annotation, default):
     """Extract parameter info from Typer's Annotated type."""
     if get_origin(annotation) is Annotated:
@@ -282,7 +299,7 @@ def main():
         "suite",
         "Suite Commands",
         "Commands for dispatching, monitoring, and managing benchmark suites.",
-        command_extras={"dispatch": SUITE_DISPATCH_GUIDE},
+        command_extras={"dispatch": SUITE_DISPATCH_GUIDE, "poll": SUITE_POLL_GUIDE},
     )
     (content_dir / "suite-commands.md").write_text(suite_docs)
     print(f"Generated {content_dir / 'suite-commands.md'}")

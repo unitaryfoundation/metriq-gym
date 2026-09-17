@@ -1313,7 +1313,7 @@ dependencies = [
     { name = "pyqpanda3" },
     { name = "python-dotenv" },
     { name = "pytket-qiskit" },
-    { name = "qbraid", extra = ["azure", "braket", "ionq", "qiskit", "quantinuum"] },
+    { name = "qbraid", extra = ["azure", "braket", "ionq", "origin", "qiskit", "quantinuum"] },
     { name = "qbraid-core" },
     { name = "qiskit", extra = ["qasm3-import"] },
     { name = "qiskit-aer" },
@@ -1362,7 +1362,7 @@ requires-dist = [
     { name = "pyqpanda3", specifier = ">=0.3.2" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.78.0" },
-    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit", "quantinuum"], specifier = ">=0.12.2,<0.13.0" },
+    { name = "qbraid", extras = ["azure", "braket", "ionq", "origin", "qiskit", "quantinuum"], specifier = ">=0.12.2,<0.13.0" },
     { name = "qbraid-core", specifier = ">=0.1.45,<0.4.0" },
     { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.17.1,<0.18.0" },
@@ -2397,6 +2397,9 @@ braket = [
 ]
 ionq = [
     { name = "qiskit-ionq" },
+]
+origin = [
+    { name = "pyqpanda3" },
 ]
 qiskit = [
     { name = "packaging" },

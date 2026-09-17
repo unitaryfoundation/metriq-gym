@@ -1,0 +1,133 @@
+name: Distribution Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+    inputs:
+      release-tag:
+        description: Release tag whose version must match both distributions
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.8.22"
+      - name: Build wheel and source distribution
+        run: uv build
+      - name: Check distribution metadata
+        run: uvx twine check --strict dist/*
+      - name: Verify distribution versions
+        id: metadata
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        run: |
+          uv run --no-project --with packaging python - <<'PY'
+          import email
+          import os
+          import pathlib
+          import re
+          import tarfile
+          import zipfile
+
+          from packaging.version import Version
+
+          wheel, = pathlib.Path("dist").glob("*.whl")
+          sdist, = pathlib.Path("dist").glob("*.tar.gz")
+          with zipfile.ZipFile(wheel) as archive:
+              metadata, = (name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
+              wheel_version = email.message_from_bytes(archive.read(metadata))["Version"]
+          with tarfile.open(sdist) as archive:
+              metadata, = (member for member in archive.getmembers()
+                           if member.name.count("/") == 1 and member.name.endswith("/PKG-INFO"))
+              sdist_version = email.message_from_bytes(archive.extractfile(metadata).read())["Version"]
+          assert wheel_version and wheel_version == sdist_version, (wheel_version, sdist_version)
+          tag = os.environ["RELEASE_TAG"]
+          if tag:
+              assert re.match(r"v[0-9]", tag), f"Invalid release tag: {tag}"
+              # Preserve accepted prerelease spellings, e.g. v0.5.1-alpha -> 0.5.1a0.
+              assert Version(tag[1:]) == Version(wheel_version), (tag, wheel_version)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"version={wheel_version}\n")
+          PY
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-distributions
+          path: dist/*
+          if-no-files-found: error
+
+  smoke:
+    name: Install ${{ matrix.distribution }} / ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.12", "3.13"]
+        distribution: [wheel]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.12"
+            distribution: sdist
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install OpenCL on Ubuntu
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ocl-icd-opencl-dev
+      - name: Install OpenCL on macOS
+        if: runner.os == 'macOS'
+        run: brew install opencl-headers ocl-icd
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.8.22"
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-distributions
+          path: ${{ runner.temp }}/distributions
+      - name: Install distribution in a clean environment
+        working-directory: ${{ runner.temp }}
+        env:
+          DISTRIBUTION: ${{ matrix.distribution }}
+        run: |
+          uv venv smoke-venv --python "$(command -v python)"
+          if [ "$DISTRIBUTION" = wheel ]; then
+            artifacts=(distributions/*.whl)
+          else
+            artifacts=(distributions/*.tar.gz)
+          fi
+          test "${#artifacts[@]}" -eq 1
+          uv pip install --python smoke-venv/bin/python "${artifacts[0]}"
+          uv pip check --python smoke-venv/bin/python
+      - name: Exercise installed CLI and packaged resources
+        working-directory: ${{ runner.temp }}
+        env:
+          EXPECTED_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          cp "$GITHUB_WORKSPACE/scripts/smoke_distribution.py" smoke_distribution.py
+          unset PYTHONPATH
+          smoke-venv/bin/python -I smoke_distribution.py --expected-version "$EXPECTED_VERSION"

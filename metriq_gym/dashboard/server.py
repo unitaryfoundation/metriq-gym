@@ -147,6 +147,10 @@ def job_state(raw: dict, state: dict) -> tuple[str, int | None]:
         return "uploaded", None
     if raw.get("result_data") is not None:
         return "ready_to_upload", None
+    if raw.get("error") is not None:
+        # Failure recorded on the job itself (dispatch raised, or a poll saw a
+        # terminal provider failure); no need to wait for a dashboard poll.
+        return "failed", None
     poll = state["polls"].get(jid)
     if poll:
         s = poll["status"]
@@ -162,6 +166,18 @@ def job_state(raw: dict, state: dict) -> tuple[str, int | None]:
             return "running", None
         return "queued", poll.get("queue_position")
     return "unknown", None
+
+
+def _dispatch_time_sort_key(job: dict) -> datetime:
+    """Sort by UTC time, treating legacy naive timestamps as local time."""
+    timestamp = job.get("dispatch_time")
+    if isinstance(timestamp, str):
+        try:
+            return datetime.fromisoformat(timestamp).astimezone(timezone.utc)
+        except (ValueError, OverflowError, OSError):
+            pass
+    # Keep partial or malformed records visible, after all dated jobs.
+    return datetime.min.replace(tzinfo=timezone.utc)
 
 
 def wire_jobs() -> list[dict]:
@@ -202,7 +218,7 @@ def wire_jobs() -> list[dict]:
                 "uploaded_at": upload.get("uploaded_at"),
             }
         )
-    out.sort(key=lambda j: j["dispatch_time"] or "", reverse=True)
+    out.sort(key=_dispatch_time_sort_key, reverse=True)
     return out
 
 

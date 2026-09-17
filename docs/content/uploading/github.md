@@ -121,6 +121,53 @@ A PR is opened with:
 ]
 ```
 
+## Reporting Failed Attempts
+
+Not every attempt produces results. metriq-data records non-completed attempts as
+first-class [outcome records](https://github.com/unitaryfoundation/metriq-data#record-outcomes)
+so that "no data" can be told apart from "tried and failed" or "device cannot run this".
+
+metriq-gym keeps the captured error on the job record when:
+
+- dispatch raises (e.g. the provider rejects the circuit at submission), or
+- a poll finds the provider tasks in a failed/cancelled state.
+
+Uploading such a job produces a record with `outcome: "error"`, `results: null`, and
+the verbatim error in `outcome_detail`:
+
+```bash
+mgym job upload <JOB_ID>
+```
+
+If the failure is structural rather than transient, reclassify it by hand. The
+captured error is attached as evidence:
+
+```bash
+mgym job upload <JOB_ID> --outcome unsupported --reason "Compiler rejects 100-qubit LR-QAOA circuits"
+mgym job upload <JOB_ID> --outcome not_applicable --reason "Benchmark does not apply to this device category"
+```
+
+```json
+{
+  "app_version": "0.7.2",
+  "timestamp": "2026-08-07T12:00:00",
+  "job_type": "Linear Ramp QAOA",
+  "params": { "benchmark_name": "Linear Ramp QAOA", "num_qubits": 100 },
+  "platform": { "provider": "aws", "device": "rigetti_cepheus-1-108q" },
+  "outcome": "unsupported",
+  "outcome_detail": {
+    "reason": "Compiler rejects 100-qubit LR-QAOA circuits",
+    "error_message": "<verbatim provider/compiler error>",
+    "source": "dispatch"
+  },
+  "results": null
+}
+```
+
+`mgym suite upload` includes failed jobs of the suite as `error` outcome records, so
+one failed benchmark does not block uploading the rest. A later successful run of
+the same instance supersedes any outcome record automatically.
+
 ## Contribution Workflow
 
 ### First-Time Contributors

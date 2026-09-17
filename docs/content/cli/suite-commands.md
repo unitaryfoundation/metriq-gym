@@ -91,6 +91,21 @@ mgym suite poll [suite_id] [OPTIONS]
 | `--json` | STR | Export results to JSON file | `None` |
 | `--no-cache` | BOOL | Ignore locally cached results and refetch | `False` |
 
+### Export results to JSON
+
+Write the suite's completed results to a file:
+
+```bash
+mgym suite poll <suite_id> --json suite-results.json
+```
+
+The file contains a JSON array in suite job order. Each record uses the same
+format as a completed job in `mgym suite upload`, including metadata, parameters,
+results, and a UTC timestamp. Without `--json`, results are displayed as a table.
+
+Failed jobs are reported and skipped. If any job is still pending, or no
+completed jobs remain, no file is written.
+
 ---
 
 ## view
@@ -152,5 +167,9 @@ mgym suite upload [suite_id] [OPTIONS]
 | `--commit-message` | STR | Commit message | `None` |
 | `--clone-dir` | STR | Working directory to clone into (env: `MGYM_UPLOAD_CLONE_DIR`) | `None` |
 | `--dry-run` | BOOL | Do not push or open a PR; print actions only | `False` |
+
+Jobs in the suite that failed (dispatch raised, or the provider reported a failure)
+are included as `outcome: "error"` records with the captured error, so one failed
+benchmark does not block the upload. Jobs that are still pending do.
 
 ---

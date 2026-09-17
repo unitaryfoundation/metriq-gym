@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import os
 import pytest
@@ -22,6 +22,7 @@ from metriq_gym.run import (
     estimate_job,
     _export_raw_debug_data,
     replay_from_debug_file,
+    _new_job,
 )
 from metriq_gym.job_manager import MetriqGymJob, JobManager
 from metriq_gym.constants import JobType
@@ -37,6 +38,22 @@ from metriq_gym.resource_estimation import (
 class FakeDevice:
     def __init__(self, id):
         self.id = id
+
+
+@pytest.mark.parametrize("local_timezone", ["Europe/Madrid", "America/New_York"], indirect=True)
+def test_new_job_persists_utc_dispatch_time(local_timezone):
+    args = SimpleNamespace(provider="local", device="aer_simulator")
+    params = SimpleNamespace(model_dump=lambda **_: {})
+    before = datetime.now(timezone.utc)
+
+    job = _new_job(args, FakeDevice(args.device), JobType.WIT, params, data={})
+
+    after = datetime.now(timezone.utc)
+    assert job.dispatch_time.tzinfo is timezone.utc
+    assert before <= job.dispatch_time <= after
+    reloaded = MetriqGymJob.deserialize(job.serialize())
+    assert reloaded.dispatch_time == job.dispatch_time
+    assert reloaded.dispatch_time.tzinfo is timezone.utc
 
 
 def test_main_loads_dotenv_from_working_directory(tmp_path, monkeypatch):
