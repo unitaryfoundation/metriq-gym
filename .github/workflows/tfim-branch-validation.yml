@@ -1,0 +1,54 @@
+name: TFIM branch validation
+
+on:
+  push:
+    branches:
+      - feat/tfim-energy-benchmark
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install OpenCL
+        run: |
+          sudo apt update
+          sudo apt install -y ocl-icd-opencl-dev
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.8.22"
+
+      - name: Sync dependencies
+        run: uv sync --group dev --frozen
+
+      - name: Ruff
+        run: uv run ruff check metriq_gym/benchmarks/tfim_energy.py tests/unit/benchmarks/test_tfim_energy.py metriq_gym/registry.py metriq_gym/constants.py
+
+      - name: MyPy
+        run: |
+          uv run stubgen --no-analysis
+          uv run mypy metriq_gym/benchmarks/tfim_energy.py
+
+      - name: Unit tests
+        run: uv run pytest tests/unit/benchmarks/test_tfim_energy.py -q
+
+      - name: Resource estimate
+        run: |
+          uv run mgym job estimate metriq_gym/schemas/examples/tfim_energy.example.json \
+            --provider local --device aer_simulator
