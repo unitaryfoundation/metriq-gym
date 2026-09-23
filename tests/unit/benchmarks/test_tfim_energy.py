@@ -2,16 +2,25 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from jsonschema.exceptions import ValidationError
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
 
 from metriq_gym.benchmarks.tfim_energy import (
     TFIMEnergy,
     TFIMEnergyData,
+    TFIMEnergyResult,
     analyze_tfim_counts,
     build_measurement_circuits,
     pauli_expectation_from_counts,
     reference_energies,
 )
+from metriq_gym.constants import JobType, SCHEMA_MAPPING
+from metriq_gym.registry import (
+    BENCHMARK_DATA_CLASSES,
+    BENCHMARK_HANDLERS,
+    BENCHMARK_RESULT_CLASSES,
+)
+from metriq_gym.schema_validator import validate_and_create_model
 
 
 def test_reference_energies_match_afriqbench_baseline():
@@ -132,3 +141,79 @@ def test_poll_handles_batched_provider_results():
     )
 
     assert result.energy.value == pytest.approx(-7.0)
+
+
+def test_dispatch_submits_one_seven_circuit_batch():
+    device = MagicMock()
+    device.num_qubits = 5
+    job = MagicMock()
+    job.id = "tfim-test-job"
+    device.run.return_value = job
+
+    benchmark = TFIMEnergy(
+        args=MagicMock(),
+        params=SimpleNamespace(shots=256),
+    )
+    data = benchmark.dispatch_handler(device)
+
+    device.run.assert_called_once()
+    circuits = device.run.call_args.args[0]
+
+    assert len(circuits) == 7
+    assert device.run.call_args.kwargs["shots"] == 256
+    assert data.provider_job_ids == ["tfim-test-job"]
+    assert data.shots == 256
+    assert data.input_two_qubit_gate_counts == [6] * 7
+    assert data.transpiled_two_qubit_gate_counts == [6] * 7
+
+
+def test_resource_estimation_matches_dispatch_shape():
+    device = MagicMock()
+    device.num_qubits = 5
+
+    benchmark = TFIMEnergy(
+        args=MagicMock(),
+        params=SimpleNamespace(shots=512),
+    )
+    batches = benchmark.estimate_resources_handler(device)
+
+    assert len(batches) == 1
+    assert len(batches[0].circuits) == 7
+    assert batches[0].shots == 512
+
+
+def test_registry_and_schema_mapping_are_registered():
+    assert JobType.TFIM_ENERGY.value == "TFIM Energy"
+    assert SCHEMA_MAPPING[JobType.TFIM_ENERGY] == "tfim_energy.schema.json"
+    assert BENCHMARK_HANDLERS[JobType.TFIM_ENERGY] is TFIMEnergy
+    assert BENCHMARK_DATA_CLASSES[JobType.TFIM_ENERGY] is TFIMEnergyData
+    assert BENCHMARK_RESULT_CLASSES[JobType.TFIM_ENERGY] is TFIMEnergyResult
+
+
+def test_schema_accepts_canonical_configuration():
+    params = validate_and_create_model(
+        {
+            "benchmark_name": "TFIM Energy",
+            "num_qubits": 4,
+            "coupling_j": 1.0,
+            "field_h": 1.0,
+            "shots": 8192,
+        }
+    )
+
+    assert params.benchmark_name == "TFIM Energy"
+    assert params.num_qubits == 4
+    assert params.shots == 8192
+
+
+def test_schema_rejects_noncanonical_field_strength():
+    with pytest.raises(ValidationError):
+        validate_and_create_model(
+            {
+                "benchmark_name": "TFIM Energy",
+                "num_qubits": 4,
+                "coupling_j": 1.0,
+                "field_h": 1.5,
+                "shots": 8192,
+            }
+        )
