@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from jsonschema.exceptions import ValidationError
+from qbraid import QuantumJob
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
 
 from metriq_gym.benchmarks.tfim_energy import (
@@ -146,7 +147,7 @@ def test_poll_handles_batched_provider_results():
 def test_dispatch_submits_one_seven_circuit_batch():
     device = MagicMock()
     device.num_qubits = 5
-    job = MagicMock()
+    job = MagicMock(spec=QuantumJob)
     job.id = "tfim-test-job"
     device.run.return_value = job
 
