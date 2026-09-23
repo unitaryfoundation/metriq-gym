@@ -1,0 +1,7 @@
+{
+  "benchmark_name": "TFIM Energy",
+  "num_qubits": 4,
+  "coupling_j": 1.0,
+  "field_h": 1.0,
+  "shots": 8192
+}
