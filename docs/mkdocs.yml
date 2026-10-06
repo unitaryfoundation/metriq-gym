@@ -46,6 +46,7 @@ nav:
     - Local Simulators: providers/local.md
   - Benchmarks:
     - Overview: benchmarks/overview.md
+    - TFIM Energy: benchmarks/tfim-energy.md
     - Metriq Score 1.0 Suite: suites/metriq-score-1.0.md
   - Uploading Results:
     - Contributing to metriq-data: uploading/github.md

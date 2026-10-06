@@ -12,9 +12,18 @@ from metriq_gym.benchmarks.mirror_circuits import (
 )
 from metriq_gym.benchmarks.wit import WIT, WITData, WITResult
 from metriq_gym.benchmarks.qedc_benchmarks import QEDCBenchmark, QEDCData, QEDCResult
-from metriq_gym.benchmarks.lr_qaoa import LinearRampQAOA, LinearRampQAOAData, LinearRampQAOAResult
+from metriq_gym.benchmarks.lr_qaoa import (
+    LinearRampQAOA,
+    LinearRampQAOAData,
+    LinearRampQAOAResult,
+)
 from metriq_gym.benchmarks.eplg import EPLG, EPLGData, EPLGResult
 from metriq_gym.benchmarks.qat_ole import QATOLE, QATOLEData, QATOLEResult
+from metriq_gym.benchmarks.tfim_energy import (
+    TFIMEnergy,
+    TFIMEnergyData,
+    TFIMEnergyResult,
+)
 
 BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.BSEQ: BSEQ,
@@ -29,6 +38,7 @@ BENCHMARK_HANDLERS: dict[JobType, type[Benchmark]] = {
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCBenchmark,
     JobType.LR_QAOA: LinearRampQAOA,
     JobType.QAT_OLE: QATOLE,
+    JobType.TFIM_ENERGY: TFIMEnergy,
 }
 
 BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
@@ -44,6 +54,7 @@ BENCHMARK_DATA_CLASSES: dict[JobType, type[BenchmarkData]] = {
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCData,
     JobType.LR_QAOA: LinearRampQAOAData,
     JobType.QAT_OLE: QATOLEData,
+    JobType.TFIM_ENERGY: TFIMEnergyData,
 }
 
 BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
@@ -59,6 +70,7 @@ BENCHMARK_RESULT_CLASSES: dict[JobType, type[BenchmarkResult]] = {
     JobType.QUANTUM_FOURIER_TRANSFORM: QEDCResult,
     JobType.LR_QAOA: LinearRampQAOAResult,
     JobType.QAT_OLE: QATOLEResult,
+    JobType.TFIM_ENERGY: TFIMEnergyResult,
 }
 
 
