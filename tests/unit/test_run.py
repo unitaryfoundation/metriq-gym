@@ -661,21 +661,25 @@ def test_estimate_job_uses_only_selected_provider_usage(job_estimation, capsys, 
         )
         assert result.ibm_quantum_seconds == 75.0
         assert result.ibm_timing_complete
-        assert output.strip() == "Estimated IBM QPU time (s): 75.000"
+        assert output == (
+            "Resource estimate for WIT on ibm:device\nEstimated IBM QPU time (s): 75.000\n"
+        )
     else:
         job_estimation.ibm_usage.assert_not_called()
         assert result.ibm_quantum_seconds is None
         assert "IBM QPU time" not in output
     if provider == "quantinuum":
         assert result.hqc_total == pytest.approx(5.0992)
-        assert output.strip() == "Total HQCs: 5.10"
+        assert output == ("Resource estimate for WIT on quantinuum:device\nTotal HQCs: 5.10\n")
     else:
         assert result.hqc_total is None
         assert all(circuit.hqc is None for circuit in result.per_circuit)
         assert "HQC" not in output
     assert job_estimation.printer.call_args.kwargs == {"verbose": False}
     if provider in {"aws", "braket"}:
-        assert output == "Total shots: 16\nTotal tasks: 1\n"
+        assert output == (
+            f"Resource estimate for WIT on {provider}:device\nTotal shots: 16\nTotal tasks: 1\n"
+        )
     else:
         assert "Total shots" not in output
     assert "benchmark chatter" not in output
@@ -707,7 +711,9 @@ def test_estimate_job_aws_counts_one_task_per_circuit(job_estimation, capsys, ve
         assert "Max qubits" in output
         assert "Resource estimate for WIT" in output
     else:
-        assert output == "Total shots: 1,032\nTotal tasks: 3\n"
+        assert output == (
+            "Resource estimate for WIT on aws:device\nTotal shots: 1,032\nTotal tasks: 3\n"
+        )
     assert "HQC" not in output
     assert "IBM QPU time" not in output
 
@@ -751,6 +757,7 @@ def test_estimate_job_unavailable_time_is_concise_by_default(job_estimation, cap
     estimate_job(job_estimation.args, job_estimation.job_manager)
 
     assert capsys.readouterr().out.strip() == (
+        "Resource estimate for WIT on ibm:device\n"
         "Estimated IBM QPU time (s): n/a (use --verbose for details)"
     )
 

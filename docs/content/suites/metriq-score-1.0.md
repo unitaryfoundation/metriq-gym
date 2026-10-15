@@ -30,7 +30,8 @@ mgym suite estimate metriq_score_1_0 --provider ibm --device ibm_phoenix --all
 
 To estimate one component and all its scale points, replace `--all` with
 `--component qft` (or another component name). Repeat `--component` to select
-multiple components. By default, IBM estimates show only the total QPU time in
+multiple components. A short header identifies the suite, provider, and device.
+By default, IBM estimates show only the total QPU time in
 seconds, using backend timing metadata and local compilation without submitting
 any jobs. Quantinuum estimates show only total HQCs, while AWS estimates
 (`--provider aws` or `--provider braket`) show total shots and total tasks,

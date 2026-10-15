@@ -48,8 +48,9 @@ mgym job estimate <config> [OPTIONS]
 | `--device, -d` | STR | Device identifier | `None` |
 | `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
 
-With `--provider ibm --device <device>`, the default output is the estimated QPU
-time in seconds based on the device's timing metadata. Add `-v` or `--verbose`
+The output starts with a short header identifying the benchmark, provider, and
+device. With `--provider ibm --device <device>`, the default summary is the
+estimated QPU time in seconds based on the device's timing metadata. Add `-v` or `--verbose`
 to show circuit resources, statistics, and estimation assumptions. Reading that
 metadata requires provider access, but the estimate does not run anything on the device.
 It assumes the default repetition delay, initial reset, and about two seconds

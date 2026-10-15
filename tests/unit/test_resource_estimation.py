@@ -118,12 +118,12 @@ def test_print_unavailable_ibm_time(capsys):
         ("local", "No cost estimate for local. Use --verbose for circuit resources.\n"),
     ],
 )
-def test_default_output_is_only_the_provider_summary(provider, expected, capsys):
+def test_default_output_has_header_and_provider_summary(provider, expected, capsys):
     print_resource_estimate(
         "test", provider, "device", _estimate(seconds=90, notes=["Verbose assumption"])
     )
 
-    assert capsys.readouterr().out == expected
+    assert capsys.readouterr().out == f"Resource estimate for test on {provider}:device\n{expected}"
 
 
 @pytest.mark.parametrize("provider", ["aws", "braket", " AWS ", " Braket "])
@@ -148,7 +148,9 @@ def test_aws_counts_each_circuit_as_a_task(provider, verbose, capsys):
         assert ("Jobs", "2") in rows
         assert ("Circuits", "3") in rows
     else:
-        assert output == "Total shots: 4,500\nTotal tasks: 3\n"
+        assert output == (
+            f"Resource estimate for test on {provider}:device\nTotal shots: 4,500\nTotal tasks: 3\n"
+        )
 
 
 @pytest.mark.parametrize("seconds", [None, 12.5])
@@ -156,7 +158,8 @@ def test_compact_output_marks_missing_or_partial_timing(seconds, capsys):
     print_resource_estimate("test", "ibm", "device", _estimate(seconds=seconds, complete=False))
 
     output = capsys.readouterr().out
-    assert len(output.splitlines()) == 1
+    assert len(output.splitlines()) == 2
+    assert output.splitlines()[0] == "Resource estimate for test on ibm:device"
     assert "--verbose" in output
     if seconds is None:
         assert "n/a" in output

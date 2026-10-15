@@ -115,6 +115,7 @@ Component selection follows the same rules as `suite dispatch`: a component
 includes all of its configured scale points, unknown or repeated names are
 rejected, and guarded suites require `--component` or `--all`.
 
+The output starts with a short header identifying the suite, provider, and device.
 The command uses the same estimator as `job estimate`:
 
 - `--provider ibm` shows total estimated QPU time in seconds. With `--verbose`,

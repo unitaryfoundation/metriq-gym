@@ -224,6 +224,9 @@ def print_resource_estimate(
     *,
     verbose: bool = False,
 ) -> None:
+    device_label = device_id if device_id else "(no device)"
+    print(f"Resource estimate for {job_type} on {provider}:{device_label}")
+
     provider_key = provider.strip().lower()
     seconds = estimate.ibm_quantum_seconds
     time_label = (
@@ -251,8 +254,7 @@ def print_resource_estimate(
             print(f"No cost estimate for {provider}. Use --verbose for circuit resources.")
         return
 
-    device_label = device_id if device_id else "(no device)"
-    print(f"Resource estimate for {job_type} on {provider}:{device_label}\n")
+    print()
 
     def fmt_int(value: int) -> str:
         return format(value, ",").replace(",", "_")

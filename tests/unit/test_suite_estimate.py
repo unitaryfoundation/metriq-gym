@@ -191,7 +191,10 @@ def test_suite_estimate_uses_only_selected_provider_usage(
             assert call.args[1] is estimation.device
         assert total.ibm_quantum_seconds == 25.0
         assert total.ibm_timing_complete
-        assert output.strip() == "Estimated IBM QPU time (s): 25.000"
+        assert output == (
+            "Resource estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
+            "Estimated IBM QPU time (s): 25.000\n"
+        )
     else:
         estimation.ibm_usage.assert_not_called()
         assert total.ibm_quantum_seconds is None
@@ -199,13 +202,19 @@ def test_suite_estimate_uses_only_selected_provider_usage(
     if provider == "quantinuum":
         assert total.hqc_total is not None
         assert total.hqc_total > 0
-        assert output.strip() == "Total HQCs: 10.12"
+        assert output == (
+            "Resource estimate for Suite total (test_suite) on quantinuum:ibm_phoenix\n"
+            "Total HQCs: 10.12\n"
+        )
     else:
         assert total.hqc_total is None
         assert all(circuit.hqc is None for circuit in total.per_circuit)
         assert "HQC" not in output
     if provider in {"aws", "braket"}:
-        assert output == "Total shots: 20\nTotal tasks: 2\n"
+        assert output == (
+            f"Resource estimate for Suite total (test_suite) on {provider}:ibm_phoenix\n"
+            "Total shots: 20\nTotal tasks: 2\n"
+        )
     else:
         assert "Total shots" not in output
     assert "benchmark chatter" not in output
@@ -242,7 +251,10 @@ def test_suite_estimate_aws_aggregates_shots_and_circuit_tasks(
         assert "Suite total" in output
     else:
         printer.assert_called_once()
-        assert output == "Total shots: 70\nTotal tasks: 4\n"
+        assert output == (
+            "Resource estimate for Suite total (test_suite) on aws:ibm_phoenix\n"
+            "Total shots: 70\nTotal tasks: 4\n"
+        )
     assert "HQC" not in output
     assert "IBM QPU time" not in output
 
@@ -274,7 +286,10 @@ def test_suite_estimate_all_guarded_entries_prints_only_total_by_default(
     run.estimate_suite(_args(_write_suite(tmp_path, guarded=True), all_components=True))
 
     assert estimation.handler.estimate_resources_handler.call_count == 2
-    assert capsys.readouterr().out.strip() == "Estimated IBM QPU time (s): 25.000"
+    assert capsys.readouterr().out == (
+        "Resource estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
+        "Estimated IBM QPU time (s): 25.000\n"
+    )
 
 
 def test_suite_ibm_timing_failure_keeps_resources_and_marks_usage_total_partial(
@@ -313,6 +328,7 @@ def test_suite_estimate_partial_time_is_concise_by_default(
     run.estimate_suite(_args(_write_suite(tmp_path)))
 
     assert capsys.readouterr().out.strip() == (
+        "Resource estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
         "Partial IBM QPU time (s): 12.500 (use --verbose for details)"
     )
 
@@ -326,6 +342,7 @@ def test_suite_estimate_without_device_is_concise_by_default(
 
     estimation.setup_device.assert_not_called()
     assert capsys.readouterr().out.strip() == (
+        "Resource estimate for Suite total (test_suite) on ibm:(no device)\n"
         "Estimated IBM QPU time (s): n/a (use --verbose for details)"
     )
 
