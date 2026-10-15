@@ -1987,8 +1987,9 @@ constructed and compiled locally; no jobs are submitted or executed on hardware.
 </tr>
 </tbody>
 </table>
-<p>With <code>--provider ibm --device &lt;device&gt;</code>, the default output is the estimated QPU
-time in seconds based on the device's timing metadata. Add <code>-v</code> or <code>--verbose</code>
+<p>The output starts with a short header identifying the benchmark, provider, and
+device. With <code>--provider ibm --device &lt;device&gt;</code>, the default summary is the
+estimated QPU time in seconds based on the device's timing metadata. Add <code>-v</code> or <code>--verbose</code>
 to show circuit resources, statistics, and estimation assumptions. Reading that
 metadata requires provider access, but the estimate does not run anything on the device.
 It assumes the default repetition delay, initial reset, and about two seconds

@@ -1421,7 +1421,8 @@ changing the meaning of this one.</p>
 </code></pre></div>
 <p>To estimate one component and all its scale points, replace <code>--all</code> with
 <code>--component qft</code> (or another component name). Repeat <code>--component</code> to select
-multiple components. By default, IBM estimates show only the total QPU time in
+multiple components. A short header identifies the suite, provider, and device.
+By default, IBM estimates show only the total QPU time in
 seconds, using backend timing metadata and local compilation without submitting
 any jobs. Quantinuum estimates show only total HQCs, while AWS estimates
 (<code>--provider aws</code> or <code>--provider braket</code>) show total shots and total tasks,
