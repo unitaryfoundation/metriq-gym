@@ -3350,10 +3350,11 @@ jobs running on quantum hardware.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Estimate circuit resource requirements before dispatching jobs.</p>
+        <p>Estimate job costs from provider usage without dispatching.</p>
 <p>IBM estimates QPU seconds using backend timing metadata and local compilation.
 Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
-total shots and tasks, counting one task per circuit. No jobs are submitted.</p>
+total shots and tasks, counting one task per circuit. No jobs are submitted.
+These usage metrics are proxies for cost.</p>
 
 
     </div>
@@ -3701,10 +3702,11 @@ jobs running on quantum hardware.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Estimate resources for suite jobs and show totals without dispatching them.</p>
+        <p>Estimate suite costs from provider usage without dispatching.</p>
 <p>IBM estimates QPU seconds using backend timing metadata and local compilation.
 Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
-total shots and tasks, counting one task per circuit.</p>
+total shots and tasks, counting one task per circuit.
+These usage metrics are proxies for cost.</p>
 
 
     </div>
