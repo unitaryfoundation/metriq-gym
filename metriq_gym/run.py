@@ -1250,23 +1250,21 @@ def estimate_suite(args: argparse.Namespace) -> None:
     if not estimates:
         print("No benchmarks could be estimated.")
         return
-    scope = "suite"
-    selection_label = suite.name
-    if getattr(args, "components", None):
+    label = f"Suite total ({suite.name})"
+    components_selected = bool(getattr(args, "components", None))
+    if components_selected:
         selected_keys = {entry.component_name.casefold() for entry in selected_benchmarks}
         components = [name for name in suite.component_names if name.casefold() in selected_keys]
-        scope = "component" if len(components) == 1 else "selected components"
-        selection_label += f": {', '.join(components)}"
-    label = f"{scope.capitalize()} total"
+        label = f"{suite.name}: {', '.join(components)}"
     if len(estimates) != len(selected_benchmarks):
-        label = f"Partial {scope} total"
+        label = (
+            f"{label} (partial)" if components_selected else f"Partial suite total ({suite.name})"
+        )
         print("Failed entries are excluded from the total below.")
     total = merge_resource_estimates(estimates)
     if len(estimates) != len(selected_benchmarks):
         total.ibm_timing_complete = False
-    print_resource_estimate(
-        f"{label} ({selection_label})", args.provider, args.device, total, verbose=verbose
-    )
+    print_resource_estimate(label, args.provider, args.device, total, verbose=verbose)
 
 
 def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:

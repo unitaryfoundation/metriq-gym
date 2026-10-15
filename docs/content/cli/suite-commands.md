@@ -116,8 +116,8 @@ includes all of its configured scale points, unknown or repeated names are
 rejected, and guarded suites require `--component` or `--all`.
 
 The output starts with a short header identifying the suite, provider, and device.
-When `--component` is used, the header names the selected components and labels
-their total accordingly; `Suite total` is reserved for a full-suite estimate.
+When `--component` is used, the header shows the suite and selected component
+names, such as `metriq_score_1_0: wit, qft`.
 The command uses the same estimator as `job estimate`:
 
 - `--provider ibm` shows total estimated QPU time in seconds. With `--verbose`,

@@ -352,11 +352,11 @@ def test_suite_estimate_without_device_is_concise_by_default(
     ("components", "second_component", "expected_label"),
     [
         (None, "wit", "Partial suite total (test_suite)"),
-        ("QFT", "qft", "Partial component total (test_suite: qft)"),
+        ("QFT", "qft", "test_suite: qft (partial)"),
         (
             ["WIT", "QFT"],
             "wit",
-            "Partial selected components total (test_suite: qft, wit)",
+            "test_suite: qft, wit (partial)",
         ),
     ],
 )
@@ -444,9 +444,9 @@ def test_suite_estimate_selects_component_entries_in_suite_order(
         call.args[1].shots for call in estimation.setup_benchmark.call_args_list
     ] == expected_shots
     assert printer.call_count == (entry_count + 1 if verbose else 1)
-    assert printer.call_args.args[0] == "Component total (test_suite: qft)"
+    assert printer.call_args.args[0] == "test_suite: qft"
     output = capsys.readouterr().out
-    assert "Cost estimate for Component total (test_suite: qft) on ibm:ibm_phoenix" in output
+    assert "Cost estimate for test_suite: qft on ibm:ibm_phoenix" in output
     assert "Suite total" not in output
     if verbose:
         assert "qft_small" in output
@@ -464,7 +464,7 @@ def test_suite_estimate_selects_component_entries_in_suite_order(
             ["QFT", "wit"],
             False,
             5,
-            "Selected components total (metriq_score_1_0: wit, qft)",
+            "metriq_score_1_0: wit, qft",
         ),
     ],
 )
