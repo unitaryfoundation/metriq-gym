@@ -225,7 +225,7 @@ def print_resource_estimate(
     verbose: bool = False,
 ) -> None:
     device_label = device_id if device_id else "(no device)"
-    print(f"Resource estimate for {job_type} on {provider}:{device_label}")
+    print(f"Cost estimate for {job_type} on {provider}:{device_label}")
 
     provider_key = provider.strip().lower()
     seconds = estimate.ibm_quantum_seconds

@@ -662,7 +662,7 @@ def test_estimate_job_uses_only_selected_provider_usage(job_estimation, capsys, 
         assert result.ibm_quantum_seconds == 75.0
         assert result.ibm_timing_complete
         assert output == (
-            "Resource estimate for WIT on ibm:device\nEstimated IBM QPU time (s): 75.000\n"
+            "Cost estimate for WIT on ibm:device\nEstimated IBM QPU time (s): 75.000\n"
         )
     else:
         job_estimation.ibm_usage.assert_not_called()
@@ -670,7 +670,7 @@ def test_estimate_job_uses_only_selected_provider_usage(job_estimation, capsys, 
         assert "IBM QPU time" not in output
     if provider == "quantinuum":
         assert result.hqc_total == pytest.approx(5.0992)
-        assert output == ("Resource estimate for WIT on quantinuum:device\nTotal HQCs: 5.10\n")
+        assert output == ("Cost estimate for WIT on quantinuum:device\nTotal HQCs: 5.10\n")
     else:
         assert result.hqc_total is None
         assert all(circuit.hqc is None for circuit in result.per_circuit)
@@ -678,7 +678,7 @@ def test_estimate_job_uses_only_selected_provider_usage(job_estimation, capsys, 
     assert job_estimation.printer.call_args.kwargs == {"verbose": False}
     if provider in {"aws", "braket"}:
         assert output == (
-            f"Resource estimate for WIT on {provider}:device\nTotal shots: 16\nTotal tasks: 1\n"
+            f"Cost estimate for WIT on {provider}:device\nTotal shots: 16\nTotal tasks: 1\n"
         )
     else:
         assert "Total shots" not in output
@@ -709,10 +709,10 @@ def test_estimate_job_aws_counts_one_task_per_circuit(job_estimation, capsys, ve
         assert "Total tasks" in output
         assert "Total shots" in output
         assert "Max qubits" in output
-        assert "Resource estimate for WIT" in output
+        assert "Cost estimate for WIT" in output
     else:
         assert output == (
-            "Resource estimate for WIT on aws:device\nTotal shots: 1,032\nTotal tasks: 3\n"
+            "Cost estimate for WIT on aws:device\nTotal shots: 1,032\nTotal tasks: 3\n"
         )
     assert "HQC" not in output
     assert "IBM QPU time" not in output
@@ -725,7 +725,7 @@ def test_estimate_job_verbose_prints_resource_details(job_estimation, capsys):
 
     assert job_estimation.printer.call_args.kwargs == {"verbose": True}
     output = capsys.readouterr().out
-    assert "Resource estimate for WIT" in output
+    assert "Cost estimate for WIT" in output
     assert "Total shots" in output
     assert "Estimated IBM QPU time (s)" in output
     assert "benchmark chatter" in output
@@ -757,7 +757,7 @@ def test_estimate_job_unavailable_time_is_concise_by_default(job_estimation, cap
     estimate_job(job_estimation.args, job_estimation.job_manager)
 
     assert capsys.readouterr().out.strip() == (
-        "Resource estimate for WIT on ibm:device\n"
+        "Cost estimate for WIT on ibm:device\n"
         "Estimated IBM QPU time (s): n/a (use --verbose for details)"
     )
 
@@ -825,7 +825,7 @@ def test_estimate_job_without_device_wit(monkeypatch, capsys):
     estimate_job(args, MagicMock())
 
     output = capsys.readouterr().out
-    assert "Resource estimate for WIT" in output
+    assert "Cost estimate for WIT" in output
     assert "(no device)" in output
     assert captured["device"] is None
 

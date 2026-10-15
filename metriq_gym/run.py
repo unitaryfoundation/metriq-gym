@@ -1202,7 +1202,7 @@ def estimate_suite(args: argparse.Namespace) -> None:
     suite, selected_benchmarks = selection
 
     if not args.provider:
-        print("Provider is required for resource estimation.")
+        print("Provider is required for cost estimation.")
         return
 
     device = None
@@ -1212,7 +1212,7 @@ def estimate_suite(args: argparse.Namespace) -> None:
         except QBraidSetupError:
             return
     elif verbose:
-        print("No device specified; estimating resources without device-specific topology.")
+        print("No device specified; estimating cost proxies without device-specific topology.")
 
     if verbose:
         print(f"Estimating suite {suite.name} on {args.provider}:{args.device}...")
@@ -1237,7 +1237,7 @@ def estimate_suite(args: argparse.Namespace) -> None:
         except Exception as exc:
             detail = str(exc)
             if isinstance(exc, NotImplementedError) and not detail:
-                detail = "Resource estimation is not implemented for this benchmark."
+                detail = "Cost estimation is not implemented for this benchmark."
             print(f"✗ {entry.name}: {type(exc).__name__}: {detail}")
             logger.debug("Suite estimation failure traceback", exc_info=True)
             continue
@@ -1250,22 +1250,29 @@ def estimate_suite(args: argparse.Namespace) -> None:
     if not estimates:
         print("No benchmarks could be estimated.")
         return
-    label = "Suite total"
+    scope = "suite"
+    selection_label = suite.name
+    if getattr(args, "components", None):
+        selected_keys = {entry.component_name.casefold() for entry in selected_benchmarks}
+        components = [name for name in suite.component_names if name.casefold() in selected_keys]
+        scope = "component" if len(components) == 1 else "selected components"
+        selection_label += f": {', '.join(components)}"
+    label = f"{scope.capitalize()} total"
     if len(estimates) != len(selected_benchmarks):
-        label = "Partial suite total"
+        label = f"Partial {scope} total"
         print("Failed entries are excluded from the total below.")
     total = merge_resource_estimates(estimates)
     if len(estimates) != len(selected_benchmarks):
         total.ibm_timing_complete = False
     print_resource_estimate(
-        f"{label} ({suite.name})", args.provider, args.device, total, verbose=verbose
+        f"{label} ({selection_label})", args.provider, args.device, total, verbose=verbose
     )
 
 
 def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:
     verbose = getattr(args, "verbose", False)
     if not args.provider:
-        print("Provider is required for resource estimation.")
+        print("Provider is required for cost estimation.")
         return
 
     device = None
@@ -1275,7 +1282,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
         except QBraidSetupError:
             return
     elif verbose:
-        print("No device specified; estimating resources without device-specific topology.")
+        print("No device specified; estimating cost proxies without device-specific topology.")
 
     config_file = args.config
 
@@ -1310,7 +1317,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
         print(f"✗ {job_type.value}: {exc}")
         return
     except Exception as exc:  # pragma: no cover - surface unexpected errors cleanly
-        print(f"✗ Failed to estimate resources: {exc}")
+        print(f"✗ Failed to estimate cost: {exc}")
         return
 
     print_resource_estimate(

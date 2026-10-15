@@ -72,7 +72,7 @@ component and scale-point reference.
 
 ## estimate
 
-Estimate circuit resources and costs for a suite before dispatching jobs. The
+Estimate provider usage as a proxy for suite costs before dispatching jobs. The
 command prints the total for the selection, without submitting jobs or recording
 them in the local database. Add `-v` or `--verbose` for per-job estimates, circuit
 resources and statistics, and estimation assumptions.
@@ -92,7 +92,7 @@ mgym suite estimate <suite_config> [OPTIONS]
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
 | `--provider, -p` | STR | Provider name (e.g., ibm, aws, azure, ionq, local; braket aliases aws) | `None` |
-| `--device, -d` | STR | Device identifier for device-dependent resource estimates | `None` |
+| `--device, -d` | STR | Device identifier for device-dependent cost estimates | `None` |
 | `--component, -c` | LIST | Component to estimate; repeat the option to select multiple components | `None` |
 | `--all` | BOOL | Explicitly estimate every component, including guarded full suites | `False` |
 | `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
@@ -116,6 +116,8 @@ includes all of its configured scale points, unknown or repeated names are
 rejected, and guarded suites require `--component` or `--all`.
 
 The output starts with a short header identifying the suite, provider, and device.
+When `--component` is used, the header names the selected components and labels
+their total accordingly; `Suite total` is reserved for a full-suite estimate.
 The command uses the same estimator as `job estimate`:
 
 - `--provider ibm` shows total estimated QPU time in seconds. With `--verbose`,
@@ -136,6 +138,10 @@ The estimate describes QPU usage, not queue time, wall-clock completion time,
 or a monetary price. Sessions can also bill idle time between executions, which
 cannot be determined statically and is excluded. See
 [IBM's usage estimation guide](https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time).
+
+For twirled CLOPS, the estimate uses the circuit template and configured number
+of randomizations and shots. Runtime twirling overhead is excluded, so actual
+IBM usage can be higher.
 
 Some benchmarks need a device to determine resources such as available qubit
 pairs. If a job cannot be estimated, the command reports the failure and

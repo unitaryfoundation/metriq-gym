@@ -214,11 +214,12 @@ def job_estimate(
     device: DeviceOption = None,
     verbose: EstimateVerboseOption = False,
 ) -> None:
-    """Estimate circuit resource requirements before dispatching jobs.
+    """Estimate job costs from provider usage without dispatching.
 
     IBM estimates QPU seconds using backend timing metadata and local compilation.
     Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
     total shots and tasks, counting one task per circuit. No jobs are submitted.
+    These usage metrics are proxies for cost.
     """
     from metriq_gym.run import estimate_job as _estimate_job
 
@@ -501,11 +502,12 @@ def suite_estimate(
     ] = False,
     verbose: EstimateVerboseOption = False,
 ) -> None:
-    """Estimate resources for suite jobs and show totals without dispatching them.
+    """Estimate suite costs from provider usage without dispatching.
 
     IBM estimates QPU seconds using backend timing metadata and local compilation.
     Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
     total shots and tasks, counting one task per circuit.
+    These usage metrics are proxies for cost.
     """
     from metriq_gym.run import estimate_suite as _estimate_suite
 

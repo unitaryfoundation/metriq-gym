@@ -27,8 +27,8 @@ mgym job dispatch <config> [OPTIONS]
 
 ## estimate
 
-Estimate circuit resource requirements before dispatching jobs. Circuits are
-constructed and compiled locally; no jobs are submitted or executed on hardware.
+Estimate provider usage as a proxy for job costs before dispatching. Circuits
+are constructed and compiled locally; no jobs are submitted or executed on hardware.
 
 ```bash
 mgym job estimate <config> [OPTIONS]

@@ -192,7 +192,7 @@ def test_suite_estimate_uses_only_selected_provider_usage(
         assert total.ibm_quantum_seconds == 25.0
         assert total.ibm_timing_complete
         assert output == (
-            "Resource estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
+            "Cost estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
             "Estimated IBM QPU time (s): 25.000\n"
         )
     else:
@@ -203,7 +203,7 @@ def test_suite_estimate_uses_only_selected_provider_usage(
         assert total.hqc_total is not None
         assert total.hqc_total > 0
         assert output == (
-            "Resource estimate for Suite total (test_suite) on quantinuum:ibm_phoenix\n"
+            "Cost estimate for Suite total (test_suite) on quantinuum:ibm_phoenix\n"
             "Total HQCs: 10.12\n"
         )
     else:
@@ -212,7 +212,7 @@ def test_suite_estimate_uses_only_selected_provider_usage(
         assert "HQC" not in output
     if provider in {"aws", "braket"}:
         assert output == (
-            f"Resource estimate for Suite total (test_suite) on {provider}:ibm_phoenix\n"
+            f"Cost estimate for Suite total (test_suite) on {provider}:ibm_phoenix\n"
             "Total shots: 20\nTotal tasks: 2\n"
         )
     else:
@@ -252,7 +252,7 @@ def test_suite_estimate_aws_aggregates_shots_and_circuit_tasks(
     else:
         printer.assert_called_once()
         assert output == (
-            "Resource estimate for Suite total (test_suite) on aws:ibm_phoenix\n"
+            "Cost estimate for Suite total (test_suite) on aws:ibm_phoenix\n"
             "Total shots: 70\nTotal tasks: 4\n"
         )
     assert "HQC" not in output
@@ -287,7 +287,7 @@ def test_suite_estimate_all_guarded_entries_prints_only_total_by_default(
 
     assert estimation.handler.estimate_resources_handler.call_count == 2
     assert capsys.readouterr().out == (
-        "Resource estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
+        "Cost estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
         "Estimated IBM QPU time (s): 25.000\n"
     )
 
@@ -328,7 +328,7 @@ def test_suite_estimate_partial_time_is_concise_by_default(
     run.estimate_suite(_args(_write_suite(tmp_path)))
 
     assert capsys.readouterr().out.strip() == (
-        "Resource estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
+        "Cost estimate for Suite total (test_suite) on ibm:ibm_phoenix\n"
         "Partial IBM QPU time (s): 12.500 (use --verbose for details)"
     )
 
@@ -342,13 +342,26 @@ def test_suite_estimate_without_device_is_concise_by_default(
 
     estimation.setup_device.assert_not_called()
     assert capsys.readouterr().out.strip() == (
-        "Resource estimate for Suite total (test_suite) on ibm:(no device)\n"
+        "Cost estimate for Suite total (test_suite) on ibm:(no device)\n"
         "Estimated IBM QPU time (s): n/a (use --verbose for details)"
     )
 
 
-def test_suite_estimate_default_marks_total_partial_when_entry_cannot_be_built(
-    tmp_path, estimation, monkeypatch, capsys
+@pytest.mark.parametrize("verbose", [False, True])
+@pytest.mark.parametrize(
+    ("components", "second_component", "expected_label"),
+    [
+        (None, "wit", "Partial suite total (test_suite)"),
+        ("QFT", "qft", "Partial component total (test_suite: qft)"),
+        (
+            ["WIT", "QFT"],
+            "wit",
+            "Partial selected components total (test_suite: qft, wit)",
+        ),
+    ],
+)
+def test_suite_estimate_marks_total_partial_when_entry_cannot_be_built(
+    tmp_path, estimation, monkeypatch, capsys, verbose, components, second_component, expected_label
 ):
     monkeypatch.setattr(run, "print_resource_estimate", print_resource_estimate)
     estimation.handler.estimate_resources_handler.side_effect = [
@@ -356,13 +369,22 @@ def test_suite_estimate_default_marks_total_partial_when_entry_cannot_be_built(
         NotImplementedError("Estimation is not implemented"),
     ]
 
-    run.estimate_suite(_args(_write_suite(tmp_path)))
+    path = _write_suite(
+        tmp_path,
+        [_entry("first", component="qft"), _entry("second", component=second_component)],
+    )
+    run.estimate_suite(_args(path, components=components, verbose=verbose))
 
     output = capsys.readouterr().out
+    assert f"Cost estimate for {expected_label} on ibm:ibm_phoenix" in output
     assert "second: NotImplementedError: Estimation is not implemented" in output
-    assert "Partial IBM QPU time (s): 12.500 (use --verbose for details)" in output
-    assert "Estimated IBM QPU time" not in output
-    assert "Total shots" not in output
+    if verbose:
+        assert "Partial IBM QPU time (s)" in output
+        assert "Total shots" in output
+    else:
+        assert "Partial IBM QPU time (s): 12.500 (use --verbose for details)" in output
+        assert "Estimated IBM QPU time" not in output
+        assert "Total shots" not in output
 
 
 def test_suite_estimate_requires_provider(tmp_path, estimation, capsys):
@@ -397,42 +419,77 @@ def test_suite_estimate_rejects_invalid_selection_before_device_setup(
 
 
 @pytest.mark.parametrize("components", [["QFT"], "qft"])
+@pytest.mark.parametrize("verbose", [False, True])
+@pytest.mark.parametrize("middle_component", ["wit", "qft"])
 def test_suite_estimate_selects_component_entries_in_suite_order(
-    tmp_path, estimation, capsys, components
+    tmp_path, estimation, monkeypatch, capsys, components, verbose, middle_component
 ):
+    printer = MagicMock(wraps=print_resource_estimate)
+    monkeypatch.setattr(run, "print_resource_estimate", printer)
     path = _write_suite(
         tmp_path,
         [
             _entry("qft_small", component="qft", shots=10),
-            _entry("wit", component="wit", shots=20),
+            _entry("middle", component=middle_component, shots=20),
             _entry("qft_large", component="qft", shots=30),
         ],
         guarded=True,
     )
 
-    run.estimate_suite(_args(path, components=components, verbose=True))
+    run.estimate_suite(_args(path, components=components, verbose=verbose))
 
-    assert [call.args[1].shots for call in estimation.setup_benchmark.call_args_list] == [10, 30]
-    assert estimation.printer.call_count == 3
+    expected_shots = [10, 30] if middle_component == "wit" else [10, 20, 30]
+    entry_count = len(expected_shots)
+    assert [
+        call.args[1].shots for call in estimation.setup_benchmark.call_args_list
+    ] == expected_shots
+    assert printer.call_count == (entry_count + 1 if verbose else 1)
+    assert printer.call_args.args[0] == "Component total (test_suite: qft)"
     output = capsys.readouterr().out
-    assert "qft_small" in output
-    assert "qft_large" in output
-    assert "2/2" in output
+    assert "Cost estimate for Component total (test_suite: qft) on ibm:ibm_phoenix" in output
+    assert "Suite total" not in output
+    if verbose:
+        assert "qft_small" in output
+        assert "qft_large" in output
+        assert f"{entry_count}/{entry_count}" in output
+    else:
+        assert len(output.splitlines()) == 2
 
 
 @pytest.mark.parametrize(
-    ("components", "all_components", "entry_count"),
-    [(None, True, 22), (["QFT", "wit"], False, 5)],
+    ("components", "all_components", "entry_count", "expected_label"),
+    [
+        (None, True, 22, "Suite total (metriq_score_1_0)"),
+        (
+            ["QFT", "wit"],
+            False,
+            5,
+            "Selected components total (metriq_score_1_0: wit, qft)",
+        ),
+    ],
 )
+@pytest.mark.parametrize("verbose", [False, True])
 def test_suite_estimate_supports_bundled_suite_and_repeatable_components(
-    estimation, capsys, components, all_components, entry_count
+    estimation,
+    monkeypatch,
+    capsys,
+    components,
+    all_components,
+    entry_count,
+    expected_label,
+    verbose,
 ):
+    printer = MagicMock(wraps=print_resource_estimate)
+    monkeypatch.setattr(run, "print_resource_estimate", printer)
     suite = parse_suite_file("metriq_score_1_0")
     expected_entries = suite.select_components(components) if components else suite.benchmarks
 
     run.estimate_suite(
         _args(
-            "metriq_score_1_0", components=components, all_components=all_components, verbose=True
+            "metriq_score_1_0",
+            components=components,
+            all_components=all_components,
+            verbose=verbose,
         )
     )
 
@@ -441,8 +498,14 @@ def test_suite_estimate_supports_bundled_suite_and_repeatable_components(
     assert [call.args[1].benchmark_name for call in estimation.setup_benchmark.call_args_list] == [
         entry.config["benchmark_name"] for entry in expected_entries
     ]
-    assert estimation.printer.call_count == entry_count + 1
-    assert f"{entry_count}/{entry_count}" in capsys.readouterr().out
+    assert printer.call_count == (entry_count + 1 if verbose else 1)
+    assert printer.call_args.args[0] == expected_label
+    output = capsys.readouterr().out
+    assert f"Cost estimate for {expected_label} on ibm:ibm_phoenix" in output
+    if verbose:
+        assert f"{entry_count}/{entry_count}" in output
+    else:
+        assert len(output.splitlines()) == 2
 
 
 def test_suite_estimate_continues_after_invalid_config_capacity_and_handler_failures(

@@ -123,7 +123,7 @@ def test_default_output_has_header_and_provider_summary(provider, expected, caps
         "test", provider, "device", _estimate(seconds=90, notes=["Verbose assumption"])
     )
 
-    assert capsys.readouterr().out == f"Resource estimate for test on {provider}:device\n{expected}"
+    assert capsys.readouterr().out == f"Cost estimate for test on {provider}:device\n{expected}"
 
 
 @pytest.mark.parametrize("provider", ["aws", "braket", " AWS ", " Braket "])
@@ -149,7 +149,7 @@ def test_aws_counts_each_circuit_as_a_task(provider, verbose, capsys):
         assert ("Circuits", "3") in rows
     else:
         assert output == (
-            f"Resource estimate for test on {provider}:device\nTotal shots: 4,500\nTotal tasks: 3\n"
+            f"Cost estimate for test on {provider}:device\nTotal shots: 4,500\nTotal tasks: 3\n"
         )
 
 
@@ -159,7 +159,7 @@ def test_compact_output_marks_missing_or_partial_timing(seconds, capsys):
 
     output = capsys.readouterr().out
     assert len(output.splitlines()) == 2
-    assert output.splitlines()[0] == "Resource estimate for test on ibm:device"
+    assert output.splitlines()[0] == "Cost estimate for test on ibm:device"
     assert "--verbose" in output
     if seconds is None:
         assert "n/a" in output
