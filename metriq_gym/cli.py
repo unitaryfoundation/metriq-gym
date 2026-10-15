@@ -174,6 +174,15 @@ DeviceOption = Annotated[
     ),
 ]
 
+EstimateVerboseOption = Annotated[
+    bool,
+    typer.Option(
+        "--verbose",
+        "-v",
+        help="Show per-job resources, circuit statistics, and estimation assumptions",
+    ),
+]
+
 
 # -----------------------------------------------------------------------------
 # Job commands
@@ -203,6 +212,7 @@ def job_estimate(
     config: Annotated[str, typer.Argument(help="Path to job configuration JSON file")],
     provider: ProviderOption = None,
     device: DeviceOption = None,
+    verbose: EstimateVerboseOption = False,
 ) -> None:
     """Estimate circuit resource requirements before dispatching jobs.
 
@@ -215,6 +225,7 @@ def job_estimate(
     args.config = config
     args.provider = provider
     args.device = device
+    args.verbose = verbose
 
     _estimate_job(args)
 
@@ -487,6 +498,7 @@ def suite_estimate(
             help="Explicitly estimate every component, including guarded full suites",
         ),
     ] = False,
+    verbose: EstimateVerboseOption = False,
 ) -> None:
     """Estimate resources for suite jobs and show totals without dispatching them.
 
@@ -501,6 +513,7 @@ def suite_estimate(
     args.device = device
     args.components = components
     args.all_components = all_components
+    args.verbose = verbose
 
     _estimate_suite(args)
 

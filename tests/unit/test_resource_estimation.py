@@ -43,13 +43,13 @@ def _estimate(*, seconds=None, complete=True, notes=()):
 )
 def test_print_estimate_only_shows_selected_provider_costs(provider, show_hqc, show_ibm, capsys):
     # Even an estimate carrying both fields must only display the chosen provider's units.
-    print_resource_estimate("test", provider, "device", _estimate(seconds=90))
+    print_resource_estimate("test", provider, "device", _estimate(seconds=90), verbose=True)
 
     output = capsys.readouterr().out
     assert ("Total HQCs" in output) is show_hqc
     assert ("HQC per circuit" in output) is show_hqc
     assert ("Estimated IBM QPU time (s)" in output) is show_ibm
-    assert ("Estimated IBM QPU time (min)" in output) is show_ibm
+    assert "QPU time (min)" not in output
     assert "Total shots" in output
 
 
@@ -82,7 +82,7 @@ def test_print_partial_ibm_time_and_exclusions(capsys):
         [_estimate(seconds=20), _estimate(complete=False, notes=["Missing timing data"])]
     )
 
-    print_resource_estimate("Suite total", "ibm", "device", total)
+    print_resource_estimate("Suite total", "ibm", "device", total, verbose=True)
 
     output = capsys.readouterr().out
     assert "Partial IBM QPU time (s)" in output
@@ -93,9 +93,38 @@ def test_print_partial_ibm_time_and_exclusions(capsys):
 
 
 def test_print_unavailable_ibm_time(capsys):
-    print_resource_estimate("test", "ibm", None, _estimate(complete=False))
+    print_resource_estimate("test", "ibm", None, _estimate(complete=False), verbose=True)
 
     output = capsys.readouterr().out
     assert "Estimated IBM QPU time (s)" in output
     assert "n/a" in output
     assert "incomplete" in output
+
+
+@pytest.mark.parametrize(
+    ("provider", "expected"),
+    [
+        ("ibm", "Estimated IBM QPU time (s): 90.000\n"),
+        ("quantinuum", "Total HQCs: 5.22\n"),
+        ("local", "No cost estimate for local. Use --verbose for circuit resources.\n"),
+    ],
+)
+def test_default_output_is_only_the_provider_summary(provider, expected, capsys):
+    print_resource_estimate(
+        "test", provider, "device", _estimate(seconds=90, notes=["Verbose assumption"])
+    )
+
+    assert capsys.readouterr().out == expected
+
+
+@pytest.mark.parametrize("seconds", [None, 12.5])
+def test_compact_output_marks_missing_or_partial_timing(seconds, capsys):
+    print_resource_estimate("test", "ibm", "device", _estimate(seconds=seconds, complete=False))
+
+    output = capsys.readouterr().out
+    assert len(output.splitlines()) == 1
+    assert "--verbose" in output
+    if seconds is None:
+        assert "n/a" in output
+    else:
+        assert "Partial IBM QPU time (s): 12.500" in output

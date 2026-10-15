@@ -46,20 +46,23 @@ mgym job estimate <config> [OPTIONS]
 |--------|------|-------------|---------|
 | `--provider, -p` | STR | Provider name (e.g., ibm, braket, azure, ionq, local) | `None` |
 | `--device, -d` | STR | Device identifier | `None` |
+| `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
 
-With `--provider ibm --device <device>`, the output includes estimated QPU
-seconds and minutes based on the device's timing metadata. Reading that metadata
-requires provider access, but the estimate does not run anything on the device.
+With `--provider ibm --device <device>`, the default output is the estimated QPU
+time in seconds based on the device's timing metadata. Add `-v` or `--verbose`
+to show circuit resources, statistics, and estimation assumptions. Reading that
+metadata requires provider access, but the estimate does not run anything on the device.
 It assumes the default repetition delay, initial reset, and about two seconds
 of overhead per circuit batch. Additional server-side splitting, runtime
 mitigation, and idle time billed within sessions are excluded. This estimates
 QPU usage, not queue time, wall-clock completion time, or a monetary price.
 See [IBM's usage estimation guide](https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time).
 
-If IBM timing metadata is unavailable or `--device` is omitted, circuit resource
-counts are still shown where supported, with the QPU estimate marked unavailable
-and an explanation. `--provider quantinuum` shows H-series Quantum Credits
-(HQCs). Other providers show circuit resources without a cost estimate.
+If IBM timing metadata is unavailable or `--device` is omitted, the QPU estimate
+is marked unavailable. Use `--verbose` for the explanation and any available
+circuit resource counts. `--provider quantinuum` shows the total H-series Quantum
+Credits (HQCs). Other providers report that no cost estimate is available; use
+`--verbose` to show circuit resources.
 
 ---
 

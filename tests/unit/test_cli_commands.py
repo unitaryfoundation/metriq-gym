@@ -7,8 +7,10 @@ These tests verify:
 - Error handling for invalid inputs
 """
 
-from typer.testing import CliRunner
 from unittest.mock import patch, MagicMock
+
+import pytest
+from typer.testing import CliRunner
 
 from metriq_gym.cli import app
 
@@ -173,6 +175,45 @@ class TestJobCommands:
         assert "CONFIG" in result.output
         assert "--provider" in result.output
         assert "--device" in result.output
+        assert "--verbose" in result.output
+        assert "-v" in result.output
+
+    @patch("metriq_gym.run.estimate_job")
+    def test_job_estimate_default_options(self, mock_estimate):
+        result = runner.invoke(app, ["job", "estimate", "job.json"])
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.config == "job.json"
+        assert args.provider is None
+        assert args.device is None
+        assert args.verbose is False
+
+    @pytest.mark.parametrize("verbose_flag", ["-v", "--verbose"])
+    @patch("metriq_gym.run.estimate_job")
+    def test_job_estimate_forwards_verbose(self, mock_estimate, verbose_flag):
+        result = runner.invoke(
+            app,
+            [
+                "job",
+                "estimate",
+                "job.json",
+                "--provider",
+                "ibm",
+                "--device",
+                "ibm_phoenix",
+                verbose_flag,
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.config == "job.json"
+        assert args.provider == "ibm"
+        assert args.device == "ibm_phoenix"
+        assert args.verbose is True
 
     def test_job_upload_help(self):
         """mgym job upload --help should show all options."""
@@ -395,6 +436,8 @@ class TestSuiteCommands:
         assert "--device" in result.output
         assert "--component" in result.output
         assert "--all" in result.output
+        assert "--verbose" in result.output
+        assert "-v" in result.output
 
     def test_suite_estimate_missing_config_shows_error(self):
         result = runner.invoke(app, ["suite", "estimate"], color=False)
@@ -475,7 +518,35 @@ class TestSuiteCommands:
         assert args.device is None
         assert args.components is None
         assert args.all_components is False
+        assert args.verbose is False
         mock_jm.assert_not_called()
+
+    @pytest.mark.parametrize("verbose_flag", ["-v", "--verbose"])
+    @patch("metriq_gym.run.estimate_suite")
+    def test_suite_estimate_forwards_verbose(self, mock_estimate, verbose_flag):
+        result = runner.invoke(
+            app,
+            [
+                "suite",
+                "estimate",
+                "metriq_score_1_0",
+                "--provider",
+                "ibm",
+                "--device",
+                "ibm_phoenix",
+                "--all",
+                verbose_flag,
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.suite_config == "metriq_score_1_0"
+        assert args.provider == "ibm"
+        assert args.device == "ibm_phoenix"
+        assert args.all_components is True
+        assert args.verbose is True
 
     def test_suite_poll_help(self):
         """mgym suite poll --help should show usage."""

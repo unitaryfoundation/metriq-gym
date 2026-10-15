@@ -73,8 +73,9 @@ component and scale-point reference.
 ## estimate
 
 Estimate circuit resources and costs for a suite before dispatching jobs. The
-command prints estimates for each selected job and totals for the selection,
-without submitting jobs or recording them in the local database.
+command prints the total for the selection, without submitting jobs or recording
+them in the local database. Add `-v` or `--verbose` for per-job estimates, circuit
+resources and statistics, and estimation assumptions.
 
 ```bash
 mgym suite estimate <suite_config> [OPTIONS]
@@ -94,6 +95,7 @@ mgym suite estimate <suite_config> [OPTIONS]
 | `--device, -d` | STR | Device identifier for device-dependent resource estimates | `None` |
 | `--component, -c` | LIST | Component to estimate; repeat the option to select multiple components | `None` |
 | `--all` | BOOL | Explicitly estimate every component, including guarded full suites | `False` |
+| `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
 
 ### Estimate the complete Metriq Score suite
 
@@ -115,12 +117,14 @@ rejected, and guarded suites require `--component` or `--all`.
 
 The command uses the same estimator as `job estimate`:
 
-- `--provider ibm` shows estimated QPU seconds and minutes for each job and the
-  selection. Circuits are transpiled and scheduled locally using timing metadata
-  from the selected device. Provider access is needed to read the metadata, but
+- `--provider ibm` shows total estimated QPU time in seconds. With `--verbose`,
+  each job's estimate is also shown in seconds. Circuits are transpiled and
+  scheduled locally using timing metadata from the selected device. Provider
+  access is needed to read the metadata, but
   nothing is submitted to or executed on the QPU.
-- `--provider quantinuum` shows H-series Quantum Credits (HQCs).
-- Other providers show circuit resource counts without a cost estimate.
+- `--provider quantinuum` shows total H-series Quantum Credits (HQCs).
+- Other providers report that no cost estimate is available. Use `--verbose` to
+  show circuit resources.
 
 IBM estimates assume the default repetition delay, initial reset, and about two
 seconds of overhead per circuit batch, treating each batch as one execution
@@ -135,10 +139,10 @@ pairs. If a job cannot be estimated, the command reports the failure and
 continues with the remaining jobs. Totals are marked as partial when any job
 fails and cover only successfully estimated jobs.
 
-If IBM timing estimation fails, circuit resource counts are retained and the
-reason is printed. QPU usage is marked unavailable when no timings are available,
-or partial when only some selected jobs have timings. Omitting `--device` also
-leaves IBM timing unavailable.
+If IBM timing estimation fails, QPU usage is marked unavailable when no timings
+are available, or partial when only some selected jobs have timings. Use
+`--verbose` for the reasons and any available circuit resource counts. Omitting
+`--device` also leaves IBM timing unavailable.
 
 ---
 

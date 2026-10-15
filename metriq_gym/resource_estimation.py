@@ -216,8 +216,36 @@ def _stat_tuple(values: Sequence[int | float]) -> tuple[str, str, str]:
 
 
 def print_resource_estimate(
-    job_type: JobType | str, provider: str, device_id: str | None, estimate: ResourceEstimate
+    job_type: JobType | str,
+    provider: str,
+    device_id: str | None,
+    estimate: ResourceEstimate,
+    *,
+    verbose: bool = False,
 ) -> None:
+    provider_key = provider.strip().lower()
+    seconds = estimate.ibm_quantum_seconds
+    time_label = (
+        "Partial IBM QPU time"
+        if seconds is not None and not estimate.ibm_timing_complete
+        else "Estimated IBM QPU time"
+    )
+    time_value = f"{seconds:,.3f}" if seconds is not None else "n/a"
+    hqc_value = f"{estimate.hqc_total:,.2f}" if estimate.hqc_total is not None else "n/a"
+    if not verbose:
+        if provider_key == "ibm":
+            detail_hint = (
+                " (use --verbose for details)"
+                if seconds is None or not estimate.ibm_timing_complete
+                else ""
+            )
+            print(f"{time_label} (s): {time_value}{detail_hint}")
+        elif provider_key == "quantinuum":
+            print(f"Total HQCs: {hqc_value}")
+        else:
+            print(f"No cost estimate for {provider}. Use --verbose for circuit resources.")
+        return
+
     device_label = device_id if device_id else "(no device)"
     print(f"Resource estimate for {job_type} on {provider}:{device_label}\n")
 
@@ -236,23 +264,10 @@ def print_resource_estimate(
         ("Total resets", fmt_int(estimate.total_gate_counts.resets)),
     ]
 
-    provider_key = provider.strip().lower()
     if provider_key == "quantinuum":
-        hqc = f"{estimate.hqc_total:,.2f}" if estimate.hqc_total is not None else "n/a"
-        summary_rows.append(("Total HQCs", hqc))
+        summary_rows.append(("Total HQCs", hqc_value))
     elif provider_key == "ibm":
-        seconds = estimate.ibm_quantum_seconds
-        label = (
-            "Partial IBM QPU time"
-            if seconds is not None and not estimate.ibm_timing_complete
-            else "Estimated IBM QPU time"
-        )
-        summary_rows.extend(
-            [
-                (f"{label} (s)", f"{seconds:,.3f}" if seconds is not None else "n/a"),
-                (f"{label} (min)", f"{seconds / 60:,.3f}" if seconds is not None else "n/a"),
-            ]
-        )
+        summary_rows.append((f"{time_label} (s)", time_value))
 
     print(tabulate(summary_rows, headers=["Metric", "Value"], tablefmt="github"))
     for note in estimate.notes:

@@ -583,7 +583,7 @@ def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
         )
 
     monkeypatch.setattr("metriq_gym.run.aggregate_resource_estimates", fake_aggregate)
-    monkeypatch.setattr("metriq_gym.run.print_resource_estimate", lambda *_: None)
+    monkeypatch.setattr("metriq_gym.run.print_resource_estimate", lambda *_, **__: None)
 
     args = SimpleNamespace(
         config="foo.json",
@@ -609,13 +609,23 @@ def job_estimation(tmp_path, monkeypatch):
     batches = [CircuitBatch(circuits=[circuit], shots=16)]
     benchmark = MagicMock()
     benchmark.estimate_resources_handler.return_value = batches
+
+    def estimate_resources(_device):
+        print("benchmark chatter")
+        return batches
+
+    def setup_benchmark(*_args, **_kwargs):
+        print("benchmark setup chatter")
+        return benchmark
+
+    benchmark.estimate_resources_handler.side_effect = estimate_resources
     ibm_usage = MagicMock(return_value=75.0)
     printer = MagicMock(wraps=print_resource_estimate)
     new_job = MagicMock()
     job_manager = MagicMock()
     monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
     monkeypatch.setattr("metriq_gym.run._lazy_registry", lambda: registry)
-    monkeypatch.setattr("metriq_gym.run.setup_benchmark", lambda *_, **__: benchmark)
+    monkeypatch.setattr("metriq_gym.run.setup_benchmark", setup_benchmark)
     monkeypatch.setattr("metriq_gym.run.print_resource_estimate", printer)
     monkeypatch.setattr("metriq_gym.run._new_job", new_job)
     monkeypatch.setattr("metriq_gym.qplatform.ibm_estimation.estimate_ibm_usage", ibm_usage)
@@ -651,23 +661,43 @@ def test_estimate_job_uses_only_selected_provider_usage(job_estimation, capsys, 
         )
         assert result.ibm_quantum_seconds == 75.0
         assert result.ibm_timing_complete
-        assert "Estimated IBM QPU time (s)" in output
-        assert "Estimated IBM QPU time (min)" in output
+        assert output.strip() == "Estimated IBM QPU time (s): 75.000"
     else:
         job_estimation.ibm_usage.assert_not_called()
         assert result.ibm_quantum_seconds is None
         assert "IBM QPU time" not in output
     if provider == "quantinuum":
         assert result.hqc_total == pytest.approx(5.0992)
-        assert "HQC" in output
+        assert output.strip() == "Total HQCs: 5.10"
     else:
         assert result.hqc_total is None
         assert all(circuit.hqc is None for circuit in result.per_circuit)
         assert "HQC" not in output
+    assert job_estimation.printer.call_args.kwargs == {"verbose": False}
+    assert "Total shots" not in output
+    assert "benchmark chatter" not in output
+    assert "benchmark setup chatter" not in output
+    assert "(min)" not in output
+
+
+def test_estimate_job_verbose_prints_resource_details(job_estimation, capsys):
+    job_estimation.args.verbose = True
+
+    estimate_job(job_estimation.args, job_estimation.job_manager)
+
+    assert job_estimation.printer.call_args.kwargs == {"verbose": True}
+    output = capsys.readouterr().out
+    assert "Resource estimate for WIT" in output
+    assert "Total shots" in output
+    assert "Estimated IBM QPU time (s)" in output
+    assert "benchmark chatter" in output
+    assert "benchmark setup chatter" in output
+    assert "(min)" not in output
 
 
 def test_estimate_job_ibm_timing_failure_keeps_circuit_resources(job_estimation, capsys):
     job_estimation.ibm_usage.side_effect = ValueError("Missing measurement duration")
+    job_estimation.args.verbose = True
 
     estimate_job(job_estimation.args, job_estimation.job_manager)
 
@@ -681,6 +711,16 @@ def test_estimate_job_ibm_timing_failure_keeps_circuit_resources(job_estimation,
     assert "IBM QPU time" in output
     assert "n/a" in output
     assert "HQC" not in output
+
+
+def test_estimate_job_unavailable_time_is_concise_by_default(job_estimation, capsys):
+    job_estimation.ibm_usage.side_effect = ValueError("Missing measurement duration")
+
+    estimate_job(job_estimation.args, job_estimation.job_manager)
+
+    assert capsys.readouterr().out.strip() == (
+        "Estimated IBM QPU time (s): n/a (use --verbose for details)"
+    )
 
 
 def test_estimate_job_without_device_wit(monkeypatch, capsys):
@@ -740,6 +780,7 @@ def test_estimate_job_without_device_wit(monkeypatch, capsys):
         config="foo.json",
         provider="quantinuum",
         device=None,
+        verbose=True,
     )
 
     estimate_job(args, MagicMock())

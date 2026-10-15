@@ -30,9 +30,10 @@ mgym suite estimate metriq_score_1_0 --provider ibm --device ibm_phoenix --all
 
 To estimate one component and all its scale points, replace `--all` with
 `--component qft` (or another component name). Repeat `--component` to select
-multiple components. The output includes per-job resource estimates and totals.
-IBM estimates QPU seconds and minutes using backend timing metadata and local
-compilation, without submitting any jobs. HQCs are shown only for Quantinuum.
+multiple components. By default, IBM estimates show only the total QPU time in
+seconds, using backend timing metadata and local compilation without submitting
+any jobs. Add `-v` or `--verbose` for per-job estimates, circuit resources and
+statistics, and estimation assumptions. HQCs are shown only for Quantinuum.
 
 The suite's twirled CLOPS estimate uses the circuit template and configured
 number of randomizations and shots. It excludes runtime twirling overhead and

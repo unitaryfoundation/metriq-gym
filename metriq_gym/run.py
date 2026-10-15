@@ -1,8 +1,10 @@
 """Runtime entrypoints for dispatching and managing metriq-gym benchmarks via the CLI."""
 
 import argparse
+from contextlib import nullcontext, redirect_stdout
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from io import StringIO
 import os
 import sys
 import logging
@@ -386,7 +388,11 @@ def _load_selected_suite(
     else:
         selected_benchmarks = suite.benchmarks
 
-    if all_components and suite.full_suite_warning:
+    if (
+        all_components
+        and suite.full_suite_warning
+        and (operation == "dispatch" or getattr(args, "verbose", False))
+    ):
         print(f"WARNING: {suite.full_suite_warning}")
 
     return suite, selected_benchmarks
@@ -1189,6 +1195,7 @@ def _estimate_resources(batches: list[CircuitBatch], provider: str, device) -> R
 
 def estimate_suite(args: argparse.Namespace) -> None:
     """Estimate selected suite entries and their total without submitting jobs."""
+    verbose = getattr(args, "verbose", False)
     selection = _load_selected_suite(args, operation="estimation")
     if selection is None:
         return
@@ -1204,14 +1211,16 @@ def estimate_suite(args: argparse.Namespace) -> None:
             device = setup_device(args.provider, args.device)
         except QBraidSetupError:
             return
-    else:
+    elif verbose:
         print("No device specified; estimating resources without device-specific topology.")
 
-    print(f"Estimating suite {suite.name} on {args.provider}:{args.device}...")
+    if verbose:
+        print(f"Estimating suite {suite.name} on {args.provider}:{args.device}...")
     estimates: list[ResourceEstimate] = []
     available_benchmarks = _lazy_registry().get_available_benchmarks()
     for entry in selected_benchmarks:
-        print(f"\nEstimating {entry.name} from {suite.name}...")
+        if verbose:
+            print(f"\nEstimating {entry.name} from {suite.name}...")
         try:
             params = validate_and_create_model(entry.config)
             if params.benchmark_name not in available_benchmarks:
@@ -1219,10 +1228,12 @@ def estimate_suite(args: argparse.Namespace) -> None:
             job_type = JobType(params.benchmark_name)
             if device is not None:
                 validate_benchmark_device_capacity(params, device)
-            benchmark = setup_benchmark(args, params, job_type)
-            estimate = _estimate_resources(
-                benchmark.estimate_resources_handler(device), args.provider, device
-            )
+            # Upstream circuit builders also print progress; keep it in verbose output only.
+            with nullcontext() if verbose else redirect_stdout(StringIO()):
+                benchmark = setup_benchmark(args, params, job_type)
+                estimate = _estimate_resources(
+                    benchmark.estimate_resources_handler(device), args.provider, device
+                )
         except Exception as exc:
             detail = str(exc)
             if isinstance(exc, NotImplementedError) and not detail:
@@ -1231,9 +1242,11 @@ def estimate_suite(args: argparse.Namespace) -> None:
             logger.debug("Suite estimation failure traceback", exc_info=True)
             continue
         estimates.append(estimate)
-        print_resource_estimate(job_type, args.provider, args.device, estimate)
+        if verbose:
+            print_resource_estimate(job_type, args.provider, args.device, estimate, verbose=True)
 
-    print(f"\nEstimated {len(estimates)}/{len(selected_benchmarks)} benchmark entries.")
+    if verbose:
+        print(f"\nEstimated {len(estimates)}/{len(selected_benchmarks)} benchmark entries.")
     if not estimates:
         print("No benchmarks could be estimated.")
         return
@@ -1242,10 +1255,15 @@ def estimate_suite(args: argparse.Namespace) -> None:
         label = "Partial suite total"
         print("Failed entries are excluded from the total below.")
     total = merge_resource_estimates(estimates)
-    print_resource_estimate(f"{label} ({suite.name})", args.provider, args.device, total)
+    if len(estimates) != len(selected_benchmarks):
+        total.ibm_timing_complete = False
+    print_resource_estimate(
+        f"{label} ({suite.name})", args.provider, args.device, total, verbose=verbose
+    )
 
 
 def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:
+    verbose = getattr(args, "verbose", False)
     if not args.provider:
         print("Provider is required for resource estimation.")
         return
@@ -1256,7 +1274,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
             device = setup_device(args.provider, args.device)
         except QBraidSetupError:
             return
-    else:
+    elif verbose:
         print("No device specified; estimating resources without device-specific topology.")
 
     config_file = args.config
@@ -1283,11 +1301,11 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
             print(f"✗ {job_type.value}: {exc}")
             return
 
-    benchmark: Benchmark = setup_benchmark(args, params, job_type)
-
     try:
-        circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
-        resource_estimate = _estimate_resources(circuit_batches, args.provider, device)
+        with nullcontext() if verbose else redirect_stdout(StringIO()):
+            benchmark: Benchmark = setup_benchmark(args, params, job_type)
+            circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
+            resource_estimate = _estimate_resources(circuit_batches, args.provider, device)
     except (ValueError, NotImplementedError) as exc:
         print(f"✗ {job_type.value}: {exc}")
         return
@@ -1295,7 +1313,9 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
         print(f"✗ Failed to estimate resources: {exc}")
         return
 
-    print_resource_estimate(job_type, args.provider, args.device, resource_estimate)
+    print_resource_estimate(
+        job_type, args.provider, args.device, resource_estimate, verbose=verbose
+    )
 
 
 def main() -> int:

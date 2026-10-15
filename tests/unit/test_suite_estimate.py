@@ -54,7 +54,17 @@ def estimation(monkeypatch):
     handler.estimate_resources_handler.return_value = [
         CircuitBatch(circuits=[QuantumCircuit(6)], shots=10)
     ]
-    setup_benchmark = MagicMock(return_value=handler)
+
+    def estimate_resources(_device):
+        print("benchmark chatter")
+        return handler.estimate_resources_handler.return_value
+
+    def setup_benchmark_handler(*_args, **_kwargs):
+        print("benchmark setup chatter")
+        return handler
+
+    handler.estimate_resources_handler.side_effect = estimate_resources
+    setup_benchmark = MagicMock(side_effect=setup_benchmark_handler)
     printer = MagicMock()
     job_manager = MagicMock()
     new_job = MagicMock()
@@ -102,7 +112,7 @@ def test_suite_estimate_sums_real_circuits_and_preserves_entry_estimates(
         [CircuitBatch(circuits=[first, second], shots=10)],
         [CircuitBatch(circuits=[first], shots=20), CircuitBatch(circuits=[second], shots=30)],
     ]
-    args = _args(_write_suite(tmp_path), provider="quantinuum", device="H1-1")
+    args = _args(_write_suite(tmp_path), provider="quantinuum", device="H1-1", verbose=True)
 
     run.estimate_suite(args)
 
@@ -111,6 +121,7 @@ def test_suite_estimate_sums_real_circuits_and_preserves_entry_estimates(
     for call in estimation.handler.estimate_resources_handler.call_args_list:
         assert call.args == (estimation.device,)
     assert estimation.printer.call_count == 3
+    assert all(call.kwargs == {"verbose": True} for call in estimation.printer.call_args_list)
     entry_estimates = [call.args[3] for call in estimation.printer.call_args_list[:-1]]
     total_label, provider, device_id, total = estimation.printer.call_args.args
     assert "Suite total" in total_label
@@ -141,7 +152,7 @@ def test_suite_estimate_without_device_prints_entry_and_total_tables(
 ):
     monkeypatch.setattr(run, "print_resource_estimate", print_resource_estimate)
 
-    run.estimate_suite(_args(_write_suite(tmp_path), device=None))
+    run.estimate_suite(_args(_write_suite(tmp_path), device=None, verbose=True))
 
     estimation.setup_device.assert_not_called()
     assert estimation.handler.estimate_resources_handler.call_count == 2
@@ -169,6 +180,8 @@ def test_suite_estimate_uses_only_selected_provider_usage(
     run.estimate_suite(_args(_write_suite(tmp_path), provider=provider))
 
     total = printer.call_args.args[3]
+    printer.assert_called_once()
+    assert printer.call_args.kwargs == {"verbose": False}
     assert total.circuit_count == 2
     assert total.total_shots == 20
     output = capsys.readouterr().out
@@ -178,8 +191,7 @@ def test_suite_estimate_uses_only_selected_provider_usage(
             assert call.args[1] is estimation.device
         assert total.ibm_quantum_seconds == 25.0
         assert total.ibm_timing_complete
-        assert "Estimated IBM QPU time (s)" in output
-        assert "Estimated IBM QPU time (min)" in output
+        assert output.strip() == "Estimated IBM QPU time (s): 25.000"
     else:
         estimation.ibm_usage.assert_not_called()
         assert total.ibm_quantum_seconds is None
@@ -187,11 +199,46 @@ def test_suite_estimate_uses_only_selected_provider_usage(
     if provider == "quantinuum":
         assert total.hqc_total is not None
         assert total.hqc_total > 0
-        assert "HQC" in output
+        assert output.strip() == "Total HQCs: 10.12"
     else:
         assert total.hqc_total is None
         assert all(circuit.hqc is None for circuit in total.per_circuit)
         assert "HQC" not in output
+    assert "Total shots" not in output
+    assert "benchmark chatter" not in output
+    assert "benchmark setup chatter" not in output
+    assert "Estimating" not in output
+    assert "(min)" not in output
+
+
+def test_suite_estimate_verbose_prints_entries_and_total(tmp_path, estimation, monkeypatch, capsys):
+    printer = MagicMock(wraps=print_resource_estimate)
+    monkeypatch.setattr(run, "print_resource_estimate", printer)
+
+    run.estimate_suite(_args(_write_suite(tmp_path), verbose=True))
+
+    assert printer.call_count == 3
+    assert all(call.kwargs == {"verbose": True} for call in printer.call_args_list)
+    output = capsys.readouterr().out
+    assert output.count("Total shots") == 3
+    assert "first" in output
+    assert "second" in output
+    assert "Suite total" in output
+    assert "2/2" in output
+    assert output.count("benchmark chatter") == 2
+    assert output.count("benchmark setup chatter") == 2
+    assert "(min)" not in output
+
+
+def test_suite_estimate_all_guarded_entries_prints_only_total_by_default(
+    tmp_path, estimation, monkeypatch, capsys
+):
+    monkeypatch.setattr(run, "print_resource_estimate", print_resource_estimate)
+
+    run.estimate_suite(_args(_write_suite(tmp_path, guarded=True), all_components=True))
+
+    assert estimation.handler.estimate_resources_handler.call_count == 2
+    assert capsys.readouterr().out.strip() == "Estimated IBM QPU time (s): 25.000"
 
 
 def test_suite_ibm_timing_failure_keeps_resources_and_marks_usage_total_partial(
@@ -201,7 +248,7 @@ def test_suite_ibm_timing_failure_keeps_resources_and_marks_usage_total_partial(
     monkeypatch.setattr(run, "print_resource_estimate", printer)
     estimation.ibm_usage.side_effect = [12.5, ValueError("Missing measurement duration")]
 
-    run.estimate_suite(_args(_write_suite(tmp_path)))
+    run.estimate_suite(_args(_write_suite(tmp_path), verbose=True))
 
     first, failed, total = [call.args[3] for call in printer.call_args_list]
     assert first.ibm_quantum_seconds == 12.5
@@ -217,8 +264,52 @@ def test_suite_ibm_timing_failure_keeps_resources_and_marks_usage_total_partial(
     output = capsys.readouterr().out
     assert "Missing measurement duration" in output
     assert "Partial IBM QPU time (s)" in output
-    assert "Partial IBM QPU time (min)" in output
+    assert "(min)" not in output
     assert "HQC" not in output
+
+
+def test_suite_estimate_partial_time_is_concise_by_default(
+    tmp_path, estimation, monkeypatch, capsys
+):
+    monkeypatch.setattr(run, "print_resource_estimate", print_resource_estimate)
+    estimation.ibm_usage.side_effect = [12.5, ValueError("Missing measurement duration")]
+
+    run.estimate_suite(_args(_write_suite(tmp_path)))
+
+    assert capsys.readouterr().out.strip() == (
+        "Partial IBM QPU time (s): 12.500 (use --verbose for details)"
+    )
+
+
+def test_suite_estimate_without_device_is_concise_by_default(
+    tmp_path, estimation, monkeypatch, capsys
+):
+    monkeypatch.setattr(run, "print_resource_estimate", print_resource_estimate)
+
+    run.estimate_suite(_args(_write_suite(tmp_path), device=None))
+
+    estimation.setup_device.assert_not_called()
+    assert capsys.readouterr().out.strip() == (
+        "Estimated IBM QPU time (s): n/a (use --verbose for details)"
+    )
+
+
+def test_suite_estimate_default_marks_total_partial_when_entry_cannot_be_built(
+    tmp_path, estimation, monkeypatch, capsys
+):
+    monkeypatch.setattr(run, "print_resource_estimate", print_resource_estimate)
+    estimation.handler.estimate_resources_handler.side_effect = [
+        [CircuitBatch(circuits=[QuantumCircuit(6)], shots=10)],
+        NotImplementedError("Estimation is not implemented"),
+    ]
+
+    run.estimate_suite(_args(_write_suite(tmp_path)))
+
+    output = capsys.readouterr().out
+    assert "second: NotImplementedError: Estimation is not implemented" in output
+    assert "Partial IBM QPU time (s): 12.500 (use --verbose for details)" in output
+    assert "Estimated IBM QPU time" not in output
+    assert "Total shots" not in output
 
 
 def test_suite_estimate_requires_provider(tmp_path, estimation, capsys):
@@ -266,7 +357,7 @@ def test_suite_estimate_selects_component_entries_in_suite_order(
         guarded=True,
     )
 
-    run.estimate_suite(_args(path, components=components))
+    run.estimate_suite(_args(path, components=components, verbose=True))
 
     assert [call.args[1].shots for call in estimation.setup_benchmark.call_args_list] == [10, 30]
     assert estimation.printer.call_count == 3
@@ -287,7 +378,9 @@ def test_suite_estimate_supports_bundled_suite_and_repeatable_components(
     expected_entries = suite.select_components(components) if components else suite.benchmarks
 
     run.estimate_suite(
-        _args("metriq_score_1_0", components=components, all_components=all_components)
+        _args(
+            "metriq_score_1_0", components=components, all_components=all_components, verbose=True
+        )
     )
 
     estimation.setup_device.assert_called_once_with("ibm", "ibm_phoenix")
@@ -319,7 +412,7 @@ def test_suite_estimate_continues_after_invalid_config_capacity_and_handler_fail
         [CircuitBatch(circuits=[QuantumCircuit(6)], shots=25)],
     ]
 
-    run.estimate_suite(_args(path))
+    run.estimate_suite(_args(path, verbose=True))
 
     assert estimation.setup_benchmark.call_count == 3
     assert estimation.printer.call_count == 2
@@ -345,7 +438,7 @@ def test_suite_estimate_continues_after_invalid_config_capacity_and_handler_fail
 def test_suite_estimate_prints_no_total_when_every_estimator_fails(tmp_path, estimation, capsys):
     estimation.handler.estimate_resources_handler.side_effect = ValueError("Device is required")
 
-    run.estimate_suite(_args(_write_suite(tmp_path), device=None))
+    run.estimate_suite(_args(_write_suite(tmp_path), device=None, verbose=True))
 
     assert estimation.handler.estimate_resources_handler.call_count == 2
     estimation.printer.assert_not_called()
