@@ -988,3 +988,66 @@ def test_replay_from_debug_file_unknown_job_type(tmp_path):
 
     result = replay_from_debug_file(str(debug_file))
     assert result is None
+
+
+# --- tabulate_job_results -------------------------------------------------------
+
+
+def test_tabulate_job_results_shows_metric_columns(metriq_job):
+    """A completed job's metric must appear in the suite table, not just its parameters."""
+    from metriq_gym.benchmarks.wit import WITResult
+    from metriq_gym.exporters.dict_exporter import DictExporter
+    from metriq_gym.run import tabulate_job_results
+
+    result = WITResult(expectation_value=BenchmarkScore(value=0.9, uncertainty=0.01))
+    record = DictExporter(metriq_job, result).export() | {"params": metriq_job.params}
+
+    table = tabulate_job_results([record])
+
+    assert "expectation_value" in table
+    assert "0.9" in table
+    assert "0.01" in table
+
+
+def test_tabulate_job_results_prefers_explicit_values_block():
+    """A record that already carries the normalized mapping is used as-is."""
+    from metriq_gym.run import tabulate_job_results
+
+    table = tabulate_job_results(
+        [
+            {
+                "job_type": "WIT",
+                "params": {},
+                "results": {"values": {"score": 0.5}, "uncertainties": {"score": 0.1}},
+            }
+        ]
+    )
+
+    assert "score" in table
+    assert "0.5 +/- 0.1" in table
+
+
+def test_tabulate_job_results_reads_bare_numeric_metrics():
+    """Metrics declared as plain numbers need no uncertainty suffix."""
+    from metriq_gym.run import tabulate_job_results
+
+    table = tabulate_job_results([{"job_type": "QFT", "params": {}, "results": {"depth": 4}}])
+
+    assert "depth" in table
+    assert "4" in table
+
+
+def test_tabulate_job_results_survives_records_without_results():
+    """Failed jobs have no results block and must not break the table."""
+    from metriq_gym.run import tabulate_job_results
+
+    table = tabulate_job_results(
+        [
+            {"job_type": "WIT", "params": {}, "results": None, "outcome": "error"},
+            {"job_type": "QFT", "params": {}, "outcome": "unsupported"},
+        ]
+    )
+
+    assert "Job Type" in table
+    assert "WIT" in table
+    assert "QFT" in table

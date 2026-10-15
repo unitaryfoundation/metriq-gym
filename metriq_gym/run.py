@@ -826,16 +826,41 @@ def upload_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         print(f"✗ Upload failed: {e}")
 
 
+def _record_metric_values(record: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Metric values and uncertainties carried by a single suite record.
+
+    ``DictExporter`` stores the benchmark result through pydantic's ``model_dump()``,
+    which does not include the ``values``/``uncertainties`` properties, so the
+    normalized mapping is normally absent. Use it when a record does carry it and
+    otherwise read the dumped metric fields, where a metric is either a plain number
+    or a mapping holding ``value``/``uncertainty``.
+    """
+    block = record.get("results")
+    if not isinstance(block, dict):
+        return {}, {}
+    values = block.get("values")
+    if isinstance(values, dict):
+        uncertainties = block.get("uncertainties")
+        return values, uncertainties if isinstance(uncertainties, dict) else {}
+    values, uncertainties = {}, {}
+    for key, value in block.items():
+        if isinstance(value, dict) and "value" in value:
+            values[key] = value["value"]
+            if value.get("uncertainty") is not None:
+                uncertainties[key] = value["uncertainty"]
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            values[key] = value
+    return values, uncertainties
+
+
 def tabulate_job_results(records, sep=" +/- "):
-    rows = []
-    metric_keys = set()
-    for record in records:
-        metric_keys.update(record.get("results", {}).get("values", {}).keys())
-    metric_keys = sorted(metric_keys)
+    metrics = [_record_metric_values(record) for record in records]
+    metric_keys = sorted({key for values, _ in metrics for key in values})
 
     headers = ["Job Type", "Parameters"] + metric_keys
 
-    for record in records:
+    rows = []
+    for record, (values, uncertainties) in zip(records, metrics):
         name = record.get("job_type")
         params = record.get("params", {})
         if isinstance(params, dict):
@@ -845,8 +870,6 @@ def tabulate_job_results(records, sep=" +/- "):
         else:
             params_str = str(params)
         row = [name, params_str]
-        values = record.get("results", {}).get("values", {})
-        uncertainties = record.get("results", {}).get("uncertainties", {})
         for metric in metric_keys:
             value = values.get(metric, "")
             uncertainty = uncertainties.get(metric)
