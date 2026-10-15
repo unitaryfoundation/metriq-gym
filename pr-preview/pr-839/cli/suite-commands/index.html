@@ -2040,8 +2040,8 @@ resources and statistics, and estimation assumptions.</p>
 includes all of its configured scale points, unknown or repeated names are
 rejected, and guarded suites require <code>--component</code> or <code>--all</code>.</p>
 <p>The output starts with a short header identifying the suite, provider, and device.
-When <code>--component</code> is used, the header names the selected components and labels
-their total accordingly; <code>Suite total</code> is reserved for a full-suite estimate.
+When <code>--component</code> is used, the header shows the suite and selected component
+names, such as <code>metriq_score_1_0: wit, qft</code>.
 The command uses the same estimator as <code>job estimate</code>:</p>
 <ul>
 <li><code>--provider ibm</code> shows total estimated QPU time in seconds. With <code>--verbose</code>,
