@@ -1933,7 +1933,8 @@
 </table>
 <hr />
 <h2 id="estimate">estimate<a class="headerlink" href="#estimate" title="Permanent link">&para;</a></h2>
-<p>Estimate circuit resource requirements before dispatching jobs.</p>
+<p>Estimate circuit resource requirements before dispatching jobs. Circuits are
+constructed and compiled locally; no jobs are submitted or executed on hardware.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>&lt;config&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_1">Arguments<a class="headerlink" href="#arguments_1" title="Permanent link">&para;</a></h3>
@@ -1980,6 +1981,18 @@
 </tr>
 </tbody>
 </table>
+<p>With <code>--provider ibm --device &lt;device&gt;</code>, the output includes estimated QPU
+seconds and minutes based on the device's timing metadata. Reading that metadata
+requires provider access, but the estimate does not run anything on the device.
+It assumes the default repetition delay, initial reset, and about two seconds
+of overhead per circuit batch. Additional server-side splitting, runtime
+mitigation, and idle time billed within sessions are excluded. This estimates
+QPU usage, not queue time, wall-clock completion time, or a monetary price.
+See <a href="https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time">IBM's usage estimation guide</a>.</p>
+<p>If IBM timing metadata is unavailable or <code>--device</code> is omitted, circuit resource
+counts are still shown where supported, with the QPU estimate marked unavailable
+and an explanation. <code>--provider quantinuum</code> shows H-series Quantum Credits
+(HQCs). Other providers show circuit resources without a cost estimate.</p>
 <hr />
 <h2 id="poll">poll<a class="headerlink" href="#poll" title="Permanent link">&para;</a></h2>
 <p>Poll job status and retrieve results when complete.</p>

@@ -1421,10 +1421,12 @@ changing the meaning of this one.</p>
 </code></pre></div>
 <p>To estimate one component and all its scale points, replace <code>--all</code> with
 <code>--component qft</code> (or another component name). Repeat <code>--component</code> to select
-multiple components. The output includes per-job estimates and totals; costs
-use Quantinuum HQCs as reference units for every provider, including IBM.</p>
-<p>The suite's twirled CLOPS mode does not currently support resource estimation.
-It is reported as unsupported and excluded from a clearly marked partial total.</p>
+multiple components. The output includes per-job resource estimates and totals.
+IBM estimates QPU seconds and minutes using backend timing metadata and local
+compilation, without submitting any jobs. HQCs are shown only for Quantinuum.</p>
+<p>The suite's twirled CLOPS estimate uses the circuit template and configured
+number of randomizations and shots. It excludes runtime twirling overhead and
+idle time billed within a session, so actual IBM usage can be higher.</p>
 <p>See <a href="../../cli/suite-commands/#estimate">Suite Commands</a> for options and how
 partial estimates are reported.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
