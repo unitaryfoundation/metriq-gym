@@ -19,11 +19,13 @@ from metriq_gym.schema_validator import load_and_validate, validate_and_create_m
 from metriq_gym.constants import HUMAN_OUTCOMES, JobType, RecordOutcome
 from metriq_gym.resource_estimation import (
     CircuitBatch,
+    ResourceEstimate,
     aggregate_resource_estimates,
+    merge_resource_estimates,
     print_resource_estimate,
     quantinuum_hqc_formula,
 )
-from metriq_gym.suite_parser import parse_suite_file
+from metriq_gym.suite_parser import BenchmarkEntry, Suite, parse_suite_file
 from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
 from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_filename
 from metriq_gym.platform import canonical_provider_name
@@ -341,6 +343,55 @@ def _record_dispatch_failure(
     return job_manager.add_job(job)
 
 
+def _load_selected_suite(
+    args: argparse.Namespace, *, operation: str
+) -> tuple[Suite, list[BenchmarkEntry]] | None:
+    """Load and select suite entries before initializing a provider."""
+    config_file = args.suite_config
+
+    try:
+        suite = parse_suite_file(config_file)
+    except FileNotFoundError:
+        print(f"✗ {config_file}: Configuration file or bundled suite not found")
+        return None
+    except Exception as exc:
+        print(f"✗ {config_file}: Invalid suite configuration: {type(exc).__name__}: {exc}")
+        return None
+
+    if not suite.benchmarks:
+        print(f"✗ {config_file}: No benchmarks found in the suite")
+        return None
+
+    requested_components = getattr(args, "components", None) or []
+    if isinstance(requested_components, str):
+        requested_components = [requested_components]
+    all_components = getattr(args, "all_components", False)
+
+    if requested_components and all_components:
+        print("✗ --component and --all cannot be used together")
+        return None
+
+    if requested_components:
+        try:
+            selected_benchmarks = suite.select_components(requested_components)
+        except ValueError as exc:
+            print(f"✗ {exc}")
+            return None
+    elif suite.full_suite_warning and not all_components:
+        print(f"WARNING: {suite.full_suite_warning}")
+        print(f"Full suite {operation} was not started.")
+        print(f"Available components: {', '.join(suite.component_names)}")
+        print("Choose one with --component NAME (repeatable), or use --all to opt in.")
+        return None
+    else:
+        selected_benchmarks = suite.benchmarks
+
+    if all_components and suite.full_suite_warning:
+        print(f"WARNING: {suite.full_suite_warning}")
+
+    return suite, selected_benchmarks
+
+
 def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Dispatch multiple benchmark configurations to a quantum device.
 
@@ -353,47 +404,11 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     Note: Continues processing remaining configs if individual configs fail.
     """
+    selection = _load_selected_suite(args, operation="dispatch")
+    if selection is None:
+        return
+    suite, selected_benchmarks = selection
     config_file = args.suite_config
-
-    try:
-        suite = parse_suite_file(config_file)
-    except FileNotFoundError:
-        print(f"✗ {config_file}: Configuration file or bundled suite not found")
-        return
-    except Exception as exc:
-        print(f"✗ {config_file}: Invalid suite configuration: {type(exc).__name__}: {exc}")
-        return
-
-    if not suite.benchmarks:
-        print(f"✗ {config_file}: No benchmarks found in the suite")
-        return
-
-    requested_components = getattr(args, "components", None) or []
-    if isinstance(requested_components, str):
-        requested_components = [requested_components]
-    all_components = getattr(args, "all_components", False)
-
-    if requested_components and all_components:
-        print("✗ --component and --all cannot be used together")
-        return
-
-    if requested_components:
-        try:
-            selected_benchmarks = suite.select_components(requested_components)
-        except ValueError as exc:
-            print(f"✗ {exc}")
-            return
-    elif suite.full_suite_warning and not all_components:
-        print(f"WARNING: {suite.full_suite_warning}")
-        print("Full suite dispatch was not started.")
-        print(f"Available components: {', '.join(suite.component_names)}")
-        print("Choose one with --component NAME (repeatable), or use --all to opt in.")
-        return
-    else:
-        selected_benchmarks = suite.benchmarks
-
-    if all_components and suite.full_suite_warning:
-        print(f"WARNING: {suite.full_suite_warning}")
 
     print(f"Starting suite dispatch on {args.provider}:{args.device}...")
 
@@ -1147,6 +1162,65 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
         except Exception as e:
             print(f"Failed to delete job {job.id}: {e}")
     print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
+
+
+def estimate_suite(args: argparse.Namespace) -> None:
+    """Estimate selected suite entries and their total without submitting jobs."""
+    selection = _load_selected_suite(args, operation="estimation")
+    if selection is None:
+        return
+    suite, selected_benchmarks = selection
+
+    if not args.provider:
+        print("Provider is required for resource estimation.")
+        return
+
+    device = None
+    if args.device:
+        try:
+            device = setup_device(args.provider, args.device)
+        except QBraidSetupError:
+            return
+    else:
+        print("No device specified; estimating resources without device-specific topology.")
+
+    print(f"Estimating suite {suite.name} on {args.provider}:{args.device}...")
+    print("HQCs use the Quantinuum formula; they are not a price quote for other providers.")
+    estimates: list[ResourceEstimate] = []
+    available_benchmarks = _lazy_registry().get_available_benchmarks()
+    for entry in selected_benchmarks:
+        print(f"\nEstimating {entry.name} from {suite.name}...")
+        try:
+            params = validate_and_create_model(entry.config)
+            if params.benchmark_name not in available_benchmarks:
+                raise ValueError(f"Unsupported benchmark '{params.benchmark_name}'")
+            job_type = JobType(params.benchmark_name)
+            if device is not None:
+                validate_benchmark_device_capacity(params, device)
+            benchmark = setup_benchmark(args, params, job_type)
+            estimate = aggregate_resource_estimates(
+                benchmark.estimate_resources_handler(device), hqc_fn=quantinuum_hqc_formula
+            )
+        except Exception as exc:
+            detail = str(exc)
+            if isinstance(exc, NotImplementedError) and not detail:
+                detail = "Resource estimation is not implemented for this benchmark."
+            print(f"✗ {entry.name}: {type(exc).__name__}: {detail}")
+            logger.debug("Suite estimation failure traceback", exc_info=True)
+            continue
+        estimates.append(estimate)
+        print_resource_estimate(job_type, args.provider, args.device, estimate)
+
+    print(f"\nEstimated {len(estimates)}/{len(selected_benchmarks)} benchmark entries.")
+    if not estimates:
+        print("No benchmarks could be estimated.")
+        return
+    label = "Suite total"
+    if len(estimates) != len(selected_benchmarks):
+        label = "Partial suite total"
+        print("Failed entries are excluded from the total below.")
+    total = merge_resource_estimates(estimates)
+    print_resource_estimate(f"{label} ({suite.name})", args.provider, args.device, total)
 
 
 def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:

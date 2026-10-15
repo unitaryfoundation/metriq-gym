@@ -1,6 +1,6 @@
 """Utilities for estimating resource requirements of metriq-gym benchmarks."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Callable, Iterable, Sequence
 
 
@@ -159,6 +159,31 @@ def quantinuum_hqc_formula(counts: GateCounts, shots: int, num_qubits: int) -> f
     return 5.0 + shots * gate_term / 5000.0
 
 
+def merge_resource_estimates(estimates: Iterable[ResourceEstimate]) -> ResourceEstimate:
+    """Combine benchmark estimates without retaining their generated circuits."""
+    total = ResourceEstimate(
+        job_count=0,
+        circuit_count=0,
+        total_shots=0,
+        max_qubits=0,
+        total_gate_counts=GateCounts(),
+        hqc_total=None,
+    )
+    for estimate in estimates:
+        total.per_circuit.extend(
+            replace(circuit, job_index=circuit.job_index + total.job_count)
+            for circuit in estimate.per_circuit
+        )
+        total.job_count += estimate.job_count
+        total.circuit_count += estimate.circuit_count
+        total.total_shots += estimate.total_shots
+        total.max_qubits = max(total.max_qubits, estimate.max_qubits)
+        total.total_gate_counts.add(estimate.total_gate_counts)
+        if estimate.hqc_total is not None:
+            total.hqc_total = (total.hqc_total or 0.0) + estimate.hqc_total
+    return total
+
+
 def _stat_tuple(values: Sequence[int | float]) -> tuple[str, str, str]:
     if not values:
         return ("0", "0", "0")
@@ -176,10 +201,10 @@ def _stat_tuple(values: Sequence[int | float]) -> tuple[str, str, str]:
 
 
 def print_resource_estimate(
-    job_type: JobType, provider: str, device_id: str | None, estimate: ResourceEstimate
+    job_type: JobType | str, provider: str, device_id: str | None, estimate: ResourceEstimate
 ) -> None:
     device_label = device_id if device_id else "(no device)"
-    print(f"Resource estimate for {job_type.value} on {provider}:{device_label}\n")
+    print(f"Resource estimate for {job_type} on {provider}:{device_label}\n")
 
     def fmt_int(value: int) -> str:
         return format(value, ",").replace(",", "_")

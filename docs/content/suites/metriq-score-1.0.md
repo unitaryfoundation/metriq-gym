@@ -20,6 +20,25 @@ The definition contains eight score components and 22 benchmark jobs:
 | LR-QAOA | 4 | 10, 20, 50, and 100 qubits |
 | QFT | 4 | 4, 8, 12, and 20 qubits |
 
+## Estimate resources before dispatch
+
+Request estimates for all 22 jobs with:
+
+```bash
+mgym suite estimate metriq_score_1_0 --provider ibm --device ibm_phoenix --all
+```
+
+To estimate one component and all its scale points, replace `--all` with
+`--component qft` (or another component name). Repeat `--component` to select
+multiple components. The output includes per-job estimates and totals; costs
+use Quantinuum HQCs as reference units for every provider, including IBM.
+
+The suite's twirled CLOPS mode does not currently support resource estimation.
+It is reported as unsupported and excluded from a clearly marked partial total.
+
+See [Suite Commands](../cli/suite-commands.md#estimate) for options and how
+partial estimates are reported.
+
 ## References
 
 - Cosentino et al., [“Metriq: A Collaborative Platform for Benchmarking

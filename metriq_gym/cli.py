@@ -7,6 +7,8 @@ Usage overview:
       mgym job poll latest --json results.json
   - Dispatch a suite of jobs:
       mgym suite dispatch path/to/suite.json -p <provider> -d <device>
+  - Estimate a complete bundled suite:
+      mgym suite estimate metriq_score_1_0 -p <provider> -d <device> --all
   - Poll a suite:
       mgym suite poll <suite_id>
   - Dry-run upload (no network):
@@ -460,6 +462,47 @@ def suite_dispatch(
 
     job_manager = JobManager()
     _dispatch_suite(args, job_manager)
+
+
+@suite_app.command("estimate")
+def suite_estimate(
+    suite_config: Annotated[
+        str,
+        typer.Argument(help="Path to suite configuration file or bundled suite name"),
+    ],
+    provider: ProviderOption = None,
+    device: DeviceOption = None,
+    components: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            "--component",
+            "-c",
+            help="Component to estimate; repeat the option to select multiple components",
+        ),
+    ] = None,
+    all_components: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Explicitly estimate every component, including guarded full suites",
+        ),
+    ] = False,
+) -> None:
+    """Estimate resources for suite jobs and show totals without dispatching them.
+
+    Cost estimates use Quantinuum H-series Quantum Credits (HQCs), including
+    when another provider is selected; they are not provider-specific prices.
+    """
+    from metriq_gym.run import estimate_suite as _estimate_suite
+
+    args = argparse.Namespace()
+    args.suite_config = suite_config
+    args.provider = provider
+    args.device = device
+    args.components = components
+    args.all_components = all_components
+
+    _estimate_suite(args)
 
 
 @suite_app.command("poll")

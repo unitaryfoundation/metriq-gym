@@ -1,6 +1,6 @@
 # Suite Commands
 
-Commands for dispatching, monitoring, and managing benchmark suites.
+Commands for estimating, dispatching, monitoring, and managing benchmark suites.
 
 ## dispatch
 
@@ -67,6 +67,61 @@ initialization.
 
 See [Metriq Score 1.0 Suite](../suites/metriq-score-1.0.md) for the versioned
 component and scale-point reference.
+
+---
+
+## estimate
+
+Estimate circuit resources and costs for a suite before dispatching jobs. The
+command prints estimates for each selected job and totals for the selection,
+without submitting jobs or recording them in the local database.
+
+```bash
+mgym suite estimate <suite_config> [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Type | Description | Required |
+|----------|------|-------------|----------|
+| `SUITE_CONFIG` | STR | Path to suite configuration file or bundled suite name | Yes |
+
+### Options
+
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| `--provider, -p` | STR | Provider name (e.g., ibm, aws, azure, ionq, local; braket aliases aws) | `None` |
+| `--device, -d` | STR | Device identifier for device-dependent resource estimates | `None` |
+| `--component, -c` | LIST | Component to estimate; repeat the option to select multiple components | `None` |
+| `--all` | BOOL | Explicitly estimate every component, including guarded full suites | `False` |
+
+### Estimate the complete Metriq Score suite
+
+```bash
+mgym suite estimate metriq_score_1_0 \
+    --provider ibm --device ibm_phoenix --all
+```
+
+### Estimate selected components
+
+```bash
+mgym suite estimate metriq_score_1_0 \
+    --provider ibm --device ibm_phoenix -c qft -c wit
+```
+
+Component selection follows the same rules as `suite dispatch`: a component
+includes all of its configured scale points, unknown or repeated names are
+rejected, and guarded suites require `--component` or `--all`.
+
+The command uses the same estimator as `job estimate`. Cost figures are
+Quantinuum H-series Quantum Credits (HQCs), even when another provider such as
+IBM is selected. They are reference estimates, not prices or QPU execution-time
+estimates for the selected provider.
+
+Some benchmarks need a device to determine resources such as available qubit
+pairs. If a job cannot be estimated, the command reports the failure and
+continues with the remaining jobs. Totals are marked as partial when any job
+fails and cover only successfully estimated jobs.
 
 ---
 

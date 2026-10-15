@@ -1,0 +1,305 @@
+import argparse
+import json
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
+from qiskit import QuantumCircuit
+
+from metriq_gym import run
+from metriq_gym.constants import JobType
+from metriq_gym.resource_estimation import CircuitBatch, GateCounts, print_resource_estimate
+from metriq_gym.suite_parser import parse_suite_file
+
+
+def _entry(name, *, component=None, shots=10, num_qubits=6):
+    return {
+        "name": name,
+        "component": component,
+        "config": {"benchmark_name": "WIT", "num_qubits": num_qubits, "shots": shots},
+    }
+
+
+def _write_suite(tmp_path, entries=None, *, guarded=False):
+    suite = {
+        "name": "test_suite",
+        "benchmarks": entries if entries is not None else [_entry("first"), _entry("second")],
+    }
+    if guarded:
+        suite["full_suite_warning"] = "This test suite is expensive."
+    path = tmp_path / "suite.json"
+    path.write_text(json.dumps(suite))
+    return str(path)
+
+
+def _args(suite_config, **kwargs):
+    return argparse.Namespace(
+        **{
+            "suite_config": suite_config,
+            "provider": "ibm",
+            "device": "ibm_phoenix",
+            "components": None,
+            "all_components": False,
+            **kwargs,
+        }
+    )
+
+
+@pytest.fixture
+def estimation(monkeypatch):
+    device = SimpleNamespace(id="ibm_phoenix", num_qubits=200)
+    setup_device = MagicMock(return_value=device)
+    registry = SimpleNamespace(get_available_benchmarks=lambda: [job.value for job in JobType])
+    handler = MagicMock()
+    handler.estimate_resources_handler.return_value = [
+        CircuitBatch(circuits=[QuantumCircuit(6)], shots=10)
+    ]
+    setup_benchmark = MagicMock(return_value=handler)
+    printer = MagicMock()
+    job_manager = MagicMock()
+    new_job = MagicMock()
+    monkeypatch.setattr(run, "setup_device", setup_device)
+    monkeypatch.setattr(run, "_lazy_registry", lambda: registry)
+    monkeypatch.setattr(run, "setup_benchmark", setup_benchmark)
+    monkeypatch.setattr(run, "print_resource_estimate", printer)
+    monkeypatch.setattr(run, "JobManager", job_manager)
+    monkeypatch.setattr(run, "_new_job", new_job)
+    yield SimpleNamespace(
+        device=device,
+        setup_device=setup_device,
+        handler=handler,
+        setup_benchmark=setup_benchmark,
+        printer=printer,
+    )
+    handler.dispatch_handler.assert_not_called()
+    job_manager.assert_not_called()
+    new_job.assert_not_called()
+
+
+def test_suite_estimate_sums_real_circuits_and_preserves_entry_estimates(
+    tmp_path, estimation, capsys
+):
+    first = QuantumCircuit(2, 2)
+    first.h(0)
+    first.cx(0, 1)
+    first.reset(1)
+    first.measure([0, 1], [0, 1])
+    second = QuantumCircuit(3, 3)
+    second.x(0)
+    second.ccx(0, 1, 2)
+    second.measure([0, 1, 2], [0, 1, 2])
+    estimation.handler.estimate_resources_handler.side_effect = [
+        [CircuitBatch(circuits=[first, second], shots=10)],
+        [CircuitBatch(circuits=[first], shots=20), CircuitBatch(circuits=[second], shots=30)],
+    ]
+    args = _args(_write_suite(tmp_path), provider="quantinuum", device="H1-1")
+
+    run.estimate_suite(args)
+
+    estimation.setup_device.assert_called_once_with("quantinuum", "H1-1")
+    assert estimation.handler.estimate_resources_handler.call_count == 2
+    for call in estimation.handler.estimate_resources_handler.call_args_list:
+        assert call.args == (estimation.device,)
+    assert estimation.printer.call_count == 3
+    entry_estimates = [call.args[3] for call in estimation.printer.call_args_list[:-1]]
+    total_label, provider, device_id, total = estimation.printer.call_args.args
+    assert "Suite total" in total_label
+    assert (provider, device_id) == ("quantinuum", "H1-1")
+    assert total.job_count == 3
+    assert total.circuit_count == 4
+    assert total.total_shots == 70
+    assert total.max_qubits == 3
+    assert total.total_gate_counts == GateCounts(
+        one_qubit=4, two_qubit=2, multi_qubit=2, measurements=10, resets=2
+    )
+    assert total.hqc_total == pytest.approx(20 + (10 * 36 + 10 * 31 + 20 * 36 + 30 * 31) / 5000)
+    assert [(c.job_index, c.circuit_index) for c in total.per_circuit] == [
+        (0, 0),
+        (0, 1),
+        (1, 0),
+        (2, 0),
+    ]
+    assert entry_estimates[0].total_gate_counts == GateCounts(
+        one_qubit=2, two_qubit=1, multi_qubit=1, measurements=5, resets=1
+    )
+    assert [c.job_index for c in entry_estimates[1].per_circuit] == [0, 1]
+    assert "2/2" in capsys.readouterr().out
+
+
+def test_suite_estimate_without_device_prints_entry_and_total_tables(
+    tmp_path, estimation, monkeypatch, capsys
+):
+    monkeypatch.setattr(run, "print_resource_estimate", print_resource_estimate)
+
+    run.estimate_suite(_args(_write_suite(tmp_path), device=None))
+
+    estimation.setup_device.assert_not_called()
+    assert estimation.handler.estimate_resources_handler.call_count == 2
+    estimation.handler.estimate_resources_handler.assert_called_with(None)
+    output = capsys.readouterr().out
+    assert "without device-specific topology" in output
+    assert "(no device)" in output
+    assert "Suite total" in output
+    assert output.count("Total shots") == 3
+    assert "first" in output
+    assert "second" in output
+
+
+def test_suite_estimate_requires_provider(tmp_path, estimation, capsys):
+    run.estimate_suite(_args(_write_suite(tmp_path), provider=None))
+
+    assert "Provider is required" in capsys.readouterr().out
+    estimation.setup_device.assert_not_called()
+    estimation.setup_benchmark.assert_not_called()
+    estimation.printer.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("components", "all_components", "message"),
+    [
+        (None, False, "--all"),
+        (["missing"], False, "Unknown component(s): missing"),
+        (["qft", "QFT"], False, "Duplicate component selection"),
+        (["qft"], True, "--component and --all cannot be used together"),
+    ],
+)
+def test_suite_estimate_rejects_invalid_selection_before_device_setup(
+    tmp_path, estimation, capsys, components, all_components, message
+):
+    path = _write_suite(tmp_path, [_entry("qft", component="qft")], guarded=True)
+
+    run.estimate_suite(_args(path, components=components, all_components=all_components))
+
+    assert message in capsys.readouterr().out
+    estimation.setup_device.assert_not_called()
+    estimation.setup_benchmark.assert_not_called()
+    estimation.printer.assert_not_called()
+
+
+@pytest.mark.parametrize("components", [["QFT"], "qft"])
+def test_suite_estimate_selects_component_entries_in_suite_order(
+    tmp_path, estimation, capsys, components
+):
+    path = _write_suite(
+        tmp_path,
+        [
+            _entry("qft_small", component="qft", shots=10),
+            _entry("wit", component="wit", shots=20),
+            _entry("qft_large", component="qft", shots=30),
+        ],
+        guarded=True,
+    )
+
+    run.estimate_suite(_args(path, components=components))
+
+    assert [call.args[1].shots for call in estimation.setup_benchmark.call_args_list] == [10, 30]
+    assert estimation.printer.call_count == 3
+    output = capsys.readouterr().out
+    assert "qft_small" in output
+    assert "qft_large" in output
+    assert "2/2" in output
+
+
+@pytest.mark.parametrize(
+    ("components", "all_components", "entry_count"),
+    [(None, True, 22), (["QFT", "wit"], False, 5)],
+)
+def test_suite_estimate_supports_bundled_suite_and_repeatable_components(
+    estimation, capsys, components, all_components, entry_count
+):
+    suite = parse_suite_file("metriq_score_1_0")
+    expected_entries = suite.select_components(components) if components else suite.benchmarks
+
+    run.estimate_suite(
+        _args("metriq_score_1_0", components=components, all_components=all_components)
+    )
+
+    estimation.setup_device.assert_called_once_with("ibm", "ibm_phoenix")
+    assert estimation.setup_benchmark.call_count == entry_count
+    assert [call.args[1].benchmark_name for call in estimation.setup_benchmark.call_args_list] == [
+        entry.config["benchmark_name"] for entry in expected_entries
+    ]
+    assert estimation.printer.call_count == entry_count + 1
+    assert f"{entry_count}/{entry_count}" in capsys.readouterr().out
+
+
+def test_suite_estimate_continues_after_invalid_config_capacity_and_handler_failures(
+    tmp_path, estimation, capsys
+):
+    estimation.device.num_qubits = 6
+    path = _write_suite(
+        tmp_path,
+        [
+            _entry("invalid_config", shots=0),
+            _entry("too_many_qubits", num_qubits=7),
+            _entry("unsupported_estimator"),
+            _entry("unexpected_error"),
+            _entry("successful_entry"),
+        ],
+    )
+    estimation.handler.estimate_resources_handler.side_effect = [
+        NotImplementedError("Estimation is not implemented"),
+        RuntimeError("Circuit construction failed"),
+        [CircuitBatch(circuits=[QuantumCircuit(6)], shots=25)],
+    ]
+
+    run.estimate_suite(_args(path))
+
+    assert estimation.setup_benchmark.call_count == 3
+    assert estimation.printer.call_count == 2
+    label, _, _, total = estimation.printer.call_args.args
+    assert "Partial suite total" in label
+    assert total.job_count == 1
+    assert total.circuit_count == 1
+    assert total.total_shots == 25
+    output = capsys.readouterr().out
+    for message in (
+        "invalid_config",
+        "too_many_qubits",
+        "Requested 7 qubits",
+        "supports only 6",
+        "Estimation is not implemented",
+        "Circuit construction failed",
+        "successful_entry",
+        "1/5",
+    ):
+        assert message in output
+
+
+def test_suite_estimate_prints_no_total_when_every_estimator_fails(tmp_path, estimation, capsys):
+    estimation.handler.estimate_resources_handler.side_effect = ValueError("Device is required")
+
+    run.estimate_suite(_args(_write_suite(tmp_path), device=None))
+
+    assert estimation.handler.estimate_resources_handler.call_count == 2
+    estimation.printer.assert_not_called()
+    output = capsys.readouterr().out
+    assert "No benchmarks could be estimated." in output
+    assert "0/2" in output
+
+
+@pytest.mark.parametrize(
+    ("contents", "message"),
+    [("{invalid json}", "Invalid suite configuration"), (None, "not found")],
+)
+def test_suite_estimate_handles_invalid_or_missing_suite(
+    tmp_path, estimation, capsys, contents, message
+):
+    path = tmp_path / "invalid.json"
+    if contents is not None:
+        path.write_text(contents)
+
+    run.estimate_suite(_args(str(path)))
+
+    assert message in capsys.readouterr().out
+    estimation.setup_device.assert_not_called()
+    estimation.setup_benchmark.assert_not_called()
+    estimation.printer.assert_not_called()
+
+
+def test_suite_estimate_handles_empty_suite(tmp_path, estimation, capsys):
+    run.estimate_suite(_args(_write_suite(tmp_path, [])))
+
+    assert "No benchmarks found" in capsys.readouterr().out
+    estimation.setup_device.assert_not_called()
+    estimation.printer.assert_not_called()
