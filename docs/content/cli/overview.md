@@ -25,12 +25,13 @@ Resources:
 | Command | Description |
 |---------|-------------|
 | `mgym job dispatch` | Dispatch a benchmark job to a quantum device or simulator. |
-| `mgym job estimate` | Estimate circuit resource requirements before dispatching jobs. |
+| `mgym job estimate` | Estimate provider usage as a proxy for job costs before dispatching. |
 | `mgym job poll` | Poll job status and retrieve results when complete. |
 | `mgym job view` | View job details and metadata. |
 | `mgym job delete` | Delete a job from the local database. |
 | `mgym job upload` | Upload job results to GitHub via pull request. |
 | `mgym suite dispatch` | Dispatch a suite of benchmark jobs to a quantum device. |
+| `mgym suite estimate` | Estimate provider usage as a proxy for costs across a suite or selected components. |
 | `mgym suite poll` | Poll suite jobs and retrieve results when complete. |
 | `mgym suite view` | View jobs in a suite. |
 | `mgym suite delete` | Delete all jobs in a suite from the local database. |

@@ -1,6 +1,6 @@
 """Utilities for estimating resource requirements of metriq-gym benchmarks."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Callable, Iterable, Sequence
 
 
@@ -8,6 +8,7 @@ from qiskit import QuantumCircuit
 from tabulate import tabulate
 
 from metriq_gym.constants import JobType
+from metriq_gym.platform import AWS_PROVIDER_ALIASES
 
 
 @dataclass
@@ -46,6 +47,9 @@ class ResourceEstimate:
     total_gate_counts: GateCounts
     hqc_total: float | None
     per_circuit: list[CircuitEstimate] = field(default_factory=list)
+    ibm_quantum_seconds: float | None = None
+    ibm_timing_complete: bool = True
+    notes: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -53,6 +57,9 @@ class CircuitBatch:
     # TODO change Qiskit QuantumCircuit to qBraid QProgram
     circuits: list[QuantumCircuit]
     shots: int
+    # Direct Runtime submissions already use physical circuits and bypass qBraid's transform.
+    transpile: bool = True
+    notes: list[str] = field(default_factory=list)
 
 
 def _count_gates(circuit: QuantumCircuit) -> GateCounts:
@@ -104,8 +111,10 @@ def aggregate_resource_estimates(
     total_counts = GateCounts()
     per_circuit: list[CircuitEstimate] = []
     hqc_total: float | None = None
+    notes: list[str] = []
 
     for job_index, batch in enumerate(batches):
+        notes.extend(note for note in batch.notes if note not in notes)
         job_count += 1
         for circuit_index, circuit in enumerate(batch.circuits):
             circuit_count += 1
@@ -141,6 +150,7 @@ def aggregate_resource_estimates(
         total_gate_counts=total_counts,
         hqc_total=hqc_total,
         per_circuit=per_circuit,
+        notes=notes,
     )
 
 
@@ -157,6 +167,37 @@ def quantinuum_hqc_formula(counts: GateCounts, shots: int, num_qubits: int) -> f
 
     gate_term = n_one + 10 * n_two + 5 * n_measure
     return 5.0 + shots * gate_term / 5000.0
+
+
+def merge_resource_estimates(estimates: Iterable[ResourceEstimate]) -> ResourceEstimate:
+    """Combine benchmark estimates without retaining their generated circuits."""
+    total = ResourceEstimate(
+        job_count=0,
+        circuit_count=0,
+        total_shots=0,
+        max_qubits=0,
+        total_gate_counts=GateCounts(),
+        hqc_total=None,
+    )
+    for estimate in estimates:
+        total.per_circuit.extend(
+            replace(circuit, job_index=circuit.job_index + total.job_count)
+            for circuit in estimate.per_circuit
+        )
+        total.job_count += estimate.job_count
+        total.circuit_count += estimate.circuit_count
+        total.total_shots += estimate.total_shots
+        total.max_qubits = max(total.max_qubits, estimate.max_qubits)
+        total.total_gate_counts.add(estimate.total_gate_counts)
+        if estimate.hqc_total is not None:
+            total.hqc_total = (total.hqc_total or 0.0) + estimate.hqc_total
+        if estimate.ibm_quantum_seconds is not None:
+            total.ibm_quantum_seconds = (
+                total.ibm_quantum_seconds or 0.0
+            ) + estimate.ibm_quantum_seconds
+        total.ibm_timing_complete &= estimate.ibm_timing_complete
+        total.notes.extend(note for note in estimate.notes if note not in total.notes)
+    return total
 
 
 def _stat_tuple(values: Sequence[int | float]) -> tuple[str, str, str]:
@@ -176,10 +217,44 @@ def _stat_tuple(values: Sequence[int | float]) -> tuple[str, str, str]:
 
 
 def print_resource_estimate(
-    job_type: JobType, provider: str, device_id: str | None, estimate: ResourceEstimate
+    job_type: JobType | str,
+    provider: str,
+    device_id: str | None,
+    estimate: ResourceEstimate,
+    *,
+    verbose: bool = False,
 ) -> None:
     device_label = device_id if device_id else "(no device)"
-    print(f"Resource estimate for {job_type.value} on {provider}:{device_label}\n")
+    print(f"Cost estimate for {job_type} on {provider}:{device_label}")
+
+    provider_key = provider.strip().lower()
+    seconds = estimate.ibm_quantum_seconds
+    time_label = (
+        "Partial IBM QPU time"
+        if seconds is not None and not estimate.ibm_timing_complete
+        else "Estimated IBM QPU time"
+    )
+    time_value = f"{seconds:,.3f}" if seconds is not None else "n/a"
+    hqc_value = f"{estimate.hqc_total:,.2f}" if estimate.hqc_total is not None else "n/a"
+    if not verbose:
+        if provider_key == "ibm":
+            detail_hint = (
+                " (use --verbose for details)"
+                if seconds is None or not estimate.ibm_timing_complete
+                else ""
+            )
+            print(f"{time_label} (s): {time_value}{detail_hint}")
+        elif provider_key == "quantinuum":
+            print(f"Total HQCs: {hqc_value}")
+        elif provider_key in AWS_PROVIDER_ALIASES:
+            print(f"Total shots: {estimate.total_shots:,}")
+            # Braket submits one task per circuit, including circuits within a batch.
+            print(f"Total tasks: {estimate.circuit_count:,}")
+        else:
+            print(f"No cost estimate for {provider}. Use --verbose for circuit resources.")
+        return
+
+    print()
 
     def fmt_int(value: int) -> str:
         return format(value, ",").replace(",", "_")
@@ -196,12 +271,18 @@ def print_resource_estimate(
         ("Total resets", fmt_int(estimate.total_gate_counts.resets)),
     ]
 
-    if estimate.hqc_total is not None:
-        summary_rows.append(("Total HQCs", f"{estimate.hqc_total:,.2f}"))
-    else:
-        summary_rows.append(("Total HQCs", "n/a"))
+    if provider_key == "quantinuum":
+        summary_rows.append(("Total HQCs", hqc_value))
+    elif provider_key == "ibm":
+        summary_rows.append((f"{time_label} (s)", time_value))
+    elif provider_key in AWS_PROVIDER_ALIASES:
+        summary_rows.append(("Total tasks", fmt_int(estimate.circuit_count)))
 
     print(tabulate(summary_rows, headers=["Metric", "Value"], tablefmt="github"))
+    for note in estimate.notes:
+        print(f"Note: {note}")
+    if provider_key == "ibm" and not estimate.ibm_timing_complete:
+        print("IBM QPU timing is incomplete; any subtotal excludes entries without timing.")
 
     if not estimate.per_circuit:
         return
@@ -225,7 +306,7 @@ def print_resource_estimate(
     ]
 
     hqc_values = [c.hqc for c in estimate.per_circuit if c.hqc is not None]
-    if hqc_values:
+    if provider_key == "quantinuum" and hqc_values:
         stats_rows.append(("HQC per circuit", *_stat_tuple(hqc_values)))
 
     print()
