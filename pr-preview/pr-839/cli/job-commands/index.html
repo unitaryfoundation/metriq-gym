@@ -1999,7 +1999,9 @@ See <a href="https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time"
 <p>If IBM timing metadata is unavailable or <code>--device</code> is omitted, the QPU estimate
 is marked unavailable. Use <code>--verbose</code> for the explanation and any available
 circuit resource counts. <code>--provider quantinuum</code> shows the total H-series Quantum
-Credits (HQCs). Other providers report that no cost estimate is available; use
+Credits (HQCs). <code>--provider aws</code> (or its alias <code>braket</code>) shows total shots and
+total tasks, counting one task per circuit. Add <code>--verbose</code> for the full resource
+breakdown. Other providers report that no cost estimate is available; use
 <code>--verbose</code> to show circuit resources.</p>
 <hr />
 <h2 id="poll">poll<a class="headerlink" href="#poll" title="Permanent link">&para;</a></h2>

@@ -1423,8 +1423,10 @@ changing the meaning of this one.</p>
 <code>--component qft</code> (or another component name). Repeat <code>--component</code> to select
 multiple components. By default, IBM estimates show only the total QPU time in
 seconds, using backend timing metadata and local compilation without submitting
-any jobs. Add <code>-v</code> or <code>--verbose</code> for per-job estimates, circuit resources and
-statistics, and estimation assumptions. HQCs are shown only for Quantinuum.</p>
+any jobs. Quantinuum estimates show only total HQCs, while AWS estimates
+(<code>--provider aws</code> or <code>--provider braket</code>) show total shots and total tasks,
+counting one task per circuit. Add <code>-v</code> or <code>--verbose</code> for per-job estimates,
+circuit resources and statistics, and estimation assumptions.</p>
 <p>The suite's twirled CLOPS estimate uses the circuit template and configured
 number of randomizations and shots. It excludes runtime twirling overhead and
 idle time billed within a session, so actual IBM usage can be higher.</p>
