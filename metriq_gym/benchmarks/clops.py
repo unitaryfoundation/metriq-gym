@@ -506,18 +506,44 @@ class Clops(Benchmark):
         self,
         device: QuantumDevice,
     ) -> list[CircuitBatch]:
-        """
-        Estimates resources needed for the instantiated mode only, as the
-        parameterized and twirled modes require features specific to the
-        cloud platform that are not yet supported.
-        """
-        if self.params.mode != "instantiated":
-            raise NotImplementedError(
-                f"Resource estimation for mode '{self.params.mode}' is not implemented."
+        """Build the submitted workload locally, without opening a session or job."""
+        mode = getattr(self.params, "mode", "instantiated") or "instantiated"
+        is_ibm = isinstance(device, QiskitBackend)
+        if mode in ("parameterized", "twirled") and not is_ibm:
+            raise ValueError(
+                f"CLOPS mode '{mode}' requires the ibm provider, but got {type(device).__name__}."
             )
+        if self.params.use_session and not is_ibm:
+            raise ValueError(
+                f"CLOPS parameter 'use_session=True' requires the ibm provider "
+                f"(QiskitBackend), but got {type(device).__name__}."
+            )
+        if mode not in ("instantiated", "parameterized", "twirled"):
+            raise ValueError(f"Unknown CLOPS mode: '{mode}'")
 
-        template, parameters = self._build_template(device, parameterized=True)
-        circuits = instantiate_circuits(
-            template, parameters, self.params.num_circuits, seed=self.params.seed
-        )
-        return [CircuitBatch(circuits=circuits, shots=self.params.shots)]
+        notes = []
+        template, parameters = self._build_template(device, parameterized=mode != "twirled")
+        if mode == "twirled":
+            # Reuse one template to represent the runtime-generated variants.
+            # Their additional twirling gates are not available before submission.
+            circuits = [template] * self.params.num_circuits
+            notes.append(
+                "Twirled CLOPS uses the untwirled template; runtime twirling overhead is excluded."
+            )
+        else:
+            circuits = instantiate_circuits(
+                template, parameters, self.params.num_circuits, seed=self.params.seed
+            )
+        if is_ibm and self.params.use_session:
+            notes.append("Session idle time is excluded; billed session usage can be higher.")
+        # The direct Sampler paths submit native circuits on their existing
+        # physical qubits; transpiling again could change their timing or layout.
+        direct_sampler = is_ibm and (mode != "instantiated" or self.params.use_session)
+        return [
+            CircuitBatch(
+                circuits=circuits,
+                shots=self.params.shots,
+                transpile=not direct_sampler,
+                notes=notes,
+            )
+        ]

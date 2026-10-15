@@ -206,8 +206,8 @@ def job_estimate(
 ) -> None:
     """Estimate circuit resource requirements before dispatching jobs.
 
-    This is especially useful for understanding costs on paid hardware like Quantinuum.
-    For Quantinuum providers, calculates H-series Quantum Credits (HQCs).
+    IBM estimates QPU seconds using backend timing metadata and local compilation.
+    Quantinuum estimates H-series Quantum Credits (HQCs). No jobs are submitted.
     """
     from metriq_gym.run import estimate_job as _estimate_job
 
@@ -490,8 +490,8 @@ def suite_estimate(
 ) -> None:
     """Estimate resources for suite jobs and show totals without dispatching them.
 
-    Cost estimates use Quantinuum H-series Quantum Credits (HQCs), including
-    when another provider is selected; they are not provider-specific prices.
+    IBM estimates QPU seconds using backend timing metadata and local compilation.
+    Quantinuum estimates H-series Quantum Credits (HQCs).
     """
     from metriq_gym.run import estimate_suite as _estimate_suite
 

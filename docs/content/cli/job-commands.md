@@ -27,7 +27,8 @@ mgym job dispatch <config> [OPTIONS]
 
 ## estimate
 
-Estimate circuit resource requirements before dispatching jobs.
+Estimate circuit resource requirements before dispatching jobs. Circuits are
+constructed and compiled locally; no jobs are submitted or executed on hardware.
 
 ```bash
 mgym job estimate <config> [OPTIONS]
@@ -45,6 +46,20 @@ mgym job estimate <config> [OPTIONS]
 |--------|------|-------------|---------|
 | `--provider, -p` | STR | Provider name (e.g., ibm, braket, azure, ionq, local) | `None` |
 | `--device, -d` | STR | Device identifier | `None` |
+
+With `--provider ibm --device <device>`, the output includes estimated QPU
+seconds and minutes based on the device's timing metadata. Reading that metadata
+requires provider access, but the estimate does not run anything on the device.
+It assumes the default repetition delay, initial reset, and about two seconds
+of overhead per circuit batch. Additional server-side splitting, runtime
+mitigation, and idle time billed within sessions are excluded. This estimates
+QPU usage, not queue time, wall-clock completion time, or a monetary price.
+See [IBM's usage estimation guide](https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time).
+
+If IBM timing metadata is unavailable or `--device` is omitted, circuit resource
+counts are still shown where supported, with the QPU estimate marked unavailable
+and an explanation. `--provider quantinuum` shows H-series Quantum Credits
+(HQCs). Other providers show circuit resources without a cost estimate.
 
 ---
 

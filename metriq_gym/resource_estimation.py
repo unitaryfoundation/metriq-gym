@@ -46,6 +46,9 @@ class ResourceEstimate:
     total_gate_counts: GateCounts
     hqc_total: float | None
     per_circuit: list[CircuitEstimate] = field(default_factory=list)
+    ibm_quantum_seconds: float | None = None
+    ibm_timing_complete: bool = True
+    notes: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -53,6 +56,9 @@ class CircuitBatch:
     # TODO change Qiskit QuantumCircuit to qBraid QProgram
     circuits: list[QuantumCircuit]
     shots: int
+    # Direct Runtime submissions already use physical circuits and bypass qBraid's transform.
+    transpile: bool = True
+    notes: list[str] = field(default_factory=list)
 
 
 def _count_gates(circuit: QuantumCircuit) -> GateCounts:
@@ -104,8 +110,10 @@ def aggregate_resource_estimates(
     total_counts = GateCounts()
     per_circuit: list[CircuitEstimate] = []
     hqc_total: float | None = None
+    notes: list[str] = []
 
     for job_index, batch in enumerate(batches):
+        notes.extend(note for note in batch.notes if note not in notes)
         job_count += 1
         for circuit_index, circuit in enumerate(batch.circuits):
             circuit_count += 1
@@ -141,6 +149,7 @@ def aggregate_resource_estimates(
         total_gate_counts=total_counts,
         hqc_total=hqc_total,
         per_circuit=per_circuit,
+        notes=notes,
     )
 
 
@@ -181,6 +190,12 @@ def merge_resource_estimates(estimates: Iterable[ResourceEstimate]) -> ResourceE
         total.total_gate_counts.add(estimate.total_gate_counts)
         if estimate.hqc_total is not None:
             total.hqc_total = (total.hqc_total or 0.0) + estimate.hqc_total
+        if estimate.ibm_quantum_seconds is not None:
+            total.ibm_quantum_seconds = (
+                total.ibm_quantum_seconds or 0.0
+            ) + estimate.ibm_quantum_seconds
+        total.ibm_timing_complete &= estimate.ibm_timing_complete
+        total.notes.extend(note for note in estimate.notes if note not in total.notes)
     return total
 
 
@@ -221,12 +236,29 @@ def print_resource_estimate(
         ("Total resets", fmt_int(estimate.total_gate_counts.resets)),
     ]
 
-    if estimate.hqc_total is not None:
-        summary_rows.append(("Total HQCs", f"{estimate.hqc_total:,.2f}"))
-    else:
-        summary_rows.append(("Total HQCs", "n/a"))
+    provider_key = provider.strip().lower()
+    if provider_key == "quantinuum":
+        hqc = f"{estimate.hqc_total:,.2f}" if estimate.hqc_total is not None else "n/a"
+        summary_rows.append(("Total HQCs", hqc))
+    elif provider_key == "ibm":
+        seconds = estimate.ibm_quantum_seconds
+        label = (
+            "Partial IBM QPU time"
+            if seconds is not None and not estimate.ibm_timing_complete
+            else "Estimated IBM QPU time"
+        )
+        summary_rows.extend(
+            [
+                (f"{label} (s)", f"{seconds:,.3f}" if seconds is not None else "n/a"),
+                (f"{label} (min)", f"{seconds / 60:,.3f}" if seconds is not None else "n/a"),
+            ]
+        )
 
     print(tabulate(summary_rows, headers=["Metric", "Value"], tablefmt="github"))
+    for note in estimate.notes:
+        print(f"Note: {note}")
+    if provider_key == "ibm" and not estimate.ibm_timing_complete:
+        print("IBM QPU timing is incomplete; any subtotal excludes entries without timing.")
 
     if not estimate.per_circuit:
         return
@@ -250,7 +282,7 @@ def print_resource_estimate(
     ]
 
     hqc_values = [c.hqc for c in estimate.per_circuit if c.hqc is not None]
-    if hqc_values:
+    if provider_key == "quantinuum" and hqc_values:
         stats_rows.append(("HQC per circuit", *_stat_tuple(hqc_values)))
 
     print()

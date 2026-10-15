@@ -44,6 +44,7 @@ def _make_params(**overrides):
         seed=42,
         two_qubit_gate="cz",
         mode="instantiated",
+        use_session=False,
     )
     defaults.update(overrides)
     m = MagicMock()
@@ -276,6 +277,127 @@ def test_dispatch_unknown_mode_raises():
     device = MagicMock()
     with pytest.raises(ValueError, match="Unknown CLOPS mode"):
         clops.dispatch_handler(device)
+
+
+# ---------------------------------------------------------------------------
+# Static resource estimation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("mode", "use_session", "transpile"),
+    [
+        ("instantiated", False, True),
+        ("instantiated", True, False),
+        ("parameterized", False, False),
+        ("parameterized", True, False),
+    ],
+)
+def test_estimate_ibm_binds_submitted_parameters_without_execution(mode, use_session, transpile):
+    clops = _make_clops(mode=mode, use_session=use_session)
+    device = MagicMock(spec=QiskitBackend)
+    template, parameters = prepare_clops_template(
+        width=4, layers=2, two_qubit_gate="cz", topology_graph=_linear_graph(6), seed=42
+    )
+    expected = instantiate_circuits(template, parameters, num_circuits=3, seed=42)
+
+    with (
+        patch.object(clops, "_build_template", return_value=(template, parameters)) as build,
+        patch.object(clops, "_submit_ibm_with_options") as submit,
+        patch("qiskit_ibm_runtime.Session") as session,
+    ):
+        batches = clops.estimate_resources_handler(device)
+
+    assert len(batches) == 1
+    batch = batches[0]
+    assert batch.circuits == expected
+    assert all(not circuit.parameters for circuit in batch.circuits)
+    assert len(batch.circuits) * batch.shots == 30
+    assert batch.transpile is transpile
+    assert batch.notes == (
+        ["Session idle time is excluded; billed session usage can be higher."]
+        if use_session
+        else []
+    )
+    build.assert_called_once_with(device, parameterized=True)
+    device.run.assert_not_called()
+    submit.assert_not_called()
+    session.assert_not_called()
+
+
+def test_estimate_twirled_reuses_template_and_counts_all_randomizations():
+    clops = _make_clops(mode="twirled", num_circuits=1000, shots=100, use_session=True)
+    device = MagicMock(spec=QiskitBackend)
+    template, parameters = prepare_clops_template(
+        width=4,
+        layers=2,
+        two_qubit_gate="cz",
+        topology_graph=_linear_graph(6),
+        parameterized=False,
+    )
+
+    with (
+        patch.object(clops, "_build_template", return_value=(template, parameters)) as build,
+        patch.object(clops, "_submit_ibm_with_options") as submit,
+        patch("qiskit_ibm_runtime.Session") as session,
+        patch("metriq_gym.benchmarks.clops.instantiate_circuits") as instantiate,
+    ):
+        batches = clops.estimate_resources_handler(device)
+
+    assert len(batches) == 1
+    batch = batches[0]
+    assert len(batch.circuits) == 1000
+    assert all(circuit is template for circuit in batch.circuits)
+    assert len(batch.circuits) * batch.shots == 100_000
+    assert batch.transpile is False
+    assert batch.notes == [
+        "Twirled CLOPS uses the untwirled template; runtime twirling overhead is excluded.",
+        "Session idle time is excluded; billed session usage can be higher.",
+    ]
+    build.assert_called_once_with(device, parameterized=False)
+    device.run.assert_not_called()
+    submit.assert_not_called()
+    session.assert_not_called()
+    instantiate.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("mode", "use_session"),
+    [("parameterized", False), ("twirled", False), ("instantiated", True)],
+)
+def test_estimate_ibm_only_options_reject_non_ibm_device(mode, use_session):
+    clops = _make_clops(mode=mode, use_session=use_session)
+    device = MagicMock()
+
+    with (
+        patch.object(clops, "_build_template") as build,
+        pytest.raises(ValueError, match="requires the ibm provider"),
+    ):
+        clops.estimate_resources_handler(device)
+
+    build.assert_not_called()
+    device.run.assert_not_called()
+
+
+def test_estimate_non_ibm_instantiated_transpiles_normally():
+    clops = _make_clops()
+    device = MagicMock()
+    template, parameters = prepare_clops_template(
+        width=4, layers=2, two_qubit_gate="cz", topology_graph=_linear_graph(6)
+    )
+    with patch.object(clops, "_build_template", return_value=(template, parameters)):
+        batch = clops.estimate_resources_handler(device)[0]
+
+    assert batch.transpile is True
+    assert batch.notes == []
+    assert len(batch.circuits) * batch.shots == 30
+    device.run.assert_not_called()
+
+
+def test_estimate_unknown_mode_raises():
+    clops = _make_clops(mode="bogus")
+    with pytest.raises(ValueError, match="Unknown CLOPS mode"):
+        clops.estimate_resources_handler(MagicMock())
 
 
 # ---------------------------------------------------------------------------

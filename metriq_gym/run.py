@@ -1164,6 +1164,29 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
 
 
+def _estimate_resources(batches: list[CircuitBatch], provider: str, device) -> ResourceEstimate:
+    """Add the selected provider's cost model without submitting any workloads."""
+    provider_key = provider.strip().lower()
+    estimate = aggregate_resource_estimates(
+        batches, hqc_fn=quantinuum_hqc_formula if provider_key == "quantinuum" else None
+    )
+    if provider_key == "ibm":
+        from metriq_gym.qplatform.ibm_estimation import estimate_ibm_usage
+
+        try:
+            estimate.ibm_quantum_seconds = estimate_ibm_usage(batches, device)
+            estimate.notes.append(
+                "Static IBM estimate using backend timing and default repetition delay, "
+                "with 2 s overhead per circuit batch. Additional runtime sub-jobs and "
+                "error suppression/mitigation overhead are excluded. No jobs are submitted."
+            )
+        except Exception as exc:
+            estimate.ibm_timing_complete = False
+            estimate.notes.append(f"IBM QPU time unavailable: {type(exc).__name__}: {exc}")
+            logger.debug("IBM timing estimation failure traceback", exc_info=True)
+    return estimate
+
+
 def estimate_suite(args: argparse.Namespace) -> None:
     """Estimate selected suite entries and their total without submitting jobs."""
     selection = _load_selected_suite(args, operation="estimation")
@@ -1185,7 +1208,6 @@ def estimate_suite(args: argparse.Namespace) -> None:
         print("No device specified; estimating resources without device-specific topology.")
 
     print(f"Estimating suite {suite.name} on {args.provider}:{args.device}...")
-    print("HQCs use the Quantinuum formula; they are not a price quote for other providers.")
     estimates: list[ResourceEstimate] = []
     available_benchmarks = _lazy_registry().get_available_benchmarks()
     for entry in selected_benchmarks:
@@ -1198,8 +1220,8 @@ def estimate_suite(args: argparse.Namespace) -> None:
             if device is not None:
                 validate_benchmark_device_capacity(params, device)
             benchmark = setup_benchmark(args, params, job_type)
-            estimate = aggregate_resource_estimates(
-                benchmark.estimate_resources_handler(device), hqc_fn=quantinuum_hqc_formula
+            estimate = _estimate_resources(
+                benchmark.estimate_resources_handler(device), args.provider, device
             )
         except Exception as exc:
             detail = str(exc)
@@ -1265,9 +1287,7 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
 
     try:
         circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
-        resource_estimate = aggregate_resource_estimates(
-            circuit_batches, hqc_fn=quantinuum_hqc_formula
-        )
+        resource_estimate = _estimate_resources(circuit_batches, args.provider, device)
     except (ValueError, NotImplementedError) as exc:
         print(f"✗ {job_type.value}: {exc}")
         return

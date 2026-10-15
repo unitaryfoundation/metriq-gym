@@ -47,7 +47,7 @@ def _args(suite_config, **kwargs):
 
 @pytest.fixture
 def estimation(monkeypatch):
-    device = SimpleNamespace(id="ibm_phoenix", num_qubits=200)
+    device = SimpleNamespace(id="ibm_phoenix", num_qubits=200, run=MagicMock())
     setup_device = MagicMock(return_value=device)
     registry = SimpleNamespace(get_available_benchmarks=lambda: [job.value for job in JobType])
     handler = MagicMock()
@@ -58,22 +58,32 @@ def estimation(monkeypatch):
     printer = MagicMock()
     job_manager = MagicMock()
     new_job = MagicMock()
+
+    def estimate_ibm_usage(batches, device):
+        if device is None:
+            raise ValueError("IBM QPU time estimation requires --device")
+        return 12.5
+
+    ibm_usage = MagicMock(side_effect=estimate_ibm_usage)
     monkeypatch.setattr(run, "setup_device", setup_device)
     monkeypatch.setattr(run, "_lazy_registry", lambda: registry)
     monkeypatch.setattr(run, "setup_benchmark", setup_benchmark)
     monkeypatch.setattr(run, "print_resource_estimate", printer)
     monkeypatch.setattr(run, "JobManager", job_manager)
     monkeypatch.setattr(run, "_new_job", new_job)
+    monkeypatch.setattr("metriq_gym.qplatform.ibm_estimation.estimate_ibm_usage", ibm_usage)
     yield SimpleNamespace(
         device=device,
         setup_device=setup_device,
         handler=handler,
         setup_benchmark=setup_benchmark,
         printer=printer,
+        ibm_usage=ibm_usage,
     )
     handler.dispatch_handler.assert_not_called()
     job_manager.assert_not_called()
     new_job.assert_not_called()
+    device.run.assert_not_called()
 
 
 def test_suite_estimate_sums_real_circuits_and_preserves_entry_estimates(
@@ -143,6 +153,72 @@ def test_suite_estimate_without_device_prints_entry_and_total_tables(
     assert output.count("Total shots") == 3
     assert "first" in output
     assert "second" in output
+    assert "HQC" not in output
+    assert "IBM QPU time" in output
+    assert "n/a" in output
+    assert "--device" in output
+
+
+@pytest.mark.parametrize("provider", ["ibm", "quantinuum", "local", "aws"])
+def test_suite_estimate_uses_only_selected_provider_usage(
+    tmp_path, estimation, monkeypatch, capsys, provider
+):
+    printer = MagicMock(wraps=print_resource_estimate)
+    monkeypatch.setattr(run, "print_resource_estimate", printer)
+
+    run.estimate_suite(_args(_write_suite(tmp_path), provider=provider))
+
+    total = printer.call_args.args[3]
+    assert total.circuit_count == 2
+    assert total.total_shots == 20
+    output = capsys.readouterr().out
+    if provider == "ibm":
+        assert estimation.ibm_usage.call_count == 2
+        for call in estimation.ibm_usage.call_args_list:
+            assert call.args[1] is estimation.device
+        assert total.ibm_quantum_seconds == 25.0
+        assert total.ibm_timing_complete
+        assert "Estimated IBM QPU time (s)" in output
+        assert "Estimated IBM QPU time (min)" in output
+    else:
+        estimation.ibm_usage.assert_not_called()
+        assert total.ibm_quantum_seconds is None
+        assert "IBM QPU time" not in output
+    if provider == "quantinuum":
+        assert total.hqc_total is not None
+        assert total.hqc_total > 0
+        assert "HQC" in output
+    else:
+        assert total.hqc_total is None
+        assert all(circuit.hqc is None for circuit in total.per_circuit)
+        assert "HQC" not in output
+
+
+def test_suite_ibm_timing_failure_keeps_resources_and_marks_usage_total_partial(
+    tmp_path, estimation, monkeypatch, capsys
+):
+    printer = MagicMock(wraps=print_resource_estimate)
+    monkeypatch.setattr(run, "print_resource_estimate", printer)
+    estimation.ibm_usage.side_effect = [12.5, ValueError("Missing measurement duration")]
+
+    run.estimate_suite(_args(_write_suite(tmp_path)))
+
+    first, failed, total = [call.args[3] for call in printer.call_args_list]
+    assert first.ibm_quantum_seconds == 12.5
+    assert first.ibm_timing_complete
+    assert failed.ibm_quantum_seconds is None
+    assert not failed.ibm_timing_complete
+    assert failed.circuit_count == 1
+    assert failed.total_shots == 10
+    assert total.circuit_count == 2
+    assert total.total_shots == 20
+    assert total.ibm_quantum_seconds == 12.5
+    assert not total.ibm_timing_complete
+    output = capsys.readouterr().out
+    assert "Missing measurement duration" in output
+    assert "Partial IBM QPU time (s)" in output
+    assert "Partial IBM QPU time (min)" in output
+    assert "HQC" not in output
 
 
 def test_suite_estimate_requires_provider(tmp_path, estimation, capsys):

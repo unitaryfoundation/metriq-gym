@@ -113,15 +113,32 @@ Component selection follows the same rules as `suite dispatch`: a component
 includes all of its configured scale points, unknown or repeated names are
 rejected, and guarded suites require `--component` or `--all`.
 
-The command uses the same estimator as `job estimate`. Cost figures are
-Quantinuum H-series Quantum Credits (HQCs), even when another provider such as
-IBM is selected. They are reference estimates, not prices or QPU execution-time
-estimates for the selected provider.
+The command uses the same estimator as `job estimate`:
+
+- `--provider ibm` shows estimated QPU seconds and minutes for each job and the
+  selection. Circuits are transpiled and scheduled locally using timing metadata
+  from the selected device. Provider access is needed to read the metadata, but
+  nothing is submitted to or executed on the QPU.
+- `--provider quantinuum` shows H-series Quantum Credits (HQCs).
+- Other providers show circuit resource counts without a cost estimate.
+
+IBM estimates assume the default repetition delay, initial reset, and about two
+seconds of overhead per circuit batch, treating each batch as one execution
+sub-job. Additional server-side splitting and runtime mitigation are excluded.
+The estimate describes QPU usage, not queue time, wall-clock completion time,
+or a monetary price. Sessions can also bill idle time between executions, which
+cannot be determined statically and is excluded. See
+[IBM's usage estimation guide](https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time).
 
 Some benchmarks need a device to determine resources such as available qubit
 pairs. If a job cannot be estimated, the command reports the failure and
 continues with the remaining jobs. Totals are marked as partial when any job
 fails and cover only successfully estimated jobs.
+
+If IBM timing estimation fails, circuit resource counts are retained and the
+reason is printed. QPU usage is marked unavailable when no timings are available,
+or partial when only some selected jobs have timings. Omitting `--device` also
+leaves IBM timing unavailable.
 
 ---
 
