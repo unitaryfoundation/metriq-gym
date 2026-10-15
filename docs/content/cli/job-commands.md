@@ -61,7 +61,9 @@ See [IBM's usage estimation guide](https://quantum.cloud.ibm.com/docs/en/guides/
 If IBM timing metadata is unavailable or `--device` is omitted, the QPU estimate
 is marked unavailable. Use `--verbose` for the explanation and any available
 circuit resource counts. `--provider quantinuum` shows the total H-series Quantum
-Credits (HQCs). Other providers report that no cost estimate is available; use
+Credits (HQCs). `--provider aws` (or its alias `braket`) shows total shots and
+total tasks, counting one task per circuit. Add `--verbose` for the full resource
+breakdown. Other providers report that no cost estimate is available; use
 `--verbose` to show circuit resources.
 
 ---

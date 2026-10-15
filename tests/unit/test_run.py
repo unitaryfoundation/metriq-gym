@@ -645,7 +645,7 @@ def job_estimation(tmp_path, monkeypatch):
     job_manager.add_job.assert_not_called()
 
 
-@pytest.mark.parametrize("provider", ["ibm", "quantinuum", "local", "aws"])
+@pytest.mark.parametrize("provider", ["ibm", "quantinuum", "local", "aws", "braket"])
 def test_estimate_job_uses_only_selected_provider_usage(job_estimation, capsys, provider):
     job_estimation.args.provider = provider
 
@@ -674,10 +674,42 @@ def test_estimate_job_uses_only_selected_provider_usage(job_estimation, capsys, 
         assert all(circuit.hqc is None for circuit in result.per_circuit)
         assert "HQC" not in output
     assert job_estimation.printer.call_args.kwargs == {"verbose": False}
-    assert "Total shots" not in output
+    if provider in {"aws", "braket"}:
+        assert output == "Total shots: 16\nTotal tasks: 1\n"
+    else:
+        assert "Total shots" not in output
     assert "benchmark chatter" not in output
     assert "benchmark setup chatter" not in output
     assert "(min)" not in output
+
+
+@pytest.mark.parametrize("verbose", [False, True])
+def test_estimate_job_aws_counts_one_task_per_circuit(job_estimation, capsys, verbose):
+    job_estimation.args.provider = "aws"
+    job_estimation.args.verbose = verbose
+    circuit = QuantumCircuit(6)
+    job_estimation.batches[:] = [
+        CircuitBatch(circuits=[circuit, circuit], shots=16),
+        CircuitBatch(circuits=[circuit], shots=1000),
+    ]
+
+    estimate_job(job_estimation.args, job_estimation.job_manager)
+
+    result = job_estimation.printer.call_args.args[3]
+    assert result.job_count == 2
+    assert result.circuit_count == 3
+    assert result.total_shots == 1032
+    job_estimation.ibm_usage.assert_not_called()
+    output = capsys.readouterr().out
+    if verbose:
+        assert "Total tasks" in output
+        assert "Total shots" in output
+        assert "Max qubits" in output
+        assert "Resource estimate for WIT" in output
+    else:
+        assert output == "Total shots: 1,032\nTotal tasks: 3\n"
+    assert "HQC" not in output
+    assert "IBM QPU time" not in output
 
 
 def test_estimate_job_verbose_prints_resource_details(job_estimation, capsys):

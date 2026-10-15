@@ -32,8 +32,10 @@ To estimate one component and all its scale points, replace `--all` with
 `--component qft` (or another component name). Repeat `--component` to select
 multiple components. By default, IBM estimates show only the total QPU time in
 seconds, using backend timing metadata and local compilation without submitting
-any jobs. Add `-v` or `--verbose` for per-job estimates, circuit resources and
-statistics, and estimation assumptions. HQCs are shown only for Quantinuum.
+any jobs. Quantinuum estimates show only total HQCs, while AWS estimates
+(`--provider aws` or `--provider braket`) show total shots and total tasks,
+counting one task per circuit. Add `-v` or `--verbose` for per-job estimates,
+circuit resources and statistics, and estimation assumptions.
 
 The suite's twirled CLOPS estimate uses the circuit template and configured
 number of randomizations and shots. It excludes runtime twirling overhead and

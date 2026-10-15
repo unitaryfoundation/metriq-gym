@@ -217,7 +217,8 @@ def job_estimate(
     """Estimate circuit resource requirements before dispatching jobs.
 
     IBM estimates QPU seconds using backend timing metadata and local compilation.
-    Quantinuum estimates H-series Quantum Credits (HQCs). No jobs are submitted.
+    Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
+    total shots and tasks, counting one task per circuit. No jobs are submitted.
     """
     from metriq_gym.run import estimate_job as _estimate_job
 
@@ -503,7 +504,8 @@ def suite_estimate(
     """Estimate resources for suite jobs and show totals without dispatching them.
 
     IBM estimates QPU seconds using backend timing metadata and local compilation.
-    Quantinuum estimates H-series Quantum Credits (HQCs).
+    Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
+    total shots and tasks, counting one task per circuit.
     """
     from metriq_gym.run import estimate_suite as _estimate_suite
 

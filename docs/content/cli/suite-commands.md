@@ -123,6 +123,8 @@ The command uses the same estimator as `job estimate`:
   access is needed to read the metadata, but
   nothing is submitted to or executed on the QPU.
 - `--provider quantinuum` shows total H-series Quantum Credits (HQCs).
+- `--provider aws` (or its alias `braket`) shows total shots and total tasks,
+  counting one task per circuit. Use `--verbose` for the full resource breakdown.
 - Other providers report that no cost estimate is available. Use `--verbose` to
   show circuit resources.
 

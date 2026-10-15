@@ -8,6 +8,7 @@ from qiskit import QuantumCircuit
 from tabulate import tabulate
 
 from metriq_gym.constants import JobType
+from metriq_gym.platform import AWS_PROVIDER_ALIASES
 
 
 @dataclass
@@ -242,6 +243,10 @@ def print_resource_estimate(
             print(f"{time_label} (s): {time_value}{detail_hint}")
         elif provider_key == "quantinuum":
             print(f"Total HQCs: {hqc_value}")
+        elif provider_key in AWS_PROVIDER_ALIASES:
+            print(f"Total shots: {estimate.total_shots:,}")
+            # Braket submits one task per circuit, including circuits within a batch.
+            print(f"Total tasks: {estimate.circuit_count:,}")
         else:
             print(f"No cost estimate for {provider}. Use --verbose for circuit resources.")
         return
@@ -268,6 +273,8 @@ def print_resource_estimate(
         summary_rows.append(("Total HQCs", hqc_value))
     elif provider_key == "ibm":
         summary_rows.append((f"{time_label} (s)", time_value))
+    elif provider_key in AWS_PROVIDER_ALIASES:
+        summary_rows.append(("Total tasks", fmt_int(estimate.circuit_count)))
 
     print(tabulate(summary_rows, headers=["Metric", "Value"], tablefmt="github"))
     for note in estimate.notes:

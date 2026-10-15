@@ -39,7 +39,13 @@ def _estimate(*, seconds=None, complete=True, notes=()):
 
 @pytest.mark.parametrize(
     ("provider", "show_hqc", "show_ibm"),
-    [("quantinuum", True, False), ("ibm", False, True), ("local", False, False)],
+    [
+        ("quantinuum", True, False),
+        ("ibm", False, True),
+        ("local", False, False),
+        ("aws", False, False),
+        ("braket", False, False),
+    ],
 )
 def test_print_estimate_only_shows_selected_provider_costs(provider, show_hqc, show_ibm, capsys):
     # Even an estimate carrying both fields must only display the chosen provider's units.
@@ -51,6 +57,7 @@ def test_print_estimate_only_shows_selected_provider_costs(provider, show_hqc, s
     assert ("Estimated IBM QPU time (s)" in output) is show_ibm
     assert "QPU time (min)" not in output
     assert "Total shots" in output
+    assert ("Total tasks" in output) is (provider in {"aws", "braket"})
 
 
 @pytest.mark.parametrize(
@@ -106,6 +113,8 @@ def test_print_unavailable_ibm_time(capsys):
     [
         ("ibm", "Estimated IBM QPU time (s): 90.000\n"),
         ("quantinuum", "Total HQCs: 5.22\n"),
+        ("aws", "Total shots: 100\nTotal tasks: 1\n"),
+        ("braket", "Total shots: 100\nTotal tasks: 1\n"),
         ("local", "No cost estimate for local. Use --verbose for circuit resources.\n"),
     ],
 )
@@ -115,6 +124,31 @@ def test_default_output_is_only_the_provider_summary(provider, expected, capsys)
     )
 
     assert capsys.readouterr().out == expected
+
+
+@pytest.mark.parametrize("provider", ["aws", "braket", " AWS ", " Braket "])
+@pytest.mark.parametrize("verbose", [False, True])
+def test_aws_counts_each_circuit_as_a_task(provider, verbose, capsys):
+    circuit = QuantumCircuit(1)
+    estimate = aggregate_resource_estimates(
+        [CircuitBatch([circuit, circuit], shots=1_000), CircuitBatch([circuit], shots=2_500)]
+    )
+    assert estimate.job_count == 2
+
+    print_resource_estimate("test", provider, "device", estimate, verbose=verbose)
+
+    output = capsys.readouterr().out
+    if verbose:
+        rows = [
+            tuple(cell.strip() for cell in line.strip("|").split("|"))
+            for line in output.splitlines()
+        ]
+        assert ("Total shots", "4_500") in rows
+        assert ("Total tasks", "3") in rows
+        assert ("Jobs", "2") in rows
+        assert ("Circuits", "3") in rows
+    else:
+        assert output == "Total shots: 4,500\nTotal tasks: 3\n"
 
 
 @pytest.mark.parametrize("seconds", [None, 12.5])

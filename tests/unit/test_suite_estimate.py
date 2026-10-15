@@ -170,7 +170,7 @@ def test_suite_estimate_without_device_prints_entry_and_total_tables(
     assert "--device" in output
 
 
-@pytest.mark.parametrize("provider", ["ibm", "quantinuum", "local", "aws"])
+@pytest.mark.parametrize("provider", ["ibm", "quantinuum", "local", "aws", "braket"])
 def test_suite_estimate_uses_only_selected_provider_usage(
     tmp_path, estimation, monkeypatch, capsys, provider
 ):
@@ -204,11 +204,47 @@ def test_suite_estimate_uses_only_selected_provider_usage(
         assert total.hqc_total is None
         assert all(circuit.hqc is None for circuit in total.per_circuit)
         assert "HQC" not in output
-    assert "Total shots" not in output
+    if provider in {"aws", "braket"}:
+        assert output == "Total shots: 20\nTotal tasks: 2\n"
+    else:
+        assert "Total shots" not in output
     assert "benchmark chatter" not in output
     assert "benchmark setup chatter" not in output
     assert "Estimating" not in output
     assert "(min)" not in output
+
+
+@pytest.mark.parametrize("verbose", [False, True])
+def test_suite_estimate_aws_aggregates_shots_and_circuit_tasks(
+    tmp_path, estimation, monkeypatch, capsys, verbose
+):
+    printer = MagicMock(wraps=print_resource_estimate)
+    monkeypatch.setattr(run, "print_resource_estimate", printer)
+    circuit = QuantumCircuit(6)
+    estimation.handler.estimate_resources_handler.side_effect = [
+        [CircuitBatch(circuits=[circuit, circuit], shots=10)],
+        [CircuitBatch(circuits=[circuit], shots=20), CircuitBatch(circuits=[circuit], shots=30)],
+    ]
+
+    run.estimate_suite(_args(_write_suite(tmp_path), provider="aws", verbose=verbose))
+
+    total = printer.call_args.args[3]
+    assert total.job_count == 3
+    assert total.circuit_count == 4
+    assert total.total_shots == 70
+    estimation.ibm_usage.assert_not_called()
+    output = capsys.readouterr().out
+    if verbose:
+        assert printer.call_count == 3
+        assert output.count("Total tasks") == 3
+        assert output.count("Total shots") == 3
+        assert "Max qubits" in output
+        assert "Suite total" in output
+    else:
+        printer.assert_called_once()
+        assert output == "Total shots: 70\nTotal tasks: 4\n"
+    assert "HQC" not in output
+    assert "IBM QPU time" not in output
 
 
 def test_suite_estimate_verbose_prints_entries_and_total(tmp_path, estimation, monkeypatch, capsys):
