@@ -1961,8 +1961,9 @@ component and scale-point reference.</p>
 <hr />
 <h2 id="estimate">estimate<a class="headerlink" href="#estimate" title="Permanent link">&para;</a></h2>
 <p>Estimate circuit resources and costs for a suite before dispatching jobs. The
-command prints estimates for each selected job and totals for the selection,
-without submitting jobs or recording them in the local database.</p>
+command prints the total for the selection, without submitting jobs or recording
+them in the local database. Add <code>-v</code> or <code>--verbose</code> for per-job estimates, circuit
+resources and statistics, and estimation assumptions.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mgym<span class="w"> </span>suite<span class="w"> </span>estimate<span class="w"> </span>&lt;suite_config&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </code></pre></div>
 <h3 id="arguments_1">Arguments<a class="headerlink" href="#arguments_1" title="Permanent link">&para;</a></h3>
@@ -2019,6 +2020,12 @@ without submitting jobs or recording them in the local database.</p>
 <td>Explicitly estimate every component, including guarded full suites</td>
 <td><code>False</code></td>
 </tr>
+<tr>
+<td><code>--verbose, -v</code></td>
+<td>BOOL</td>
+<td>Show per-job resources, circuit statistics, and estimation assumptions</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
 <h3 id="estimate-the-complete-metriq-score-suite">Estimate the complete Metriq Score suite<a class="headerlink" href="#estimate-the-complete-metriq-score-suite" title="Permanent link">&para;</a></h3>
@@ -2034,12 +2041,14 @@ includes all of its configured scale points, unknown or repeated names are
 rejected, and guarded suites require <code>--component</code> or <code>--all</code>.</p>
 <p>The command uses the same estimator as <code>job estimate</code>:</p>
 <ul>
-<li><code>--provider ibm</code> shows estimated QPU seconds and minutes for each job and the
-  selection. Circuits are transpiled and scheduled locally using timing metadata
-  from the selected device. Provider access is needed to read the metadata, but
+<li><code>--provider ibm</code> shows total estimated QPU time in seconds. With <code>--verbose</code>,
+  each job's estimate is also shown in seconds. Circuits are transpiled and
+  scheduled locally using timing metadata from the selected device. Provider
+  access is needed to read the metadata, but
   nothing is submitted to or executed on the QPU.</li>
-<li><code>--provider quantinuum</code> shows H-series Quantum Credits (HQCs).</li>
-<li>Other providers show circuit resource counts without a cost estimate.</li>
+<li><code>--provider quantinuum</code> shows total H-series Quantum Credits (HQCs).</li>
+<li>Other providers report that no cost estimate is available. Use <code>--verbose</code> to
+  show circuit resources.</li>
 </ul>
 <p>IBM estimates assume the default repetition delay, initial reset, and about two
 seconds of overhead per circuit batch, treating each batch as one execution
@@ -2052,10 +2061,10 @@ cannot be determined statically and is excluded. See
 pairs. If a job cannot be estimated, the command reports the failure and
 continues with the remaining jobs. Totals are marked as partial when any job
 fails and cover only successfully estimated jobs.</p>
-<p>If IBM timing estimation fails, circuit resource counts are retained and the
-reason is printed. QPU usage is marked unavailable when no timings are available,
-or partial when only some selected jobs have timings. Omitting <code>--device</code> also
-leaves IBM timing unavailable.</p>
+<p>If IBM timing estimation fails, QPU usage is marked unavailable when no timings
+are available, or partial when only some selected jobs have timings. Use
+<code>--verbose</code> for the reasons and any available circuit resource counts. Omitting
+<code>--device</code> also leaves IBM timing unavailable.</p>
 <hr />
 <h2 id="poll">poll<a class="headerlink" href="#poll" title="Permanent link">&para;</a></h2>
 <p>Poll suite jobs and retrieve results when complete.</p>

@@ -1979,20 +1979,28 @@ constructed and compiled locally; no jobs are submitted or executed on hardware.
 <td>Device identifier</td>
 <td><code>None</code></td>
 </tr>
+<tr>
+<td><code>--verbose, -v</code></td>
+<td>BOOL</td>
+<td>Show per-job resources, circuit statistics, and estimation assumptions</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
-<p>With <code>--provider ibm --device &lt;device&gt;</code>, the output includes estimated QPU
-seconds and minutes based on the device's timing metadata. Reading that metadata
-requires provider access, but the estimate does not run anything on the device.
+<p>With <code>--provider ibm --device &lt;device&gt;</code>, the default output is the estimated QPU
+time in seconds based on the device's timing metadata. Add <code>-v</code> or <code>--verbose</code>
+to show circuit resources, statistics, and estimation assumptions. Reading that
+metadata requires provider access, but the estimate does not run anything on the device.
 It assumes the default repetition delay, initial reset, and about two seconds
 of overhead per circuit batch. Additional server-side splitting, runtime
 mitigation, and idle time billed within sessions are excluded. This estimates
 QPU usage, not queue time, wall-clock completion time, or a monetary price.
 See <a href="https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time">IBM's usage estimation guide</a>.</p>
-<p>If IBM timing metadata is unavailable or <code>--device</code> is omitted, circuit resource
-counts are still shown where supported, with the QPU estimate marked unavailable
-and an explanation. <code>--provider quantinuum</code> shows H-series Quantum Credits
-(HQCs). Other providers show circuit resources without a cost estimate.</p>
+<p>If IBM timing metadata is unavailable or <code>--device</code> is omitted, the QPU estimate
+is marked unavailable. Use <code>--verbose</code> for the explanation and any available
+circuit resource counts. <code>--provider quantinuum</code> shows the total H-series Quantum
+Credits (HQCs). Other providers report that no cost estimate is available; use
+<code>--verbose</code> to show circuit resources.</p>
 <hr />
 <h2 id="poll">poll<a class="headerlink" href="#poll" title="Permanent link">&para;</a></h2>
 <p>Poll job status and retrieve results when complete.</p>
