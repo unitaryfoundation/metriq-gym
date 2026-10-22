@@ -249,7 +249,7 @@ def test_failed_jobs_summary_none_when_nothing_failed():
     assert failed_jobs_summary([_qiskit_job_with("q-1", JobStatus.QUEUED)]) is None
 
 
-# --- NEXUS status refinement and error_detail surfacing (#813) ---------------------
+# --- Quantinuum error_detail surfacing (#813) --------------------------------------
 
 
 def test_failure_reason_quantinuum_prefers_error_detail():
@@ -293,66 +293,3 @@ def test_failure_reason_quantinuum_missing_status_detail_falls_back():
     with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref):
         job = QuantinuumJob(job_id="test-job-id")
         assert failure_reason(job) == "compile error"
-
-
-@pytest.mark.parametrize(
-    ("nexus_status", "expected"),
-    [
-        ("SUBMITTED", JobStatus.QUEUED),
-        ("RETRYING", JobStatus.RUNNING),
-        ("CANCELLING", JobStatus.CANCELLING),
-        ("TERMINATED", JobStatus.FAILED),
-        ("DEPLETED", JobStatus.FAILED),
-    ],
-)
-def test_job_status_quantinuum_refines_unmapped_nexus_states(nexus_status, expected):
-    """NEXUS states qBraid leaves unmapped must not surface as UNKNOWN."""
-    mock_ref = MagicMock()
-    mock_ref.last_status = nexus_status
-
-    with (
-        patch.object(QuantinuumJob, "status", return_value=JobStatus.UNKNOWN),
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
-    ):
-        info = job_status(QuantinuumJob(job_id="test-job-id"))
-
-    assert info.status == expected
-    assert info.queue_position is None
-
-
-def test_job_status_quantinuum_keeps_provider_mapped_status():
-    """A status qBraid already maps correctly is never overridden by the refinement."""
-    mock_ref = MagicMock()
-    mock_ref.last_status = "SUBMITTED"
-
-    with (
-        patch.object(QuantinuumJob, "status", return_value=JobStatus.RUNNING),
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
-    ):
-        info = job_status(QuantinuumJob(job_id="test-job-id"))
-
-    assert info.status == JobStatus.RUNNING
-
-
-def test_job_status_quantinuum_unrecognised_state_stays_unknown():
-    mock_ref = MagicMock()
-    mock_ref.last_status = "SOMETHING_NEW"
-
-    with (
-        patch.object(QuantinuumJob, "status", return_value=JobStatus.UNKNOWN),
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
-    ):
-        info = job_status(QuantinuumJob(job_id="test-job-id"))
-
-    assert info.status == JobStatus.UNKNOWN
-
-
-def test_job_status_quantinuum_stays_unknown_when_ref_unavailable():
-    """A broken NEXUS lookup must degrade to UNKNOWN rather than raise."""
-    with (
-        patch.object(QuantinuumJob, "status", return_value=JobStatus.UNKNOWN),
-        patch.object(QuantinuumJob, "_get_ref", side_effect=RuntimeError("offline")),
-    ):
-        info = job_status(QuantinuumJob(job_id="test-job-id"))
-
-    assert info.status == JobStatus.UNKNOWN

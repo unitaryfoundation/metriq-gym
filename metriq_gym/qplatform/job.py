@@ -211,38 +211,3 @@ def _(quantum_job: BraketQuantumTask) -> JobStatusInfo:
 @job_status.register
 def _(quantum_job: AzureQuantumJob) -> JobStatusInfo:
     return extract_status_info(quantum_job, supports_queue_position=False)
-
-
-# NEXUS reports states that qBraid's Quantinuum provider does not translate, so they
-# collapse to ``JobStatus.UNKNOWN`` and a healthy, freshly dispatched job looks unknown
-# in ``mgym job poll``. Only the UNKNOWN result is refined below, so every status qBraid
-# maps correctly is left exactly as the provider reported it.
-_QUANTINUUM_UNMAPPED_STATUS: dict[str, JobStatus] = {
-    "SUBMITTED": JobStatus.QUEUED,
-    "RETRYING": JobStatus.RUNNING,
-    "CANCELLING": JobStatus.CANCELLING,
-    "TERMINATED": JobStatus.FAILED,
-    "DEPLETED": JobStatus.FAILED,
-}
-
-
-def _refine_unknown_quantinuum_status(quantum_job: QuantinuumJob) -> JobStatus | None:
-    """Translate a NEXUS state qBraid leaves unmapped, or None when it has no opinion."""
-    try:
-        last_status = quantum_job._get_ref().last_status
-    except Exception:
-        return None
-    if not isinstance(last_status, str):
-        return None
-    return _QUANTINUUM_UNMAPPED_STATUS.get(last_status.upper())
-
-
-@job_status.register
-def _(quantum_job: QuantinuumJob) -> JobStatusInfo:
-    info = extract_status_info(quantum_job, supports_queue_position=False)
-    if info.status is not JobStatus.UNKNOWN:
-        return info
-    refined = _refine_unknown_quantinuum_status(quantum_job)
-    if refined is None:
-        return info
-    return JobStatusInfo(status=refined, queue_position=None)
