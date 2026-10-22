@@ -16,7 +16,7 @@ license-files = [
     "submodules/QC-App-Oriented-Benchmarks/LICENSE"
 ]
 dynamic = ["version"]
-requires-python = ">=3.12,<3.15"
+requires-python = ">=3.12,<3.16"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -28,7 +28,8 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14"
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15"
 ]
 dependencies = [
     "jsonschema>=4.25.1,<5.0.0",
@@ -36,26 +37,25 @@ dependencies = [
     "pydantic>=2.5.0,<2.15",
     # Braket uses pydantic.v1, whose Python 3.14 support starts in Pydantic 2.13.
     "pydantic>=2.13; python_version >= '3.14'",
-    "numpy>=1.26.4,<3.0.0",
-    "numpy>=2.1; python_version >= '3.13'",
-    "numpy>=2.3.3; python_version >= '3.14'",
+    "numpy>=2.5.2,<3.0.0",
     "networkx>=3.6.1,<4.0.0",
     "rustworkx>=0.17.1,<0.19.0",
     "qiskit[qasm3-import]>=1.4.3,<3.0",
     "qiskit-experiments>=0.9.0,<0.15.0",
-    "qiskit-aer>=0.17.1,<0.18.0",
+    "qiskit-aer>=0.18.0,<0.19.0",
     "qiskit-ibm-runtime>=0.41.1,<0.51.0",
     "qbraid-core>=0.1.45,<0.7.0",
-    "scipy>=1.16.2,<2.0.0",
+    "scipy>=1.18.1,<2.0.0",
     "tabulate>=0.9.0,<0.11.0",
     "typer>=0.21.1,<1.0.0",
-    "qbraid[ionq,qiskit,braket,azure,quantinuum,origin]>=0.12.2,<0.14.0",
+    "qbraid[ionq,qiskit,braket,azure,quantinuum]>=0.12.2,<0.14.0",
+    # OriginQ's SDK has no Python 3.15 distribution yet.
+    "qbraid[origin]>=0.12.2,<0.14.0; python_version < '3.15'",
     "amazon-braket-sdk>=1.111.1",
     "platformdirs>=4.4.0,<5.0.0",
     "dimod>=0.12.20,<0.13.0",
     "pytket-qiskit>=0.71.0,<0.80.0",
-    "pyqpanda3>=0.3.2",
-    "pyqpanda3>=0.3.5; python_version >= '3.14'",
+    "pyqpanda3>=0.3.5; python_version < '3.15'",
 ]
 
 [project.scripts]

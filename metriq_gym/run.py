@@ -4,6 +4,7 @@ import argparse
 from contextlib import nullcontext, redirect_stdout
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from importlib.util import find_spec
 from io import StringIO
 import os
 import sys
@@ -52,11 +53,21 @@ class FetchResultOutput:
     from_cache: bool = False
 
 
+def _require_origin_sdk(provider_name: str) -> None:
+    """Check optional Origin support before provider credentials or network access."""
+    if provider_name.strip().lower() == "origin" and find_spec("pyqpanda3") is None:
+        raise QBraidSetupError(
+            "OriginQ requires the pyqpanda3 SDK, which is not installed. "
+            "Use Python 3.12–3.14 and reinstall metriq-gym for OriginQ support."
+        )
+
+
 def load_provider(provider_name: str):
     """Lazy proxy to qbraid.runtime.load_provider.
 
     Exposed at module level so tests can monkeypatch `metriq_gym.run.load_provider`.
     """
+    _require_origin_sdk(provider_name)
     from qbraid.runtime import load_provider as _load_provider
 
     return _load_provider(canonical_provider_name(provider_name))
@@ -77,6 +88,7 @@ def load_job(job_id: str, *, provider: str, **kwargs):
 
     Exposed at module level so tests can monkeypatch `metriq_gym.run.load_job`.
     """
+    _require_origin_sdk(provider)
     from qbraid.runtime import load_job as _load_job
 
     return _load_job(job_id, provider=canonical_provider_name(provider), **kwargs)
@@ -158,6 +170,9 @@ def setup_device(provider_name: str, device_name: str):
 
     try:
         provider = load_provider(provider_name)
+    except QBraidSetupError as exc:
+        logger.error("%s", exc)
+        raise
     except QbraidError:
         providers = ", ".join(get_providers())
         logger.error(f"No provider matching the name '{provider_name}' found.")
@@ -512,7 +527,11 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not metriq_job:
         return
     print("Polling job...")
-    fetch_output = fetch_result(metriq_job, args, job_manager)
+    try:
+        fetch_output = fetch_result(metriq_job, args, job_manager)
+    except QBraidSetupError as exc:
+        print(f"✗ Could not fetch status/results for job {metriq_job.id}: {exc}")
+        return
     if fetch_output is None:
         if metriq_job.failed:
             print(f"Job {metriq_job.id} failed and has no results.")
@@ -548,7 +567,7 @@ def _resolve_upload_outcome(
             choices = ", ".join(o.value for o in RecordOutcome)
             print(f"Error: --outcome must be one of {choices}; got '{raw_outcome}'.")
             return None
-    if outcome in HUMAN_OUTCOMES and not reason:
+    if outcome is not None and outcome in HUMAN_OUTCOMES and not reason:
         print(f"Error: --outcome {outcome.value} requires --reason explaining the classification.")
         return None
     if reason and outcome is None:
@@ -703,7 +722,11 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     completed_jobs: list[MetriqGymJob] = []
     results: list[Any] = []
     for metriq_job in jobs:
-        fetch_output = fetch_result(metriq_job, args, job_manager)
+        try:
+            fetch_output = fetch_result(metriq_job, args, job_manager)
+        except QBraidSetupError as exc:
+            print(f"✗ Could not fetch status/results for job {metriq_job.id}: {exc}")
+            return
         if fetch_output is None:
             if metriq_job.failed:
                 # Failed jobs have nothing to tabulate; report and keep going so one

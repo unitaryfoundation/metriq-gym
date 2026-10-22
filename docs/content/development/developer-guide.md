@@ -6,7 +6,7 @@ This guide covers setting up a development environment for contributing to Metri
 
 Before you begin, ensure you have:
 
-- [Python](https://www.python.org/downloads/) (version 3.12 or newer)
+- [Python](https://www.python.org/downloads/) (version 3.12–3.15)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management
 - [Git](https://git-scm.com/) for version control
 
@@ -252,7 +252,7 @@ version as their tag after Python version normalization (for example,
 that passed these checks.
 
 The wheel is installed in fresh environments on Linux and macOS with Python
-3.12, 3.13, and 3.14. The source distribution is independently installed on Linux with
+3.12, 3.13, 3.14, and 3.15. The source distribution is independently installed on Linux with
 Python 3.12. These installs resolve the dependencies declared in the package,
 without the development environment or `uv.lock`.
 
