@@ -1799,8 +1799,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "pydantic", version = "2.12.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
-    { name = "pyqpanda3", version = "0.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
-    { name = "pyqpanda3", version = "0.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.14.*'" },
+    { name = "pyqpanda3", marker = "python_full_version < '3.15'" },
     { name = "python-dotenv" },
     { name = "pytket-qiskit" },
     { name = "qbraid", extra = ["azure", "braket", "ionq", "qiskit", "quantinuum"] },
@@ -1847,14 +1846,11 @@ requires-dist = [
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.0" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.24" },
     { name = "networkx", specifier = ">=3.6.1,<4.0.0" },
-    { name = "numpy", specifier = ">=1.26.4,<3.0.0" },
-    { name = "numpy", marker = "python_full_version >= '3.13'", specifier = ">=2.1" },
-    { name = "numpy", marker = "python_full_version >= '3.14'", specifier = ">=2.3.3" },
+    { name = "numpy", specifier = ">=2.5.2,<3.0.0" },
     { name = "platformdirs", specifier = ">=4.4.0,<5.0.0" },
     { name = "pydantic", specifier = ">=2.5.0,<2.15" },
     { name = "pydantic", marker = "python_full_version >= '3.14'", specifier = ">=2.13" },
-    { name = "pyqpanda3", marker = "python_full_version == '3.14.*'", specifier = ">=0.3.5" },
-    { name = "pyqpanda3", marker = "python_full_version < '3.15'", specifier = ">=0.3.2" },
+    { name = "pyqpanda3", marker = "python_full_version < '3.15'", specifier = ">=0.3.5" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.80.0" },
     { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit", "quantinuum"], specifier = ">=0.12.2,<0.14.0" },
@@ -2966,46 +2962,17 @@ wheels = [
 
 [[package]]
 name = "pyqpanda3"
-version = "0.3.4"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version == '3.13.*'",
-    "python_full_version < '3.13'",
-]
-dependencies = [
-    { name = "cython", marker = "python_full_version < '3.14'" },
-    { name = "graphviz", marker = "python_full_version < '3.14'" },
-    { name = "matplotlib", marker = "python_full_version < '3.14'" },
-    { name = "mypy", marker = "python_full_version < '3.14'" },
-    { name = "networkx", marker = "python_full_version < '3.14'" },
-    { name = "numpy", marker = "python_full_version < '3.14'" },
-    { name = "setuptools", marker = "python_full_version < '3.14'" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/a3/3af2be4a54ab2366621ff3f8306428b7f84c1c2153d5b3388bb42257e499/pyqpanda3-0.3.4-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:59c6f4c4924713d72607142aedeb8f7070387b741c3ea0db355ac028f5b91d4d", size = 16468136, upload-time = "2026-03-11T09:41:43.28Z" },
-    { url = "https://files.pythonhosted.org/packages/61/e7/822328bccef770e10c00ae1772a4175c0198758a82e9c625d916849ccdd1/pyqpanda3-0.3.4-cp312-none-manylinux1_x86_64.whl", hash = "sha256:ee6bd0e4a4f56f6e4ec05984caad39b3e44dd710dffd6df8ce9f01271336f2bd", size = 39493476, upload-time = "2026-03-11T09:42:19.415Z" },
-    { url = "https://files.pythonhosted.org/packages/fb/72/3886bd5b99ccd4ac139221f2b8b93182e1ae8c16e34b05067ef5234d978d/pyqpanda3-0.3.4-cp312-none-win_amd64.whl", hash = "sha256:6bc20fe2ad87952848b34e198ebf2e65eec16fc4b3a2f1823afc02ba83b33baa", size = 21739115, upload-time = "2026-03-11T09:42:48.646Z" },
-    { url = "https://files.pythonhosted.org/packages/54/7e/1ce65ce2f9e0713e5e98b3c930e5076a2c8a1b95e6f8f0dc7172338ab271/pyqpanda3-0.3.4-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:96736222078b4d53428c3bd2757dc7165c54e396f18c91a2fc6576e77cc2b3cc", size = 16468967, upload-time = "2026-03-11T09:43:07.018Z" },
-    { url = "https://files.pythonhosted.org/packages/fe/8f/47c67596b5f97cb1d1f20efc876f009740d93b18218a630be6d6a8dd8081/pyqpanda3-0.3.4-cp313-none-manylinux1_x86_64.whl", hash = "sha256:10482fa0b2fbed8f818f261224e0519a2f2c97d42ea72517903fac95aa45630d", size = 39497243, upload-time = "2026-03-11T09:43:44.103Z" },
-    { url = "https://files.pythonhosted.org/packages/97/4c/82bd4f7fc2babe9fd4e8c0ca0208613bba86101f76f7b0817793c052e0d0/pyqpanda3-0.3.4-cp313-none-win_amd64.whl", hash = "sha256:becf88e82f0c20205c8f112bfe169d83765c75edec7d8f34e954c0321a4731cd", size = 21741284, upload-time = "2026-03-11T09:44:14.077Z" },
-]
-
-[[package]]
-name = "pyqpanda3"
 version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version == '3.14.*'",
-]
 dependencies = [
-    { name = "cython", marker = "python_full_version == '3.14.*'" },
-    { name = "graphviz", marker = "python_full_version == '3.14.*'" },
-    { name = "matplotlib", marker = "python_full_version == '3.14.*'" },
-    { name = "mypy", marker = "python_full_version == '3.14.*'" },
-    { name = "networkx", marker = "python_full_version == '3.14.*'" },
-    { name = "numpy", marker = "python_full_version == '3.14.*'" },
-    { name = "scipy", marker = "python_full_version == '3.14.*'" },
-    { name = "setuptools", marker = "python_full_version == '3.14.*'" },
+    { name = "cython", marker = "python_full_version < '3.15'" },
+    { name = "graphviz", marker = "python_full_version < '3.15'" },
+    { name = "matplotlib", marker = "python_full_version < '3.15'" },
+    { name = "mypy", marker = "python_full_version < '3.15'" },
+    { name = "networkx", marker = "python_full_version < '3.15'" },
+    { name = "numpy", marker = "python_full_version < '3.15'" },
+    { name = "scipy", marker = "python_full_version < '3.15'" },
+    { name = "setuptools", marker = "python_full_version < '3.15'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/03/e8/9844b25a48f4807bbb3c79dedd858c490536a7883293a73f3ec19bde0a51/pyqpanda3-0.5.0-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:560f1295ef76c60ddf26852ff65f46c942cf2922be20ee66040a17bbecaead8f", size = 21694654, upload-time = "2026-09-24T10:12:48.908Z" },
@@ -3281,8 +3248,7 @@ ionq = [
     { name = "qiskit-ionq" },
 ]
 origin = [
-    { name = "pyqpanda3", version = "0.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
-    { name = "pyqpanda3", version = "0.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.14.*'" },
+    { name = "pyqpanda3", marker = "python_full_version < '3.15'" },
 ]
 qiskit = [
     { name = "packaging" },
