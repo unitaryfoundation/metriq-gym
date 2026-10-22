@@ -4,8 +4,7 @@ Metriq-Gym provides a command-line interface for running quantum benchmark jobs 
 
 ## Installation
 
-Use Python 3.12–3.15. The [OriginQ provider](../providers/originq.md) requires
-Python 3.12–3.14 until `pyqpanda3` provides Python 3.15 wheels.
+Use Python 3.12–3.15.
 
 Install the package from PyPI:
 

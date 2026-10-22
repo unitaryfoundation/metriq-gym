@@ -25,8 +25,7 @@ metriq-gym is a Python framework for implementing and running standard quantum b
 
 ## Quick Start
 
-Requires Python 3.12–3.15. The OriginQ provider requires Python 3.12–3.14 until
-`pyqpanda3` provides Python 3.15 wheels.
+Requires Python 3.12–3.15.
 
 Four easy steps to get started with `metriq-gym`!
 

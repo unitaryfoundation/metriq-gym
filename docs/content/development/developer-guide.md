@@ -37,10 +37,6 @@ uv sync --all-groups
 
 This creates a virtual environment in `.venv` and installs all dependencies.
 
-OriginQ dependencies are installed only on Python 3.12–3.14. Use one of those
-versions when working on the OriginQ provider; `pyqpanda3` does not yet provide
-Python 3.15 wheels.
-
 ### Activate Environment
 
 Either activate the virtual environment:
