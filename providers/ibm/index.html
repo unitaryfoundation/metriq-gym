@@ -858,10 +858,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resource-estimation" class="md-nav__link">
+  <a href="#cost-estimation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resource Estimation
+        Cost estimation
       
     </span>
   </a>
@@ -1599,10 +1599,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resource-estimation" class="md-nav__link">
+  <a href="#cost-estimation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resource Estimation
+        Cost estimation
       
     </span>
   </a>
@@ -1735,8 +1735,10 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span><span class="nb">local</span><span class="w"> </span>--device<span class="w"> </span>ibm_sherbrooke
 </code></pre></div>
 <p>This uses Qiskit Aer with the noise model from the specified IBM device.</p>
-<h2 id="resource-estimation">Resource Estimation<a class="headerlink" href="#resource-estimation" title="Permanent link">&para;</a></h2>
-<p>Estimate job resources before dispatch:</p>
+<h2 id="cost-estimation">Cost estimation<a class="headerlink" href="#cost-estimation" title="Permanent link">&para;</a></h2>
+<p>Estimate QPU time in seconds as a proxy for job costs before dispatch. Circuits
+are compiled locally using device timing metadata without running on hardware.
+Add <code>-v</code> or <code>--verbose</code> for circuit statistics and estimation assumptions.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>metriq_gym/schemas/examples/bseq.example.json<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span>--provider<span class="w"> </span>ibm<span class="w"> </span>--device<span class="w"> </span>ibm_fez
 </code></pre></div>
