@@ -6,7 +6,7 @@ This guide covers setting up a development environment for contributing to Metri
 
 Before you begin, ensure you have:
 
-- [Python](https://www.python.org/downloads/) (version 3.12 or newer)
+- [Python](https://www.python.org/downloads/) (version 3.12–3.15)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management
 - [Git](https://git-scm.com/) for version control
 
@@ -36,6 +36,10 @@ uv sync --all-groups
 ```
 
 This creates a virtual environment in `.venv` and installs all dependencies.
+
+OriginQ dependencies are installed only on Python 3.12–3.14. Use one of those
+versions when working on the OriginQ provider; `pyqpanda3` does not yet provide
+Python 3.15 wheels.
 
 ### Activate Environment
 
