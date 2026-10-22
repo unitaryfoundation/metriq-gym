@@ -1988,22 +1988,26 @@ are constructed and compiled locally; no jobs are submitted or executed on hardw
 </tbody>
 </table>
 <p>The output starts with a short header identifying the benchmark, provider, and
-device. With <code>--provider ibm --device &lt;device&gt;</code>, the default summary is the
-estimated QPU time in seconds based on the device's timing metadata. Add <code>-v</code> or <code>--verbose</code>
-to show circuit resources, statistics, and estimation assumptions. Reading that
-metadata requires provider access, but the estimate does not run anything on the device.
-It assumes the default repetition delay, initial reset, and about two seconds
-of overhead per circuit batch. Additional server-side splitting, runtime
+device. Add <code>-v</code> or <code>--verbose</code> to show circuit resources, statistics, and
+estimation assumptions. The default summary depends on the provider:</p>
+<ul>
+<li><code>--provider ibm --device &lt;device&gt;</code> shows estimated QPU time in seconds based
+  on the device's timing metadata. Reading that metadata requires provider
+  access, but the estimate does not run anything on the device.</li>
+<li><code>--provider quantinuum</code> shows total H-series Quantum Credits (HQCs).</li>
+<li><code>--provider aws</code> (or its alias <code>braket</code>) shows total shots and total tasks,
+  counting one task per circuit. Use <code>--verbose</code> for the full resource breakdown.</li>
+<li>Other providers report that no cost estimate is available. Use <code>--verbose</code> to
+  show circuit resources.</li>
+</ul>
+<p>IBM estimates assume the default repetition delay, initial reset, and about two
+seconds of overhead per circuit batch. Additional server-side splitting, runtime
 mitigation, and idle time billed within sessions are excluded. This estimates
 QPU usage, not queue time, wall-clock completion time, or a monetary price.
 See <a href="https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time">IBM's usage estimation guide</a>.</p>
 <p>If IBM timing metadata is unavailable or <code>--device</code> is omitted, the QPU estimate
 is marked unavailable. Use <code>--verbose</code> for the explanation and any available
-circuit resource counts. <code>--provider quantinuum</code> shows the total H-series Quantum
-Credits (HQCs). <code>--provider aws</code> (or its alias <code>braket</code>) shows total shots and
-total tasks, counting one task per circuit. Add <code>--verbose</code> for the full resource
-breakdown. Other providers report that no cost estimate is available; use
-<code>--verbose</code> to show circuit resources.</p>
+circuit resource counts.</p>
 <hr />
 <h2 id="poll">poll<a class="headerlink" href="#poll" title="Permanent link">&para;</a></h2>
 <p>Poll job status and retrieve results when complete.</p>
