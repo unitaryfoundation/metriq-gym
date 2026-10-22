@@ -6,8 +6,8 @@ import warnings
 
 from qiskit import QuantumCircuit
 from qiskit.circuit import ControlFlowOp
-from qiskit.transpiler import PassManager, Target
-from qiskit.transpiler.passes import ALAPScheduleAnalysis, PadDelay, TimeUnitConversion
+from qiskit.transpiler import PassManagerConfig, Target
+from qiskit.transpiler.preset_passmanagers import level_0_pass_manager
 
 if TYPE_CHECKING:
     from qbraid import QuantumDevice
@@ -57,13 +57,16 @@ def _validate_instructions(circuit: QuantumCircuit, target: Target) -> set[int]:
 
 def _scheduled_duration(circuit: QuantumCircuit, target: Target) -> float:
     """Schedule without changing the physical mapping chosen by device.transform."""
-    scheduler = PassManager(
-        [
-            TimeUnitConversion(target=target),
-            ALAPScheduleAnalysis(target=target),
-            PadDelay(target=target),
-        ]
+    # ALAP follows IBM's local usage example linked in estimate_ibm_usage.
+    # Give Qiskit's generated stage explicit timing constraints so it includes
+    # hardware alignment. Run only scheduling to preserve the physical circuit.
+    config = PassManagerConfig(
+        target=target,
+        instruction_durations=target.durations(),
+        timing_constraints=target.timing_constraints(),
+        scheduling_method="alap",
     )
+    scheduler = level_0_pass_manager(config).scheduling
     scheduled = scheduler.run(circuit)
     estimate_duration = getattr(scheduled, "estimate_duration", None)
     if callable(estimate_duration):

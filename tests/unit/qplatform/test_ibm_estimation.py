@@ -83,6 +83,52 @@ def test_physical_circuit_skips_transpilation(device):
     device.transform.assert_not_called()
 
 
+@pytest.mark.parametrize("legacy_duration", [False, True])
+@pytest.mark.parametrize(
+    "delay_before_x,delay_dt",
+    [
+        pytest.param(False, 100, id="measurement-alignment"),
+        pytest.param(True, 100, id="pulse-alignment"),
+        pytest.param(False, 112, id="already-aligned"),
+    ],
+)
+def test_physical_circuit_respects_hardware_alignment(
+    device,
+    monkeypatch,
+    legacy_duration,
+    delay_before_x,
+    delay_dt,
+):
+    target = device._backend.target
+    target.acquire_alignment = 16
+    target.pulse_alignment = 16
+    for name in ("x", "measure"):
+        target.update_instruction_properties(name, (1,), InstructionProperties(duration=160e-9))
+    if legacy_duration:
+        monkeypatch.setattr(QuantumCircuit, "estimate_duration", None)
+
+    # Use physical qubit 1: remapping to qubit 0 would use different durations.
+    circuit = QuantumCircuit(3, 1)
+    if delay_before_x:
+        circuit.delay(delay_dt, 1, unit="dt")
+    circuit.x(1)
+    if not delay_before_x:
+        circuit.delay(delay_dt, 1, unit="dt")
+    circuit.measure(1, 0)
+    before = circuit.copy()
+
+    result = estimate_ibm_usage([CircuitBatch([circuit], shots=1000, transpile=False)], device)
+
+    # A 100 dt delay puts the next instruction off the 16 dt boundary; it must
+    # become 112 dt. An already aligned 112 dt delay must not gain more padding.
+    # 160 dt + 112 dt + 160 dt = 432 ns, plus qubit 1's 8 us initialization.
+    assert result == pytest.approx(2 + 1000 * (432e-9 + 8e-6 + 250e-6), rel=0, abs=1e-12)
+    assert circuit == before
+    device.transform.assert_not_called()
+    device.run.assert_not_called()
+    device.submit.assert_not_called()
+
+
 def test_uses_transformed_circuit_and_preserves_input(device):
     circuit = QuantumCircuit(3, 1)
     circuit.x(0)
