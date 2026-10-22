@@ -161,7 +161,8 @@ def append_2q_layer(
     """
     available_edges = set(topology_graph.edge_list())
     while len(available_edges) > 0:
-        edge = tuple(rng.choice(list(available_edges)))
+        edges = list(available_edges)
+        edge = edges[rng.integers(len(edges))]
         available_edges.remove(edge)
         edges_to_delete = set()
         for ce in list(available_edges):

@@ -252,7 +252,7 @@ version as their tag after Python version normalization (for example,
 that passed these checks.
 
 The wheel is installed in fresh environments on Linux and macOS with Python
-3.12 and 3.13. The source distribution is independently installed on Linux with
+3.12, 3.13, and 3.14. The source distribution is independently installed on Linux with
 Python 3.12. These installs resolve the dependencies declared in the package,
 without the development environment or `uv.lock`.
 

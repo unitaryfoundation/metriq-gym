@@ -34,7 +34,11 @@ dependencies = [
     "jsonschema>=4.25.1,<5.0.0",
     "python-dotenv>=1.0.1,<2.0.0",
     "pydantic>=2.5.0,<2.15",
+    # Braket uses pydantic.v1, whose Python 3.14 support starts in Pydantic 2.13.
+    "pydantic>=2.13; python_version >= '3.14'",
     "numpy>=1.26.4,<3.0.0",
+    "numpy>=2.1; python_version >= '3.13'",
+    "numpy>=2.3.3; python_version >= '3.14'",
     "networkx>=3.6.1,<4.0.0",
     "rustworkx>=0.17.1,<0.19.0",
     "qiskit[qasm3-import]>=1.4.3,<3.0",
@@ -51,6 +55,7 @@ dependencies = [
     "dimod>=0.12.20,<0.13.0",
     "pytket-qiskit>=0.71.0,<0.80.0",
     "pyqpanda3>=0.3.2",
+    "pyqpanda3>=0.3.5; python_version >= '3.14'",
 ]
 
 [project.scripts]
@@ -91,7 +96,8 @@ line-length = 100
 extend_exclude = ["submodules", ".poetry"]
 known_first_party = ["_common"]
 optional_dependencies_dev_groups = ["docs"]
-per_rule_ignores = { DEP002 = ["amazon-braket-sdk"] }
+# Provider dependencies constrained here are imported through qBraid.
+per_rule_ignores = { DEP002 = ["amazon-braket-sdk", "pyqpanda3"] }
 
 [tool.pytest.ini_options]
 testpaths = [
