@@ -49,23 +49,27 @@ mgym job estimate <config> [OPTIONS]
 | `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
 
 The output starts with a short header identifying the benchmark, provider, and
-device. With `--provider ibm --device <device>`, the default summary is the
-estimated QPU time in seconds based on the device's timing metadata. Add `-v` or `--verbose`
-to show circuit resources, statistics, and estimation assumptions. Reading that
-metadata requires provider access, but the estimate does not run anything on the device.
-It assumes the default repetition delay, initial reset, and about two seconds
-of overhead per circuit batch. Additional server-side splitting, runtime
+device. Add `-v` or `--verbose` to show circuit resources, statistics, and
+estimation assumptions. The default summary depends on the provider:
+
+- `--provider ibm --device <device>` shows estimated QPU time in seconds based
+  on the device's timing metadata. Reading that metadata requires provider
+  access, but the estimate does not run anything on the device.
+- `--provider quantinuum` shows total H-series Quantum Credits (HQCs).
+- `--provider aws` (or its alias `braket`) shows total shots and total tasks,
+  counting one task per circuit. Use `--verbose` for the full resource breakdown.
+- Other providers report that no cost estimate is available. Use `--verbose` to
+  show circuit resources.
+
+IBM estimates assume the default repetition delay, initial reset, and about two
+seconds of overhead per circuit batch. Additional server-side splitting, runtime
 mitigation, and idle time billed within sessions are excluded. This estimates
 QPU usage, not queue time, wall-clock completion time, or a monetary price.
 See [IBM's usage estimation guide](https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time).
 
 If IBM timing metadata is unavailable or `--device` is omitted, the QPU estimate
 is marked unavailable. Use `--verbose` for the explanation and any available
-circuit resource counts. `--provider quantinuum` shows the total H-series Quantum
-Credits (HQCs). `--provider aws` (or its alias `braket`) shows total shots and
-total tasks, counting one task per circuit. Add `--verbose` for the full resource
-breakdown. Other providers report that no cost estimate is available; use
-`--verbose` to show circuit resources.
+circuit resource counts.
 
 ---
 
