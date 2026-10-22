@@ -85,9 +85,11 @@ mgym job dispatch config.json --provider local --device ibm_sherbrooke
 
 This uses Qiskit Aer with the noise model from the specified IBM device.
 
-## Resource Estimation
+## Cost estimation
 
-Estimate job resources before dispatch:
+Estimate QPU time in seconds as a proxy for job costs before dispatch. Circuits
+are compiled locally using device timing metadata without running on hardware.
+Add `-v` or `--verbose` for circuit statistics and estimation assumptions.
 
 ```bash
 mgym job estimate metriq_gym/schemas/examples/bseq.example.json \

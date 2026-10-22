@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 import json
 from pydantic import BaseModel
+from qiskit import QuantumCircuit
 from qbraid import QbraidError
 from qbraid.runtime import BraketDevice, JobStatus
 from qbraid.runtime.result_data import GateModelResultData, MeasCount
@@ -28,10 +29,12 @@ from metriq_gym.job_manager import MetriqGymJob, JobManager
 from metriq_gym.constants import JobType
 from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
 from metriq_gym.resource_estimation import (
+    CircuitBatch,
     GateCounts,
     CircuitEstimate,
     ResourceEstimate,
     quantinuum_hqc_formula,
+    print_resource_estimate,
 )
 
 
@@ -580,7 +583,7 @@ def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
         )
 
     monkeypatch.setattr("metriq_gym.run.aggregate_resource_estimates", fake_aggregate)
-    monkeypatch.setattr("metriq_gym.run.print_resource_estimate", lambda *_: None)
+    monkeypatch.setattr("metriq_gym.run.print_resource_estimate", lambda *_, **__: None)
 
     args = SimpleNamespace(
         config="foo.json",
@@ -592,6 +595,171 @@ def test_estimate_job_quantinuum_defaults(monkeypatch, capsys):
 
     expected = quantinuum_hqc_formula(GateCounts(), 16, 6)
     assert abs(captured["hqc"] - expected) < 1e-6
+
+
+@pytest.fixture
+def job_estimation(tmp_path, monkeypatch):
+    path = tmp_path / "wit.json"
+    path.write_text(json.dumps({"benchmark_name": "WIT", "num_qubits": 6, "shots": 16}))
+    device = SimpleNamespace(id="device", num_qubits=20, run=MagicMock())
+    setup_device_mock = MagicMock(return_value=device)
+    registry = SimpleNamespace(get_available_benchmarks=lambda: ["WIT"])
+    circuit = QuantumCircuit(6)
+    circuit.h(0)
+    batches = [CircuitBatch(circuits=[circuit], shots=16)]
+    benchmark = MagicMock()
+    benchmark.estimate_resources_handler.return_value = batches
+
+    def estimate_resources(_device):
+        print("benchmark chatter")
+        return batches
+
+    def setup_benchmark(*_args, **_kwargs):
+        print("benchmark setup chatter")
+        return benchmark
+
+    benchmark.estimate_resources_handler.side_effect = estimate_resources
+    ibm_usage = MagicMock(return_value=75.0)
+    printer = MagicMock(wraps=print_resource_estimate)
+    new_job = MagicMock()
+    job_manager = MagicMock()
+    monkeypatch.setattr("metriq_gym.run.setup_device", setup_device_mock)
+    monkeypatch.setattr("metriq_gym.run._lazy_registry", lambda: registry)
+    monkeypatch.setattr("metriq_gym.run.setup_benchmark", setup_benchmark)
+    monkeypatch.setattr("metriq_gym.run.print_resource_estimate", printer)
+    monkeypatch.setattr("metriq_gym.run._new_job", new_job)
+    monkeypatch.setattr("metriq_gym.qplatform.ibm_estimation.estimate_ibm_usage", ibm_usage)
+    yield SimpleNamespace(
+        args=SimpleNamespace(config=str(path), provider="ibm", device="device"),
+        device=device,
+        batches=batches,
+        benchmark=benchmark,
+        setup_device=setup_device_mock,
+        ibm_usage=ibm_usage,
+        printer=printer,
+        job_manager=job_manager,
+    )
+    benchmark.dispatch_handler.assert_not_called()
+    device.run.assert_not_called()
+    new_job.assert_not_called()
+    job_manager.add_job.assert_not_called()
+
+
+@pytest.mark.parametrize("provider", ["ibm", "quantinuum", "local", "aws", "braket"])
+def test_estimate_job_uses_only_selected_provider_usage(job_estimation, capsys, provider):
+    job_estimation.args.provider = provider
+
+    estimate_job(job_estimation.args, job_estimation.job_manager)
+
+    result = job_estimation.printer.call_args.args[3]
+    assert result.circuit_count == 1
+    assert result.total_shots == 16
+    output = capsys.readouterr().out
+    if provider == "ibm":
+        job_estimation.ibm_usage.assert_called_once_with(
+            job_estimation.batches, job_estimation.device
+        )
+        assert result.ibm_quantum_seconds == 75.0
+        assert result.ibm_timing_complete
+        assert output == (
+            "Cost estimate for WIT on ibm:device\nEstimated IBM QPU time (s): 75.000\n"
+        )
+    else:
+        job_estimation.ibm_usage.assert_not_called()
+        assert result.ibm_quantum_seconds is None
+        assert "IBM QPU time" not in output
+    if provider == "quantinuum":
+        assert result.hqc_total == pytest.approx(5.0992)
+        assert output == ("Cost estimate for WIT on quantinuum:device\nTotal HQCs: 5.10\n")
+    else:
+        assert result.hqc_total is None
+        assert all(circuit.hqc is None for circuit in result.per_circuit)
+        assert "HQC" not in output
+    assert job_estimation.printer.call_args.kwargs == {"verbose": False}
+    if provider in {"aws", "braket"}:
+        assert output == (
+            f"Cost estimate for WIT on {provider}:device\nTotal shots: 16\nTotal tasks: 1\n"
+        )
+    else:
+        assert "Total shots" not in output
+    assert "benchmark chatter" not in output
+    assert "benchmark setup chatter" not in output
+    assert "(min)" not in output
+
+
+@pytest.mark.parametrize("verbose", [False, True])
+def test_estimate_job_aws_counts_one_task_per_circuit(job_estimation, capsys, verbose):
+    job_estimation.args.provider = "aws"
+    job_estimation.args.verbose = verbose
+    circuit = QuantumCircuit(6)
+    job_estimation.batches[:] = [
+        CircuitBatch(circuits=[circuit, circuit], shots=16),
+        CircuitBatch(circuits=[circuit], shots=1000),
+    ]
+
+    estimate_job(job_estimation.args, job_estimation.job_manager)
+
+    result = job_estimation.printer.call_args.args[3]
+    assert result.job_count == 2
+    assert result.circuit_count == 3
+    assert result.total_shots == 1032
+    job_estimation.ibm_usage.assert_not_called()
+    output = capsys.readouterr().out
+    if verbose:
+        assert "Total tasks" in output
+        assert "Total shots" in output
+        assert "Max qubits" in output
+        assert "Cost estimate for WIT" in output
+    else:
+        assert output == (
+            "Cost estimate for WIT on aws:device\nTotal shots: 1,032\nTotal tasks: 3\n"
+        )
+    assert "HQC" not in output
+    assert "IBM QPU time" not in output
+
+
+def test_estimate_job_verbose_prints_resource_details(job_estimation, capsys):
+    job_estimation.args.verbose = True
+
+    estimate_job(job_estimation.args, job_estimation.job_manager)
+
+    assert job_estimation.printer.call_args.kwargs == {"verbose": True}
+    output = capsys.readouterr().out
+    assert "Cost estimate for WIT" in output
+    assert "Total shots" in output
+    assert "Estimated IBM QPU time (s)" in output
+    assert "benchmark chatter" in output
+    assert "benchmark setup chatter" in output
+    assert "(min)" not in output
+
+
+def test_estimate_job_ibm_timing_failure_keeps_circuit_resources(job_estimation, capsys):
+    job_estimation.ibm_usage.side_effect = ValueError("Missing measurement duration")
+    job_estimation.args.verbose = True
+
+    estimate_job(job_estimation.args, job_estimation.job_manager)
+
+    result = job_estimation.printer.call_args.args[3]
+    assert result.circuit_count == 1
+    assert result.total_shots == 16
+    assert result.ibm_quantum_seconds is None
+    assert not result.ibm_timing_complete
+    output = capsys.readouterr().out
+    assert "Missing measurement duration" in output
+    assert "IBM QPU time" in output
+    assert "n/a" in output
+    assert "HQC" not in output
+
+
+def test_estimate_job_unavailable_time_is_concise_by_default(job_estimation, capsys):
+    job_estimation.ibm_usage.side_effect = ValueError("Missing measurement duration")
+
+    estimate_job(job_estimation.args, job_estimation.job_manager)
+
+    assert capsys.readouterr().out.strip() == (
+        "Cost estimate for WIT on ibm:device\n"
+        "Estimated IBM QPU time (s): n/a (use --verbose for details)"
+    )
 
 
 def test_estimate_job_without_device_wit(monkeypatch, capsys):
@@ -651,12 +819,13 @@ def test_estimate_job_without_device_wit(monkeypatch, capsys):
         config="foo.json",
         provider="quantinuum",
         device=None,
+        verbose=True,
     )
 
     estimate_job(args, MagicMock())
 
     output = capsys.readouterr().out
-    assert "Resource estimate for WIT" in output
+    assert "Cost estimate for WIT" in output
     assert "(no device)" in output
     assert captured["device"] is None
 

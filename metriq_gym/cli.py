@@ -7,6 +7,8 @@ Usage overview:
       mgym job poll latest --json results.json
   - Dispatch a suite of jobs:
       mgym suite dispatch path/to/suite.json -p <provider> -d <device>
+  - Estimate a complete bundled suite:
+      mgym suite estimate metriq_score_1_0 -p <provider> -d <device> --all
   - Poll a suite:
       mgym suite poll <suite_id>
   - Dry-run upload (no network):
@@ -172,6 +174,15 @@ DeviceOption = Annotated[
     ),
 ]
 
+EstimateVerboseOption = Annotated[
+    bool,
+    typer.Option(
+        "--verbose",
+        "-v",
+        help="Show per-job resources, circuit statistics, and estimation assumptions",
+    ),
+]
+
 
 # -----------------------------------------------------------------------------
 # Job commands
@@ -201,11 +212,14 @@ def job_estimate(
     config: Annotated[str, typer.Argument(help="Path to job configuration JSON file")],
     provider: ProviderOption = None,
     device: DeviceOption = None,
+    verbose: EstimateVerboseOption = False,
 ) -> None:
-    """Estimate circuit resource requirements before dispatching jobs.
+    """Estimate job costs from provider usage without dispatching.
 
-    This is especially useful for understanding costs on paid hardware like Quantinuum.
-    For Quantinuum providers, calculates H-series Quantum Credits (HQCs).
+    IBM estimates QPU seconds using backend timing metadata and local compilation.
+    Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
+    total shots and tasks, counting one task per circuit. No jobs are submitted.
+    These usage metrics are proxies for cost.
     """
     from metriq_gym.run import estimate_job as _estimate_job
 
@@ -213,6 +227,7 @@ def job_estimate(
     args.config = config
     args.provider = provider
     args.device = device
+    args.verbose = verbose
 
     _estimate_job(args)
 
@@ -460,6 +475,51 @@ def suite_dispatch(
 
     job_manager = JobManager()
     _dispatch_suite(args, job_manager)
+
+
+@suite_app.command("estimate")
+def suite_estimate(
+    suite_config: Annotated[
+        str,
+        typer.Argument(help="Path to suite configuration file or bundled suite name"),
+    ],
+    provider: ProviderOption = None,
+    device: DeviceOption = None,
+    components: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            "--component",
+            "-c",
+            help="Component to estimate; repeat the option to select multiple components",
+        ),
+    ] = None,
+    all_components: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Explicitly estimate every component, including guarded full suites",
+        ),
+    ] = False,
+    verbose: EstimateVerboseOption = False,
+) -> None:
+    """Estimate suite costs from provider usage without dispatching.
+
+    IBM estimates QPU seconds using backend timing metadata and local compilation.
+    Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
+    total shots and tasks, counting one task per circuit.
+    These usage metrics are proxies for cost.
+    """
+    from metriq_gym.run import estimate_suite as _estimate_suite
+
+    args = argparse.Namespace()
+    args.suite_config = suite_config
+    args.provider = provider
+    args.device = device
+    args.components = components
+    args.all_components = all_components
+    args.verbose = verbose
+
+    _estimate_suite(args)
 
 
 @suite_app.command("poll")
