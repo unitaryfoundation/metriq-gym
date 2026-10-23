@@ -526,7 +526,7 @@ def estimate_fidelity_oscillation(
         parities.append(parity)
         parity_vars.append((1 - parity**2) / total)
 
-    angles = n * np.asarray(phases)
+    angles: np.ndarray = n * np.asarray(phases)
     design = np.column_stack((np.cos(angles), np.sin(angles)))
     quadratures, _, rank, _ = np.linalg.lstsq(design, np.asarray(parities), rcond=None)
     if rank < 2:
