@@ -28,6 +28,7 @@ from metriq_gym.run import (
 from metriq_gym.job_manager import MetriqGymJob, JobManager
 from metriq_gym.constants import JobType
 from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
+from metriq_gym.schema_validator import validate_and_create_model
 from metriq_gym.resource_estimation import (
     CircuitBatch,
     GateCounts,
@@ -362,6 +363,20 @@ def test_validate_benchmark_device_capacity_recognizes_width_fields(width_field)
 
     with pytest.raises(DeviceCapacityError, match="Requested 50 qubits"):
         validate_benchmark_device_capacity(params, device)
+
+
+@pytest.mark.parametrize("size_search", [False, True])
+def test_ghz_capacity_validation_ignores_num_qubits_only_for_size_search(size_search):
+    params = validate_and_create_model(
+        {"benchmark_name": "GHZ", "num_qubits": 100, "size_search": size_search}
+    )
+    device = SimpleNamespace(id="small-device", num_qubits=5)
+
+    if size_search:
+        validate_benchmark_device_capacity(params, device)
+    else:
+        with pytest.raises(DeviceCapacityError, match="Requested 100 qubits"):
+            validate_benchmark_device_capacity(params, device)
 
 
 def _write_component_suite(tmp_path, *, guarded: bool = True):

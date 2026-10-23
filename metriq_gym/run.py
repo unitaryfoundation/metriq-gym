@@ -208,6 +208,9 @@ def setup_benchmark(args, params, job_type: JobType) -> "Benchmark":
 def validate_benchmark_device_capacity(params, device) -> None:
     """Validate explicit benchmark width before constructing its handler."""
     config = params.model_dump(exclude_none=True)
+    if config.get("benchmark_name") == JobType.GHZ and config.get("size_search") is True:
+        # GHZ search derives its widths from the device and ignores num_qubits.
+        return
     requested_qubits = next(
         (
             config[field]
