@@ -1757,6 +1757,12 @@
 </tbody>
 </table>
 <h3 id="ghz-results-and-scoring">GHZ results and scoring<a class="headerlink" href="#ghz-results-and-scoring" title="Permanent link">&para;</a></h3>
+<p>The logarithmic-depth preparation follows the approach illustrated by
+<a href="https://docs.quantinuum.com/systems/trainings/knowledge_articles/Quantinuum_n56_ghz_state_fidelity.html">Quantinuum's GHZ state fidelity example</a>.
+That example combines a population measurement with <code>N</code> deterministic equatorial
+parity settings to estimate fidelity against GHZ+. Here DFE samples stabilizers
+for the same target, while the oscillation methods recover coherence magnitude
+and optimize over the relative phase.</p>
 <p>Use <code>num_qubits</code> to measure one size, or <code>size_search: true</code> to test a halving
 grid that includes <code>min_qubits</code>. Size search reports <code>largest_passing_size</code>,
 <code>device_fraction</code>, and the fidelity and uncertainty at each tested size. The
