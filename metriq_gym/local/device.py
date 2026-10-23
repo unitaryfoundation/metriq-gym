@@ -57,7 +57,11 @@ class LocalAerDevice(QuantumDevice):
         # their native basis gates and coupling map, so translate first.
         # optimization_level=0 keeps the logical circuit structure intact
         # (no gate cancellation), which benchmarks rely on.
-        run_input = transpile(run_input, backend=self._backend, optimization_level=0)
+        # Compile serially: Qiskit's process-pool serializer (dill) cannot
+        # serialize code objects on every supported Python version.
+        run_input = transpile(
+            run_input, backend=self._backend, optimization_level=0, num_processes=1
+        )
         start_time = time.perf_counter()
         counts = self._backend.run(run_input, shots=shots, **kwargs).result().get_counts()
         end_time = time.perf_counter()

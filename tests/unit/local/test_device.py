@@ -47,7 +47,7 @@ def test_submit_returns_local_aer_job(mock_provider, mock_backend):
         job = device.submit(input_circuit, shots=N_SHOTS)
         # Circuits are translated to the backend basis without optimization.
         mock_transpile.assert_called_once_with(
-            input_circuit, backend=mock_backend, optimization_level=0
+            input_circuit, backend=mock_backend, optimization_level=0, num_processes=1
         )
         assert isinstance(job, LocalAerJob)
         assert job.device == device
