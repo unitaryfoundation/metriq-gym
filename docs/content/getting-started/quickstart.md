@@ -4,6 +4,8 @@ Metriq-Gym provides a command-line interface for running quantum benchmark jobs 
 
 ## Installation
 
+Use Python 3.12–3.15.
+
 Install the package from PyPI:
 
 ```bash

@@ -1,9 +1,24 @@
 from datetime import datetime
+import time
 
 import pytest
 
 from metriq_gym.constants import JobType
 from metriq_gym.job_manager import MetriqGymJob
+
+
+@pytest.fixture
+def local_timezone(monkeypatch, request):
+    """Run with a non-UTC system timezone, restoring it even if the test fails."""
+    if not hasattr(time, "tzset"):
+        pytest.skip("Changing the system timezone requires time.tzset")
+    try:
+        with monkeypatch.context() as env:
+            env.setenv("TZ", getattr(request, "param", "Europe/Madrid"))
+            time.tzset()
+            yield
+    finally:
+        time.tzset()
 
 
 @pytest.fixture

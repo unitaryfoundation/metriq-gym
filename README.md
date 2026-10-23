@@ -25,6 +25,8 @@ metriq-gym is a Python framework for implementing and running standard quantum b
 
 ## Quick Start
 
+Requires Python 3.12–3.15.
+
 Four easy steps to get started with `metriq-gym`!
 
 1. Install `metriq-gym` directly in your Python environment using pip:

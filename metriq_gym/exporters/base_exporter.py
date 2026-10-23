@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import timezone
 from typing import Any
 
 from metriq_gym.benchmarks.benchmark import BenchmarkResult
@@ -71,10 +72,13 @@ class BaseExporter(ABC):
             results_block = self.result.model_dump()
             if results_block.get("score") is None:
                 results_block.pop("score", None)
+        # Legacy jobs contain naive local times. astimezone uses the system's
+        # local timezone at the dispatch date when no offset was recorded.
+        dispatch_time = self.metriq_gym_job.dispatch_time.astimezone(timezone.utc)
         # Do not emit a separate uncertainties block; structured fields carry their own
         record = {
             "app_version": self.metriq_gym_job.app_version,
-            "timestamp": self.metriq_gym_job.dispatch_time.isoformat(),
+            "timestamp": dispatch_time.isoformat(),
             "suite_id": self.metriq_gym_job.suite_id,
             "job_type": self.metriq_gym_job.job_type.value,
             "results": results_block,

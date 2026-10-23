@@ -1,5 +1,7 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
+
+import pytest
 
 from metriq_gym.constants import JobType
 from metriq_gym.job_manager import MetriqGymJob
@@ -54,7 +56,7 @@ def test_default_upload_dir_accepts_braket_alias_directly():
 
 
 def test_job_filename_structure():
-    when = datetime(2024, 1, 2, 3, 4, 5)
+    when = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
 
     job = MetriqGymJob(
         id="job-1",
@@ -75,10 +77,39 @@ def test_job_filename_structure():
 
 
 def test_suite_filename_structure():
-    when = datetime(2024, 6, 7, 8, 9, 10)
+    when = datetime(2024, 6, 7, 8, 9, 10, tzinfo=timezone.utc)
     payload = [{"results": {"score": {"value": 1, "uncertainty": None}}}]
     name = suite_filename("My Suite", when, payload=payload)
     assert re.match(
         r"2024-06-07_08-09-10_my_suite_[0-9a-f]{8}\.json",
         name,
     )
+
+
+@pytest.mark.parametrize(
+    "dispatch_time, expected_prefix",
+    [
+        ("2026-09-09T14:34:31+00:00", "2026-09-09_14-34-31"),
+        ("2026-09-09T16:34:31+02:00", "2026-09-09_14-34-31"),
+        ("2026-09-09T23:34:31-05:00", "2026-09-10_04-34-31"),
+        ("2026-09-09T16:34:31", "2026-09-09_14-34-31"),
+        ("2026-01-09T16:34:31", "2026-01-09_15-34-31"),
+    ],
+)
+def test_upload_filenames_use_utc(metriq_job, local_timezone, dispatch_time, expected_prefix):
+    metriq_job.dispatch_time = datetime.fromisoformat(dispatch_time)
+
+    assert job_filename(metriq_job) == f"{expected_prefix}_wit.json"
+    assert (
+        suite_filename("My Suite", metriq_job.dispatch_time) == f"{expected_prefix}_my_suite.json"
+    )
+
+
+def test_suite_filename_defaults_to_utc(local_timezone):
+    before = datetime.now(timezone.utc).replace(microsecond=0)
+
+    name = suite_filename("My Suite")
+
+    after = datetime.now(timezone.utc)
+    timestamp = datetime.strptime(name[:19], "%Y-%m-%d_%H-%M-%S").replace(tzinfo=timezone.utc)
+    assert before <= timestamp <= after

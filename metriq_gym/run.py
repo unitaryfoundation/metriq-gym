@@ -1,8 +1,11 @@
 """Runtime entrypoints for dispatching and managing metriq-gym benchmarks via the CLI."""
 
 import argparse
+from contextlib import nullcontext, redirect_stdout
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+from importlib.util import find_spec
+from io import StringIO
 import os
 import sys
 import logging
@@ -19,11 +22,13 @@ from metriq_gym.schema_validator import load_and_validate, validate_and_create_m
 from metriq_gym.constants import HUMAN_OUTCOMES, JobType, RecordOutcome
 from metriq_gym.resource_estimation import (
     CircuitBatch,
+    ResourceEstimate,
     aggregate_resource_estimates,
+    merge_resource_estimates,
     print_resource_estimate,
     quantinuum_hqc_formula,
 )
-from metriq_gym.suite_parser import parse_suite_file
+from metriq_gym.suite_parser import BenchmarkEntry, Suite, parse_suite_file
 from metriq_gym.exceptions import DeviceCapacityError, QBraidSetupError
 from metriq_gym.upload_paths import default_upload_dir, job_filename, suite_filename
 from metriq_gym.platform import canonical_provider_name
@@ -48,11 +53,21 @@ class FetchResultOutput:
     from_cache: bool = False
 
 
+def _require_origin_sdk(provider_name: str) -> None:
+    """Check optional Origin support before provider credentials or network access."""
+    if provider_name.strip().lower() == "origin" and find_spec("pyqpanda3") is None:
+        raise QBraidSetupError(
+            "OriginQ requires the pyqpanda3 SDK, which is not installed. "
+            "Use Python 3.12–3.14 and reinstall metriq-gym for OriginQ support."
+        )
+
+
 def load_provider(provider_name: str):
     """Lazy proxy to qbraid.runtime.load_provider.
 
     Exposed at module level so tests can monkeypatch `metriq_gym.run.load_provider`.
     """
+    _require_origin_sdk(provider_name)
     from qbraid.runtime import load_provider as _load_provider
 
     return _load_provider(canonical_provider_name(provider_name))
@@ -73,6 +88,7 @@ def load_job(job_id: str, *, provider: str, **kwargs):
 
     Exposed at module level so tests can monkeypatch `metriq_gym.run.load_job`.
     """
+    _require_origin_sdk(provider)
     from qbraid.runtime import load_job as _load_job
 
     return _load_job(job_id, provider=canonical_provider_name(provider), **kwargs)
@@ -154,6 +170,9 @@ def setup_device(provider_name: str, device_name: str):
 
     try:
         provider = load_provider(provider_name)
+    except QBraidSetupError as exc:
+        logger.error("%s", exc)
+        raise
     except QbraidError:
         providers = ", ".join(get_providers())
         logger.error(f"No provider matching the name '{provider_name}' found.")
@@ -308,7 +327,7 @@ def _new_job(
             "device": args.device,
             "device_metadata": normalized_metadata(device),
         },
-        dispatch_time=datetime.now(),
+        dispatch_time=datetime.now(timezone.utc),
     )
 
 
@@ -341,6 +360,59 @@ def _record_dispatch_failure(
     return job_manager.add_job(job)
 
 
+def _load_selected_suite(
+    args: argparse.Namespace, *, operation: str
+) -> tuple[Suite, list[BenchmarkEntry]] | None:
+    """Load and select suite entries before initializing a provider."""
+    config_file = args.suite_config
+
+    try:
+        suite = parse_suite_file(config_file)
+    except FileNotFoundError:
+        print(f"✗ {config_file}: Configuration file or bundled suite not found")
+        return None
+    except Exception as exc:
+        print(f"✗ {config_file}: Invalid suite configuration: {type(exc).__name__}: {exc}")
+        return None
+
+    if not suite.benchmarks:
+        print(f"✗ {config_file}: No benchmarks found in the suite")
+        return None
+
+    requested_components = getattr(args, "components", None) or []
+    if isinstance(requested_components, str):
+        requested_components = [requested_components]
+    all_components = getattr(args, "all_components", False)
+
+    if requested_components and all_components:
+        print("✗ --component and --all cannot be used together")
+        return None
+
+    if requested_components:
+        try:
+            selected_benchmarks = suite.select_components(requested_components)
+        except ValueError as exc:
+            print(f"✗ {exc}")
+            return None
+    elif suite.full_suite_warning and not all_components:
+        print(f"WARNING: {suite.full_suite_warning}")
+        print(f"Full suite {operation} was not started.")
+        print(f"Available components: {', '.join(suite.component_names)}")
+        print("Choose one with --component NAME (repeatable), or use --all to opt in.")
+        return None
+    else:
+        selected_benchmarks = suite.benchmarks
+
+    if (
+        all_components
+        and suite.full_suite_warning
+        and (operation == "dispatch" or getattr(args, "verbose", False))
+    ):
+        print(f"WARNING: {suite.full_suite_warning}")
+
+    return suite, selected_benchmarks
+
+
 def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     """Dispatch multiple benchmark configurations to a quantum device.
 
@@ -353,47 +425,11 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     Note: Continues processing remaining configs if individual configs fail.
     """
+    selection = _load_selected_suite(args, operation="dispatch")
+    if selection is None:
+        return
+    suite, selected_benchmarks = selection
     config_file = args.suite_config
-
-    try:
-        suite = parse_suite_file(config_file)
-    except FileNotFoundError:
-        print(f"✗ {config_file}: Configuration file or bundled suite not found")
-        return
-    except Exception as exc:
-        print(f"✗ {config_file}: Invalid suite configuration: {type(exc).__name__}: {exc}")
-        return
-
-    if not suite.benchmarks:
-        print(f"✗ {config_file}: No benchmarks found in the suite")
-        return
-
-    requested_components = getattr(args, "components", None) or []
-    if isinstance(requested_components, str):
-        requested_components = [requested_components]
-    all_components = getattr(args, "all_components", False)
-
-    if requested_components and all_components:
-        print("✗ --component and --all cannot be used together")
-        return
-
-    if requested_components:
-        try:
-            selected_benchmarks = suite.select_components(requested_components)
-        except ValueError as exc:
-            print(f"✗ {exc}")
-            return
-    elif suite.full_suite_warning and not all_components:
-        print(f"WARNING: {suite.full_suite_warning}")
-        print("Full suite dispatch was not started.")
-        print(f"Available components: {', '.join(suite.component_names)}")
-        print("Choose one with --component NAME (repeatable), or use --all to opt in.")
-        return
-    else:
-        selected_benchmarks = suite.benchmarks
-
-    if all_components and suite.full_suite_warning:
-        print(f"WARNING: {suite.full_suite_warning}")
 
     print(f"Starting suite dispatch on {args.provider}:{args.device}...")
 
@@ -491,7 +527,11 @@ def poll_job(args: argparse.Namespace, job_manager: JobManager) -> None:
     if not metriq_job:
         return
     print("Polling job...")
-    fetch_output = fetch_result(metriq_job, args, job_manager)
+    try:
+        fetch_output = fetch_result(metriq_job, args, job_manager)
+    except QBraidSetupError as exc:
+        print(f"✗ Could not fetch status/results for job {metriq_job.id}: {exc}")
+        return
     if fetch_output is None:
         if metriq_job.failed:
             print(f"Job {metriq_job.id} failed and has no results.")
@@ -527,7 +567,7 @@ def _resolve_upload_outcome(
             choices = ", ".join(o.value for o in RecordOutcome)
             print(f"Error: --outcome must be one of {choices}; got '{raw_outcome}'.")
             return None
-    if outcome in HUMAN_OUTCOMES and not reason:
+    if outcome is not None and outcome in HUMAN_OUTCOMES and not reason:
         print(f"Error: --outcome {outcome.value} requires --reason explaining the classification.")
         return None
     if reason and outcome is None:
@@ -682,7 +722,11 @@ def poll_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     completed_jobs: list[MetriqGymJob] = []
     results: list[Any] = []
     for metriq_job in jobs:
-        fetch_output = fetch_result(metriq_job, args, job_manager)
+        try:
+            fetch_output = fetch_result(metriq_job, args, job_manager)
+        except QBraidSetupError as exc:
+            print(f"✗ Could not fetch status/results for job {metriq_job.id}: {exc}")
+            return
         if fetch_output is None:
             if metriq_job.failed:
                 # Failed jobs have nothing to tabulate; report and keep going so one
@@ -724,7 +768,11 @@ def export_suite_results(args, jobs: list[MetriqGymJob], results: list["Benchmar
         records.append(DictExporter(job, result).export() | {"params": job.params})
 
     if hasattr(args, "json"):
-        raise NotImplementedError("JSON export of suite results is not implemented yet.")
+        import json
+
+        with open(args.json, "w") as json_file:
+            json.dump(records, json_file, indent=4)
+        print(f"Results exported to {args.json}")
     else:
         print("\n--- Suite Metadata ---")
         print_selected(records[0], COMMON_SUITE_METADATA)
@@ -1145,9 +1193,39 @@ def delete_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
     print(f"All jobs for suite ID {args.suite_id} deleted successfully.")
 
 
-def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:
+def _estimate_resources(batches: list[CircuitBatch], provider: str, device) -> ResourceEstimate:
+    """Add the selected provider's cost model without submitting any workloads."""
+    provider_key = provider.strip().lower()
+    estimate = aggregate_resource_estimates(
+        batches, hqc_fn=quantinuum_hqc_formula if provider_key == "quantinuum" else None
+    )
+    if provider_key == "ibm":
+        from metriq_gym.qplatform.ibm_estimation import estimate_ibm_usage
+
+        try:
+            estimate.ibm_quantum_seconds = estimate_ibm_usage(batches, device)
+            estimate.notes.append(
+                "Static IBM estimate using backend timing and default repetition delay, "
+                "with 2 s overhead per circuit batch. Additional runtime sub-jobs and "
+                "error suppression/mitigation overhead are excluded. No jobs are submitted."
+            )
+        except Exception as exc:
+            estimate.ibm_timing_complete = False
+            estimate.notes.append(f"IBM QPU time unavailable: {type(exc).__name__}: {exc}")
+            logger.debug("IBM timing estimation failure traceback", exc_info=True)
+    return estimate
+
+
+def estimate_suite(args: argparse.Namespace) -> None:
+    """Estimate selected suite entries and their total without submitting jobs."""
+    verbose = getattr(args, "verbose", False)
+    selection = _load_selected_suite(args, operation="estimation")
+    if selection is None:
+        return
+    suite, selected_benchmarks = selection
+
     if not args.provider:
-        print("Provider is required for resource estimation.")
+        print("Provider is required for cost estimation.")
         return
 
     device = None
@@ -1156,8 +1234,76 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
             device = setup_device(args.provider, args.device)
         except QBraidSetupError:
             return
-    else:
-        print("No device specified; estimating resources without device-specific topology.")
+    elif verbose:
+        print("No device specified; estimating cost proxies without device-specific topology.")
+
+    if verbose:
+        print(f"Estimating suite {suite.name} on {args.provider}:{args.device}...")
+    estimates: list[ResourceEstimate] = []
+    available_benchmarks = _lazy_registry().get_available_benchmarks()
+    for entry in selected_benchmarks:
+        if verbose:
+            print(f"\nEstimating {entry.name} from {suite.name}...")
+        try:
+            params = validate_and_create_model(entry.config)
+            if params.benchmark_name not in available_benchmarks:
+                raise ValueError(f"Unsupported benchmark '{params.benchmark_name}'")
+            job_type = JobType(params.benchmark_name)
+            if device is not None:
+                validate_benchmark_device_capacity(params, device)
+            # Upstream circuit builders also print progress; keep it in verbose output only.
+            with nullcontext() if verbose else redirect_stdout(StringIO()):
+                benchmark = setup_benchmark(args, params, job_type)
+                estimate = _estimate_resources(
+                    benchmark.estimate_resources_handler(device), args.provider, device
+                )
+        except Exception as exc:
+            detail = str(exc)
+            if isinstance(exc, NotImplementedError) and not detail:
+                detail = "Cost estimation is not implemented for this benchmark."
+            print(f"✗ {entry.name}: {type(exc).__name__}: {detail}")
+            logger.debug("Suite estimation failure traceback", exc_info=True)
+            continue
+        estimates.append(estimate)
+        if verbose:
+            print_resource_estimate(job_type, args.provider, args.device, estimate, verbose=True)
+
+    if verbose:
+        print(f"\nEstimated {len(estimates)}/{len(selected_benchmarks)} benchmark entries.")
+    if not estimates:
+        print("No benchmarks could be estimated.")
+        return
+    label = f"Suite total ({suite.name})"
+    components_selected = bool(getattr(args, "components", None))
+    if components_selected:
+        selected_keys = {entry.component_name.casefold() for entry in selected_benchmarks}
+        components = [name for name in suite.component_names if name.casefold() in selected_keys]
+        label = f"{suite.name}: {', '.join(components)}"
+    if len(estimates) != len(selected_benchmarks):
+        label = (
+            f"{label} (partial)" if components_selected else f"Partial suite total ({suite.name})"
+        )
+        print("Failed entries are excluded from the total below.")
+    total = merge_resource_estimates(estimates)
+    if len(estimates) != len(selected_benchmarks):
+        total.ibm_timing_complete = False
+    print_resource_estimate(label, args.provider, args.device, total, verbose=verbose)
+
+
+def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = None) -> None:
+    verbose = getattr(args, "verbose", False)
+    if not args.provider:
+        print("Provider is required for cost estimation.")
+        return
+
+    device = None
+    if args.device:
+        try:
+            device = setup_device(args.provider, args.device)
+        except QBraidSetupError:
+            return
+    elif verbose:
+        print("No device specified; estimating cost proxies without device-specific topology.")
 
     config_file = args.config
 
@@ -1183,21 +1329,21 @@ def estimate_job(args: argparse.Namespace, _job_manager: JobManager | None = Non
             print(f"✗ {job_type.value}: {exc}")
             return
 
-    benchmark: Benchmark = setup_benchmark(args, params, job_type)
-
     try:
-        circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
-        resource_estimate = aggregate_resource_estimates(
-            circuit_batches, hqc_fn=quantinuum_hqc_formula
-        )
+        with nullcontext() if verbose else redirect_stdout(StringIO()):
+            benchmark: Benchmark = setup_benchmark(args, params, job_type)
+            circuit_batches: list[CircuitBatch] = benchmark.estimate_resources_handler(device)
+            resource_estimate = _estimate_resources(circuit_batches, args.provider, device)
     except (ValueError, NotImplementedError) as exc:
         print(f"✗ {job_type.value}: {exc}")
         return
     except Exception as exc:  # pragma: no cover - surface unexpected errors cleanly
-        print(f"✗ Failed to estimate resources: {exc}")
+        print(f"✗ Failed to estimate cost: {exc}")
         return
 
-    print_resource_estimate(job_type, args.provider, args.device, resource_estimate)
+    print_resource_estimate(
+        job_type, args.provider, args.device, resource_estimate, verbose=verbose
+    )
 
 
 def main() -> int:
