@@ -5,7 +5,6 @@ import random
 from qiskit import QuantumCircuit
 from qiskit.circuit import Parameter, ParameterVector
 import networkx as nx
-import numpy as np
 from typing import Literal, List, Tuple
 
 GraphType = Literal[
@@ -250,17 +249,16 @@ def qaoa_circuit(
                 else:
                     qc.compose(cost_layer_1.assign_parameters([gammas[pi]]), inplace=True)
                 qc.rx(-2 * betas[pi], range(nq))
-                qc.measure(
-                    range(nq),
-                    [
-                        i
-                        for i in (
-                            range(nq)
-                            if num_qaoa_layers % 2 == 0
-                            else np.argsort(qubit_order(nq, len(list_2q_layers) - 1))
-                        )
-                    ],
-                )
+            # Qubit q holds node qubit_order(...)[q] after an odd number of layers and node q
+            # after an even number; node i must land in bitstring position i (clbit nq - 1 - i).
+            qc.measure(
+                range(nq),
+                (
+                    list(reversed(range(nq)))
+                    if num_qaoa_layers % 2 == 0
+                    else [nq - 1 - i for i in qubit_order(nq, len(list_2q_layers) - 1)]
+                ),
+            )
         else:
             raise ValueError(
                 f"{circuit_encoding} is not valid circuit encoding from ['Direct', 'SWAP']"
