@@ -2,7 +2,7 @@
   "$id": "metriq-gym/ghz.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "GHZ",
-  "description": "GHZ state preparation and verification benchmark. Constructs a GHZ state on the device using a binary dissemination tree over the device connectivity, then estimates fidelity via direct fidelity estimation (DFE, uniform stabilizer sampling), the two-setting Z/X lower bound, parity oscillation curve fitting, or compressed sensing (random-phase parity sampling with sparse spectrum recovery by L1 minimization).",
+  "description": "GHZ state preparation and verification benchmark. Constructs a GHZ state on the device using a binary dissemination tree over the device connectivity, then estimates fidelity via direct fidelity estimation (DFE, uniform stabilizer sampling), the two-setting Z/X lower bound, parity oscillation quadrature fitting, or compressed sensing (random-phase parity sampling with sparse spectrum recovery by L1 minimization).",
   "type": "object",
   "properties": {
     "benchmark_name": {
@@ -22,7 +22,7 @@
     },
     "size_search": {
       "type": "boolean",
-      "description": "Search GHZ sizes by progressive bisection instead of verifying one fixed size: build GHZ states at halving sizes from the device size down to min_qubits (e.g. 156, 78, 39, 19, 9), dispatch them all in a single job, and report the largest size whose fidelity clears fidelity_threshold (largest_passing_size, which becomes the score) plus per-size fidelities. With the default compressed sensing this costs about 5*ln(N) circuits per size.",
+      "description": "Search GHZ sizes by progressive bisection instead of verifying one fixed size: build GHZ states at halving sizes from the device size down to min_qubits (e.g. 156, 78, 39, 19, 9, 5), dispatch them all in a single job, and report the largest size whose fidelity clears fidelity_threshold (largest_passing_size, which becomes the score) plus per-size fidelities. With the default compressed sensing this costs about 5*ln(N) circuits per size.",
       "default": false,
       "examples": [
         true
@@ -30,7 +30,7 @@
     },
     "min_qubits": {
       "type": "integer",
-      "description": "Lower bound for size_search; halving stops before going below this size. Ignored in fixed-size mode.",
+      "description": "Smallest size included in size_search, appended if halving steps over it. Ignored in fixed-size mode.",
       "default": 5,
       "minimum": 2,
       "examples": [
@@ -59,7 +59,7 @@
     },
     "method": {
       "type": "string",
-      "description": "Verification method: 'dfe' (Flammia-Liu direct fidelity estimation: 1 + num_stabilizers circuits, uniformly sampled off-diagonal stabilizers averaged into an unbiased coherence estimate with pure finite-sampling error), 'two_setting_bound' (2 circuits; the global X parity is corrected by the largest possible non-GHZ complementary-pair contribution estimated from the Z distribution, a conservative lower bound only valid while 2^N stays within the shot count), 'parity_oscillation' (uniform grid over [0, 2pi), needs more than 2N points to avoid aliasing), or 'compressed_sensing' (~5*ln(N) random phases, LASSO over a cosine basis; also witnesses the actual GHZ size and phase offset). When omitted, defaults to 'dfe' for a fixed size and 'compressed_sensing' for size_search.",
+      "description": "Verification method: 'dfe' (Flammia-Liu direct fidelity estimation against GHZ+: 1 + num_stabilizers circuits), 'two_setting_bound' (2 circuits; subtracts the population outside the GHZ subspace from global X-parity magnitude to bound phase-optimized fidelity), 'parity_oscillation' (phase-optimized fidelity from a uniform grid over [0, 2pi), requiring more than 2N points), or 'compressed_sensing' (phase-optimized fidelity from ~5*ln(N) random phases, LASSO and a quadrature refit; also reports recovered frequency and phase offset). Compressed-sensing uncertainty is conditional on the recovered sparse model; increase num_phases when the spectrum needs more samples. DFE penalizes coherent phase errors; the other methods optimize over phase. When omitted, defaults to 'dfe' for a fixed size and 'compressed_sensing' for size_search.",
       "enum": [
         "dfe",
         "two_setting_bound",
@@ -96,7 +96,7 @@
     },
     "confidence_sigma": {
       "type": "number",
-      "description": "Size search only: how many standard deviations a size's fidelity must clear fidelity_threshold by before it counts as passing. Keeps the discrete size score from flipping between runs when a size sits at the boundary. Set to 0 to threshold on the point estimate.",
+      "description": "Size search only: how many estimated standard deviations fidelity must clear fidelity_threshold by. Set to 0 to threshold on the point estimate. This margin reduces threshold fluctuations; it is not a rigorous confidence guarantee, and compressed-sensing uncertainty is conditional on its recovered sparse model.",
       "default": 1.0,
       "minimum": 0,
       "examples": [

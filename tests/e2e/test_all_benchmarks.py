@@ -70,6 +70,11 @@ def shrink_config_using_schema(config: dict) -> dict:
         if key not in properties:
             continue
 
+        # GHZ spectral recovery needs enough shots to distinguish signal from
+        # noise. Keep the example's shot count while shrinking circuit sizes.
+        if benchmark_name == "GHZ" and key == "shots":
+            continue
+
         prop_schema = properties[key]
 
         # A. Shrink simple Numbers/Integers

@@ -12,13 +12,11 @@ Summary:
     Two modes:
     - Fixed size (`num_qubits`): verify a GHZ state of one requested size.
     - Size search (`size_search: true`): build GHZ states at halving sizes
-      from the device size down to `min_qubits` (e.g. 156, 78, 39, 19, 9),
+      from the device size down to `min_qubits` (e.g. 156, 78, 39, 19, 9, 5),
       all dispatched in a single job, and report the largest size whose
       fidelity clears `fidelity_threshold` by `confidence_sigma` standard
-      deviations. Defaults to compressed sensing: the two-setting bound
-      corrects for the non-GHZ parity contribution using the observed Z
-      distribution, and that correction stops holding once 2^N outruns the
-      shot count, which the larger searched sizes always do.
+      deviations. Defaults to compressed sensing, which resolves the
+      frequency spectrum using logarithmically many phase samples.
 
 Result interpretation:
     - population: probability of measuring all-zero or all-one bitstrings (Z basis).
@@ -27,16 +25,18 @@ Result interpretation:
       2·Re(rho[0...0, 1...1]) with pure finite-sampling error (the diagonal
       half of the stabilizer group averages exactly to the population, so the
       Z circuit covers it with no sampling). two_setting_bound takes the
-      global X parity and subtracts the largest contribution the non-GHZ
-      complementary pairs could have made, since X^(x)N connects every
+      global X parity and subtracts the population outside the GHZ subspace,
+      bounding the contribution of non-GHZ complementary pairs: X^(x)N connects every
       bitstring to its complement and not only 0...0 to 1...1; without that
       subtraction a product state such as |+>^(x)N reports coherence 1. The
       oscillation methods instead isolate the N-qubit Fourier component, by
       curve fit or by LASSO over random-phase parity samples.
-    - fidelity: (population + coherence) / 2.
+    - fidelity: (population + coherence) / 2. DFE targets GHZ+; oscillation
+      methods maximize over the relative phase, and two_setting_bound bounds
+      that phase-optimized fidelity. These targets differ for coherent phase errors.
     - recovered_frequency (compressed sensing only): dominant frequency of the
-      parity signal, which equals N only if the full N-qubit GHZ state was
-      actually prepared; a partially entangled state shows a lower frequency.
+      parity signal. This is a diagnostic of the spectrum, not by itself an
+      entanglement certificate; use fidelity to assess the prepared state.
     - phase_offset (compressed sensing only): phase θ of the off-diagonal
       element, i.e. the state (|0...0> + e^{iθ}|1...1>)/√2. Zero for an ideal
       GHZ; a nonzero value exposes coherent errors (residual Z rotations,
@@ -58,14 +58,13 @@ References:
       Quantum Devices without Tomography", Phys. Rev. Lett. 107, 210404 (2011).
 """
 
-import logging
 import math
 from dataclasses import dataclass, field
 
 import numpy as np
 from pydantic import Field
-from qiskit import QuantumCircuit
-from scipy.optimize import curve_fit
+from qbraid.runtime import QiskitBackend
+from qiskit import QuantumCircuit, transpile
 from typing import TYPE_CHECKING
 
 from metriq_gym.benchmarks.benchmark import (
@@ -75,14 +74,12 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkScore,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.qplatform.device import connectivity_graph
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
     from qbraid import GateModelResultData, QuantumDevice, QuantumJob
-
-
-logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -113,16 +110,16 @@ class GHZData(BenchmarkData):
 class GHZResult(BenchmarkResult):
     population: BenchmarkScore = Field(description="Z-basis population of |0...0> + |1...1>")
     coherence: BenchmarkScore = Field(
-        description="Off-diagonal coherence (X-basis parity or oscillation amplitude)"
+        description="Signed GHZ+ coherence (DFE), magnitude (oscillation), or magnitude lower bound"
     )
     fidelity: BenchmarkScore = Field(
-        description="GHZ state fidelity lower bound: (population + coherence) / 2"
+        description="GHZ fidelity estimate or two-setting lower bound: (population + coherence) / 2"
     )
     recovered_frequency: int | None = Field(
         default=None,
         description=(
             "Dominant parity-oscillation frequency recovered by compressed sensing; "
-            "equals num_qubits only if the full GHZ state was prepared. "
+            "diagnoses the signal spectrum but does not alone certify entanglement. "
             "None for other methods."
         ),
     )
@@ -137,7 +134,7 @@ class GHZResult(BenchmarkResult):
     )
     phase_offset_err: float | None = Field(
         default=None,
-        description="Uncertainty on phase_offset (c_err / coherence); None when phase_offset is None.",
+        description="Propagated shot uncertainty on phase_offset; None when phase_offset is None.",
     )
     largest_passing_size: BenchmarkScore | None = Field(
         default=None,
@@ -380,49 +377,6 @@ def build_ghz_circuits(
 # ---------------------------------------------------------------------------
 
 
-def complementary_pair_bound(z_counts: dict[str, int], n: int, total_z: int) -> float:
-    """Bound the non-GHZ contribution to the global X parity.
-
-    ``X^{\\otimes N}`` connects every bitstring to its complement, so its
-    expectation is ``2 * sum_pairs Re(rho[x, x_bar])`` over all complementary
-    pairs, not just the GHZ pair ``{0...0, 1...1}``. Positivity of rho gives
-    ``|Re(rho[x, x_bar])| <= sqrt(P(x) P(x_bar))``, so this returns
-
-        sum_{pairs != GHZ pair} sqrt(P(x) P(x_bar))
-
-    estimated from the Z-basis distribution. Subtracting twice this from the
-    measured parity leaves a valid lower bound on the GHZ coherence.
-
-    The estimate is only trustworthy when the Z distribution is adequately
-    sampled; see :func:`two_setting_sampling_is_adequate`.
-    """
-    zero, one = "0" * n, "1" * n
-    seen: set[str] = set()
-    bound = 0.0
-    for bitstring, count in z_counts.items():
-        if bitstring in (zero, one) or bitstring in seen:
-            continue
-        complement = bitstring.translate(str.maketrans("01", "10"))
-        seen.add(bitstring)
-        seen.add(complement)
-        p = count / total_z
-        p_comp = z_counts.get(complement, 0) / total_z
-        bound += math.sqrt(p * p_comp)
-    return bound
-
-
-def two_setting_sampling_is_adequate(n: int, shots: int) -> bool:
-    """Whether the Z distribution can support the complementary-pair bound.
-
-    The bound in :func:`complementary_pair_bound` is estimated from observed
-    Z-basis frequencies. Once 2^n greatly exceeds the shot count, complementary
-    pairs are essentially never both observed, the bound collapses toward zero
-    and stops being a valid lower bound. Require at least one expected shot per
-    computational basis state.
-    """
-    return n <= 30 and (2**n) <= shots
-
-
 def estimate_fidelity_two_setting_bound(
     z_counts: dict[str, int],
     x_counts: dict[str, int],
@@ -433,9 +387,11 @@ def estimate_fidelity_two_setting_bound(
     Not direct fidelity estimation: X^(x)N is a single element of the
     stabilizer group, so this yields a conservative bound rather than an
     unbiased estimate — see :func:`estimate_fidelity_dfe` for the real thing.
-    The coherence is the global X parity corrected by the largest possible
-    contribution from non-GHZ complementary pairs, so a separable state such
-    as ``|+>^{\\otimes N}`` (parity 1, no entanglement) is not certified.
+    The non-GHZ complementary pairs contribute at most the population outside
+    the GHZ subspace: 2*sqrt(p_x*p_complement) <= p_x+p_complement. Subtracting
+    1-population from |X parity| therefore bounds the coherence magnitude
+    without estimating exponentially many individual outcome probabilities.
+    Finite-shot uncertainty still applies to both measured expectations.
 
     Returns: (population, coherence, population_err, coherence_err)
     """
@@ -455,13 +411,20 @@ def estimate_fidelity_two_setting_bound(
     even_x = sum(c for b, c in x_counts.items() if b.count("1") % 2 == 0)
     raw_parity = abs((2 * even_x - total_x) / total_x)
 
-    # Subtract the maximum the other complementary pairs could have
-    # contributed. Without this, |+>^N reports coherence 1 despite carrying no
-    # entanglement at all.
-    coherence = max(0.0, raw_parity - 2.0 * complementary_pair_bound(z_counts, n, total_z))
-    c_err = np.sqrt(max(0.0, 1 - coherence**2) / total_x)
+    coherence = max(0.0, raw_parity - (1.0 - population))
+    c_err = np.sqrt(p_err**2 + max(0.0, 1 - raw_parity**2) / total_x)
 
     return population, coherence, p_err, c_err
+
+
+def _fidelity_uncertainty(method: str, p_err: float, c_err: float) -> float:
+    """Propagate uncertainty, accounting for shared Z counts in the bound."""
+    variance = p_err**2 + c_err**2
+    if method == "two_setting_bound":
+        # C = |X| + P - 1 shares P with F = (P+C)/2, so Cov(P,C)=Var(P).
+        # Keep this conservative error even when C is clamped to zero.
+        variance += 2 * p_err**2
+    return math.sqrt(variance) / 2
 
 
 def estimate_fidelity_dfe(
@@ -535,7 +498,11 @@ def estimate_fidelity_oscillation(
     phases: list[float],
     n: int,
 ) -> tuple[float, float, float, float]:
-    """Estimate GHZ fidelity using parity oscillation curve fitting.
+    """Estimate GHZ fidelity from the sine/cosine quadratures at frequency n.
+
+    The uniform phase grid makes these columns orthogonal to other Fourier
+    components. A linear fit stays identifiable even at zero phase offset,
+    where a nonlinear amplitude/phase fit can return infinite covariance.
 
     Returns: (population, coherence, population_err, coherence_err)
     """
@@ -549,32 +516,34 @@ def estimate_fidelity_oscillation(
 
     # Compute parities for each phase
     parities = []
+    parity_vars = []
     for osc_counts in osc_counts_list:
         total = sum(osc_counts.values())
         if total == 0:
-            parities.append(0.0)
-            continue
+            raise ValueError("GHZ parity oscillation requires counts for every phase")
         even = sum(c for b, c in osc_counts.items() if b.count("1") % 2 == 0)
-        parities.append((2 * even - total) / total)
+        parity = (2 * even - total) / total
+        parities.append(parity)
+        parity_vars.append((1 - parity**2) / total)
 
-    # Fit oscillation: amplitude * cos(n * phi + offset)
-    def osc_func(phi, amplitude, offset):
-        return amplitude * np.cos(n * phi + offset)
+    angles = n * np.asarray(phases)
+    design = np.column_stack((np.cos(angles), np.sin(angles)))
+    quadratures, _, rank, _ = np.linalg.lstsq(design, np.asarray(parities), rcond=None)
+    if rank < 2:
+        raise ValueError("GHZ parity phases cannot resolve both coherence quadratures")
+    coherence = float(np.linalg.norm(quadratures))
+    inverse = np.linalg.pinv(design)
+    covariance = (inverse * np.asarray(parity_vars)) @ inverse.T
+    if coherence > 1e-12:
+        direction = quadratures / coherence
+        variance = float(direction @ covariance @ direction)
+    else:
+        # At zero amplitude its gradient is undefined; retain the largest
+        # quadrature variance instead of reporting zero uncertainty.
+        variance = float(np.linalg.eigvalsh(covariance)[-1])
+    c_err = math.sqrt(max(0.0, variance))
 
-    try:
-        popt, pcov = curve_fit(osc_func, np.array(phases), np.array(parities), p0=[0.5, 0])
-        coherence = abs(popt[0])
-        c_err = np.sqrt(pcov[0, 0])
-    except Exception as exc:
-        logger.warning(
-            "Parity oscillation fit failed for GHZ benchmark "
-            "(returning coherence=0); root cause: %s",
-            exc,
-        )
-        coherence = 0.0
-        c_err = 0.0
-
-    return population, coherence, p_err, c_err
+    return population, coherence, float(p_err), c_err
 
 
 def _cosine_dictionary(phases: np.ndarray, max_freq: int) -> np.ndarray:
@@ -595,6 +564,7 @@ def _lasso_spectrum(
     dictionary: np.ndarray,
     signal: np.ndarray,
     lam_ratio: float = 0.1,
+    lam_floor: float = 0.0,
     max_iter: int = 5000,
     tol: float = 1e-10,
 ) -> np.ndarray:
@@ -603,7 +573,7 @@ def _lasso_spectrum(
     λ is set relative to λ_max = max|Aᵀy| (the smallest λ with all-zero
     solution), the standard parameterization for basis-pursuit denoising.
     """
-    lam = lam_ratio * float(np.max(np.abs(dictionary.T @ signal), initial=0.0))
+    lam = max(lam_floor, lam_ratio * float(np.max(np.abs(dictionary.T @ signal), initial=0.0)))
     lipschitz = float(np.linalg.norm(dictionary, 2)) ** 2
     x = np.zeros(dictionary.shape[1])
     if lipschitz == 0.0:
@@ -633,14 +603,17 @@ def estimate_fidelity_compressed_sensing(
 
     Samples the parity signal at M random phases on [0, 2π) and recovers its
     sparse frequency spectrum by L1-regularized least squares (LASSO) over a
-    cosine/sine dictionary, followed by an ordinary least-squares refit on the
-    recovered support to remove the L1 shrinkage bias. Random phases provide
-    the incoherence needed for sub-Nyquist recovery with M ≈ 5·ln(n) samples.
+    cosine/sine dictionary, followed by an ordinary least-squares refit on both
+    quadratures of each recovered frequency to remove the L1 shrinkage bias.
+    The reported uncertainty propagates shot noise conditional on this sparse
+    model; it does not bound errors from unidentified frequency components.
+    Random phases provide the incoherence needed for sub-Nyquist recovery
+    with M ≈ 5·ln(n) samples.
 
     The coherence is the amplitude of the n-qubit frequency component. The
-    dominant frequency overall is also returned: it equals n only if the full
-    GHZ state was prepared, so it acts as a witness of the actual GHZ size
-    (a k-qubit entangled core oscillates at frequency k, not n).
+    dominant frequency overall is also returned as a diagnostic. A partially
+    entangled state can have several spectral peaks, including frequency n;
+    the dominant frequency alone does not certify entanglement.
     See arXiv:2604.27824.
 
     The frequency-n quadrature coefficients also encode the phase θ of the
@@ -672,7 +645,9 @@ def estimate_fidelity_compressed_sensing(
         even = sum(c for b, c in osc_counts.items() if b.count("1") % 2 == 0)
         p_k = (2 * even - total) / total
         parities.append(p_k)
-        parity_vars.append((1.0 - p_k**2) / total)
+        # A one-count continuity floor keeps saturated observations from
+        # claiming exact parity, especially when only one shot was taken.
+        parity_vars.append(max((1.0 - p_k**2) / total, 1.0 / total**2))
 
     M = len(parities)
     if M == 0:
@@ -680,29 +655,38 @@ def estimate_fidelity_compressed_sensing(
 
     dictionary = _cosine_dictionary(np.asarray(phases), n)
     signal = np.asarray(parities)
-    coeffs = _lasso_spectrum(dictionary, signal)
+    # A purely relative penalty promotes many noise peaks when the physical
+    # signal is weak, exhausting the phase samples during the paired refit.
+    # Set a noise floor from the largest propagated column standard error,
+    # with the usual sqrt(2 log(number of columns)) multiple-comparison scale.
+    column_vars = (dictionary**2).T @ np.asarray(parity_vars)
+    lam_floor = math.sqrt(2.0 * math.log(dictionary.shape[1]) * float(np.max(column_vars)))
+    coeffs = _lasso_spectrum(dictionary, signal, lam_floor=lam_floor)
 
-    # Debias: LASSO shrinks the surviving coefficients toward zero, so refit
-    # ordinary least squares on the recovered support (the relaxed-lasso
-    # estimator), plus frequency n so the coherence is always defined.
-    #
-    # arXiv:2604.27824 refits only the dominant recovered frequency because it
-    # reads only that amplitude. This implementation reads the amplitude at
-    # frequency n, which is a different column whenever the state is partially
-    # entangled, so truncating the refit to a subset of the recovered support
-    # biases what remains: on the cos(10 phi) cos^2(phi) signal, whose exact
-    # amplitudes are 1/4, 1/2, 1/4 at frequencies 8, 10, 12, dropping the
-    # frequency-8 column pushes the frequency-12 amplitude from 0.25 to 0.32,
-    # since the discarded energy has nowhere else to go. Refitting the full
-    # support recovers 0.25. Skipped when the system is not overdetermined.
+    # Debias all recovered frequencies, including BOTH quadratures even when
+    # LASSO selected only one. Otherwise a small omitted sine coefficient at a
+    # lower frequency leaks into the n-qubit amplitude on a random phase grid
+    # and can falsely certify a biseparable state. Always include frequency n.
     support = np.flatnonzero(np.abs(coeffs) > 1e-8)
-    if 0 < support.size < M:
-        coherence_cols = [c for c in (2 * n - 1, 2 * n) if c < dictionary.shape[1]]
-        refit_cols = sorted(set(support.tolist()) | set(coherence_cols))
-        if len(refit_cols) < M:
-            refit, *_ = np.linalg.lstsq(dictionary[:, refit_cols], signal, rcond=None)
-            coeffs = np.zeros_like(coeffs)
-            coeffs[refit_cols] = refit
+    frequencies = {(int(col) + 1) // 2 for col in support if col > 0} | {n}
+    refit_cols = sorted(
+        ({0} if 0 in support else set())
+        | {col for freq in frequencies for col in (2 * freq - 1, 2 * freq)}
+    )
+    if len(refit_cols) >= M:
+        raise ValueError(
+            "Compressed-sensing spectrum needs more phase samples for an "
+            "overdetermined refit; increase num_phases."
+        )
+    design = dictionary[:, refit_cols]
+    refit, _, rank, _ = np.linalg.lstsq(design, signal, rcond=None)
+    if rank < len(refit_cols):
+        raise ValueError(
+            "Compressed-sensing phase samples cannot resolve the recovered "
+            "frequencies; increase num_phases or use a different seed."
+        )
+    coeffs = np.zeros_like(coeffs)
+    coeffs[refit_cols] = refit
 
     # Fold cos/sin coefficient pairs into per-frequency amplitudes.
     amplitudes = np.empty(n + 1)
@@ -714,10 +698,22 @@ def estimate_fidelity_compressed_sensing(
     oscillating = amplitudes[1:]
     recovered_frequency = int(np.argmax(oscillating)) + 1 if np.max(oscillating) > 1e-9 else 0
 
-    # Shot-noise propagation for a least-squares cosine amplitude over M
-    # samples; the real and imaginary quadratures each pick up roughly half
-    # the total parity variance.
-    c_err = (np.sqrt(2.0) / M) * float(np.sqrt(np.sum(parity_vars)))
+    # Propagate each phase's binomial variance through the actual refit. The
+    # random design is not orthogonal, and fitting nuisance frequencies can
+    # amplify shot noise substantially compared with a uniform phase grid.
+    inverse = np.linalg.pinv(design)
+    covariance = (inverse * np.asarray(parity_vars)) @ inverse.T
+    coherence_indices = [refit_cols.index(2 * n - 1), refit_cols.index(2 * n)]
+    coherence_covariance = covariance[np.ix_(coherence_indices, coherence_indices)]
+    quadratures = coeffs[[2 * n - 1, 2 * n]]
+    if coherence > 1e-12:
+        gradient = quadratures / coherence
+        coherence_var = float(gradient @ coherence_covariance @ gradient)
+    else:
+        # The amplitude gradient is undefined at zero; use the largest
+        # quadrature variance as a conservative scale for the noise floor.
+        coherence_var = float(np.linalg.eigvalsh(coherence_covariance)[-1])
+    c_err = math.sqrt(max(0.0, coherence_var))
 
     # Phase of the frequency-n component (see docstring for the convention).
     # Undefined when the amplitude is within noise of zero: atan2 of noise.
@@ -725,7 +721,9 @@ def estimate_fidelity_compressed_sensing(
     phase_offset_err: float | None = None
     if coherence > max(2.0 * c_err, 1e-9):
         phase_offset = float(np.arctan2(-coeffs[2 * n], coeffs[2 * n - 1]))
-        phase_offset_err = float(c_err / coherence)
+        phase_gradient = np.array([quadratures[1], -quadratures[0]]) / coherence**2
+        phase_var = float(phase_gradient @ coherence_covariance @ phase_gradient)
+        phase_offset_err = math.sqrt(max(0.0, phase_var))
 
     return population, coherence, p_err, c_err, recovered_frequency, phase_offset, phase_offset_err
 
@@ -733,7 +731,7 @@ def estimate_fidelity_compressed_sensing(
 def bisection_sizes(device_size: int, min_qubits: int) -> list[int]:
     """Halving size grid from the device size down to min_qubits, largest first.
 
-    E.g. device_size=156, min_qubits=5 -> [156, 78, 39, 19, 9]. Every size is
+    E.g. device_size=156, min_qubits=5 -> [156, 78, 39, 19, 9, 5]. Every size is
     dispatched in one job, so the cost is logarithmic in the device size while
     still bracketing the largest buildable GHZ state to within a factor of two.
     """
@@ -794,7 +792,7 @@ class GHZBenchmark(Benchmark):
         """Phase grid for oscillation-style methods.
 
         parity_oscillation samples the full period [0, 2π) on a uniform grid
-        (default 20 points) and relies on a nonlinear fit. compressed_sensing
+        (default max(20, 2n+1) points) and fits both quadratures. compressed_sensing
         samples random phases on [0, 2π), as required for sparse recovery,
         and needs only M ≈ 5·ln(n) samples (the default when `num_phases` is
         not set); pass `seed` for a reproducible draw.
@@ -839,11 +837,9 @@ class GHZBenchmark(Benchmark):
     def _resolved_method(self) -> str:
         """Verification method, defaulting per mode.
 
-        Size search defaults to compressed sensing rather than the two-setting
-        bound: the bound corrects for the non-GHZ parity contribution using
-        the observed Z distribution, and that correction stops being valid
-        once 2^n outruns the shot count, which the largest searched sizes
-        always do.
+        Size search defaults to compressed sensing for an estimate of the
+        phase-optimized fidelity; the inexpensive two-setting method gives
+        only a lower bound.
         """
         method = getattr(self.params, "method", None)
         if method:
@@ -875,18 +871,6 @@ class GHZBenchmark(Benchmark):
         if bool(getattr(self.params, "size_search", False)):
             min_qubits = getattr(self.params, "min_qubits", None) or 5
             sizes = bisection_sizes(graph.num_nodes(), min_qubits)
-            if method == "two_setting_bound":
-                shots = getattr(self.params, "shots", 0) or 0
-                unsound = [s for s in sizes if not two_setting_sampling_is_adequate(s, shots)]
-                if unsound:
-                    logger.warning(
-                        "GHZ size search with method='two_setting_bound' at sizes %s: "
-                        "2^n exceeds the %d shots, so the complementary-pair correction "
-                        "cannot be estimated and the reported fidelity is not a valid "
-                        "lower bound. Use compressed_sensing or dfe for these sizes.",
-                        unsound,
-                        shots,
-                    )
             circuits: list[QuantumCircuit] = []
             circuit_counts: list[int] = []
             search_phases: list[list[float]] = []
@@ -941,10 +925,32 @@ class GHZBenchmark(Benchmark):
         ) = self._build_circuits(device)
         method = self._resolved_method()
 
-        quantum_job = device.run(circuits, shots=self.params.shots)
-
-        # No local transpilation pass, so transpiled counts mirror the input.
         counts = [count_two_qubit_gates(c) for c in circuits]
+        transpiled_counts = counts
+        if isinstance(device, (QiskitBackend, LocalAerDevice)):
+            # These circuits already use physical device indices. qBraid's
+            # default transform selects a fresh layout for each measurement
+            # setting, which would combine observations of different physical
+            # GHZ preparations. Translate gates without changing that layout
+            # or optimizing the common preparation differently per setting.
+            circuits = [
+                transpile(
+                    circuit,
+                    backend=device._backend,
+                    initial_layout=list(range(circuit.num_qubits)),
+                    optimization_level=0,
+                )
+                for circuit in circuits
+            ]
+            transpiled_counts = [count_two_qubit_gates(c) for c in circuits]
+            original_transform = device._options.get("transform")
+            device.set_options(transform=False)
+            try:
+                quantum_job = device.run(circuits, shots=self.params.shots)
+            finally:
+                device.set_options(transform=original_transform)
+        else:
+            quantum_job = device.run(circuits, shots=self.params.shots)
 
         return GHZData.from_quantum_job(
             quantum_job,
@@ -963,7 +969,7 @@ class GHZBenchmark(Benchmark):
                 else 1.0
             ),
             input_two_qubit_gate_counts=counts,
-            transpiled_two_qubit_gate_counts=counts,
+            transpiled_two_qubit_gate_counts=transpiled_counts,
         )
 
     def poll_handler(
@@ -985,7 +991,7 @@ class GHZBenchmark(Benchmark):
             )
         )
         fidelity = (pop + coh) / 2
-        f_err = np.sqrt(p_err**2 + c_err**2) / 2
+        f_err = _fidelity_uncertainty(method, p_err, c_err)
 
         return GHZResult(
             population=BenchmarkScore(value=pop, uncertainty=p_err),
@@ -1021,7 +1027,7 @@ class GHZBenchmark(Benchmark):
 
         fidelities = [(pop + coh) / 2 for pop, coh, *_ in per_size]
         uncertainties = [
-            float(np.sqrt(p_err**2 + c_err**2) / 2) for _, _, p_err, c_err, *_ in per_size
+            _fidelity_uncertainty(method, p_err, c_err) for _, _, p_err, c_err, *_ in per_size
         ]
 
         # Sizes are searched largest-first; the first one clearing the

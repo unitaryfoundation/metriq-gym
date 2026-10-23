@@ -8,8 +8,8 @@ from qiskit import QuantumCircuit
 
 from metriq_gym.benchmarks.ghz import (
     GHZBenchmark,
+    GHZData,
     bisection_sizes,
-    two_setting_sampling_is_adequate,
     GHZResult,
     _bfs_edges,
     build_ghz_circuits,
@@ -306,6 +306,45 @@ class TestEstimateFidelityOscillation:
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0, abs=0.05)
 
+    @pytest.mark.parametrize("phase_offset", [0.0, np.pi / 2, -0.7])
+    def test_ideal_state_passes_size_search(self, phase_offset):
+        n, shots = 4, 10000
+        phases = np.linspace(0, 2 * np.pi, 20, endpoint=False)
+        counts = [{"0000": shots // 2, "1111": shots // 2}]
+        for phi in phases:
+            even = round(shots * (1 + np.cos(n * phi + phase_offset)) / 2)
+            counts.append({"0000": even, "0001": shots - even})
+        data = GHZData(
+            provider_job_ids=["test"],
+            num_qubits=n,
+            method="parity_oscillation",
+            search_sizes=[n],
+            search_circuit_counts=[len(counts)],
+            search_phases=[phases.tolist()],
+        )
+        result = GHZBenchmark(Namespace(), Namespace())._poll_size_search(data, counts, data.method)
+        assert result.fidelity.value == pytest.approx(1.0, abs=1e-4)
+        assert 0 < result.fidelity.uncertainty < 0.01
+        assert result.largest_passing_size.value == n
+
+    def test_zero_signal_retains_shot_uncertainty(self):
+        phases = np.linspace(0, 2 * np.pi, 20, endpoint=False).tolist()
+        _, coherence, _, error = estimate_fidelity_oscillation(
+            {"0000": 500, "1111": 500},
+            [{"0000": 500, "0001": 500} for _ in phases],
+            phases,
+            4,
+        )
+        assert coherence == pytest.approx(0.0)
+        assert error == pytest.approx(np.sqrt(2 / (20 * 1000)))
+
+    def test_missing_phase_counts_raise(self):
+        phases = np.linspace(0, 2 * np.pi, 20, endpoint=False).tolist()
+        counts = [{"0000": 500, "0001": 500} for _ in phases]
+        counts[3] = {}
+        with pytest.raises(ValueError, match="counts for every phase"):
+            estimate_fidelity_oscillation({"0000": 1000}, counts, phases, 4)
+
     def test_empty_z_counts(self):
         pop, coh, _, _ = estimate_fidelity_oscillation({}, [], [], 3)
         assert pop == 0.0
@@ -384,6 +423,92 @@ class TestEstimateFidelityCompressedSensing:
         )
         assert freq == k
         assert coh == pytest.approx(0.25, abs=0.03)
+
+    @pytest.mark.parametrize("n, seed", [(5, 91), (10, 14), (20, 26), (50, 11)])
+    def test_small_nuisance_quadrature_does_not_certify_biseparable_state(self, n, seed):
+        # GHZ_(n-1)(phase .03) tensor |+>(phase -.03) is biseparable, with
+        # population=coherence=.5 and true optimized GHZ fidelity exactly .5.
+        # LASSO can discard the small sin((n-2)*phi) coefficient; omitting it
+        # from the refit biases coherence upward even with negligible noise.
+        phases = self._random_phases(max(6, int(np.ceil(5 * np.log(n)))), seed)
+        shots = 1_000_000_000
+        osc_counts = self._build_osc_counts(
+            n,
+            phases,
+            shots,
+            lambda phi: 0.5 * np.cos(n * phi) + 0.5 * np.cos((n - 2) * phi + 0.06),
+        )
+        z_counts = {
+            "0" * n: shots // 4,
+            "1" * n: shots // 4,
+            "0" * (n - 1) + "1": shots // 4,
+            "1" * (n - 1) + "0": shots // 4,
+        }
+        pop, coh, p_err, c_err, *_ = estimate_fidelity_compressed_sensing(
+            z_counts, osc_counts, phases, n
+        )
+        assert coh == pytest.approx(0.5, abs=1e-7)
+        assert (pop + coh - np.hypot(p_err, c_err)) / 2 <= 0.5
+
+    def test_uncertainty_accounts_for_poor_phase_coverage(self):
+        # Angles close to zero barely constrain the sine quadrature. A
+        # balanced-grid error formula would incorrectly give about .018.
+        n = 3
+        phases = np.linspace(0, 0.05, 6).tolist()
+        osc_counts = [{"000": 500, "001": 500} for _ in phases]
+        *_, c_err, _freq, phase, phase_err = estimate_fidelity_compressed_sensing(
+            {"000": 500, "111": 500}, osc_counts, phases, n
+        )
+        assert c_err > 0.2
+        assert phase is None
+        assert phase_err is None
+
+    @pytest.mark.parametrize("n", [5, 20, 156])
+    @pytest.mark.parametrize("amplitude", [0.0, 0.2])
+    def test_shot_noise_does_not_exhaust_sparse_refit(self, n, amplitude):
+        # A relative-only LASSO penalty selects many random noise frequencies
+        # for a weak signal, leaving insufficient phases for a valid refit.
+        for seed in range(3):
+            phases = self._random_phases(max(6, int(np.ceil(5 * np.log(n)))), seed)
+            rng = np.random.default_rng(seed + 1000)
+            even = rng.binomial(1000, (1 + amplitude * np.cos(n * np.array(phases) + 0.7)) / 2)
+            osc_counts = [{"0" * n: int(e), "0" * (n - 1) + "1": 1000 - int(e)} for e in even]
+            z_counts = {"0" * n: 125, "1" * n: 125, "0" * (n - 1) + "1": 750}
+            pop, coh, p_err, c_err, *_ = estimate_fidelity_compressed_sensing(
+                z_counts, osc_counts, phases, n
+            )
+            assert coh == pytest.approx(amplitude, abs=0.06)
+            assert np.isfinite(c_err) and c_err > 0
+            assert (pop + coh - np.hypot(p_err, c_err)) / 2 < 0.5
+
+    def test_underdetermined_refit_requires_more_phases(self):
+        n = 3
+        phases = self._random_phases(3)
+        osc_counts = self._build_osc_counts(
+            n, phases, 1_000_000, lambda phi: 0.5 * (np.cos(3 * phi) + np.cos(phi))
+        )
+        with pytest.raises(ValueError, match="increase num_phases"):
+            estimate_fidelity_compressed_sensing({"000": 500, "111": 500}, osc_counts, phases, n)
+
+    def test_one_shot_noise_does_not_have_zero_uncertainty(self):
+        n = 20
+        phases = self._random_phases(int(np.ceil(5 * np.log(n))), seed=0)
+        rng = np.random.default_rng(1000)
+        osc_counts = [
+            {"0" * n if even else "0" * (n - 1) + "1": 1}
+            for even in rng.binomial(1, 0.5, len(phases))
+        ]
+        pop, coh, p_err, c_err, *_ = estimate_fidelity_compressed_sensing(
+            {"0" * (n - 1) + "1": 1}, osc_counts, phases, n
+        )
+        assert np.isfinite(c_err) and c_err > 0.1
+        assert (pop + coh - np.hypot(p_err, c_err)) / 2 < 0.5
+
+    def test_rank_deficient_refit_rejected(self):
+        phases = [0.0] * 10
+        osc_counts = [{"000": 1000} for _ in phases]
+        with pytest.raises(ValueError, match="cannot resolve"):
+            estimate_fidelity_compressed_sensing({"000": 500, "111": 500}, osc_counts, phases, 3)
 
     def test_zero_parity_signal_gives_zero_coherence(self):
         n = 3
@@ -634,11 +759,30 @@ class TestSeparableStateNotCertified:
         assert pop == pytest.approx(1.0)
         assert coh == pytest.approx(1.0)
 
-    def test_sampling_adequacy_gate(self):
-        # The correction is estimated from observed Z frequencies, so it stops
-        # being a valid bound once 2^n outruns the shots.
-        assert two_setting_sampling_is_adequate(8, 1000) is True
-        assert two_setting_sampling_is_adequate(50, 1000) is False
+    def test_sparse_z_counts_do_not_overestimate_fidelity(self):
+        # rho = .4 GHZ+ + .6 |+><+|^10 has fidelity below .5. Even with
+        # shots == 2^n, plugging observed complementary-pair frequencies into
+        # the old correction reported F=.541 and certified this state.
+        n, shots = 10, 1024
+        probabilities = np.full(2**n, 0.6 / 2**n)
+        probabilities[[0, -1]] += 0.2
+        frequencies = np.random.default_rng(0).multinomial(shots, probabilities)
+        z = {format(i, f"0{n}b"): int(count) for i, count in enumerate(frequencies)}
+        x = {"0" * n: shots}
+        bench = GHZBenchmark(Namespace(), Namespace())
+        data = GHZData(
+            provider_job_ids=["test"],
+            num_qubits=n,
+            method="two_setting_bound",
+            search_sizes=[n],
+            search_circuit_counts=[2],
+        )
+        result = bench._poll_size_search(data, [z, x], data.method)
+        assert result.fidelity.value == pytest.approx(0.375)
+        assert result.largest_passing_size.value == 0
+        # Here X is deterministic and F=P; the uncertainty must retain the
+        # covariance from using the same Z counts in population and coherence.
+        assert result.fidelity.uncertainty == pytest.approx(np.sqrt(0.375 * 0.625 / shots))
 
 
 class TestPreparationDepth:
