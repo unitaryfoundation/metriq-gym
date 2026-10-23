@@ -45,6 +45,13 @@ Example files are not canonical Metriq Score configurations.
 
 ### GHZ results and scoring
 
+The logarithmic-depth preparation follows the approach illustrated by
+[Quantinuum's GHZ state fidelity example](https://docs.quantinuum.com/systems/trainings/knowledge_articles/Quantinuum_n56_ghz_state_fidelity.html).
+That example combines a population measurement with `N` deterministic equatorial
+parity settings to estimate fidelity against GHZ+. Here DFE samples stabilizers
+for the same target, while the oscillation methods recover coherence magnitude
+and optimize over the relative phase.
+
 Use `num_qubits` to measure one size, or `size_search: true` to test a halving
 grid that includes `min_qubits`. Size search reports `largest_passing_size`,
 `device_fraction`, and the fidelity and uncertainty at each tested size. The
