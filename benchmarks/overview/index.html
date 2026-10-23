@@ -1054,6 +1054,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#ghz-results-and-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GHZ results and scoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#metriq_gym.benchmarks.mirror_circuits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1135,6 +1146,17 @@
     <span class="md-ellipsis">
       
         clops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metriq_gym.benchmarks.ghz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ghz
       
     </span>
   </a>
@@ -1522,6 +1544,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#ghz-results-and-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GHZ results and scoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#metriq_gym.benchmarks.mirror_circuits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1603,6 +1636,17 @@
     <span class="md-ellipsis">
       
         clops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metriq_gym.benchmarks.ghz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ghz
       
     </span>
   </a>
@@ -1706,8 +1750,37 @@
 <td><a href="#metriq_gym.benchmarks.clops">CLOPS</a></td>
 <td>Circuit layer operations per second to measure device speed</td>
 </tr>
+<tr>
+<td><a href="#metriq_gym.benchmarks.ghz">GHZ</a></td>
+<td>GHZ state fidelity, at a fixed size or by searching for the largest one the device can build</td>
+</tr>
 </tbody>
 </table>
+<h3 id="ghz-results-and-scoring">GHZ results and scoring<a class="headerlink" href="#ghz-results-and-scoring" title="Permanent link">&para;</a></h3>
+<p>The logarithmic-depth preparation follows the approach illustrated by
+<a href="https://docs.quantinuum.com/systems/trainings/knowledge_articles/Quantinuum_n56_ghz_state_fidelity.html">Quantinuum's GHZ state fidelity example</a>.
+That example combines a population measurement with <code>N</code> deterministic equatorial
+parity settings to estimate fidelity against GHZ+. Here DFE samples stabilizers
+for the same target, while the oscillation methods recover coherence magnitude
+and optimize over the relative phase.</p>
+<p>Use <code>num_qubits</code> to measure one size, or <code>size_search: true</code> to test a halving
+grid that includes <code>min_qubits</code>. Size search reports <code>largest_passing_size</code>,
+<code>device_fraction</code>, and the fidelity and uncertainty at each tested size. The
+passing margin is <code>fidelity - confidence_sigma * uncertainty &gt; fidelity_threshold</code>.
+This is a margin based on estimated standard errors, not a rigorous confidence
+guarantee. The search reports the largest <strong>tested</strong> passing size.</p>
+<p>For Metriq Score integration, select <code>largest_passing_size</code> explicitly for a
+size-search component, or <code>fidelity</code> with a fixed-size selector. The generic
+<code>score</code> has different units in these modes. GHZ is not yet part of the canonical
+score suite.</p>
+<p>DFE estimates fidelity against GHZ+, so a relative phase error reduces its score.
+Parity oscillation and compressed sensing estimate fidelity optimized over that
+phase; the two-setting method gives a lower bound on this optimized fidelity.
+Compare runs using the same method. Compressed sensing assumes a sparse spectrum;
+its uncertainty propagates shot noise through the recovered model, and its
+<code>recovered_frequency</code> is a diagnostic rather than an entanglement certificate.
+If the recovered spectrum needs more phase samples, increase <code>num_phases</code> or use
+uniform parity oscillation.</p>
 <hr />
 
 
@@ -2225,6 +2298,114 @@ compilation, communication, and execution overhead.</p>
   <ul>
 <li><a href="https://arxiv.org/abs/2110.14108">Wack et al., "Quality, Speed, and Scale: three key attributes to measure the performance of near-term quantum computers", arXiv:2110.14108</a>.</li>
 <li><a href="https://github.com/qiskit-community/qiskit-device-benchmarking">Qiskit Device Benchmarking CLOPS</a>.</li>
+</ul>
+</details>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="metriq_gym.benchmarks.ghz" class="doc doc-heading">
+            <code>ghz</code>
+
+
+<a href="#metriq_gym.benchmarks.ghz" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>GHZ state preparation and verification benchmark.</p>
+
+
+<details class="summary" open>
+  <summary>Summary</summary>
+  <p>Constructs a GHZ state on the device using a binary dissemination tree over
+the device's connectivity graph (logarithmic depth where connectivity
+allows), then estimates fidelity via one of four verification methods:
+direct fidelity estimation (DFE, uniform sampling of the GHZ stabilizer
+group), the two-setting Z/X lower bound, parity oscillation curve fitting,
+or compressed sensing (parity samples at random phases, sparse spectrum
+recovery by L1 minimization).</p>
+<p>Two modes:
+- Fixed size (<code>num_qubits</code>): verify a GHZ state of one requested size.
+- Size search (<code>size_search: true</code>): build GHZ states at halving sizes
+  from the device size down to <code>min_qubits</code> (e.g. 156, 78, 39, 19, 9, 5),
+  all dispatched in a single job, and report the largest size whose
+  fidelity clears <code>fidelity_threshold</code> by <code>confidence_sigma</code> standard
+  deviations. Defaults to compressed sensing, which resolves the
+  frequency spectrum using logarithmically many phase samples.</p>
+</details>
+
+<details class="result-interpretation" open>
+  <summary>Result interpretation</summary>
+  <ul>
+<li>population: probability of measuring all-zero or all-one bitstrings (Z basis).</li>
+<li>coherence: off-diagonal element. DFE averages uniformly sampled
+  off-diagonal stabilizers X^(x)N·Z_s, an unbiased estimate of
+  2·Re(rho[0...0, 1...1]) with pure finite-sampling error (the diagonal
+  half of the stabilizer group averages exactly to the population, so the
+  Z circuit covers it with no sampling). two_setting_bound takes the
+  global X parity and subtracts the population outside the GHZ subspace,
+  bounding the contribution of non-GHZ complementary pairs: X^(x)N connects every
+  bitstring to its complement and not only 0...0 to 1...1; without that
+  subtraction a product state such as |+&gt;^(x)N reports coherence 1. The
+  oscillation methods instead isolate the N-qubit Fourier component, by
+  curve fit or by LASSO over random-phase parity samples.</li>
+<li>fidelity: (population + coherence) / 2. DFE targets GHZ+; oscillation
+  methods maximize over the relative phase, and two_setting_bound bounds
+  that phase-optimized fidelity. These targets differ for coherent phase errors.</li>
+<li>recovered_frequency (compressed sensing only): dominant frequency of the
+  parity signal. This is a diagnostic of the spectrum, not by itself an
+  entanglement certificate; use fidelity to assess the prepared state.</li>
+<li>phase_offset (compressed sensing only): phase θ of the off-diagonal
+  element, i.e. the state (|0...0&gt; + e^{iθ}|1...1&gt;)/√2. Zero for an ideal
+  GHZ; a nonzero value exposes coherent errors (residual Z rotations,
+  frame misalignment) that leave the coherence magnitude unchanged. None
+  when the coherence is at the noise floor, where the angle is undefined.</li>
+<li>largest_passing_size / device_fraction (size search only): the largest
+  searched size with fidelity above the threshold, and that size divided
+  by the device size. Per-size fidelities are reported in search_sizes /
+  search_fidelities so no resolution is lost to the threshold.</li>
+</ul>
+</details>
+
+<details class="references" open>
+  <summary>References</summary>
+  <ul>
+<li>Moses et al., "A Race-Track Trapped-Ion Quantum Processor",
+  Phys. Rev. X 13, 041052 (2023). [arXiv:2305.03828]</li>
+<li>"Compressed sensing verification of large entangled states",
+  arXiv:2604.27824.</li>
+<li>Flammia &amp; Liu, "Direct Fidelity Estimation from Few Pauli Measurements",
+  Phys. Rev. Lett. 106, 230501 (2011). [arXiv:1104.4695]</li>
+<li>da Silva, Landon-Cardinal &amp; Poulin, "Practical Characterization of
+  Quantum Devices without Tomography", Phys. Rev. Lett. 107, 210404 (2011).</li>
 </ul>
 </details>
 
