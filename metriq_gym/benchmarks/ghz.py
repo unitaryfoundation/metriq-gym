@@ -52,6 +52,8 @@ Result interpretation:
       by the device size. Per-size fidelities are reported in search_sizes /
       search_fidelities, with uncertainties in search_uncertainties, so no
       resolution is lost to the threshold.
+    - score: fidelity in fixed-size mode; largest_passing_size (a qubit count)
+      in size-search mode. Scores from these modes are not directly comparable.
 
 Size search and uncertainty:
     A size passes when
@@ -65,7 +67,7 @@ Size search and uncertainty:
 
 References:
     - Cruz et al., "Efficient quantum algorithms for GHZ and W states, and
-      implementation on the IBM quantum computer", Adv. Quantum Technol.
+      implementation on the IBM quantum computer", Adv. Quantum Technol. 2,
       1900015 (2019). [arXiv:1807.05572](https://arxiv.org/abs/1807.05572).
     - Flammia & Liu, "Direct Fidelity Estimation from Few Pauli Measurements",
       Phys. Rev. Lett. 106, 230501 (2011).
