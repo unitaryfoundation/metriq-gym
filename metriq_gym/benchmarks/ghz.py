@@ -9,7 +9,11 @@ Summary:
     or compressed sensing (parity samples at random phases, sparse spectrum
     recovery by L1 minimization).
 
+    **Experimental:** available for standalone evaluation. The methodology and
+    defaults may change before inclusion in the benchmark suite.
+
     Two modes:
+
     - Fixed size (`num_qubits`): verify a GHZ state of one requested size.
     - Size search (`size_search: true`): build GHZ states at halving sizes
       from the device size down to `min_qubits` (e.g. 156, 78, 39, 19, 9, 5),
@@ -34,6 +38,7 @@ Result interpretation:
     - fidelity: (population + coherence) / 2. DFE targets GHZ+; oscillation
       methods maximize over the relative phase, and two_setting_bound bounds
       that phase-optimized fidelity. These targets differ for coherent phase errors.
+      Compare runs using the same method.
     - recovered_frequency (compressed sensing only): dominant frequency of the
       parity signal. This is a diagnostic of the spectrum, not by itself an
       entanglement certificate; use fidelity to assess the prepared state.
@@ -43,19 +48,32 @@ Result interpretation:
       frame misalignment) that leave the coherence magnitude unchanged. None
       when the coherence is at the noise floor, where the angle is undefined.
     - largest_passing_size / device_fraction (size search only): the largest
-      searched size with fidelity above the threshold, and that size divided
+      tested size that passes the fidelity margin, and that size divided
       by the device size. Per-size fidelities are reported in search_sizes /
-      search_fidelities so no resolution is lost to the threshold.
+      search_fidelities, with uncertainties in search_uncertainties, so no
+      resolution is lost to the threshold.
+    - score: fidelity in fixed-size mode; largest_passing_size (a qubit count)
+      in size-search mode. Scores from these modes are not directly comparable.
+
+Size search and uncertainty:
+    A size passes when
+    `fidelity - confidence_sigma * uncertainty > fidelity_threshold`.
+    This margin uses estimated standard errors, not a rigorous confidence
+    guarantee. Size search reports the largest **tested** passing size.
+
+    Compressed sensing assumes a sparse spectrum. Its uncertainty propagates
+    shot noise through the recovered model. If the recovered spectrum needs
+    more phase samples, increase `num_phases` or use uniform parity oscillation.
 
 References:
-    - Moses et al., "A Race-Track Trapped-Ion Quantum Processor",
-      Phys. Rev. X 13, 041052 (2023). [arXiv:2305.03828]
-    - "Compressed sensing verification of large entangled states",
-      arXiv:2604.27824.
+    - Cruz et al., "Efficient quantum algorithms for GHZ and W states, and
+      implementation on the IBM quantum computer", Adv. Quantum Technol. 2,
+      1900015 (2019). [arXiv:1807.05572](https://arxiv.org/abs/1807.05572).
     - Flammia & Liu, "Direct Fidelity Estimation from Few Pauli Measurements",
-      Phys. Rev. Lett. 106, 230501 (2011). [arXiv:1104.4695]
-    - da Silva, Landon-Cardinal & Poulin, "Practical Characterization of
-      Quantum Devices without Tomography", Phys. Rev. Lett. 107, 210404 (2011).
+      Phys. Rev. Lett. 106, 230501 (2011).
+      [arXiv:1104.4695](https://arxiv.org/abs/1104.4695).
+    - Labib et al., "Compressed Sensing for Efficient Fidelity Estimation of
+      GHZ States" (2026). [arXiv:2604.27824](https://arxiv.org/abs/2604.27824).
 """
 
 import math
