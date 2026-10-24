@@ -247,3 +247,49 @@ def test_failed_jobs_summary_none_when_nothing_failed():
     from metriq_gym.qplatform.job import failed_jobs_summary
 
     assert failed_jobs_summary([_qiskit_job_with("q-1", JobStatus.QUEUED)]) is None
+
+
+# --- Quantinuum error_detail surfacing (#813) --------------------------------------
+
+
+def test_failure_reason_quantinuum_prefers_error_detail():
+    """Surface the actionable ``error_detail`` instead of the generic ``last_message``."""
+    from metriq_gym.qplatform.job import failure_reason
+
+    mock_ref = MagicMock()
+    mock_ref.last_message = "Program has encountered an error"
+    mock_ref.last_status_detail = SimpleNamespace(
+        error_detail="Submission error: You do not have access to this machine (code: 14)"
+    )
+
+    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref):
+        job = QuantinuumJob(job_id="test-job-id")
+        assert failure_reason(job) == (
+            "Submission error: You do not have access to this machine (code: 14)"
+        )
+
+
+@pytest.mark.parametrize("error_detail", [None, "", "   "])
+def test_failure_reason_quantinuum_falls_back_without_error_detail(error_detail):
+    """Fall back to ``last_message`` when ``error_detail`` is absent or blank."""
+    from metriq_gym.qplatform.job import failure_reason
+
+    mock_ref = MagicMock()
+    mock_ref.last_message = "compile error"
+    mock_ref.last_status_detail = SimpleNamespace(error_detail=error_detail)
+
+    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref):
+        job = QuantinuumJob(job_id="test-job-id")
+        assert failure_reason(job) == "compile error"
+
+
+def test_failure_reason_quantinuum_missing_status_detail_falls_back():
+    from metriq_gym.qplatform.job import failure_reason
+
+    mock_ref = MagicMock()
+    mock_ref.last_message = "compile error"
+    mock_ref.last_status_detail = None
+
+    with patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref):
+        job = QuantinuumJob(job_id="test-job-id")
+        assert failure_reason(job) == "compile error"
