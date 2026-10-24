@@ -69,6 +69,8 @@ def _count_gates(circuit: QuantumCircuit) -> GateCounts:
         qargs = inst.qubits
         cargs = inst.clbits
         name = instruction.name
+        if name == "barrier":
+            continue
         num_qubits = len(qargs)
         if name == "measure":
             counts.measurements += len(cargs) or num_qubits

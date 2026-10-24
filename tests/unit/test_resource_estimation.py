@@ -37,6 +37,24 @@ def _estimate(*, seconds=None, complete=True, notes=()):
     return estimate
 
 
+def test_compiler_barriers_do_not_inflate_gates_or_cost():
+    circuit = QuantumCircuit(3)
+    circuit.h(0)
+    circuit.cx(0, 1)
+    circuit.measure_all()
+    protected = circuit.copy()
+    protected.barrier(0)
+    protected.barrier(0, 1)
+    protected.barrier()
+
+    estimates = [
+        aggregate_resource_estimates([CircuitBatch([c], shots=100)], quantinuum_hqc_formula)
+        for c in (circuit, protected)
+    ]
+    assert estimates[0].total_gate_counts == estimates[1].total_gate_counts
+    assert estimates[0].hqc_total == estimates[1].hqc_total
+
+
 @pytest.mark.parametrize(
     ("provider", "show_hqc", "show_ibm"),
     [
