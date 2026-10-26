@@ -1,4 +1,4 @@
-"""Tests for the IonQ patches that fix qBraid's IonQ result processing."""
+"""Tests for the IonQ patches that marginalize counts onto the classical register."""
 
 import json
 from unittest.mock import MagicMock
@@ -11,7 +11,6 @@ from metriq_gym.ionq.device import (
     _META_NUM_QUBITS,
     _extract_measurement_map,
     _marginalize_to_clbits,
-    _pad_counts,
     _reshape_counts,
     patch_ionq_device,
 )
@@ -38,25 +37,12 @@ class TestExtractMeasurementMap:
         assert meas_map == {}
 
 
-class TestPadCounts:
-    def test_pads_short_keys(self):
-        assert _pad_counts({"0": 8192}, 7) == {"0000000": 8192}
-
-    def test_already_correct_width(self):
-        counts = {"0000000": 4096, "1111111": 4096}
-        assert _pad_counts(counts, 7) == counts
-
-    def test_mixed_lengths(self):
-        counts = {"0": 100, "101": 200}
-        assert _pad_counts(counts, 5) == {"00000": 100, "00101": 200}
-
-
 class TestMarginalizeToClbits:
     def test_full_measurement_is_identity(self):
         """An identity qubit->clbit map leaves big-endian bitstrings unchanged."""
         meas_map = {"0": 0, "1": 1}
         counts = {"00": 50, "01": 30, "10": 15, "11": 5}
-        result = _marginalize_to_clbits(counts, meas_map, num_clbits=2)
+        result = _marginalize_to_clbits(counts, meas_map, num_qubits=2, num_clbits=2)
         assert result == counts
 
     def test_wit_single_qubit_measurement(self):
@@ -67,7 +53,7 @@ class TestMarginalizeToClbits:
         """
         meas_map = {"5": 0}
         counts = {"0000000": 4000, "0100000": 4000}
-        result = _marginalize_to_clbits(counts, meas_map, num_clbits=1)
+        result = _marginalize_to_clbits(counts, meas_map, num_qubits=7, num_clbits=1)
         assert result == {"0": 4000, "1": 4000}
 
     def test_two_qubit_partial_preserves_clbit_order(self):
@@ -81,33 +67,34 @@ class TestMarginalizeToClbits:
         # "0010": q1=index2='1' -> clbit0; q3=index0='0' -> clbit1 => "01"
         # "1001": q1=index2='0' -> clbit0; q3=index0='1' -> clbit1 => "10"
         counts = {"0000": 40, "1010": 30, "0010": 20, "1001": 10}
-        result = _marginalize_to_clbits(counts, meas_map, num_clbits=2)
+        result = _marginalize_to_clbits(counts, meas_map, num_qubits=4, num_clbits=2)
         assert result == {"00": 40, "11": 30, "01": 20, "10": 10}
 
     def test_aggregates_degenerate_states(self):
         """States that share the measured qubit's value merge together."""
         meas_map = {"0": 0}
         counts = {"00": 25, "01": 25, "10": 25, "11": 25}
-        result = _marginalize_to_clbits(counts, meas_map, num_clbits=1)
+        result = _marginalize_to_clbits(counts, meas_map, num_qubits=2, num_clbits=1)
         assert result == {"0": 50, "1": 50}
+
+    def test_pads_keys_narrower_than_the_register(self):
+        """qBraid falls back to the widest observed outcome when IonQ omits the width."""
+        counts = {"1": 60, "0": 40}
+        result = _marginalize_to_clbits(counts, {"5": 0}, num_qubits=7, num_clbits=1)
+        assert result == {"0": 100}
 
 
 class TestReshapeCounts:
-    def test_returns_unchanged_without_metadata(self):
-        counts = {"1": 100}
-        assert _reshape_counts(counts, None, None, None) == counts
-
-    def test_single_circuit_pads_and_marginalizes(self):
-        # Raw value 4 -> "100"; padded to 4 -> "0100"; identity map -> "0100".
-        counts = {"100": 200}
+    def test_single_circuit_identity_map(self):
+        counts = {"0100": 200}
         out = _reshape_counts(counts, [{"0": 0, "1": 1, "2": 2, "3": 3}], [4], [4])
         assert out == {"0100": 200}
 
     def test_multi_circuit_reshapes_each_independently(self):
-        counts = [{"1": 200}, {"100": 200}]
-        maps = [{"0": 0, "1": 1, "2": 2, "3": 3}] * 2
-        out = _reshape_counts(counts, maps, [4, 4], [4, 4])
-        assert out == [{"0001": 200}, {"0100": 200}]
+        counts = [{"0001": 200}, {"0100": 200}]
+        maps = [{"0": 0, "1": 1, "2": 2, "3": 3}, {"2": 0}]
+        out = _reshape_counts(counts, maps, [4, 4], [4, 1])
+        assert out == [{"0001": 200}, {"1": 200}]
 
     def test_partial_measurement_reduces_width(self):
         # 7 qubits, only qubit 5 measured -> 1 clbit.
@@ -118,7 +105,7 @@ class TestReshapeCounts:
 
 class TestPatchIonqDevice:
     def test_run_converts_to_qasm_and_records_metadata(self):
-        """Dispatch converts qiskit circuits to QASM3 and records reshape metadata."""
+        """Dispatch converts qiskit circuits to QASM3 and records measurement metadata."""
         captured = {}
 
         class FakeIonQDevice:

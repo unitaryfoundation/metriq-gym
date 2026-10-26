@@ -24,14 +24,10 @@ def test_execution_time_quantinuum():
     start = datetime.now()
     completed = start + timedelta(seconds=15)
 
-    mock_ref = MagicMock()
-    mock_ref.last_status_detail = SimpleNamespace(
-        running_time=start,
-        completed_time=completed,
-    )
+    detail = SimpleNamespace(running_time=start, completed_time=completed)
 
     with (
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(QuantinuumJob, "_get_status_detail", return_value=detail),
         patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
@@ -47,29 +43,28 @@ def test_execution_time_quantinuum_not_completed():
 
 
 def test_execution_time_quantinuum_missing_status_detail():
-    """Verify execution time raises ValueError when last_status_detail is missing."""
-    mock_ref = MagicMock()
-    mock_ref.last_status_detail = None
+    """Verify execution time raises ValueError when the NEXUS status cannot be fetched."""
+    from qbraid.runtime.quantinuum.exceptions import QuantinuumJobError
 
     with (
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(
+            QuantinuumJob,
+            "_get_status_detail",
+            side_effect=QuantinuumJobError("Unable to retrieve job status for test-job-id"),
+        ),
         patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
-        with pytest.raises(ValueError, match="last_status_detail is missing"):
+        with pytest.raises(ValueError, match="Unable to retrieve job status"):
             execution_time(quantinuum_job)
 
 
 def test_execution_time_quantinuum_missing_timestamps():
     """Verify execution time raises ValueError when timestamps are missing."""
-    mock_ref = MagicMock()
-    mock_ref.last_status_detail = SimpleNamespace(
-        running_time=datetime.now(),
-        completed_time=None,  # missing completed_time
-    )
+    detail = SimpleNamespace(running_time=datetime.now(), completed_time=None)
 
     with (
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(QuantinuumJob, "_get_status_detail", return_value=detail),
         patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
@@ -190,9 +185,7 @@ def test_execution_time_ionq_with_predicted_execution_time():
 
 def test_execution_time_ionq_prefers_execution_time_over_predicted():
     """IonQ job prefers execution_time over predicted_execution_time."""
-    job = _make_ionq_job_with_metadata(
-        {"execution_time": 5200, "predicted_execution_time": 3000}
-    )
+    job = _make_ionq_job_with_metadata({"execution_time": 5200, "predicted_execution_time": 3000})
     assert execution_time(job) == pytest.approx(5.2)
 
 
