@@ -1,6 +1,6 @@
 # Suite Commands
 
-Commands for dispatching, monitoring, and managing benchmark suites.
+Commands for estimating, dispatching, monitoring, and managing benchmark suites.
 
 ## dispatch
 
@@ -70,6 +70,91 @@ component and scale-point reference.
 
 ---
 
+## estimate
+
+Estimate provider usage as a proxy for suite costs before dispatching jobs. The
+command prints the total for the selection, without submitting jobs or recording
+them in the local database. Add `-v` or `--verbose` for per-job estimates, circuit
+resources and statistics, and estimation assumptions.
+
+```bash
+mgym suite estimate <suite_config> [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Type | Description | Required |
+|----------|------|-------------|----------|
+| `SUITE_CONFIG` | STR | Path to suite configuration file or bundled suite name | Yes |
+
+### Options
+
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| `--provider, -p` | STR | Provider name (e.g., ibm, aws, azure, ionq, local; braket aliases aws) | `None` |
+| `--device, -d` | STR | Device identifier for device-dependent cost estimates | `None` |
+| `--component, -c` | LIST | Component to estimate; repeat the option to select multiple components | `None` |
+| `--all` | BOOL | Explicitly estimate every component, including guarded full suites | `False` |
+| `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
+
+### Estimate the complete Metriq Score suite
+
+```bash
+mgym suite estimate metriq_score_1_0 \
+    --provider ibm --device ibm_phoenix --all
+```
+
+### Estimate selected components
+
+```bash
+mgym suite estimate metriq_score_1_0 \
+    --provider ibm --device ibm_phoenix -c qft -c wit
+```
+
+Component selection follows the same rules as `suite dispatch`: a component
+includes all of its configured scale points, unknown or repeated names are
+rejected, and guarded suites require `--component` or `--all`.
+
+The output starts with a short header identifying the suite, provider, and device.
+When `--component` is used, the header shows the suite and selected component
+names, such as `metriq_score_1_0: wit, qft`.
+The command uses the same estimator as `job estimate`:
+
+- `--provider ibm` shows total estimated QPU time in seconds. With `--verbose`,
+  each job's estimate is also shown in seconds. Circuits are transpiled and
+  scheduled locally using timing metadata from the selected device. Provider
+  access is needed to read the metadata, but
+  nothing is submitted to or executed on the QPU.
+- `--provider quantinuum` shows total H-series Quantum Credits (HQCs).
+- `--provider aws` (or its alias `braket`) shows total shots and total tasks,
+  counting one task per circuit. Use `--verbose` for the full resource breakdown.
+- Other providers report that no cost estimate is available. Use `--verbose` to
+  show circuit resources.
+
+IBM estimates assume the default repetition delay, initial reset, and about two
+seconds of overhead per circuit batch, treating each batch as one execution
+sub-job. Additional server-side splitting and runtime mitigation are excluded.
+The estimate describes QPU usage, not queue time, wall-clock completion time,
+or a monetary price. Sessions can also bill idle time between executions, which
+cannot be determined statically and is excluded. See
+[IBM's usage estimation guide](https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time).
+
+For twirled CLOPS, the estimate uses the circuit template and configured number
+of randomizations and shots. Runtime twirling overhead is excluded, so actual
+IBM usage can be higher.
+
+Some benchmarks need a device to determine resources such as available qubit
+pairs. If a job cannot be estimated, the command reports the failure and
+continues with the remaining jobs. Totals are marked as partial when any job
+fails and cover only successfully estimated jobs.
+
+If IBM timing estimation fails, QPU usage is marked unavailable when no timings
+are available, or partial when only some selected jobs have timings. Use
+`--verbose` for the reasons and any available circuit resource counts. Omitting
+`--device` also leaves IBM timing unavailable.
+
+---
+
 ## poll
 
 Poll suite jobs and retrieve results when complete.
@@ -90,6 +175,21 @@ mgym suite poll [suite_id] [OPTIONS]
 |--------|------|-------------|---------|
 | `--json` | STR | Export results to JSON file | `None` |
 | `--no-cache` | BOOL | Ignore locally cached results and refetch | `False` |
+
+### Export results to JSON
+
+Write the suite's completed results to a file:
+
+```bash
+mgym suite poll <suite_id> --json suite-results.json
+```
+
+The file contains a JSON array in suite job order. Each record uses the same
+format as a completed job in `mgym suite upload`, including metadata, parameters,
+results, and a UTC timestamp. Without `--json`, results are displayed as a table.
+
+Failed jobs are reported and skipped. If any job is still pending, or no
+completed jobs remain, no file is written.
 
 ---
 
@@ -152,5 +252,9 @@ mgym suite upload [suite_id] [OPTIONS]
 | `--commit-message` | STR | Commit message | `None` |
 | `--clone-dir` | STR | Working directory to clone into (env: `MGYM_UPLOAD_CLONE_DIR`) | `None` |
 | `--dry-run` | BOOL | Do not push or open a PR; print actions only | `False` |
+
+Jobs in the suite that failed (dispatch raised, or the provider reported a failure)
+are included as `outcome: "error"` records with the captured error, so one failed
+benchmark does not block the upload. Jobs that are still pending do.
 
 ---

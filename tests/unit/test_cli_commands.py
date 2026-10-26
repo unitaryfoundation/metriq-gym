@@ -7,8 +7,10 @@ These tests verify:
 - Error handling for invalid inputs
 """
 
-from typer.testing import CliRunner
 from unittest.mock import patch, MagicMock
+
+import pytest
+from typer.testing import CliRunner
 
 from metriq_gym.cli import app
 
@@ -173,6 +175,45 @@ class TestJobCommands:
         assert "CONFIG" in result.output
         assert "--provider" in result.output
         assert "--device" in result.output
+        assert "--verbose" in result.output
+        assert "-v" in result.output
+
+    @patch("metriq_gym.run.estimate_job")
+    def test_job_estimate_default_options(self, mock_estimate):
+        result = runner.invoke(app, ["job", "estimate", "job.json"])
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.config == "job.json"
+        assert args.provider is None
+        assert args.device is None
+        assert args.verbose is False
+
+    @pytest.mark.parametrize("verbose_flag", ["-v", "--verbose"])
+    @patch("metriq_gym.run.estimate_job")
+    def test_job_estimate_forwards_verbose(self, mock_estimate, verbose_flag):
+        result = runner.invoke(
+            app,
+            [
+                "job",
+                "estimate",
+                "job.json",
+                "--provider",
+                "ibm",
+                "--device",
+                "ibm_phoenix",
+                verbose_flag,
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.config == "job.json"
+        assert args.provider == "ibm"
+        assert args.device == "ibm_phoenix"
+        assert args.verbose is True
 
     def test_job_upload_help(self):
         """mgym job upload --help should show all options."""
@@ -187,6 +228,8 @@ class TestJobCommands:
         assert "--commit-message" in result.output
         assert "--clone-dir" in result.output
         assert "--dry-run" in result.output
+        assert "--outcome" in result.output
+        assert "--reason" in result.output
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -198,6 +241,48 @@ class TestJobCommands:
         args = mock_upload.call_args[0][0]
         assert args.job_id == "latest"
         assert args.dry_run is True
+        assert args.outcome is None
+        assert args.reason is None
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
+    def test_job_upload_with_outcome_and_reason(self, mock_upload, mock_jm):
+        """mgym job upload --outcome/--reason should be forwarded to upload_job."""
+        runner.invoke(
+            app,
+            [
+                "job",
+                "upload",
+                "test-id",
+                "--outcome",
+                "unsupported",
+                "--reason",
+                "Compiler rejects 100q circuits",
+            ],
+        )
+
+        mock_upload.assert_called_once()
+        args = mock_upload.call_args[0][0]
+        assert args.outcome == "unsupported"
+        assert args.reason == "Compiler rejects 100q circuits"
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
+    def test_job_upload_outcome_is_case_insensitive(self, mock_upload, mock_jm):
+        runner.invoke(
+            app, ["job", "upload", "test-id", "--outcome", "Not_Applicable", "--reason", "r"]
+        )
+        mock_upload.assert_called_once()
+        assert mock_upload.call_args[0][0].outcome == "not_applicable"
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.upload_job")
+    def test_job_upload_rejects_unknown_outcome_at_cli(self, mock_upload, mock_jm):
+        result = runner.invoke(app, ["job", "upload", "test-id", "--outcome", "exploded"])
+        assert result.exit_code != 0
+        combined = (result.output or "") + (result.stderr or "")
+        assert "not one of" in combined
+        mock_upload.assert_not_called()
 
     @patch("metriq_gym.cli.JobManager")
     @patch("metriq_gym.run.upload_job")
@@ -267,6 +352,7 @@ class TestSuiteCommands:
         assert "view" in result.output
         assert "delete" in result.output
         assert "upload" in result.output
+        assert "estimate" in result.output
 
     def test_suite_no_args_shows_help(self):
         """Running mgym suite without args should show help."""
@@ -341,6 +427,126 @@ class TestSuiteCommands:
         args = mock_dispatch.call_args[0][0]
         assert args.components is None
         assert args.all_components is True
+
+    def test_suite_estimate_help(self):
+        result = runner.invoke(app, ["suite", "estimate", "--help"], color=False)
+        assert result.exit_code == 0
+        assert "SUITE_CONFIG" in result.output
+        assert "--provider" in result.output
+        assert "--device" in result.output
+        assert "--component" in result.output
+        assert "--all" in result.output
+        assert "--verbose" in result.output
+        assert "-v" in result.output
+
+    def test_suite_estimate_missing_config_shows_error(self):
+        result = runner.invoke(app, ["suite", "estimate"], color=False)
+        assert result.exit_code != 0
+        combined_output = (result.output or "") + (result.stderr or "")
+        assert "Missing argument" in combined_output or "SUITE_CONFIG" in combined_output
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.estimate_suite")
+    def test_suite_estimate_bundled_suite_with_all(self, mock_estimate, mock_jm):
+        result = runner.invoke(
+            app,
+            [
+                "suite",
+                "estimate",
+                "metriq_score_1_0",
+                "--provider",
+                "ibm",
+                "--device",
+                "ibm_phoenix",
+                "--all",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.suite_config == "metriq_score_1_0"
+        assert args.provider == "ibm"
+        assert args.device == "ibm_phoenix"
+        assert args.components is None
+        assert args.all_components is True
+        mock_jm.assert_not_called()
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.estimate_suite")
+    def test_suite_estimate_json_with_components(self, mock_estimate, mock_jm, tmp_path):
+        config_file = tmp_path / "suite.json"
+        config_file.write_text("{}")
+
+        result = runner.invoke(
+            app,
+            [
+                "suite",
+                "estimate",
+                str(config_file),
+                "-p",
+                "local",
+                "-d",
+                "aer_simulator",
+                "-c",
+                "qft",
+                "--component",
+                "wit",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.suite_config == str(config_file)
+        assert args.provider == "local"
+        assert args.device == "aer_simulator"
+        assert args.components == ["qft", "wit"]
+        assert args.all_components is False
+        mock_jm.assert_not_called()
+
+    @patch("metriq_gym.cli.JobManager")
+    @patch("metriq_gym.run.estimate_suite")
+    def test_suite_estimate_default_options(self, mock_estimate, mock_jm):
+        result = runner.invoke(app, ["suite", "estimate", "suite.json"])
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.suite_config == "suite.json"
+        assert args.provider is None
+        assert args.device is None
+        assert args.components is None
+        assert args.all_components is False
+        assert args.verbose is False
+        mock_jm.assert_not_called()
+
+    @pytest.mark.parametrize("verbose_flag", ["-v", "--verbose"])
+    @patch("metriq_gym.run.estimate_suite")
+    def test_suite_estimate_forwards_verbose(self, mock_estimate, verbose_flag):
+        result = runner.invoke(
+            app,
+            [
+                "suite",
+                "estimate",
+                "metriq_score_1_0",
+                "--provider",
+                "ibm",
+                "--device",
+                "ibm_phoenix",
+                "--all",
+                verbose_flag,
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        args = mock_estimate.call_args[0][0]
+        assert args.suite_config == "metriq_score_1_0"
+        assert args.provider == "ibm"
+        assert args.device == "ibm_phoenix"
+        assert args.all_components is True
+        assert args.verbose is True
 
     def test_suite_poll_help(self):
         """mgym suite poll --help should show usage."""

@@ -27,7 +27,8 @@ mgym job dispatch <config> [OPTIONS]
 
 ## estimate
 
-Estimate circuit resource requirements before dispatching jobs.
+Estimate provider usage as a proxy for job costs before dispatching. Circuits
+are constructed and compiled locally; no jobs are submitted or executed on hardware.
 
 ```bash
 mgym job estimate <config> [OPTIONS]
@@ -45,6 +46,30 @@ mgym job estimate <config> [OPTIONS]
 |--------|------|-------------|---------|
 | `--provider, -p` | STR | Provider name (e.g., ibm, braket, azure, ionq, local) | `None` |
 | `--device, -d` | STR | Device identifier | `None` |
+| `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
+
+The output starts with a short header identifying the benchmark, provider, and
+device. Add `-v` or `--verbose` to show circuit resources, statistics, and
+estimation assumptions. The default summary depends on the provider:
+
+- `--provider ibm --device <device>` shows estimated QPU time in seconds based
+  on the device's timing metadata. Reading that metadata requires provider
+  access, but the estimate does not run anything on the device.
+- `--provider quantinuum` shows total H-series Quantum Credits (HQCs).
+- `--provider aws` (or its alias `braket`) shows total shots and total tasks,
+  counting one task per circuit. Use `--verbose` for the full resource breakdown.
+- Other providers report that no cost estimate is available. Use `--verbose` to
+  show circuit resources.
+
+IBM estimates assume the default repetition delay, initial reset, and about two
+seconds of overhead per circuit batch. Additional server-side splitting, runtime
+mitigation, and idle time billed within sessions are excluded. This estimates
+QPU usage, not queue time, wall-clock completion time, or a monetary price.
+See [IBM's usage estimation guide](https://quantum.cloud.ibm.com/docs/en/guides/estimate-job-run-time).
+
+If IBM timing metadata is unavailable or `--device` is omitted, the QPU estimate
+is marked unavailable. Use `--verbose` for the explanation and any available
+circuit resource counts.
 
 ---
 
@@ -159,6 +184,29 @@ mgym job upload [job_id] [OPTIONS]
 | `--commit-message` | STR | Commit message | `None` |
 | `--clone-dir` | STR | Working directory to clone into (env: `MGYM_UPLOAD_CLONE_DIR`) | `None` |
 | `--dry-run` | BOOL | Do not push or open a PR; print actions only | `False` |
+| `--outcome` | STR | Upload a non-completed outcome record instead of results: `error`, `unsupported` or `not_applicable` | `None` |
+| `--reason` | STR | Human-readable reason for the `--outcome` classification (required for `unsupported` / `not_applicable`) | `None` |
+
+### Failed jobs
+
+A job whose dispatch raised, or whose provider tasks ended in a failed/cancelled
+state, keeps the captured error on the job record (visible in `mgym job view`).
+Uploading such a job produces an `outcome: "error"` record with the verbatim error
+message instead of results. To assert that the device structurally cannot run the
+benchmark instance, reclassify it by hand:
+
+```bash
+mgym job upload <JOB_ID> --outcome unsupported --reason "Compiler rejects 100-qubit LR-QAOA circuits"
+```
+
+Completed jobs cannot be uploaded with `--outcome`; a completed record always
+supersedes outcome records for the same benchmark instance. `--outcome error` is
+reserved for captured failures and cannot be asserted by hand.
+
+Once a failure is recorded, `poll` and `upload` trust it without reconnecting to the
+provider (failed/cancelled statuses are terminal); pass `--no-cache` to `poll` to
+force a re-check. An upload with an explicit `--outcome` goes ahead even if the
+provider cannot be reached, attaching whatever error was recorded locally.
 
 ---
 

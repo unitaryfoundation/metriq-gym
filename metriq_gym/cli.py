@@ -7,6 +7,8 @@ Usage overview:
       mgym job poll latest --json results.json
   - Dispatch a suite of jobs:
       mgym suite dispatch path/to/suite.json -p <provider> -d <device>
+  - Estimate a complete bundled suite:
+      mgym suite estimate metriq_score_1_0 -p <provider> -d <device> --all
   - Poll a suite:
       mgym suite poll <suite_id>
   - Dry-run upload (no network):
@@ -21,6 +23,7 @@ import typer
 
 from tabulate import tabulate
 
+from metriq_gym.constants import RecordOutcome
 from metriq_gym.job_manager import JobManager, MetriqGymJob
 
 
@@ -51,6 +54,16 @@ suite_app = typer.Typer(help="Suite operations")
 
 app.add_typer(job_app, name="job")
 app.add_typer(suite_app, name="suite")
+
+
+@app.command("dashboard")
+def dashboard(
+    port: Annotated[int, typer.Option(help="Port to serve the dashboard on")] = 8787,
+) -> None:
+    """Launch the local jobs dashboard web UI."""
+    from metriq_gym.dashboard.server import main as dashboard_main
+
+    dashboard_main(port=port)
 
 
 def _show_help_and_exit_if_no_subcommand(ctx: typer.Context) -> None:
@@ -161,6 +174,15 @@ DeviceOption = Annotated[
     ),
 ]
 
+EstimateVerboseOption = Annotated[
+    bool,
+    typer.Option(
+        "--verbose",
+        "-v",
+        help="Show per-job resources, circuit statistics, and estimation assumptions",
+    ),
+]
+
 
 # -----------------------------------------------------------------------------
 # Job commands
@@ -190,11 +212,14 @@ def job_estimate(
     config: Annotated[str, typer.Argument(help="Path to job configuration JSON file")],
     provider: ProviderOption = None,
     device: DeviceOption = None,
+    verbose: EstimateVerboseOption = False,
 ) -> None:
-    """Estimate circuit resource requirements before dispatching jobs.
+    """Estimate job costs from provider usage without dispatching.
 
-    This is especially useful for understanding costs on paid hardware like Quantinuum.
-    For Quantinuum providers, calculates H-series Quantum Credits (HQCs).
+    IBM estimates QPU seconds using backend timing metadata and local compilation.
+    Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
+    total shots and tasks, counting one task per circuit. No jobs are submitted.
+    These usage metrics are proxies for cost.
     """
     from metriq_gym.run import estimate_job as _estimate_job
 
@@ -202,6 +227,7 @@ def job_estimate(
     args.config = config
     args.provider = provider
     args.device = device
+    args.verbose = verbose
 
     _estimate_job(args)
 
@@ -330,8 +356,28 @@ def job_upload(
         bool,
         typer.Option("--dry-run", help="Do not push or open a PR; print actions only"),
     ] = False,
+    outcome: Annotated[
+        Optional[RecordOutcome],
+        typer.Option(
+            "--outcome",
+            case_sensitive=False,
+            help=(
+                "Upload a non-completed outcome record instead of results: "
+                "'error' (default for failed jobs), 'unsupported' (device cannot run "
+                "this benchmark instance) or 'not_applicable'. The latter two require --reason."
+            ),
+        ),
+    ] = None,
+    reason: Annotated[
+        Optional[str],
+        typer.Option("--reason", help="Human-readable reason for the --outcome classification"),
+    ] = None,
 ) -> None:
-    """Upload job results to GitHub via pull request."""
+    """Upload job results to GitHub via pull request.
+
+    Failed jobs (dispatch raised, or the provider reported a failure) are uploaded as
+    'error' outcome records carrying the captured error message.
+    """
     from metriq_gym.run import upload_job as _upload_job
 
     args = argparse.Namespace()
@@ -345,6 +391,8 @@ def job_upload(
     args.commit_message = commit_message
     args.clone_dir = clone_dir
     args.dry_run = dry_run
+    args.outcome = outcome
+    args.reason = reason
 
     job_manager = JobManager()
     _upload_job(args, job_manager)
@@ -429,6 +477,51 @@ def suite_dispatch(
     _dispatch_suite(args, job_manager)
 
 
+@suite_app.command("estimate")
+def suite_estimate(
+    suite_config: Annotated[
+        str,
+        typer.Argument(help="Path to suite configuration file or bundled suite name"),
+    ],
+    provider: ProviderOption = None,
+    device: DeviceOption = None,
+    components: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            "--component",
+            "-c",
+            help="Component to estimate; repeat the option to select multiple components",
+        ),
+    ] = None,
+    all_components: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Explicitly estimate every component, including guarded full suites",
+        ),
+    ] = False,
+    verbose: EstimateVerboseOption = False,
+) -> None:
+    """Estimate suite costs from provider usage without dispatching.
+
+    IBM estimates QPU seconds using backend timing metadata and local compilation.
+    Quantinuum estimates H-series Quantum Credits (HQCs). AWS (or braket) shows
+    total shots and tasks, counting one task per circuit.
+    These usage metrics are proxies for cost.
+    """
+    from metriq_gym.run import estimate_suite as _estimate_suite
+
+    args = argparse.Namespace()
+    args.suite_config = suite_config
+    args.provider = provider
+    args.device = device
+    args.components = components
+    args.all_components = all_components
+    args.verbose = verbose
+
+    _estimate_suite(args)
+
+
 @suite_app.command("poll")
 def suite_poll(
     suite_id: Annotated[Optional[str], typer.Argument(help="Suite ID to poll")] = None,
@@ -472,7 +565,11 @@ def suite_view(
 def suite_delete(
     suite_id: Annotated[Optional[str], typer.Argument(help="Suite ID to delete")] = None,
 ) -> None:
-    """Delete all jobs in a suite from the local database."""
+    """Delete all jobs in a suite from the local database.
+
+    Note: This only removes the jobs from local tracking. It does not cancel
+    jobs running on quantum hardware.
+    """
     from metriq_gym.run import delete_suite as _delete_suite
 
     args = argparse.Namespace()

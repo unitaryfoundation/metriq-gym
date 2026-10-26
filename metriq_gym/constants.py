@@ -13,6 +13,7 @@ class JobType(StrEnum):
     HIDDEN_SHIFT = "Hidden Shift"
     QUANTUM_FOURIER_TRANSFORM = "Quantum Fourier Transform"
     LR_QAOA = "Linear Ramp QAOA"
+    GHZ = "GHZ"
     QAT_OLE = "QAT OLE"
 
 
@@ -28,5 +29,23 @@ SCHEMA_MAPPING = {
     JobType.HIDDEN_SHIFT: "hidden_shift.schema.json",
     JobType.QUANTUM_FOURIER_TRANSFORM: "quantum_fourier_transform.schema.json",
     JobType.LR_QAOA: "lr_qaoa.schema.json",
+    JobType.GHZ: "ghz.schema.json",
     JobType.QAT_OLE: "qat_ole.schema.json",
 }
+
+
+class RecordOutcome(StrEnum):
+    """Non-completed outcomes an uploaded record may declare.
+
+    Mirrors the metriq-data "Record outcomes" contract. A record without an outcome is
+    a completed run. ``ERROR`` is what a machine records for a failed attempt;
+    ``UNSUPPORTED`` and ``NOT_APPLICABLE`` are human classifications asserted at upload
+    time (see ``HUMAN_OUTCOMES``).
+    """
+
+    ERROR = "error"
+    UNSUPPORTED = "unsupported"
+    NOT_APPLICABLE = "not_applicable"
+
+
+HUMAN_OUTCOMES = frozenset({RecordOutcome.UNSUPPORTED, RecordOutcome.NOT_APPLICABLE})

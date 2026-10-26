@@ -4,6 +4,7 @@ Run benchmarks on OriginQ Wukong superconducting quantum computers.
 
 ## Prerequisites
 
+- Python 3.12–3.14 (`pyqpanda3` does not yet provide Python 3.15 wheels)
 - An [OriginQ QCloud](https://account.originqc.com.cn/) account
 - OriginQ API token
 - (macOS only) `libidn2` library

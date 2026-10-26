@@ -10,6 +10,9 @@ class CliExporter(BaseExporter):
         record = self.as_dict()
         pprint(record)
 
+        if self.result is None:
+            return
+
         # Surface the full result object, formatting uncertainties inline when available
         print("\nResults:")
         payload = self.result.model_dump()

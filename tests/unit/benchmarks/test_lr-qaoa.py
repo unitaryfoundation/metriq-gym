@@ -142,6 +142,12 @@ def test_calc_stats_pass():
     assert [round(i, 6) for i in stats.optimal_probability] == [0.6, 1.0, 0.25]
     assert [round(i, 6) for i in stats.approx_ratio] == [0.645, 1.0, 0.25]
     assert round(approx_ratio_random_mean, 1) == 0.5
+    # effective_approx_ratio is floored at zero when approx_ratio is below the
+    # random baseline (third layer: 0.25 < ~0.5), and positive otherwise.
+    assert stats.effective_approx_ratio[0] > 0
+    assert stats.effective_approx_ratio[1] == 1.0
+    assert stats.effective_approx_ratio[2] == 0.0
+    assert all(r >= 0 for r in stats.effective_approx_ratio)
 
 
 @pytest.mark.parametrize("width, length", [(5, 5), (7, 7), (3, 3)])
