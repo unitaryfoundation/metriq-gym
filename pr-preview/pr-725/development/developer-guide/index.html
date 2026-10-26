@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1508,6 +1508,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#distribution-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distribution checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tag-naming-requirement" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1945,6 +1956,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#distribution-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distribution checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tag-naming-requirement" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1996,7 +2018,7 @@
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Before you begin, ensure you have:</p>
 <ul>
-<li><a href="https://www.python.org/downloads/">Python</a> (version 3.12 or newer)</li>
+<li><a href="https://www.python.org/downloads/">Python</a> (version 3.12–3.15)</li>
 <li><a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> for dependency management</li>
 <li><a href="https://git-scm.com/">Git</a> for version control</li>
 </ul>
@@ -2037,7 +2059,7 @@
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Unit tests only</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;not e2e&quot;</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not e2e"</span>
 <a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
 <a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># End-to-end tests only</span>
 <a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>e2e
@@ -2066,18 +2088,17 @@
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>│   ├── benchmarks/      # Benchmark implementations
 <a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>│   ├── exporters/       # Result export (JSON, GitHub PR)
 <a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>│   ├── local/           # Local simulator provider
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>│   ├── origin/          # OriginQ provider
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>│   ├── quantinuum/      # Quantinuum provider
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>│   ├── schemas/         # JSON schemas and examples
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>│   ├── cli.py           # CLI argument parsing
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>│   ├── constants.py     # JobType enum, schema mapping
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>│   ├── job_manager.py   # Job tracking
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>│   ├── registry.py      # Benchmark registration
-<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>│   └── run.py           # Main entrypoint
-<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>├── tests/               # Test suite
-<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>├── docs/                # Documentation
-<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>├── submodules/          # External dependencies
-<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>└── pyproject.toml       # Project configuration
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>│   ├── qplatform/       # Provider-specific device/job helpers
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>│   ├── schemas/         # JSON schemas and examples
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>│   ├── cli.py           # CLI argument parsing
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>│   ├── constants.py     # JobType enum, schema mapping
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>│   ├── job_manager.py   # Job tracking
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>│   ├── registry.py      # Benchmark registration
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>│   └── run.py           # Main entrypoint
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>├── tests/               # Test suite
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>├── docs/                # Documentation
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>├── submodules/          # External dependencies
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>└── pyproject.toml       # Project configuration
 </code></pre></div>
 <h2 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h2>
 <h3 id="contribution-workflow">Contribution Workflow<a class="headerlink" href="#contribution-workflow" title="Permanent link">&para;</a></h3>
@@ -2111,7 +2132,7 @@
 <h3 id="type-annotations">Type Annotations<a class="headerlink" href="#type-annotations" title="Permanent link">&para;</a></h3>
 <p>Use type annotations for all public functions:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">dispatch_job</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">SimpleNamespace</span><span class="p">,</span> <span class="n">job_manager</span><span class="p">:</span> <span class="n">JobManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Dispatch a benchmark job.</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="sd">"""Dispatch a benchmark job.</span>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
 <a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="sd">    Args:</span>
 <a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="sd">        config: Job configuration with provider, device, and config path</span>
@@ -2119,7 +2140,7 @@
 <a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
 <a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="sd">        The metriq-gym job ID</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="sd">    """</span>
 <a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    <span class="o">...</span>
 </code></pre></div>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
@@ -2147,14 +2168,14 @@
 <a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">metriq_gym.benchmarks.wit</span><span class="w"> </span><span class="kn">import</span> <span class="n">WIT</span>
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
 <a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_wit_dispatch</span><span class="p">():</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test WIT benchmark dispatch creates correct circuits.&quot;&quot;&quot;</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="sd">"""Test WIT benchmark dispatch creates correct circuits."""</span>
 <a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">benchmark</span> <span class="o">=</span> <span class="n">WIT</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 <a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">benchmark</span><span class="o">.</span><span class="n">dispatch_handler</span><span class="p">(</span><span class="n">mock_device</span><span class="p">)</span>
 <a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">circuits</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
 <a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
 <a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">e2e</span>
 <a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_wit_full_workflow</span><span class="p">():</span>
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test full WIT workflow on simulator.&quot;&quot;&quot;</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">    </span><span class="sd">"""Test full WIT workflow on simulator."""</span>
 <a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>    <span class="c1"># This test requires local simulator</span>
 <a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>    <span class="o">...</span>
 </code></pre></div>
@@ -2173,9 +2194,40 @@
 <p>Releases are managed by maintainers:</p>
 <ol>
 <li>Version is determined by <code>setuptools_scm</code> from git tags</li>
-<li>CI builds and publishes to PyPI</li>
+<li>CI builds and tests the wheel and source distribution before publishing to PyPI</li>
 <li>Documentation is deployed to GitHub Pages</li>
 </ol>
+<h3 id="distribution-checks">Distribution checks<a class="headerlink" href="#distribution-checks" title="Permanent link">&para;</a></h3>
+<p>The <code>Distribution Tests</code> workflow runs on pull requests and pushes to <code>main</code>.
+Both publishing workflows also call it: a failed build, metadata check, install,
+or simulator smoke test prevents publishing. Release builds must have the same
+version as their tag after Python version normalization (for example,
+<code>v0.5.1-alpha</code> becomes <code>0.5.1a0</code>). PyPI and TestPyPI receive the exact artifacts
+that passed these checks.</p>
+<p>The wheel is installed in fresh environments on Linux and macOS with Python
+3.12, 3.13, 3.14, and 3.15. The source distribution is independently installed on Linux with
+Python 3.12. These installs resolve the dependencies declared in the package,
+without the development environment or <code>uv.lock</code>.</p>
+<p>The smoke script runs outside the checkout and checks the installed version,
+CLI entry point, JSON schemas, bundled suites, dashboard HTML, and benchmark
+modules from the submodules. It then dispatches and polls a small local Aer job
+and a two-job suite, checking their JSON results. No provider credentials are
+needed.</p>
+<p>To reproduce a wheel check locally on Linux or macOS:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>uv<span class="w"> </span>build
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nv">smoke_dir</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="w"> </span>-d<span class="k">)</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>uv<span class="w"> </span>venv<span class="w"> </span><span class="s2">"</span><span class="nv">$smoke_dir</span><span class="s2">/venv"</span><span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="s2">"</span><span class="nv">$smoke_dir</span><span class="s2">/venv/bin/python"</span><span class="w"> </span>dist/*.whl
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>uv<span class="w"> </span>pip<span class="w"> </span>check<span class="w"> </span>--python<span class="w"> </span><span class="s2">"</span><span class="nv">$smoke_dir</span><span class="s2">/venv/bin/python"</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>cp<span class="w"> </span>scripts/smoke_distribution.py<span class="w"> </span><span class="s2">"</span><span class="nv">$smoke_dir</span><span class="s2">/"</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="o">(</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="s2">"</span><span class="nv">$smoke_dir</span><span class="s2">"</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">    </span><span class="nb">unset</span><span class="w"> </span>PYTHONPATH
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">    </span>./venv/bin/python<span class="w"> </span>-I<span class="w"> </span>smoke_distribution.py
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="o">)</span>
+</code></pre></div>
+<p>Repeat with a fresh environment and <code>dist/*.tar.gz</code> to check the source
+distribution. OpenCL must be installed, as for the regular test workflow.</p>
 <h3 id="tag-naming-requirement">Tag naming requirement<a class="headerlink" href="#tag-naming-requirement" title="Permanent link">&para;</a></h3>
 <p>Release tags <strong>must</strong> follow the <code>v&lt;digit&gt;</code> scheme, i.e. <code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>
 with an optional pre-release suffix (e.g. <code>v0.7.1</code>, <code>v0.8.0rc1</code>). <code>setuptools_scm</code>
@@ -2267,10 +2319,10 @@ they are ignored by versioning, so they can be created freely.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "content.code.copy", "content.code.annotate", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "content.code.copy", "content.code.annotate", "search.highlight"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

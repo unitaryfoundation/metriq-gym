@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1141,6 +1141,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metriq_gym.benchmarks.ghz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ghz
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1609,6 +1620,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metriq_gym.benchmarks.ghz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ghz
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1705,6 +1727,10 @@
 <tr>
 <td><a href="#metriq_gym.benchmarks.clops">CLOPS</a></td>
 <td>Circuit layer operations per second to measure device speed</td>
+</tr>
+<tr>
+<td><a href="#metriq_gym.benchmarks.ghz">GHZ</a> <strong>(Experimental)</strong></td>
+<td>GHZ state fidelity, at a fixed size or by searching for the largest one the device can build</td>
 </tr>
 </tbody>
 </table>
@@ -2253,6 +2279,133 @@ compilation, communication, and execution overhead.</p>
 
     </div>
 
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="metriq_gym.benchmarks.ghz" class="doc doc-heading">
+            <code>ghz</code>
+
+
+<a href="#metriq_gym.benchmarks.ghz" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>GHZ state preparation and verification benchmark.</p>
+
+
+<details class="summary" open>
+  <summary>Summary</summary>
+  <p>Constructs a GHZ state on the device using a binary dissemination tree over
+the device's connectivity graph (logarithmic depth where connectivity
+allows), then estimates fidelity via one of four verification methods:
+direct fidelity estimation (DFE, uniform sampling of the GHZ stabilizer
+group), the two-setting Z/X lower bound, parity oscillation curve fitting,
+or compressed sensing (parity samples at random phases, sparse spectrum
+recovery by L1 minimization).</p>
+<p><strong>Experimental:</strong> available for standalone evaluation. The methodology and
+defaults may change before inclusion in the benchmark suite.</p>
+<p>Two modes:</p>
+<ul>
+<li>Fixed size (<code>num_qubits</code>): verify a GHZ state of one requested size.</li>
+<li>Size search (<code>size_search: true</code>): build GHZ states at halving sizes
+  from the device size down to <code>min_qubits</code> (e.g. 156, 78, 39, 19, 9, 5),
+  all dispatched in a single job, and report the largest size whose
+  fidelity clears <code>fidelity_threshold</code> by <code>confidence_sigma</code> standard
+  deviations. Defaults to compressed sensing, which resolves the
+  frequency spectrum using logarithmically many phase samples.</li>
+</ul>
+</details>
+
+<details class="result-interpretation" open>
+  <summary>Result interpretation</summary>
+  <ul>
+<li>population: probability of measuring all-zero or all-one bitstrings (Z basis).</li>
+<li>coherence: off-diagonal element. DFE averages uniformly sampled
+  off-diagonal stabilizers X^(x)N·Z_s, an unbiased estimate of
+  2·Re(rho[0...0, 1...1]) with pure finite-sampling error (the diagonal
+  half of the stabilizer group averages exactly to the population, so the
+  Z circuit covers it with no sampling). two_setting_bound takes the
+  global X parity and subtracts the population outside the GHZ subspace,
+  bounding the contribution of non-GHZ complementary pairs: X^(x)N connects every
+  bitstring to its complement and not only 0...0 to 1...1; without that
+  subtraction a product state such as |+&gt;^(x)N reports coherence 1. The
+  oscillation methods instead isolate the N-qubit Fourier component, by
+  curve fit or by LASSO over random-phase parity samples.</li>
+<li>fidelity: (population + coherence) / 2. DFE targets GHZ+; oscillation
+  methods maximize over the relative phase, and two_setting_bound bounds
+  that phase-optimized fidelity. These targets differ for coherent phase errors.
+  Compare runs using the same method.</li>
+<li>recovered_frequency (compressed sensing only): dominant frequency of the
+  parity signal. This is a diagnostic of the spectrum, not by itself an
+  entanglement certificate; use fidelity to assess the prepared state.</li>
+<li>phase_offset (compressed sensing only): phase θ of the off-diagonal
+  element, i.e. the state (|0...0&gt; + e^{iθ}|1...1&gt;)/√2. Zero for an ideal
+  GHZ; a nonzero value exposes coherent errors (residual Z rotations,
+  frame misalignment) that leave the coherence magnitude unchanged. None
+  when the coherence is at the noise floor, where the angle is undefined.</li>
+<li>largest_passing_size / device_fraction (size search only): the largest
+  tested size that passes the fidelity margin, and that size divided
+  by the device size. Per-size fidelities are reported in search_sizes /
+  search_fidelities, with uncertainties in search_uncertainties, so no
+  resolution is lost to the threshold.</li>
+<li>score: fidelity in fixed-size mode; largest_passing_size (a qubit count)
+  in size-search mode. Scores from these modes are not directly comparable.</li>
+</ul>
+</details>
+
+<details class="size-search-and-uncertainty" open>
+  <summary>Size search and uncertainty</summary>
+  <p>A size passes when
+<code>fidelity - confidence_sigma * uncertainty &gt; fidelity_threshold</code>.
+This margin uses estimated standard errors, not a rigorous confidence
+guarantee. Size search reports the largest <strong>tested</strong> passing size.</p>
+<p>Compressed sensing assumes a sparse spectrum. Its uncertainty propagates
+shot noise through the recovered model. If the recovered spectrum needs
+more phase samples, increase <code>num_phases</code> or use uniform parity oscillation.</p>
+</details>
+
+<details class="references" open>
+  <summary>References</summary>
+  <ul>
+<li>Cruz et al., "Efficient quantum algorithms for GHZ and W states, and
+  implementation on the IBM quantum computer", Adv. Quantum Technol. 2,
+  1900015 (2019). <a href="https://arxiv.org/abs/1807.05572">arXiv:1807.05572</a>.</li>
+<li>Flammia &amp; Liu, "Direct Fidelity Estimation from Few Pauli Measurements",
+  Phys. Rev. Lett. 106, 230501 (2011).
+  <a href="https://arxiv.org/abs/1104.4695">arXiv:1104.4695</a>.</li>
+<li>Labib et al., "Compressed Sensing for Efficient Fidelity Estimation of
+  GHZ States" (2026). <a href="https://arxiv.org/abs/2604.27824">arXiv:2604.27824</a>.</li>
+</ul>
+</details>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
 </div><h2 id="adding-custom-benchmarks">Adding Custom Benchmarks<a class="headerlink" href="#adding-custom-benchmarks" title="Permanent link">&para;</a></h2>
 <p>See <a href="../../development/adding-benchmarks/">Adding New Benchmarks</a> to contribute new benchmarks.</p>
 
@@ -2326,10 +2479,10 @@ compilation, communication, and execution overhead.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "content.code.copy", "content.code.annotate", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "content.code.copy", "content.code.annotate", "search.highlight"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

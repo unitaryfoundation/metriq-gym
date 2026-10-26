@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -858,10 +858,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resource-estimation" class="md-nav__link">
+  <a href="#cost-estimation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resource Estimation
+        Cost estimation
       
     </span>
   </a>
@@ -1599,10 +1599,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resource-estimation" class="md-nav__link">
+  <a href="#cost-estimation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resource Estimation
+        Cost estimation
       
     </span>
   </a>
@@ -1696,19 +1696,19 @@
 <h3 id="2-configure-environment">2. Configure Environment<a class="headerlink" href="#2-configure-environment" title="Permanent link">&para;</a></h3>
 <p>Add to your <code>.env</code> file:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Required</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">QISKIT_IBM_TOKEN</span><span class="o">=</span><span class="s2">&quot;&lt;your-ibm-cloud-api-key&gt;&quot;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">QISKIT_IBM_TOKEN</span><span class="o">=</span><span class="s2">"&lt;your-ibm-cloud-api-key&gt;"</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Optional</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">QISKIT_IBM_CHANNEL</span><span class="o">=</span><span class="s2">&quot;ibm_quantum_platform&quot;</span><span class="w">  </span><span class="c1"># or &quot;ibm_quantum&quot;</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nv">QISKIT_IBM_INSTANCE</span><span class="o">=</span><span class="s2">&quot;&lt;instance-crn&gt;&quot;</span><span class="w">       </span><span class="c1"># for specific instance access</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">QISKIT_IBM_CHANNEL</span><span class="o">=</span><span class="s2">"ibm_quantum_platform"</span><span class="w">  </span><span class="c1"># or "ibm_quantum"</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nv">QISKIT_IBM_INSTANCE</span><span class="o">=</span><span class="s2">"&lt;instance-crn&gt;"</span><span class="w">       </span><span class="c1"># for specific instance access</span>
 </code></pre></div>
 <h2 id="discovering-devices">Discovering Devices<a class="headerlink" href="#discovering-devices" title="Permanent link">&para;</a></h2>
 <p>Device availability depends on your IBM Quantum plan and changes frequently. To see your available devices:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qbraid.runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_provider</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">&quot;ibm&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">load_provider</span><span class="p">(</span><span class="s2">"ibm"</span><span class="p">)</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">get_devices</span><span class="p">():</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">num_qubits</span><span class="si">}</span><span class="s2"> qubits - </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">num_qubits</span><span class="si">}</span><span class="s2"> qubits - </span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 <p>Or visit <a href="https://quantum.ibm.com">quantum.ibm.com</a> to check your dashboard.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
@@ -1735,8 +1735,10 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>dispatch<span class="w"> </span>config.json<span class="w"> </span>--provider<span class="w"> </span><span class="nb">local</span><span class="w"> </span>--device<span class="w"> </span>ibm_sherbrooke
 </code></pre></div>
 <p>This uses Qiskit Aer with the noise model from the specified IBM device.</p>
-<h2 id="resource-estimation">Resource Estimation<a class="headerlink" href="#resource-estimation" title="Permanent link">&para;</a></h2>
-<p>Estimate job resources before dispatch:</p>
+<h2 id="cost-estimation">Cost estimation<a class="headerlink" href="#cost-estimation" title="Permanent link">&para;</a></h2>
+<p>Estimate QPU time in seconds as a proxy for job costs before dispatch. Circuits
+are compiled locally using device timing metadata without running on hardware.
+Add <code>-v</code> or <code>--verbose</code> for circuit statistics and estimation assumptions.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mgym<span class="w"> </span>job<span class="w"> </span>estimate<span class="w"> </span>metriq_gym/schemas/examples/bseq.example.json<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span>--provider<span class="w"> </span>ibm<span class="w"> </span>--device<span class="w"> </span>ibm_fez
 </code></pre></div>
@@ -1744,7 +1746,7 @@
 <h3 id="authentication-errors">Authentication Errors<a class="headerlink" href="#authentication-errors" title="Permanent link">&para;</a></h3>
 <p>Ensure your API key is valid and has appropriate permissions:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qiskit_ibm_runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">QiskitRuntimeService</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">service</span> <span class="o">=</span> <span class="n">QiskitRuntimeService</span><span class="p">(</span><span class="n">channel</span><span class="o">=</span><span class="s2">&quot;ibm_quantum_platform&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">service</span> <span class="o">=</span> <span class="n">QiskitRuntimeService</span><span class="p">(</span><span class="n">channel</span><span class="o">=</span><span class="s2">"ibm_quantum_platform"</span><span class="p">)</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">service</span><span class="o">.</span><span class="n">backends</span><span class="p">())</span>
 </code></pre></div>
 <h3 id="device-unavailable">Device Unavailable<a class="headerlink" href="#device-unavailable" title="Permanent link">&para;</a></h3>
@@ -1828,10 +1830,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "content.code.copy", "content.code.annotate", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "content.code.copy", "content.code.annotate", "search.highlight"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>
