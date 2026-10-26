@@ -171,26 +171,25 @@ def _make_ionq_job_with_metadata(metadata: dict) -> IonQJob:
     return job
 
 
-def test_execution_time_ionq_with_execution_time():
-    """IonQ job with execution_time field in metadata (milliseconds)."""
-    job = _make_ionq_job_with_metadata({"execution_time": 5200})
+def test_execution_time_ionq_reads_execution_duration_ms():
+    job = _make_ionq_job_with_metadata({"execution_duration_ms": 5200})
     assert execution_time(job) == pytest.approx(5.2)
 
 
-def test_execution_time_ionq_with_predicted_execution_time():
-    """IonQ job falls back to predicted_execution_time."""
-    job = _make_ionq_job_with_metadata({"predicted_execution_time": 3000})
-    assert execution_time(job) == pytest.approx(3.0)
+def test_execution_time_ionq_ignores_predicted_duration():
+    """An estimate is not a measured run time."""
+    job = _make_ionq_job_with_metadata({"predicted_execution_duration_ms": 3000})
+    with pytest.raises(ValueError, match="Execution time not available"):
+        execution_time(job)
 
 
-def test_execution_time_ionq_prefers_execution_time_over_predicted():
-    """IonQ job prefers execution_time over predicted_execution_time."""
-    job = _make_ionq_job_with_metadata({"execution_time": 5200, "predicted_execution_time": 3000})
-    assert execution_time(job) == pytest.approx(5.2)
+def test_execution_time_ionq_zero_duration_is_a_value():
+    """The simulator reports 0 ms, which is a measurement, not a missing field."""
+    job = _make_ionq_job_with_metadata({"execution_duration_ms": 0})
+    assert execution_time(job) == 0.0
 
 
 def test_execution_time_ionq_no_timing():
-    """IonQ job raises ValueError when no timing info is available."""
     job = _make_ionq_job_with_metadata({})
     with pytest.raises(ValueError, match="Execution time not available"):
         execution_time(job)

@@ -54,11 +54,10 @@ def _(quantum_job: QuantinuumJob) -> float:
 
 @execution_time.register
 def _(quantum_job: IonQJob) -> float:
-    meta = quantum_job.metadata()
-    # IonQ API returns execution_time (ms) and/or predicted_execution_time (ms)
-    exec_time_ms = meta.get("execution_time")
-    if exec_time_ms is None:
-        exec_time_ms = meta.get("predicted_execution_time")
+    # IonQ's v0.4 job record reports the measured run time as
+    # execution_duration_ms. predicted_execution_duration_ms is an estimate and
+    # is deliberately not used in its place.
+    exec_time_ms = quantum_job.metadata().get("execution_duration_ms")
     if exec_time_ms is None:
         raise ValueError("Execution time not available")
     return exec_time_ms / 1000.0

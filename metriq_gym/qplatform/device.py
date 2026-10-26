@@ -41,8 +41,8 @@ def _(device: LocalAerDevice) -> str:
 @version.register
 def _(device: IonQDevice) -> str:
     charact = device.profile.characterization
-    if charact and "date" in charact:
-        return charact["date"]
+    if charact and charact.get("date") is not None:
+        return str(charact["date"])
     return "unknown"
 
 

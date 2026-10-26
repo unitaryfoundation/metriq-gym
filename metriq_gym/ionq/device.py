@@ -43,6 +43,23 @@ _META_NUM_QUBITS = "_metriq_num_qubits"
 _META_NUM_CLBITS = "_metriq_num_clbits"
 
 
+# Non-unitary operations that qBraid's OpenQASM-to-IonQ conversion drops without
+# warning. IonQ's API has no mid-circuit reset or measurement, so a circuit that
+# uses one cannot run as written and must not report a result as if it had.
+_UNSUPPORTED_OPERATIONS = frozenset({"reset"})
+
+
+def _reject_unsupported_operations(circuits: list[QuantumCircuit]) -> None:
+    """Raise if any circuit uses an operation IonQ cannot run."""
+    for index, circuit in enumerate(circuits):
+        for inst in circuit.data:
+            if inst.operation.name in _UNSUPPORTED_OPERATIONS:
+                raise ValueError(
+                    f"Circuit {index} ({circuit.name!r}) uses '{inst.operation.name}', which "
+                    "IonQ does not support and qBraid's conversion would silently drop."
+                )
+
+
 def _extract_measurement_map(circuit: QuantumCircuit) -> dict[str, int]:
     """Return ``{"qubit_index": clbit_index}`` for every measure gate.
 
@@ -69,9 +86,9 @@ def _marginalize_to_clbits(
     Args:
         counts: Counts keyed by bitstring over all ``num_qubits`` qubits.
         meas_map: ``{"qubit_index": clbit_index}`` extracted at dispatch time.
-        num_qubits: Width of the submitted register. qBraid pads to this width
-            when IonQ reports it; the ``zfill`` covers the fallback where it
-            does not.
+        num_qubits: Width of the circuit's own register, used as a floor on the
+            key width for the case where IonQ omits the batch width and qBraid
+            falls back to the widest observed outcome.
         num_clbits: Size of the classical register.
     """
     qubit_indices = sorted(int(q) for q in meas_map)
@@ -79,12 +96,15 @@ def _marginalize_to_clbits(
 
     marginal: dict[str, int] = {}
     for bitstring, count in counts.items():
+        # IonQ runs a multi-circuit job at the width of its widest circuit and
+        # qBraid pads every histogram to that shared width, so a key can be
+        # wider than this circuit's own register. Qubit 0 is always the last
+        # character, so index from the right end of whatever width arrived.
         bits = bitstring.zfill(num_qubits)
-        # Bitstrings are big-endian: index i holds bit/clbit (n - 1 - i), so an
-        # identity qubit->clbit map reproduces the input unchanged.
+        width = len(bits)
         clbits = ["0"] * num_clbits
         for q_idx, c_idx in zip(qubit_indices, clbit_indices):
-            clbits[num_clbits - 1 - c_idx] = bits[num_qubits - 1 - q_idx]
+            clbits[num_clbits - 1 - c_idx] = bits[width - 1 - q_idx]
         key = "".join(clbits)
         marginal[key] = marginal.get(key, 0) + count
     return marginal
@@ -114,8 +134,8 @@ def _reshape_counts(
 def patch_ionq_device(device: IonQDevice) -> None:
     """Patch an IonQDevice instance.
 
-    Converts qiskit circuits to OpenQASM 3 and records per-circuit measurement
-    metadata on the IonQ job. Also ensures the class-level IonQJob patch is
+    Rejects circuits IonQ cannot run, converts qiskit circuits to OpenQASM 3,
+    and records per-circuit measurement metadata on the IonQ job. Also ensures the class-level IonQJob patch is
     applied so polling marginalizes the counts.
     """
     patch_ionq_job()  # idempotent
@@ -128,6 +148,7 @@ def patch_ionq_device(device: IonQDevice) -> None:
 
         # Only qiskit circuits carry a classical register to marginalize onto.
         if circuits and all(isinstance(c, QuantumCircuit) for c in circuits):
+            _reject_unsupported_operations(circuits)
             meas_maps = [_extract_measurement_map(c) for c in circuits]
             num_qubits = [c.num_qubits for c in circuits]
             num_clbits = [c.num_clbits for c in circuits]

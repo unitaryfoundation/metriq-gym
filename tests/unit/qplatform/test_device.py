@@ -665,6 +665,10 @@ class TestIonQVersion:
         result = version(device)
         assert result == "2026-01-15T12:00:00Z"
 
+    def test_ionq_version_numeric_date_is_stringified(self):
+        device = _make_mock_ionq_device(characterization={"date": 1725102011})
+        assert version(device) == "1725102011"
+
     def test_ionq_version_no_characterization(self):
         device = _make_mock_ionq_device(characterization=None)
         result = version(device)
