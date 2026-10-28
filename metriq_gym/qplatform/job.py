@@ -115,7 +115,19 @@ def _(quantum_job: AzureQuantumJob) -> str | None:
 @failure_reason.register
 def _(quantum_job: QuantinuumJob) -> str | None:
     try:
-        reason = quantum_job._get_ref().last_message
+        ref = quantum_job._get_ref()
+    except Exception:
+        return None
+
+    # ``last_message`` is a generic "Program has encountered an error"; the actionable
+    # text (e.g. "Submission error: You do not have access to this machine (code: 14)")
+    # only appears in ``last_status_detail.error_detail``.
+    detail = getattr(getattr(ref, "last_status_detail", None), "error_detail", None)
+    if isinstance(detail, str) and detail.strip():
+        return detail.strip()
+
+    try:
+        reason = ref.last_message
     except Exception:
         return None
     return str(reason) if reason else None
