@@ -135,6 +135,44 @@ class TestRejectUnsupportedOperations:
         qc.measure([0, 1], [0, 1])
         _reject_unsupported_operations([qc])
 
+    def test_gate_after_measurement_is_rejected(self):
+        qc = QuantumCircuit(1, 1)
+        qc.x(0)
+        qc.measure(0, 0)
+        qc.x(0)
+        with pytest.raises(ValueError, match="applies 'x' to qubit 0 after measuring it"):
+            _reject_unsupported_operations([qc])
+
+    def test_two_qubit_gate_on_measured_qubit_is_rejected(self):
+        qc = QuantumCircuit(2, 2)
+        qc.measure(0, 0)
+        qc.cx(1, 0)
+        qc.measure(1, 1)
+        with pytest.raises(ValueError, match="applies 'cx' to qubit 0"):
+            _reject_unsupported_operations([qc])
+
+    def test_second_measurement_of_the_same_qubit_is_rejected(self):
+        qc = QuantumCircuit(1, 2)
+        qc.measure(0, 0)
+        qc.measure(0, 1)
+        with pytest.raises(ValueError, match="applies 'measure' to qubit 0"):
+            _reject_unsupported_operations([qc])
+
+    def test_barrier_after_measurement_passes(self):
+        qc = QuantumCircuit(2, 2)
+        qc.h(0)
+        qc.measure(0, 0)
+        qc.barrier()
+        qc.measure(1, 1)
+        _reject_unsupported_operations([qc])
+
+    def test_gates_on_other_qubits_after_a_measurement_pass(self):
+        qc = QuantumCircuit(2, 2)
+        qc.measure(0, 0)
+        qc.x(1)
+        qc.measure(1, 1)
+        _reject_unsupported_operations([qc])
+
 
 class TestPatchIonqDevice:
     def test_run_converts_to_qasm_and_records_metadata(self):

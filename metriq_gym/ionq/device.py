@@ -48,16 +48,40 @@ _META_NUM_CLBITS = "_metriq_num_clbits"
 # uses one cannot run as written and must not report a result as if it had.
 _UNSUPPORTED_OPERATIONS = frozenset({"reset"})
 
+# Operations that touch a qubit without changing its state, so they are fine
+# after a measurement.
+_INERT_OPERATIONS = frozenset({"barrier", "delay"})
+
 
 def _reject_unsupported_operations(circuits: list[QuantumCircuit]) -> None:
-    """Raise if any circuit uses an operation IonQ cannot run."""
+    """Raise if any circuit uses an operation IonQ cannot run.
+
+    IonQ measures every qubit once, at the end. A measurement is therefore only
+    faithful when nothing acts on that qubit afterwards; otherwise the poll
+    patch reads the qubit's final value, not the one the circuit recorded.
+    """
     for index, circuit in enumerate(circuits):
+        label = f"Circuit {index} ({circuit.name!r})"
+        measured: set[int] = set()
         for inst in circuit.data:
-            if inst.operation.name in _UNSUPPORTED_OPERATIONS:
+            name = inst.operation.name
+            if name in _UNSUPPORTED_OPERATIONS:
                 raise ValueError(
-                    f"Circuit {index} ({circuit.name!r}) uses '{inst.operation.name}', which "
-                    "IonQ does not support and qBraid's conversion would silently drop."
+                    f"{label} uses '{name}', which IonQ does not support and qBraid's "
+                    "conversion would silently drop."
                 )
+            if name in _INERT_OPERATIONS:
+                continue
+            qubits = [circuit.find_bit(q).index for q in inst.qubits]
+            touched = measured.intersection(qubits)
+            if touched:
+                raise ValueError(
+                    f"{label} applies '{name}' to qubit {min(touched)} after measuring it. "
+                    "IonQ measures only at the end of the circuit, so mid-circuit "
+                    "measurement cannot run as written."
+                )
+            if name == "measure":
+                measured.update(qubits)
 
 
 def _extract_measurement_map(circuit: QuantumCircuit) -> dict[str, int]:
