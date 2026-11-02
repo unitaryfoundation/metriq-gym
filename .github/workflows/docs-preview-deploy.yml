@@ -90,7 +90,7 @@ jobs:
 
       - name: Deploy preview
         if: ${{ steps.metadata.outputs.pr_action != 'closed' }}
-        uses: rossjrw/pr-preview-action@v1.8.1
+        uses: rossjrw/pr-preview-action@v1.8.2
         with:
           source-dir: docs-site
           preview-branch: gh-pages
@@ -101,7 +101,7 @@ jobs:
 
       - name: Remove preview
         if: ${{ steps.metadata.outputs.pr_action == 'closed' }}
-        uses: rossjrw/pr-preview-action@v1.8.1
+        uses: rossjrw/pr-preview-action@v1.8.2
         with:
           preview-branch: gh-pages
           umbrella-dir: pr-preview
