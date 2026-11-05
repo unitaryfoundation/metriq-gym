@@ -1,8 +1,12 @@
 import pytest
 import networkx as nx
 import random
+from collections import defaultdict
 from types import SimpleNamespace
 from unittest.mock import patch
+
+from qiskit import QuantumCircuit
+from qiskit.quantum_info import Statevector
 
 from metriq_gym.benchmarks.lr_qaoa import (
     LinearRampQAOA,
@@ -92,6 +96,46 @@ def test_prepare_fully_connected_layout_lrqaoa_circuits(num_qubits, qaoa_layers)
         )
     for circ_i, p_layer in zip(circuits, qaoa_layers):
         assert p_layer * num_qubits == circ_i.count_ops()["rx"]
+
+
+def _counts_distribution(circuit: QuantumCircuit) -> dict[str, float]:
+    """Exact distribution of count keys for a circuit that only measures at the end."""
+    measured = {}
+    gates = QuantumCircuit(circuit.num_qubits)
+    for inst in circuit.data:
+        qubits = [circuit.find_bit(q).index for q in inst.qubits]
+        if inst.operation.name == "measure":
+            measured[circuit.find_bit(inst.clbits[0]).index] = qubits[0]
+        else:
+            assert not measured, "gate applied after a measurement"
+            gates.append(inst.operation, qubits)
+    assert sorted(measured) == list(range(circuit.num_clbits))
+    distribution: dict[str, float] = defaultdict(float)
+    for key, prob in Statevector(gates).probabilities_dict().items():
+        qubit_bits = key[::-1]
+        bits = "".join(qubit_bits[measured[c]] for c in reversed(range(circuit.num_clbits)))
+        distribution[bits] += prob
+    return distribution
+
+
+@pytest.mark.parametrize("num_qubits", [4, 5, 6])
+@pytest.mark.parametrize("num_layers", [1, 2, 3, 4])
+def test_fully_connected_swap_encoding_matches_direct(num_qubits, num_layers):
+    rng = random.Random(num_qubits * 10 + num_layers)
+    graph = nx.complete_graph(num_qubits)
+    for u, v in graph.edges():
+        graph[u][v]["weight"] = rng.uniform(0.1, 1.0)
+    (direct,) = prepare_qaoa_circuit(graph, [num_layers], "FC", "Direct")
+    (swap,) = prepare_qaoa_circuit(graph, [num_layers], "FC", "SWAP")
+    assert swap.count_ops()["measure"] == num_qubits
+
+    values = [rng.uniform(0.1, 1.0) for _ in direct.parameters]
+    direct = direct.assign_parameters(dict(zip(direct.parameters, values)))
+    swap = swap.assign_parameters(dict(zip(swap.parameters, values)))
+    expected = _counts_distribution(direct)
+    actual = _counts_distribution(swap)
+    for bits in set(expected) | set(actual):
+        assert actual.get(bits, 0.0) == pytest.approx(expected.get(bits, 0.0), abs=1e-9)
 
 
 def test_calc_stats_pass():
