@@ -1,7 +1,10 @@
 
 # Description
 
-Please include a summary of the changes and the related issue. Please also include relevant motivation and context. List any dependencies that are required for this change.
+Briefly explain what changed and why. For a bug fix, include a minimal reproducer
+and expected versus observed behavior. For a feature or new method, state its
+requirement. Mention dependency changes when applicable. Keep the description
+concise and include only details that help review.
 
 # Issue ticket number and link
 
@@ -16,13 +19,33 @@ Fixes # (issue)
 
 # How Has This Been Tested?
 
-Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration
+Describe validation that CI does not cover, with enough detail to reproduce it.
+Do not include passing-test counts or repeat metadata already in GitHub CI reports;
+link to those reports when useful. Explain failures, skipped checks, or limitations
+that affect review. For documentation-only changes, briefly note content and link
+checks if CI does not cover them.
+
+For scientific changes, identify the protocol/reference and independent evidence
+supporting correctness, including statistical tolerances where applicable. Explain
+any effect on benchmark scores or comparability with previous results. Label
+simulated, synthetic, and hardware evidence accurately.
+
+# AI assistance
+
+State whether AI tools were used, name them (including version if recorded), and
+describe their role. Briefly describe the human review performed. See
+[AI_POLICY.md](https://github.com/unitaryfoundation/metriq-gym/blob/main/AI_POLICY.md);
+write `AI use: none` if no AI tools were used.
+
+For agent-driven changes requiring prior maintainer approval under that policy,
+link the approval here.
 
 # Checklist:
 
+- [ ] I have read the AI contribution policy and take responsibility for this contribution
 - [ ] I have performed a self-review of my code
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have made corresponding changes to the documentation
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
+- [ ] I have added appropriate regression or feature tests, or explained why they are not applicable
+- [ ] I have explained any failed or skipped checks and relevant limitations
 - [ ] Any dependent changes have been merged and published in downstream modules (or not applicable)
