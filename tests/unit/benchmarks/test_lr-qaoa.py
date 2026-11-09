@@ -10,6 +10,7 @@ from metriq_gym.benchmarks.lr_qaoa import (
     prepare_qaoa_circuit,
     calc_stats,
     cost_maxcut,
+    plant_partition,
     weighted_maxcut_solver,
     calc_random_stats,
 )
@@ -246,9 +247,9 @@ def test_bipartite_reference_preserves_node_indices_across_components():
     "edges, sample, expected_solution",
     [
         ([(0, 1, 1.0), (1, 2, 1.0), (0, 2, 1.0)], {0: -1, 1: 1, 2: -1}, "010"),
-        ([(0, 1, 1.0), (1, 2, -1.0)], {0: -1, 1: 1, 2: 1}, "011"),
+        ([(0, 1, 1.0), (1, 2, -1.0), (0, 2, -1.0)], {0: -1, 1: 1, 2: 1}, "011"),
     ],
-    ids=["odd-cycle", "negative-weight"],
+    ids=["odd-cycle", "unbalanced-signs"],
 )
 def test_other_graphs_keep_annealing_reference(edges, sample, expected_solution):
     graph = nx.Graph()
@@ -259,6 +260,100 @@ def test_other_graphs_keep_annealing_reference(edges, sample, expected_solution)
 
     sampler.return_value.sample.assert_called_once()
     assert solution == expected_solution
+
+
+def _dispatch_without_annealing(graph_type, device_graph, seed=123):
+    num_qubits = device_graph.num_nodes()
+    params = SimpleNamespace(
+        num_qubits=num_qubits,
+        graph_type=graph_type,
+        qaoa_layers=[1],
+        trials=1,
+        shots=100,
+        num_random_trials=5,
+        confidence_level=0.999,
+        delta_beta=0.3,
+        delta_gamma=0.6,
+        seed=seed,
+    )
+    benchmark = LinearRampQAOA(SimpleNamespace(), params)
+    device = SimpleNamespace(
+        id="test-device",
+        num_qubits=num_qubits,
+        run=Mock(return_value=SimpleNamespace(id="test-job")),
+    )
+    with (
+        patch("metriq_gym.benchmarks.lr_qaoa.connectivity_graph", return_value=device_graph),
+        patch(
+            "metriq_gym.benchmarks.lr_qaoa.SimulatedAnnealingSampler",
+            side_effect=AssertionError("Generated instances should not need annealing"),
+        ),
+    ):
+        data = benchmark.dispatch_handler(device)
+    graph = nx.Graph()
+    graph.add_nodes_from(range(num_qubits))
+    graph.add_weighted_edges_from(data.graph_info)
+    return data, graph
+
+
+def _brute_force_maxcut(graph):
+    n = graph.number_of_nodes()
+    return max(cost_maxcut(format(k, f"0{n}b"), graph) for k in range(2**n))
+
+
+@pytest.mark.parametrize(
+    "device_graph",
+    [
+        rx.generators.heavy_hex_graph(3),
+        rx.generators.heavy_square_graph(3),
+        rx.generators.grid_graph(4, 4),
+    ],
+    ids=["heavy-hex", "heavy-square", "square"],
+)
+def test_bipartite_native_layout_reference_cuts_every_edge(device_graph):
+    data, graph = _dispatch_without_annealing("NL", device_graph)
+
+    weights = [w for _, _, w in data.graph_info]
+    assert all(w > 0 for w in weights)
+    assert cost_maxcut(data.optimal_sol, graph) == pytest.approx(sum(weights))
+
+
+def test_non_bipartite_native_layout_plants_reference():
+    device_graph = rx.generators.grid_graph(3, 3)
+    device_graph.add_edge(0, 4, None)  # A diagonal coupler creates a triangle.
+    data, graph = _dispatch_without_annealing("NL", device_graph)
+
+    assert any(w < 0 for _, _, w in data.graph_info)
+    assert cost_maxcut(data.optimal_sol, graph) == pytest.approx(_brute_force_maxcut(graph))
+
+
+@pytest.mark.parametrize("num_qubits", [3, 6, 10])
+@pytest.mark.parametrize("seed", [0, 1, 123])
+@pytest.mark.parametrize("encoding", ["Direct", "SWAP"])
+def test_fully_connected_reference_is_planted_optimum(num_qubits, seed, encoding):
+    device_graph = (
+        rx.generators.complete_graph(num_qubits)
+        if encoding == "Direct"
+        else rx.generators.path_graph(num_qubits)
+    )
+    data, graph = _dispatch_without_annealing("FC", device_graph, seed)
+
+    assert data.circuit_encoding == encoding
+    positive_weight = sum(w for _, _, w in data.graph_info if w > 0)
+    assert positive_weight > 0
+    assert cost_maxcut(data.optimal_sol, graph) == pytest.approx(positive_weight)
+    assert cost_maxcut(data.optimal_sol, graph) == pytest.approx(_brute_force_maxcut(graph))
+
+    stats = calc_stats(data, [{data.optimal_sol: data.shots}])
+    assert stats.approx_ratio == pytest.approx([1.0])
+    assert stats.optimal_probability == pytest.approx([1.0])
+
+
+def test_plant_partition_keeps_both_sides_nonempty():
+    graph_info = [(0, 1, 0.5)]
+    for seed in range(50):
+        random.seed(seed)
+        assert plant_partition(2, graph_info) == [(0, 1, 0.5)]
 
 
 @pytest.mark.parametrize("nq", [5, 10, 15, 20])
