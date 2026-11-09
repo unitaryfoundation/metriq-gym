@@ -1,9 +1,10 @@
 import pytest
 import networkx as nx
 import random
+import rustworkx as rx
 from collections import defaultdict
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
@@ -220,6 +221,88 @@ def test_simulated_annealing_solver(nq):
     # Check if the solution is valid
     cost = cost_maxcut(optimal_solution, graph)
     assert cost >= 0
+
+
+@pytest.mark.parametrize(
+    "num_qubits, expected_cost", [(10, 3.0), (20, 6.9), (50, 18.6), (100, 43.0)]
+)
+def test_chain_reference_normalizes_optimal_samples(num_qubits, expected_cost, capsys):
+    # These widths and graph seed match the Metriq Score 1.0 suite. Previously
+    # annealing could underestimate the optimum and make perfect samples score >1.
+    params = SimpleNamespace(
+        num_qubits=num_qubits,
+        graph_type="1D",
+        qaoa_layers=[10],
+        trials=1,
+        shots=1000,
+        num_random_trials=25,
+        confidence_level=0.999,
+        delta_beta=0.3,
+        delta_gamma=0.6,
+        seed=123,
+    )
+    benchmark = LinearRampQAOA(SimpleNamespace(), params)
+    device = SimpleNamespace(
+        id="test-device",
+        num_qubits=num_qubits,
+        run=Mock(return_value=SimpleNamespace(id="test-job")),
+    )
+    with (
+        patch(
+            "metriq_gym.benchmarks.lr_qaoa.connectivity_graph",
+            return_value=rx.generators.path_graph(num_qubits),
+        ),
+        patch(
+            "metriq_gym.benchmarks.lr_qaoa.SimulatedAnnealingSampler",
+            side_effect=AssertionError("Chains should not need annealing"),
+        ),
+    ):
+        data = benchmark.dispatch_handler(device)
+
+    graph = nx.Graph()
+    graph.add_weighted_edges_from(data.graph_info)
+    assert cost_maxcut(data.optimal_sol, graph) == pytest.approx(expected_cost)
+
+    exact_solution = "01" * (num_qubits // 2)
+    stats = calc_stats(data, [{exact_solution: params.shots}])
+    assert stats.approx_ratio == pytest.approx([1.0])
+    assert stats.effective_approx_ratio == pytest.approx([1.0])
+    assert stats.optimal_probability == pytest.approx([1.0])
+    assert "There is a better cost" not in capsys.readouterr().out
+
+
+def test_bipartite_reference_preserves_node_indices_across_components():
+    graph = nx.Graph()
+    graph.add_nodes_from([3, 1, 0, 4, 2, 5])
+    graph.add_weighted_edges_from([(0, 2, 0.1), (2, 1, 1.0), (3, 4, 0.0)])
+    with patch(
+        "metriq_gym.benchmarks.lr_qaoa.SimulatedAnnealingSampler",
+        side_effect=AssertionError("Nonnegative bipartite graphs should not need annealing"),
+    ):
+        solution = weighted_maxcut_solver(graph)
+
+    assert len(solution) == 6
+    assert set(solution) <= {"0", "1"}
+    assert cost_maxcut(solution, graph) == pytest.approx(1.1)
+
+
+@pytest.mark.parametrize(
+    "edges, sample, expected_solution",
+    [
+        ([(0, 1, 1.0), (1, 2, 1.0), (0, 2, 1.0)], {0: -1, 1: 1, 2: -1}, "010"),
+        ([(0, 1, 1.0), (1, 2, -1.0)], {0: -1, 1: 1, 2: 1}, "011"),
+    ],
+    ids=["odd-cycle", "negative-weight"],
+)
+def test_other_graphs_keep_annealing_reference(edges, sample, expected_solution):
+    graph = nx.Graph()
+    graph.add_weighted_edges_from(edges)
+    with patch("metriq_gym.benchmarks.lr_qaoa.SimulatedAnnealingSampler") as sampler:
+        sampler.return_value.sample.return_value = [sample]
+        solution = weighted_maxcut_solver(graph)
+
+    sampler.return_value.sample.assert_called_once()
+    assert solution == expected_solution
 
 
 @pytest.mark.parametrize("nq", [5, 10, 15, 20])
