@@ -1,5 +1,6 @@
 import pytest
 import networkx as nx
+import numpy as np
 import random
 import rustworkx as rx
 from types import SimpleNamespace
@@ -11,6 +12,7 @@ from metriq_gym.benchmarks.lr_qaoa import (
     calc_stats,
     cost_maxcut,
     plant_partition,
+    planted_complete_graph,
     weighted_maxcut_solver,
     calc_random_stats,
 )
@@ -327,7 +329,7 @@ def test_non_bipartite_native_layout_plants_reference():
     assert cost_maxcut(data.optimal_sol, graph) == pytest.approx(_brute_force_maxcut(graph))
 
 
-@pytest.mark.parametrize("num_qubits", [3, 6, 10])
+@pytest.mark.parametrize("num_qubits", [3, 4, 5, 6, 10])
 @pytest.mark.parametrize("seed", [0, 1, 123])
 @pytest.mark.parametrize("encoding", ["Direct", "SWAP"])
 def test_fully_connected_reference_is_planted_optimum(num_qubits, seed, encoding):
@@ -339,14 +341,30 @@ def test_fully_connected_reference_is_planted_optimum(num_qubits, seed, encoding
     data, graph = _dispatch_without_annealing("FC", device_graph, seed)
 
     assert data.circuit_encoding == encoding
-    positive_weight = sum(w for _, _, w in data.graph_info if w > 0)
-    assert positive_weight > 0
-    assert cost_maxcut(data.optimal_sol, graph) == pytest.approx(positive_weight)
+    assert graph.number_of_edges() == num_qubits * (num_qubits - 1) // 2
+    assert all(w > 0 for _, _, w in data.graph_info)
+    assert data.optimal_sol.count("1") == num_qubits // 2
     assert cost_maxcut(data.optimal_sol, graph) == pytest.approx(_brute_force_maxcut(graph))
 
     stats = calc_stats(data, [{data.optimal_sol: data.shots}])
     assert stats.approx_ratio == pytest.approx([1.0])
     assert stats.optimal_probability == pytest.approx([1.0])
+
+
+@pytest.mark.parametrize("num_nodes", [3, 11, 20, 51, 100])
+def test_planted_complete_graph_attains_sdp_bound(num_nodes):
+    # The planted cut is optimal if Diag(x) L x - L is positive semidefinite on the cut
+    # vector x: then the Goemans-Williamson SDP upper bound equals the planted cut value.
+    random.seed(num_nodes)
+    graph_info, optimal_sol = planted_complete_graph(num_nodes)
+    weights = np.zeros((num_nodes, num_nodes))
+    for i, j, w in graph_info:
+        weights[i, j] = weights[j, i] = w
+    laplacian = np.diag(weights.sum(axis=1)) - weights
+    x = np.array([1 if bit == "1" else -1 for bit in optimal_sol])
+    certificate = np.diag(x * (laplacian @ x)) - laplacian
+
+    assert np.linalg.eigvalsh(certificate)[0] > -1e-9
 
 
 def test_plant_partition_keeps_both_sides_nonempty():
