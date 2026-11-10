@@ -1,10 +1,12 @@
-
 # Description
 
-Briefly explain what changed and why. For a bug fix, include a minimal reproducer
-and expected versus observed behavior. For a feature or new method, state its
-requirement. Mention dependency changes when applicable. Keep the description
-concise and include only details that help review.
+Briefly explain what changed and why.
+
+If there is no associated issue, provide context for the change, that is: 
+- for a bug fix, include a minimal reproducer and expected versus observed behavior. 
+- for a feature or new method, state its requirement. 
+
+Mention dependency changes when applicable. Keep the description concise and include only details that help review.
 
 # Issue ticket number and link
 
@@ -20,15 +22,10 @@ Fixes # (issue)
 # How Has This Been Tested?
 
 Describe validation that CI does not cover, with enough detail to reproduce it.
-Do not include passing-test counts or repeat metadata already in GitHub CI reports;
-link to those reports when useful. Explain failures, skipped checks, or limitations
-that affect review. For documentation-only changes, briefly note content and link
-checks if CI does not cover them.
+For example, if you smoke tested the change locally against a simulator, 
+or a hardware backend, then report the results.
 
-For scientific changes, identify the protocol/reference and independent evidence
-supporting correctness, including statistical tolerances where applicable. Explain
-any effect on benchmark scores or comparability with previous results. Label
-simulated, synthetic, and hardware evidence accurately.
+For changes affecting scientific results, explain any effect on benchmark scores or comparability with previous results.
 
 # AI assistance
 

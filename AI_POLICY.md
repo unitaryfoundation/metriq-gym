@@ -2,8 +2,7 @@
 
 AI tools are welcome in metriq-gym. Their use does not lower the standard for a
 contribution: a human must understand the work, verify it, and take responsibility
-for it. This policy covers code, tests, documentation, issues, pull requests,
-reviews, and discussion comments.
+for it. This policy does not cover only code, but also everything else in this repository: tests, documentation, issues, pull requests, reviews, and discussion comments.
 
 Benchmark correctness is essential. An implementation can run successfully and
 produce plausible numbers while measuring the wrong quantity. Errors in circuit

@@ -54,7 +54,7 @@ benchmarks; preserving their scientific meaning matters as much as working code.
   CI, releases, or verification workflows, or involve protected resources.
 - Obtain authorization before credentialed, paid-service, or hardware operations.
   Do not expose credentials or use a real backend for verification without that
-  authorization.
+  authorization. Should not access any private credential information, and these information should not be implicitly included in any session context.
 - Do not commit, push, open a PR, or post comments unless explicitly requested.
   Commands such as `mgym job upload` and `mgym suite upload` can publish data PRs;
   they are not local verification steps.
