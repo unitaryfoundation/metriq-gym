@@ -109,6 +109,10 @@ APIs are only contacted when you click Poll.
 Start with [CONTRIBUTING.md](https://github.com/unitaryfoundation/metriq-gym/blob/main/CONTRIBUTING.md) for the workflow checklist, and review the [Developer
 Guide](https://unitaryfoundation.github.io/metriq-gym/development/developer-guide/). Issues and pull requests are welcome!
 
+Our [AI contribution policy](AI_POLICY.md) and [coding-agent instructions](AGENTS.md)
+follow the standards in Unitary Foundation's [AI4QOSS repository](https://github.com/unitaryfoundation/ai4qoss), adapted to quantum benchmarking.
+Coding agents should start with `AGENTS.md`.
+
 ## License
 
 metriq-gym is available under the [Apache License 2.0](https://github.com/unitaryfoundation/metriq-gym/blob/main/LICENSE).
