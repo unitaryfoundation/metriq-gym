@@ -2,9 +2,10 @@
 
 Briefly explain what changed and why.
 
-If there is no associated issue, provide context for the change, that is: 
-- for a bug fix, include a minimal reproducer and expected versus observed behavior. 
-- for a feature or new method, state its requirement. 
+If there is no associated issue, or it does not provide this context, include:
+
+- for a bug fix, include a minimal reproducer and expected versus observed behavior.
+- for a feature or new method, state its requirement.
 
 Mention dependency changes when applicable. Keep the description concise and include only details that help review.
 
@@ -22,7 +23,7 @@ Fixes # (issue)
 # How Has This Been Tested?
 
 Describe validation that CI does not cover, with enough detail to reproduce it.
-For example, if you smoke tested the change locally against a simulator, 
+For example, if you smoke tested the change locally against a simulator,
 or a hardware backend, then report the results.
 
 For changes affecting scientific results, explain any effect on benchmark scores or comparability with previous results.
