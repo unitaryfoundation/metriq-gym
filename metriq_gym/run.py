@@ -948,14 +948,23 @@ def _export_raw_debug_data(
     metriq_job: MetriqGymJob,
     raw_results: list["GateModelResultData"],
 ) -> None:
-    """Export raw measurement counts and job data to a separate debug file.
+    """Export raw measurements and job data to a separate debug file.
 
     Args:
         base_filename: The base JSON filename (e.g., 'result.json').
         metriq_job: The job being exported.
-        raw_counts: Raw measurement counts from the provider.
+        raw_results: Raw measurement data from the provider.
     """
     import json
+    import numpy as np
+
+    def serialize_numpy(value: Any) -> Any:
+        # Provider results can contain arrays, including one array per circuit.
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        if isinstance(value, np.generic):
+            return value.item()
+        raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
     # Generate debug filename: result.json -> result_debug.json
     if base_filename.endswith(".json"):
@@ -971,8 +980,10 @@ def _export_raw_debug_data(
         "raw_results": [r.to_dict() for r in raw_results],
     }
 
+    # Serialize before opening the file so an unsupported value cannot truncate it.
+    serialized = json.dumps(debug_data, indent=4, default=serialize_numpy)
     with open(debug_filename, "w") as f:
-        json.dump(debug_data, f, indent=4)
+        f.write(serialized)
     print(f"Debug data exported to {debug_filename}")
 
 

@@ -50,6 +50,7 @@ class ResourceEstimate:
     ibm_quantum_seconds: float | None = None
     ibm_timing_complete: bool = True
     notes: list[str] = field(default_factory=list)
+    sampled: bool = False
 
 
 @dataclass
@@ -60,6 +61,7 @@ class CircuitBatch:
     # Direct Runtime submissions already use physical circuits and bypass qBraid's transform.
     transpile: bool = True
     notes: list[str] = field(default_factory=list)
+    sampled: bool = False
 
 
 def _count_gates(circuit: QuantumCircuit) -> GateCounts:
@@ -114,8 +116,10 @@ def aggregate_resource_estimates(
     per_circuit: list[CircuitEstimate] = []
     hqc_total: float | None = None
     notes: list[str] = []
+    sampled = False
 
     for job_index, batch in enumerate(batches):
+        sampled |= batch.sampled
         notes.extend(note for note in batch.notes if note not in notes)
         job_count += 1
         for circuit_index, circuit in enumerate(batch.circuits):
@@ -153,6 +157,7 @@ def aggregate_resource_estimates(
         hqc_total=hqc_total,
         per_circuit=per_circuit,
         notes=notes,
+        sampled=sampled,
     )
 
 
@@ -198,6 +203,7 @@ def merge_resource_estimates(estimates: Iterable[ResourceEstimate]) -> ResourceE
                 total.ibm_quantum_seconds or 0.0
             ) + estimate.ibm_quantum_seconds
         total.ibm_timing_complete &= estimate.ibm_timing_complete
+        total.sampled |= estimate.sampled
         total.notes.extend(note for note in estimate.notes if note not in total.notes)
     return total
 
@@ -228,6 +234,11 @@ def print_resource_estimate(
 ) -> None:
     device_label = device_id if device_id else "(no device)"
     print(f"Cost estimate for {job_type} on {provider}:{device_label}")
+    if estimate.sampled:
+        print(
+            "Sampled circuit estimate: gate counts and timing are extrapolated; "
+            "circuit/shot totals cover the full workload. Use --full to build every circuit."
+        )
 
     provider_key = provider.strip().lower()
     seconds = estimate.ibm_quantum_seconds

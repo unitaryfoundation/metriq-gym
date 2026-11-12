@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import logging
 import os
+import numpy as np
 import pytest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -1076,6 +1077,41 @@ def test_export_raw_debug_data_creates_separate_file(tmp_path):
     assert "raw_results" in data
     assert isinstance(data["raw_results"], list)
     assert data["raw_results"][0]["measurement_counts"] == {"00": 512, "11": 488}
+
+
+@pytest.mark.parametrize("batched", [False, True], ids=["single", "batched"])
+def test_export_raw_debug_data_preserves_numpy_measurements(tmp_path, batched):
+    # IBM returns a packed measurement array per circuit, or a list for multiple PUBs.
+    counts = {"00": 2, "11": 1}
+    measurements = np.array([[0], [3], [0]], dtype=np.uint8)
+    raw_result = GateModelResultData(
+        measurement_counts=[counts, counts] if batched else counts,
+        measurements=[measurements, measurements] if batched else measurements,
+        metadata={"count": np.int64(3), "fraction": np.float32(0.5), "valid": np.bool_(True)},
+    )
+
+    _export_raw_debug_data(str(tmp_path / "result.json"), _make_cached_job(1), [raw_result])
+
+    data = json.loads((tmp_path / "result_debug.json").read_text())["raw_results"][0]
+    expected_measurements = [[[0], [3], [0]], [[0], [3], [0]]] if batched else [[0], [3], [0]]
+    assert data["measurements"] == expected_measurements
+    assert data["metadata"] == {"count": 3, "fraction": 0.5, "valid": True}
+    # Replay uses from_dict(), so verify numeric values and circuit boundaries survive.
+    restored = GateModelResultData.from_dict(data)
+    assert restored.get_counts() == ([counts, counts] if batched else counts)
+    np.testing.assert_array_equal(restored.measurements, expected_measurements)
+
+
+def test_export_raw_debug_data_rejects_unsupported_objects_without_truncating(tmp_path):
+    debug_file = tmp_path / "result_debug.json"
+    previous_contents = '{"existing": true}\n'
+    debug_file.write_text(previous_contents)
+    raw_result = GateModelResultData(measurement_counts={"0": 1}, unsupported=object())
+
+    with pytest.raises(TypeError, match="Object of type object is not JSON serializable"):
+        _export_raw_debug_data(str(tmp_path / "result.json"), _make_cached_job(1), [raw_result])
+
+    assert debug_file.read_text() == previous_contents
 
 
 def test_replay_from_debug_file_success(tmp_path):
