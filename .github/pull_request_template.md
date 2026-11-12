@@ -30,8 +30,10 @@ For changes affecting scientific results, explain any effect on benchmark scores
 
 # AI assistance
 
-State whether AI tools were used, name them (including version if recorded), and
-describe their role. Briefly describe the human review performed. See
+State whether AI tools were used. Name each tool and the model(s) used with it,
+including versions if recorded, and describe their role, including PR preparation
+or creation. If the model is not exposed by the tool or session, say so explicitly
+rather than guessing. The responsible human should describe the human review performed. See
 [AI_POLICY.md](https://github.com/unitaryfoundation/metriq-gym/blob/main/AI_POLICY.md);
 write `AI use: none` if no AI tools were used.
 
