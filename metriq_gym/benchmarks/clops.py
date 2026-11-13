@@ -47,6 +47,7 @@ from metriq_gym.qplatform.device import (
     connectivity_graph_for_gate,
     pruned_connectivity_graph,
 )
+from metriq_gym.qplatform.submission import record_submission, run_circuits
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
@@ -379,11 +380,12 @@ class Clops(Benchmark):
             with Session(backend=device._backend) as session:
                 sampler = Sampler(mode=session, options=options)
                 job = sampler.run(pubs, shots=shots)
-        else:
-            sampler = Sampler(mode=device._backend, options=options)
-            job = sampler.run(pubs, shots=shots)
+                # Preserve the accepted job even if closing the session fails.
+                return record_submission(QiskitJob(job.job_id(), job=job, device=device))
 
-        return QiskitJob(job.job_id(), job=job, device=device)
+        sampler = Sampler(mode=device._backend, options=options)
+        job = sampler.run(pubs, shots=shots)
+        return record_submission(QiskitJob(job.job_id(), job=job, device=device))
 
     def _dispatch_instantiated(self, device: QuantumDevice) -> ClopsData:
         """Bind parameters locally and send concrete circuits (any provider)."""
@@ -403,7 +405,7 @@ class Clops(Benchmark):
                 transpiled_two_qubit_gate_counts=counts,
             )
         return ClopsData.from_quantum_job(
-            device.run(circuits, shots=self.params.shots),
+            run_circuits(device, circuits, shots=self.params.shots),
             input_two_qubit_gate_counts=counts,
             transpiled_two_qubit_gate_counts=counts,
         )

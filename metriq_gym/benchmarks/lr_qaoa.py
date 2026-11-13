@@ -49,6 +49,7 @@ from metriq_gym.benchmarks.benchmark import (
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import connectivity_graph, validate_qubit_capacity
+from metriq_gym.qplatform.submission import run_circuits
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
@@ -473,7 +474,7 @@ class LinearRampQAOA(Benchmark):
         counts = [count_two_qubit_gates(c) for c in circuits_with_params]
 
         return LinearRampQAOAData.from_quantum_job(
-            quantum_job=device.run(circuits_with_params, shots=self.params.shots),
+            quantum_job=run_circuits(device, circuits_with_params, shots=self.params.shots),
             input_two_qubit_gate_counts=counts,
             transpiled_two_qubit_gate_counts=counts,
             num_qubits=self.params.num_qubits,

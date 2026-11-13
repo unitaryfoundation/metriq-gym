@@ -110,6 +110,7 @@ from metriq_gym.benchmarks.ghz.circuits import (
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.qplatform.submission import run_circuits
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
@@ -390,11 +391,11 @@ class GHZBenchmark(Benchmark):
             original_transform = device._options.get("transform")
             device.set_options(transform=False)
             try:
-                quantum_job = device.run(circuits, shots=self.params.shots)
+                quantum_job = run_circuits(device, circuits, shots=self.params.shots)
             finally:
                 device.set_options(transform=original_transform)
         else:
-            quantum_job = device.run(circuits, shots=self.params.shots)
+            quantum_job = run_circuits(device, circuits, shots=self.params.shots)
 
         return GHZData.from_quantum_job(
             quantum_job,

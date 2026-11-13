@@ -34,6 +34,7 @@ from metriq_gym.helpers.statistics import (
     binary_expectation_stddev,
     binary_expectation_value,
 )
+from metriq_gym.qplatform.submission import run_circuits
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
@@ -263,7 +264,7 @@ class WIT(Benchmark):
         # No local transpilation pass, so transpiled counts mirror the input.
         counts = [count_two_qubit_gates(circuit)]
         return WITData.from_quantum_job(
-            device.run(circuit, shots=self.params.shots),
+            run_circuits(device, circuit, shots=self.params.shots),
             input_two_qubit_gate_counts=counts,
             transpiled_two_qubit_gate_counts=counts,
         )

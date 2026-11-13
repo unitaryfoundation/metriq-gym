@@ -87,6 +87,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkScore,
 )
 from metriq_gym.helpers.task_helpers import flatten_counts
+from metriq_gym.qplatform.submission import run_circuits
 from metriq_gym.resource_estimation import CircuitBatch
 
 if TYPE_CHECKING:
@@ -416,7 +417,7 @@ class QATOLE(Benchmark):
     def dispatch_handler(self, device: "QuantumDevice") -> QATOLEData:
         built = self._build_circuits()
         return QATOLEData.from_quantum_job(
-            device.run(built.circuits, shots=self.params.shots),
+            run_circuits(device, built.circuits, shots=self.params.shots),
             observable_qubits=built.observable_qubits,
             initial_states=built.initial_states,
             seed=getattr(self.params, "seed", None),

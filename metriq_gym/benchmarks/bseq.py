@@ -49,6 +49,7 @@ from metriq_gym.helpers.graph_helpers import (
     largest_connected_size,
 )
 from metriq_gym.qplatform.device import connectivity_graph
+from metriq_gym.qplatform.submission import run_circuits
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
@@ -209,7 +210,7 @@ class BSEQ(Benchmark):
         counts = [count_two_qubit_gates(c) for circ_set in circuit_sets for c in circ_set]
 
         quantum_jobs: list[QuantumJob | list[QuantumJob]] = [
-            device.run(circ_set, shots=shots) for circ_set in circuit_sets
+            run_circuits(device, circ_set, shots=shots) for circ_set in circuit_sets
         ]
 
         provider_job_ids = [

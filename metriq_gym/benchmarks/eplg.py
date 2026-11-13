@@ -39,6 +39,7 @@ from metriq_gym.benchmarks.benchmark import (
     BenchmarkResult,
 )
 from metriq_gym.qplatform.device import connectivity_graph, connectivity_graph_for_gate
+from metriq_gym.qplatform.submission import run_circuits
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
@@ -510,7 +511,7 @@ class EPLG(Benchmark[EPLGData, EPLGResult]):
         ) = self._build_circuits(device)
 
         shots = self.params.shots
-        quantum_job = device.run(circuits, shots=shots)
+        quantum_job = run_circuits(device, circuits, shots=shots)
 
         # Counts from the circuits just before submission reflect any
         # transpilation/optimization the dispatch path performed.

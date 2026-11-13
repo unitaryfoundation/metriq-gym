@@ -43,6 +43,7 @@ from metriq_gym.qplatform.device import connectivity_graph
 
 from typing import TYPE_CHECKING
 
+from metriq_gym.qplatform.submission import run_circuits
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 if TYPE_CHECKING:
@@ -562,7 +563,7 @@ class MirrorCircuits(Benchmark):
         counts = [count_two_qubit_gates(c) for c in circuits]
 
         return MirrorCircuitsData.from_quantum_job(
-            quantum_job=device.run(circuits, shots=self.params.shots),
+            quantum_job=run_circuits(device, circuits, shots=self.params.shots),
             input_two_qubit_gate_counts=counts,
             transpiled_two_qubit_gate_counts=counts,
             num_layers=self.params.num_layers,

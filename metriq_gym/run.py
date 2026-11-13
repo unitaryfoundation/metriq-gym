@@ -16,7 +16,7 @@ from tabulate import tabulate
 from typing import Any, TYPE_CHECKING, Optional
 from metriq_gym import __version__
 from metriq_gym.cli import list_jobs, prompt_for_job, app as typer_app
-from metriq_gym.job_manager import JobManager, MetriqGymJob
+from metriq_gym.job_manager import JobManager, JobPersistenceError, MetriqGymJob
 from metriq_gym.qplatform.job import failed_jobs_summary, total_execution_time
 from metriq_gym.schema_validator import load_and_validate, validate_and_create_model
 from metriq_gym.constants import HUMAN_OUTCOMES, JobType, RecordOutcome
@@ -282,18 +282,17 @@ def dispatch_job(args: argparse.Namespace, job_manager: JobManager) -> None:
 
     handler: Benchmark = setup_benchmark(args, params, job_type)
     try:
-        job_data: BenchmarkData = handler.dispatch_handler(device)
-    except Exception as exc:
-        job_id = _record_dispatch_failure(job_manager, args, device, job_type, params, exc)
-        print(f"✗ {params.benchmark_name} failed to dispatch: {type(exc).__name__}: {exc}")
-        print(f"  Recorded as failed metriq-gym Job ID: {job_id}")
+        job = _dispatch_benchmark(job_manager, args, device, job_type, params, handler)
+    except JobPersistenceError as exc:
+        print(f"Dispatch stopped: {exc}")
+        return
+    if job.error is not None:
+        print(f"✗ {params.benchmark_name} failed to dispatch: {job.error['message']}")
+        print(f"  Recorded as failed metriq-gym Job ID: {job.id}")
         print(_OUTCOME_UPLOAD_HINT)
-        logger.debug("Dispatch failure traceback", exc_info=True)
         return
 
-    job_id = job_manager.add_job(_new_job(args, device, job_type, params, data=asdict(job_data)))
-
-    print(f"✓ {params.benchmark_name} dispatched with metriq-gym Job ID: {job_id}")
+    print(f"✓ {params.benchmark_name} dispatched with metriq-gym Job ID: {job.id}")
 
 
 _OUTCOME_UPLOAD_HINT = (
@@ -334,22 +333,20 @@ def _new_job(
     )
 
 
-def _record_dispatch_failure(
+def _dispatch_benchmark(
     job_manager: JobManager,
     args: argparse.Namespace,
     device,
     job_type: JobType,
     params,
-    exc: BaseException,
+    handler: "Benchmark",
     *,
     suite_id: str | None = None,
     suite_name: str | None = None,
-) -> str:
-    """Persist a job whose submission to the device raised.
+) -> MetriqGymJob:
+    """Checkpoint accepted jobs until the complete benchmark metadata is available."""
+    from metriq_gym.qplatform.submission import track_submissions
 
-    The attempt is kept (with the verbatim error) so it can later be uploaded as an
-    outcome record instead of silently disappearing. No provider job ids exist.
-    """
     job = _new_job(
         args,
         device,
@@ -359,8 +356,39 @@ def _record_dispatch_failure(
         suite_id=suite_id,
         suite_name=suite_name,
     )
-    job.record_error("dispatch", exc)
-    return job_manager.add_job(job)
+    job.dispatch_complete = False
+    job_manager.add_job(job)
+
+    def checkpoint(ids: list[str]) -> None:
+        recorded = job.data["provider_job_ids"]
+        recorded.extend(job_id for job_id in ids if job_id not in recorded)
+        job_manager.update_job(job)
+
+    try:
+        with track_submissions(checkpoint):
+            job_data = handler.dispatch_handler(device)
+        complete_data = asdict(job_data)
+        if not set(job.data["provider_job_ids"]) <= set(complete_data["provider_job_ids"]):
+            raise ValueError("Benchmark metadata omitted accepted provider job IDs")
+        job.data = complete_data
+        job.dispatch_complete = True
+        job_manager.update_job(job)
+    except JobPersistenceError:
+        job.dispatch_complete = False
+        print(
+            f"Could not checkpoint job {job.id}. Accepted provider job IDs: "
+            f"{', '.join(job.data['provider_job_ids']) or '(none)'}"
+        )
+        raise
+    except BaseException as exc:
+        # Also preserve an interrupted acquisition; never turn it into a score.
+        job.dispatch_complete = False
+        job.record_error("dispatch", exc)
+        job_manager.update_job(job)
+        if not isinstance(exc, Exception):
+            raise
+        logger.debug("Dispatch failure traceback", exc_info=True)
+    return job
 
 
 def _load_selected_suite(
@@ -467,43 +495,32 @@ def dispatch_suite(args: argparse.Namespace, job_manager: JobManager) -> None:
             )
 
             handler: Benchmark = setup_benchmark(args, params, job_type)
-            try:
-                job_data: BenchmarkData = handler.dispatch_handler(device)
-            except Exception as exc:
-                job_id = _record_dispatch_failure(
-                    job_manager,
-                    args,
-                    device,
-                    job_type,
-                    params,
-                    exc,
-                    suite_id=suite_id,
-                    suite_name=suite.name,
-                )
+            job = _dispatch_benchmark(
+                job_manager,
+                args,
+                device,
+                job_type,
+                params,
+                handler,
+                suite_id=suite_id,
+                suite_name=suite.name,
+            )
+            if job.error is not None:
                 results.append(
                     f"✗ {benchmark_entry.name} from {suite.name} failed: "
-                    f"{type(exc).__name__}: {exc} (recorded as failed Job ID: {job_id})"
+                    f"{job.error['message']} (recorded as failed Job ID: {job.id})"
                 )
-                failed_jobs.append(job_id)
+                failed_jobs.append(job.id)
                 continue
 
-            job_id = job_manager.add_job(
-                _new_job(
-                    args,
-                    device,
-                    job_type,
-                    params,
-                    data=asdict(job_data),
-                    suite_id=suite_id,
-                    suite_name=suite.name,
-                )
-            )
-
             results.append(
-                f"✓ {benchmark_entry.name} ({params.benchmark_name}) from {suite.name} dispatched with metriq-gym Job ID: {job_id}"
+                f"✓ {benchmark_entry.name} ({params.benchmark_name}) from {suite.name} dispatched with metriq-gym Job ID: {job.id}"
             )
-            successful_jobs.append(job_id)
+            successful_jobs.append(job.id)
 
+        except JobPersistenceError as exc:
+            print(f"Suite dispatch stopped: {exc}")
+            return
         except Exception as e:
             error_details = f"{type(e).__name__}: {str(e)}"
             results.append(f"✗ {benchmark_entry.name} from {suite.name} failed: {error_details}")
@@ -1097,6 +1114,19 @@ def fetch_result(
         FetchResultOutput containing the result, optional raw counts, and cache status.
         Returns None if job is not yet completed.
     """
+    if not getattr(metriq_job, "dispatch_complete", True):
+        print("Dispatch is incomplete; no benchmark score can be computed.")
+        if metriq_job.error:
+            print(metriq_job.error["message"])
+        for job_id in metriq_job.data.get("provider_job_ids", []):
+            task = load_job(job_id, provider=metriq_job.provider_name, **metriq_job.data)
+            info = job_status(task)
+            print(f"- {job_id}: {info.status.value}")
+        print(
+            "Inspect the accepted jobs before dispatching again; a new dispatch repeats the work."
+        )
+        return None
+
     job_type: JobType = JobType(metriq_job.job_type)
     job_result_type = setup_benchmark_result_class(job_type)
     if metriq_job.result_data is not None and not getattr(args, "no_cache", False):

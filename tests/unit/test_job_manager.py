@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime
-from metriq_gym.job_manager import JobManager, MetriqGymJob
+from metriq_gym.job_manager import JobManager, JobPersistenceError, MetriqGymJob
 from tests.unit.test_schema_validator import FAKE_BENCHMARK_NAME, FakeJobType
 
 
@@ -42,6 +42,33 @@ def test_add_job(job_manager, sample_job):
     jobs = job_manager.get_jobs()
     assert len(jobs) == 1
     assert jobs[0].id == sample_job.id
+
+
+def test_add_job_write_failure_is_not_reported_as_success(job_manager, sample_job, tmp_path):
+    job_manager.jobs_file = tmp_path / "missing" / "jobs.jsonl"
+
+    with pytest.raises(JobPersistenceError):
+        job_manager.add_job(sample_job)
+
+    assert job_manager.get_jobs() == []
+
+
+def test_rewrite_and_cleanup_failure_still_reports_persistence_error(
+    job_manager, sample_job, monkeypatch
+):
+    job_manager.add_job(sample_job)
+    previous = job_manager.jobs_file.read_text()
+
+    def fail(*args, **kwargs):
+        raise PermissionError("write denied")
+
+    monkeypatch.setattr(Path, "replace", fail)
+    monkeypatch.setattr(Path, "unlink", fail)
+
+    with pytest.raises(JobPersistenceError):
+        job_manager.update_job(sample_job)
+
+    assert job_manager.jobs_file.read_text() == previous
 
 
 def test_load_jobs_with_existing_data(job_manager, sample_job):

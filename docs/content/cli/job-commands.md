@@ -23,6 +23,18 @@ mgym job dispatch <config> [OPTIONS]
 | `--provider, -p` | STR | Provider name (e.g., ibm, braket, azure, ionq, local) | `None` |
 | `--device, -d` | STR | Device identifier | `None` |
 
+Accepted provider job IDs are saved after each submission. If a later submission
+fails or dispatch is interrupted, `mgym job view <id>` shows the recorded IDs and
+`mgym job poll <id>` checks their status. An incomplete dispatch produces no
+benchmark score, even with `--no-cache`. Inspect the accepted jobs before retrying:
+running `dispatch` again starts a new experiment and can repeat paid work.
+
+Dispatch stops if the local job record cannot be saved. If a provider accepts work
+but its SDK fails before returning a job ID, check the provider's dashboard; that
+submission cannot be recovered from the local record. Braket tasks are submitted
+one at a time so each accepted ID can be recorded, which can increase dispatch
+latency; their execution remains asynchronous.
+
 ---
 
 ## estimate

@@ -6,7 +6,6 @@ from pathlib import Path
 import shutil
 from metriq_gym._version import __version__
 import json
-import os
 import pprint
 import logging
 from typing import Any, Sequence
@@ -18,6 +17,10 @@ from metriq_gym.platform import canonical_device_name, canonical_provider_name
 
 
 logger = logging.getLogger(__name__)
+
+
+class JobPersistenceError(OSError):
+    """A job record could not be saved; further submissions must stop."""
 
 
 @dataclass
@@ -38,6 +41,8 @@ class MetriqGymJob:
     runtime_seconds: float | None = None
     # Captured failure for an attempt that did not complete (see ``record_error``).
     error: dict[str, Any] | None = None
+    # Legacy records were written only after dispatch returned (or raised).
+    dispatch_complete: bool = True
 
     def __post_init__(self) -> None:
         """Populate the canonical dataset platform without rewriting runtime identifiers.
@@ -149,6 +154,7 @@ class MetriqGymJob:
             ["platform", pprint.pformat(self.platform)],
             ["provider_job_ids", pprint.pformat(self.data.get("provider_job_ids"))],
             ["dispatch_time", self.dispatch_time.isoformat()],
+            ["dispatch_complete", str(self.dispatch_complete)],
             ["app_version", self.app_version],
             ["runtime_seconds", str(self.runtime_seconds)],
             ["result_data", pprint.pformat(self.result_data)],
@@ -244,6 +250,7 @@ class JobManager:
                 f"Failed to append job {job.id} to {self.jobs_file}: {e}. "
                 "Job was not persisted and has been removed from memory."
             )
+            raise JobPersistenceError(f"Could not save job {job.id}: {e}") from e
         return job.id
 
     def get_jobs(self) -> list[MetriqGymJob]:
@@ -305,10 +312,13 @@ class JobManager:
             Path.replace(Path(temp_file), self.jobs_file)
         except Exception as e:
             logger.error(f"Failed to rewrite jobs file {self.jobs_file}: {e}")
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+            try:
+                Path(temp_file).unlink(missing_ok=True)
+            except OSError:
+                logger.exception("Could not remove temporary jobs file %s", temp_file)
             if backup_path:
                 logger.error(f"Original file preserved at {backup_path}")
+            raise JobPersistenceError(f"Could not update jobs file {self.jobs_file}: {e}") from e
 
     def _backup_jobs_file(self) -> Path | None:
         """Create a timestamped backup of the current jobs file before rewrite."""
