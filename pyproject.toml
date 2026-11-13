@@ -48,9 +48,9 @@ dependencies = [
     "scipy>=1.18.1,<2.0.0",
     "tabulate>=0.9.0,<0.11.0",
     "typer>=0.21.1,<1.0.0",
-    "qbraid[ionq,qiskit,braket,azure,quantinuum]>=0.12.2,<0.14.0",
+    "qbraid[ionq,qiskit,braket,azure,quantinuum]>=0.13.0,<0.14.0",
     # OriginQ's SDK has no Python 3.15 distribution yet.
-    "qbraid[origin]>=0.12.2,<0.14.0; python_version < '3.15'",
+    "qbraid[origin]>=0.13.0,<0.14.0; python_version < '3.15'",
     "amazon-braket-sdk>=1.111.1",
     "platformdirs>=4.4.0,<5.0.0",
     "dimod>=0.12.20,<0.13.0",

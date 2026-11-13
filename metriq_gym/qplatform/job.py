@@ -3,7 +3,7 @@ from functools import singledispatch
 from typing import Iterable
 
 from qbraid import QuantumJob
-from qbraid.runtime import QiskitJob, AzureQuantumJob, BraketQuantumTask
+from qbraid.runtime import QiskitJob, AzureQuantumJob, BraketQuantumTask, IonQJob
 from qbraid.runtime.enums import JobStatus
 from qiskit_ibm_runtime.execution_span import ExecutionSpans
 
@@ -50,6 +50,17 @@ def _(quantum_job: QuantinuumJob) -> float:
     if res is None:
         raise ValueError("Execution time not available")
     return res
+
+
+@execution_time.register
+def _(quantum_job: IonQJob) -> float:
+    # IonQ's v0.4 job record reports the measured run time as
+    # execution_duration_ms. predicted_execution_duration_ms is an estimate and
+    # is deliberately not used in its place.
+    exec_time_ms = quantum_job.metadata().get("execution_duration_ms")
+    if exec_time_ms is None:
+        raise ValueError("Execution time not available")
+    return exec_time_ms / 1000.0
 
 
 def total_execution_time(quantum_jobs: Iterable[QuantumJob]) -> float | None:
@@ -198,4 +209,9 @@ def _(quantum_job: BraketQuantumTask) -> JobStatusInfo:
 
 @job_status.register
 def _(quantum_job: AzureQuantumJob) -> JobStatusInfo:
+    return extract_status_info(quantum_job, supports_queue_position=False)
+
+
+@job_status.register
+def _(quantum_job: IonQJob) -> JobStatusInfo:
     return extract_status_info(quantum_job, supports_queue_position=False)
