@@ -84,12 +84,6 @@ from metriq_gym.benchmarks.benchmark import (
 from metriq_gym.helpers.task_helpers import flatten_counts
 from metriq_gym.qplatform.device import validate_qubit_capacity
 from metriq_gym.qplatform.job import QPUTime, qpu_time, sum_qpu_times
-from metriq_gym.qplatform.quops import (
-    compile_quops_circuit,
-    prepare_quops_circuit,
-    submit_quops_circuits,
-    validate_quops_options,
-)
 from metriq_gym.resource_estimation import CircuitBatch, count_two_qubit_gates
 
 from .analysis import QUOPS_THRESHOLD, ShapeEstimate, estimate_polarization, effective_polarization
@@ -99,6 +93,12 @@ from .circuits import (
     build_spam_circuit,
     sample_quops_circuit,
     validate_shape,
+)
+from .execution import (
+    compile_quops_circuit,
+    prepare_quops_circuit,
+    submit_quops_circuits,
+    validate_quops_options,
 )
 
 if TYPE_CHECKING:

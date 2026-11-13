@@ -17,9 +17,10 @@ from qiskit.quantum_info import Operator, Statevector
 from qiskit.transpiler import InstructionProperties
 from qiskit_aer import AerSimulator
 
+from metriq_gym.benchmarks.quops.circuits import build_mirror_circuits, build_spam_circuit
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.qplatform.job import qpu_time
-from metriq_gym.qplatform.quops import (
+from metriq_gym.benchmarks.quops.execution import (
     _braket_circuit,
     compile_quops_circuit,
     prepare_quops_circuit,
@@ -187,7 +188,7 @@ def test_global_routing_ancillas_fall_back_to_connected_subset(monkeypatch):
     def transpile_with_ancilla(*args, **kwargs):
         return with_ancilla if "backend" in kwargs else transpile(*args, **kwargs)
 
-    monkeypatch.setattr("metriq_gym.qplatform.quops.transpile", transpile_with_ancilla)
+    monkeypatch.setattr("metriq_gym.benchmarks.quops.execution.transpile", transpile_with_ancilla)
     compiled = compile_quops_circuit(device, _workload(), seed=9)
     assert compiled.metadata["layout_method"] == "connected_subset_fallback"
     assert compiled.physical_qubits == [0, 1, 2]
@@ -213,17 +214,54 @@ def test_ibm_submission_disables_automatic_twirling_and_enables_requested_dd(mon
     sampler.run.assert_called_once_with(circuits, shots=17)
 
 
-def test_quantinuum_native_roundtrip_keeps_mirror_and_barriers(monkeypatch):
+def test_quantinuum_workload_avoids_redundant_native_roundtrip():
+    circuit = QuantumCircuit(2)
+    circuit.cx(0, 1)
+    compiled = compile_quops_circuit(_quantinuum(), circuit, seed=8)
+    # One CX already represents one native ZZMax up to local rotations. Lowering
+    # it and converting back before mirroring unnecessarily adds local gates.
+    assert compiled.circuit.count_ops() == {"cx": 1}
+
+
+def test_quantinuum_submission_keeps_native_mirror_and_barriers(monkeypatch):
+    from pytket.extensions.qiskit import tk_to_qiskit
+
     device = _quantinuum()
     compiled = compile_quops_circuit(device, _workload(), seed=8)
-    prepared = prepare_quops_circuit(device, _mirror(compiled.circuit), compiled.physical_qubits)
-    _assert_zero_state(prepared)
+    mirrors = build_mirror_circuits(compiled.circuit, np.random.default_rng(3))
+    assert len({mirror.ideal_bitstring for mirror in mirrors} - {"000"}) == 2
+    prepared = [
+        prepare_quops_circuit(device, mirror.circuit, compiled.physical_qubits)
+        for mirror in mirrors
+    ]
     submit = Mock(return_value=SimpleNamespace(id="quantinuum-test"))
     monkeypatch.setattr(device, "submit", submit)
-    jobs = submit_quops_circuits(device, [prepared], shots=17)
-    native = submit.call_args.args[0][0]
-    assert native.n_gates_of_type(OpType.ZZMax) == 2 * compiled.circuit.count_ops()["cx"]
-    assert native.n_gates_of_type(OpType.Barrier) >= 2
+    jobs = submit_quops_circuits(device, prepared, shots=17)
+    native_circuits = submit.call_args.args[0]
+    for native, mirror, circuit in zip(native_circuits, mirrors, prepared, strict=True):
+        # The known workload has two CX gates; each mirror has two halves.
+        assert native.n_gates_of_type(OpType.ZZMax) == 4
+        assert native.n_gates_of_type(OpType.Barrier) == circuit.count_ops()["barrier"]
+        assert {command.op.type for command in native.get_commands()} <= {
+            OpType.ZZMax,
+            OpType.Rz,
+            OpType.PhasedX,
+            OpType.Barrier,
+            OpType.Measure,
+        }
+        converted = tk_to_qiskit(native)
+        measurements = [
+            (converted.find_bit(inst.qubits[0]).index, converted.find_bit(inst.clbits[0]).index)
+            for inst in converted.data
+            if inst.operation.name == "measure"
+        ]
+        assert sorted(measurements) == [(0, 0), (1, 1), (2, 2)]
+        probabilities = Statevector.from_instruction(
+            converted.remove_final_measurements(inplace=False)
+        ).probabilities()
+        # Independent statevector evaluation checks the native circuit's output
+        # and the batch order, with tolerance for floating-point synthesis only.
+        assert probabilities[int(mirror.ideal_bitstring, 2)] == pytest.approx(1, rel=0, abs=1e-10)
     assert submit.call_args.kwargs == {"shots": 17, "optimisation_level": 0}
     assert jobs[0].id == "quantinuum-test"
 
@@ -367,19 +405,52 @@ def test_braket_nonzero_output_matches_qiskit_counts_order():
     assert BraketGateModelResultBuilder(result).get_counts() == {"001": 32}
 
 
-def test_local_submission_does_not_recompile(monkeypatch):
-    device = LocalAerDevice(provider=Mock())
+@pytest.mark.parametrize("basis", ["ideal", "cx", "cz"])
+def test_local_submission_reuses_device_and_preserves_prepared_mirrors(monkeypatch, basis):
+    backend = AerSimulator()
+    if basis != "ideal":
+        order = [0, 2, 4, 6, 1, 3, 5]
+        edges = [[a, b] for pair in zip(order, order[1:]) for a, b in (pair, pair[::-1])]
+        backend = AerSimulator.from_backend(
+            GenericBackendV2(7, coupling_map=edges, basis_gates=["rz", "sx", "x", basis], seed=42)
+        )
+        # Retain the native basis and connectivity, with deterministic ideal outputs.
+        backend.set_options(noise_model=None)
+    backend.set_options(seed_simulator=42)
+    device = LocalAerDevice(provider=Mock(), backend=backend)
     monkeypatch.setattr("metriq_gym.local.job.write", Mock())
-    monkeypatch.setattr(
-        device, "submit", Mock(side_effect=AssertionError("No second transpilation"))
-    )
-    compiled = compile_quops_circuit(device, _workload(), seed=3)
-    prepared = prepare_quops_circuit(device, _mirror(compiled.circuit), compiled.physical_qubits)
-    assert prepared.num_qubits == 3
-    jobs = submit_quops_circuits(device, [prepared], shots=32)
+    submit = Mock(wraps=device.submit)
+    run = Mock(wraps=backend.run)
+    monkeypatch.setattr(device, "submit", submit)
+    monkeypatch.setattr(backend, "run", run)
+    physical = [1, 3, 5]
+    compiled = compile_quops_circuit(device, _workload(), seed=8, physical_qubits=physical)
+    rng = np.random.default_rng(3)
+    mirrors = [*build_mirror_circuits(compiled.circuit, rng), build_spam_circuit(3, rng)]
+    assert any(mirror.ideal_bitstring != "000" for mirror in mirrors)
+    prepared = [prepare_quops_circuit(device, mirror.circuit, physical) for mirror in mirrors]
+    snapshots = [circuit.copy() for circuit in prepared]
+
+    jobs = submit_quops_circuits(device, prepared, shots=32)
+
+    submit.assert_called_once_with(prepared, shots=32)
+    run.assert_called_once()
+    for before, sent in zip(snapshots, run.call_args.args[0], strict=True):
+        # LocalAerDevice's level-0 translation must leave these ISA circuits intact.
+        assert sent.data == before.data
+        assert sent.global_phase == before.global_phase
+        assert sent.num_qubits == before.num_qubits
+        assert sent.num_clbits == before.num_clbits
+        assert sent.count_ops()["barrier"] > 0
+        measurements = [
+            (sent.find_bit(inst.qubits[0]).index, sent.find_bit(inst.clbits[0]).index)
+            for inst in sent.data
+            if inst.operation.name == "measure"
+        ]
+        assert measurements == [(1, 0), (3, 1), (5, 2)]
     assert len(jobs) == 1
     counts = jobs[0].result().data.measurement_counts
-    assert counts == {"000": 32} or counts == [{"000": 32}]
+    assert counts == [{mirror.ideal_bitstring: 32} for mirror in mirrors]
     assert qpu_time(jobs[0]) is None
 
 

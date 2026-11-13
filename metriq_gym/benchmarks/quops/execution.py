@@ -2,8 +2,8 @@
 
 Optimize the test computation before constructing its mirrors. Once mirrors
 exist, only basis translation is permitted. In particular, Braket QPUs need
-verbatim execution: losing the Qiskit barriers in a normal conversion would
-allow the provider to cancel a circuit against its inverse.
+verbatim execution to prevent cancellation across mirror sections. qBraid handles
+format conversion and submission where its API exposes the required controls.
 """
 
 from dataclasses import dataclass, field
@@ -11,10 +11,12 @@ from importlib.metadata import version
 import math
 from typing import Any
 
+from qbraid import transpile as convert
 from qbraid.runtime import BraketDevice, QiskitBackend, QiskitJob
 from qbraid.runtime.quantinuum import QuantinuumDevice
 from qiskit import QuantumCircuit, transpile
-from qiskit.transpiler import CouplingMap, Target
+from qiskit.transpiler import CouplingMap, PassManager, Target
+from qiskit.transpiler.passes import RemoveBarriers
 
 from metriq_gym.local.device import LocalAerDevice
 from metriq_gym.qplatform.device import connectivity_graph
@@ -142,10 +144,11 @@ def _coupling(device, physical: list[int] | None = None) -> CouplingMap | None:
 
 def _quantinuum_native(circuit: QuantumCircuit):
     from pytket.circuit import OpType
-    from pytket.extensions.qiskit import qiskit_to_tk
-    from pytket.passes import AutoRebase
+    from pytket.passes import AutoRebase, DecomposeBoxes
 
-    native = qiskit_to_tk(circuit)
+    native = convert(circuit, "pytket", require_native=True, nodes=["qiskit", "qasm2", "pytket"])
+    # qBraid's QASM route can represent Qiskit's R gate as a custom gate box.
+    DecomposeBoxes().apply(native)
     AutoRebase({OpType.ZZMax, OpType.Rz, OpType.PhasedX}).apply(native)
     return native
 
@@ -264,13 +267,11 @@ def compile_quops_circuit(
             layout_method = "connected_subset"
         basis = _braket_basis(device) if isinstance(device, BraketDevice) else ["u", "cx"]
         coupling = _coupling(device, physical) if isinstance(device, BraketDevice) else None
+        # H-series CX maps to one ZZMax plus local rotations. Lowering to native
+        # gates and back here adds local gates before mirror construction.
         compact = transpile(circuit, basis_gates=basis, coupling_map=coupling, **common)
         if isinstance(device, BraketDevice) and not device.simulator:
             compact = _braket_fixed_rx(compact)
-        if isinstance(device, QuantinuumDevice):
-            from pytket.extensions.qiskit import tk_to_qiskit
-
-            compact = tk_to_qiskit(_quantinuum_native(compact))
     else:
         raise ValueError(f"QUOPS does not support device type {type(device).__name__}")
     canonical = transpile(
@@ -338,11 +339,9 @@ def prepare_quops_circuit(
             raise ValueError(
                 "QUOPS Quantinuum requires register indices 0..width-1; placement is device-managed"
             )
-        from pytket.extensions.qiskit import tk_to_qiskit
-
         # Store a Qiskit representation for the common resource estimator.
-        # Submission restores the native gate labels without optimizations.
-        return tk_to_qiskit(_quantinuum_native(circuit))
+        # Submission rebases it without optimizing across mirror sections.
+        return convert(_quantinuum_native(circuit), "qiskit", max_path_depth=1)
     if isinstance(device, BraketDevice):
         native = transpile(
             circuit, basis_gates=_braket_basis(device), optimization_level=0, num_processes=1
@@ -356,27 +355,24 @@ def prepare_quops_circuit(
 
 
 def _braket_circuit(circuit: QuantumCircuit, *, verbatim: bool):
-    """Convert only our explicit native basis; drop barriers only inside a verbatim box."""
+    """Convert the native basis with qBraid, preserving layout and result order."""
     from braket.circuits import Circuit
 
-    body = Circuit()
-    measurements = []
-    for inst in circuit.data:
-        name = inst.operation.name
-        qubits = [circuit.find_bit(q).index for q in inst.qubits]
-        if name == "barrier":
-            continue
-        if name == "measure":
-            measurements.append((circuit.find_bit(inst.clbits[0]).index, qubits[0]))
-        elif name in ("rx", "ry", "rz"):
-            getattr(body, name)(qubits[0], float(inst.operation.params[0]))
-        elif name in ("cx", "cz"):
-            getattr(body, "cnot" if name == "cx" else name)(*qubits)
-        else:
-            raise ValueError(f"Unsupported QUOPS Braket instruction: {name}")
+    unsupported = set(circuit.count_ops()) - {"rx", "ry", "rz", "cx", "cz", "barrier", "measure"}
+    if unsupported:
+        raise ValueError(f"Unsupported QUOPS Braket instructions: {sorted(unsupported)}")
+    measurements = [
+        (circuit.find_bit(inst.clbits[0]).index, circuit.find_bit(inst.qubits[0]).index)
+        for inst in circuit.data
+        if inst.operation.name == "measure"
+    ]
     ordered = [q for _, q in sorted(measurements)]
     if not ordered or ordered != sorted(set(ordered)):
         raise ValueError("QUOPS Braket measurements must use distinct ascending physical qubits")
+    body = PassManager(RemoveBarriers()).run(circuit.remove_final_measurements(inplace=False))
+    # Use qBraid's QASM conversion: its optional direct Braket converter can
+    # transpile again. The verbatim box replaces barriers on hardware.
+    body = convert(body, "braket", require_native=True, nodes=["qiskit", "qasm3", "braket"])
     result = Circuit().add_verbatim_box(body) if verbatim else body
     result.measure(ordered)
     return result
@@ -398,6 +394,7 @@ def submit_quops_circuits(
     if isinstance(device, QiskitBackend):
         from qiskit_ibm_runtime import SamplerOptions, SamplerV2
 
+        # qBraid's IBM submit API does not yet accept SamplerOptions.
         options = SamplerOptions(
             dynamical_decoupling={"enable": dynamical_decoupling, "sequence_type": "XX"},
             twirling={"enable_gates": False, "enable_measure": False},
@@ -405,17 +402,7 @@ def submit_quops_circuits(
         job = SamplerV2(mode=device._backend, options=options).run(circuits, shots=shots)
         return [QiskitJob(job.job_id(), job=job, device=device)]
     if isinstance(device, LocalAerDevice):
-        from time import perf_counter
-        from uuid import uuid4
-        from metriq_gym.local.job import LocalAerJob
-
-        started = perf_counter()
-        counts = device._backend.run(circuits, shots=shots).result().get_counts()
-        return [
-            LocalAerJob(
-                str(uuid4()), device=device, counts=counts, execution_time=perf_counter() - started
-            )
-        ]
+        return [device.submit(circuits, shots=shots)]
     if isinstance(device, QuantinuumDevice):
         return [
             device.submit(
