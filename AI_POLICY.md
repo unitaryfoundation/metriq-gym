@@ -65,15 +65,18 @@ evidence is incomplete, state the limitation.
 
 ## AI disclosure and human review
 
-In each pull request, state whether AI tools were used and what they did, such as
-drafting code, generating tests, reviewing a diff, or running commands. Name the
-tool and preserve any version or attribution it records; do not guess versions.
-A short note is sufficient, for example:
+In each pull request, include a visible `AI use:` note stating whether AI tools
+were used and what they did, including preparing or opening the pull request.
+Name each tool and the model(s) used with it, as reported by the tool or session,
+and preserve any recorded version or attribution. If the model is not exposed,
+say so explicitly; do not infer it from the tool's name or guess versions.
+A short note is sufficient, for example (replace `MODEL_ID` with the reported model):
 
-> AI use: Codex drafted the implementation and tests; I reviewed the diff and
-> verified the results described above.
+> AI use: Codex (model: MODEL_ID) drafted the implementation, tests, and PR
+> description and ran local checks.
 
-Use that wording only if it accurately describes the human review and validation.
+Write `AI use: none` if no AI tools were used. Statements about human review and
+approval must be added by the responsible human and describe what they actually did.
 For issues, reviews, and discussions, disclose substantive AI assistance too.
 When including generated analysis, label it clearly and add your own assessment
 of its relevance and correctness. Do not answer reviewers by pasting raw or

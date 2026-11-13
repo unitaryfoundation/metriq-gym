@@ -70,8 +70,10 @@ benchmarks; preserving their scientific meaning matters as much as working code.
 - Put lengthy supporting evidence in an optional `<details>` block with a
   descriptive `<summary>`, such as "Reproduction details" or "Numerical validation".
   Short PRs do not need one. Human review must cover collapsed content too.
-- Include an accurate, visible `AI use:` note. Leave statements about human review
-  and approval to the responsible human.
+- Include an accurate, visible `AI use:` note naming each AI tool and model used,
+  and their role, including PR preparation or creation. Use identifiers reported
+  by the tool or session; if the model is not exposed, say so rather than guessing.
+  Leave statements about human review and approval to the responsible human.
 - Do not include passing-test counts or metadata already available in GitHub CI
   reports, including in collapsed sections; link to the reports when useful.
   Describe only validation evidence that CI does not provide, such as manual checks
