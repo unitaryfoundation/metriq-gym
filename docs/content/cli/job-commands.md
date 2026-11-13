@@ -47,6 +47,7 @@ mgym job estimate <config> [OPTIONS]
 | `--provider, -p` | STR | Provider name (e.g., ibm, braket, azure, ionq, local) | `None` |
 | `--device, -d` | STR | Device identifier | `None` |
 | `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
+| `--full` | BOOL | Build every circuit instead of using benchmark-specific estimation sampling | `False` |
 
 The output starts with a short header identifying the benchmark, provider, and
 device. Add `-v` or `--verbose` to show circuit resources, statistics, and
@@ -60,6 +61,9 @@ estimation assumptions. The default summary depends on the provider:
   counting one task per circuit. Use `--verbose` for the full resource breakdown.
 - Other providers report that no cost estimate is available. Use `--verbose` to
   show circuit resources.
+
+Benchmarks such as QUOPS use sampled circuits for faster estimates and label
+the resulting approximation. Add `--full` to build every configured circuit.
 
 IBM estimates assume the default repetition delay, initial reset, and about two
 seconds of overhead per circuit batch. Additional server-side splitting, runtime

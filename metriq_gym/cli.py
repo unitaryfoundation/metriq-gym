@@ -183,6 +183,14 @@ EstimateVerboseOption = Annotated[
     ),
 ]
 
+EstimateFullOption = Annotated[
+    bool,
+    typer.Option(
+        "--full",
+        help="Build every circuit instead of using benchmark-specific estimation sampling.",
+    ),
+]
+
 
 # -----------------------------------------------------------------------------
 # Job commands
@@ -213,6 +221,7 @@ def job_estimate(
     provider: ProviderOption = None,
     device: DeviceOption = None,
     verbose: EstimateVerboseOption = False,
+    full: EstimateFullOption = False,
 ) -> None:
     """Estimate job costs from provider usage without dispatching.
 
@@ -228,6 +237,7 @@ def job_estimate(
     args.provider = provider
     args.device = device
     args.verbose = verbose
+    args.full = full
 
     _estimate_job(args)
 
@@ -501,6 +511,7 @@ def suite_estimate(
         ),
     ] = False,
     verbose: EstimateVerboseOption = False,
+    full: EstimateFullOption = False,
 ) -> None:
     """Estimate suite costs from provider usage without dispatching.
 
@@ -518,6 +529,7 @@ def suite_estimate(
     args.components = components
     args.all_components = all_components
     args.verbose = verbose
+    args.full = full
 
     _estimate_suite(args)
 

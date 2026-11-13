@@ -55,6 +55,35 @@ def test_compiler_barriers_do_not_inflate_gates_or_cost():
     assert estimates[0].hqc_total == estimates[1].hqc_total
 
 
+@pytest.mark.parametrize("flags", [(False, False), (True, False), (False, True), (True, True)])
+def test_sampled_marker_survives_aggregation_and_merging(flags):
+    circuit = QuantumCircuit(1)
+    batches = [CircuitBatch([circuit], shots=100, sampled=flag) for flag in flags]
+    combined = aggregate_resource_estimates(batches)
+    separate = [aggregate_resource_estimates([batch]) for batch in batches]
+    merged = merge_resource_estimates(separate)
+
+    assert combined.sampled is any(flags)
+    assert merged.sampled is any(flags)
+    assert combined.circuit_count == merged.circuit_count == 2
+    assert combined.total_shots == merged.total_shots == 200
+    assert [estimate.sampled for estimate in separate] == list(flags)
+
+
+@pytest.mark.parametrize("verbose", [False, True])
+@pytest.mark.parametrize("sampled", [False, True])
+def test_print_sampled_estimate_notice(sampled, verbose, capsys):
+    estimate = _estimate(seconds=90)
+    estimate.sampled = sampled
+    print_resource_estimate("test", "ibm", "device", estimate, verbose=verbose)
+
+    notice = (
+        "Sampled circuit estimate: gate counts and timing are extrapolated; "
+        "circuit/shot totals cover the full workload. Use --full to build every circuit."
+    )
+    assert (notice in capsys.readouterr().out) is sampled
+
+
 @pytest.mark.parametrize(
     ("provider", "show_hqc", "show_ibm"),
     [

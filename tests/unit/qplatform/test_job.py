@@ -1,7 +1,16 @@
 from unittest.mock import MagicMock, patch
 import pytest
 from qbraid.runtime import QuantumJob, QiskitJob, AzureQuantumJob
-from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo, total_execution_time
+from metriq_gym.qplatform.job import (
+    execution_time,
+    job_status,
+    JobStatusInfo,
+    total_execution_time,
+    QPUTime,
+    qpu_time,
+    sum_qpu_times,
+)
+from metriq_gym.local.job import LocalAerJob
 from qbraid.runtime.quantinuum import QuantinuumJob
 from qbraid.runtime.enums import JobStatus
 from datetime import datetime, timedelta
@@ -167,6 +176,109 @@ def test_total_execution_time_skips_unreported():
     result = total_execution_time([job_not_impl, job_value_error, job_valid])
 
     assert result == pytest.approx(4.2)
+
+
+def _usage_job(usage):
+    job = MagicMock(spec=QiskitJob)
+    job._job = MagicMock()
+    job._job.metrics.return_value = {"usage": usage}
+    return job
+
+
+def _timed_job(seconds):
+    return _usage_job({"quantum_seconds": seconds})
+
+
+def test_qpu_time_sums_legacy_and_finalized_current_ibm_usage():
+    current = _usage_job({"qpu_charge_time_seconds": 3, "status": "complete"})
+    assert qpu_time(current) == QPUTime(3, "ibm_qpu_usage")
+    assert qpu_time(_timed_job(2.5)) == QPUTime(2.5, "ibm_qpu_usage")
+    assert sum_qpu_times(qpu_time(job) for job in [_timed_job(2.5), current]) == QPUTime(
+        5.5, "ibm_qpu_usage"
+    )
+
+
+@pytest.mark.parametrize("status", [None, "pending", "incomplete", "unknown", "completed"])
+@pytest.mark.parametrize("current", [False, True])
+def test_qpu_time_rejects_nonfinal_ibm_usage(status, current):
+    usage = {"quantum_seconds": 5, "status": status}
+    if current:
+        usage["qpu_charge_time_seconds"] = 3
+    assert qpu_time(_usage_job(usage)) is None
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_current_ibm_usage_requires_explicit_complete_status(legacy):
+    usage = {"qpu_charge_time_seconds": 3}
+    if legacy:
+        usage["quantum_seconds"] = 5
+    assert qpu_time(_usage_job(usage)) is None
+
+
+def test_current_ibm_usage_takes_precedence_over_legacy_duration():
+    job = _usage_job({"qpu_charge_time_seconds": 3, "quantum_seconds": 99, "status": "complete"})
+    assert qpu_time(job) == QPUTime(3, "ibm_qpu_usage")
+
+
+@pytest.mark.parametrize("invalid", [None, 0, -1, float("nan"), float("inf"), True, "invalid"])
+def test_invalid_ibm_usage_is_unavailable_without_legacy_fallback(invalid):
+    current = _usage_job(
+        {"qpu_charge_time_seconds": invalid, "quantum_seconds": 5, "status": "complete"}
+    )
+    assert qpu_time(current) is None
+    assert qpu_time(_timed_job(invalid)) is None
+
+
+def test_qpu_time_handles_missing_ibm_usage_and_accessor_errors():
+    assert qpu_time(_usage_job({})) is None
+    assert qpu_time(_usage_job(None)) is None
+    job = _timed_job(3)
+    job._job.metrics.side_effect = OSError("timer unavailable")
+    assert qpu_time(job) is None
+
+
+def test_qpu_time_does_not_substitute_generic_or_simulator_time():
+    assert qpu_time(MagicMock(spec=QuantumJob)) is None
+    assert qpu_time(MagicMock(spec=QuantinuumJob)) is None
+    local = MagicMock(spec=LocalAerJob)
+    local._execution_time_s = 5
+    assert execution_time(local) == 5
+    assert qpu_time(local) is None
+
+
+def test_sum_qpu_times_requires_every_record_and_a_finite_sum():
+    assert sum_qpu_times([]) is None
+    assert sum_qpu_times([QPUTime(2.5, "qpu_timer"), None]) is None
+    assert sum_qpu_times([QPUTime(1e308, "qpu_timer")] * 2) is None
+
+
+@pytest.fixture
+def registered_qpu_job():
+    class OtherQPUJob:
+        def __init__(self, timing):
+            self.timing = timing
+
+    @qpu_time.register(OtherQPUJob)
+    def _(job):
+        return job.timing
+
+    return OtherQPUJob
+
+
+def test_sum_qpu_times_supports_an_independent_provider_adapter(registered_qpu_job):
+    jobs = [registered_qpu_job(QPUTime(seconds, "other_qpu_timer")) for seconds in (2.5, 3)]
+    assert sum_qpu_times(qpu_time(job) for job in jobs) == QPUTime(5.5, "other_qpu_timer")
+    assert sum_qpu_times([qpu_time(jobs[0]), qpu_time(_timed_job(3))]) is None
+
+
+@pytest.mark.parametrize("seconds", [0, -1, float("nan"), float("inf"), True, "3"])
+def test_sum_qpu_times_rejects_invalid_durations(seconds):
+    assert sum_qpu_times([QPUTime(seconds, "qpu_timer")]) is None
+
+
+@pytest.mark.parametrize("source", [None, "", " "])
+def test_sum_qpu_times_requires_a_source(source):
+    assert sum_qpu_times([QPUTime(3, source)]) is None
 
 
 # --- failure_reason / failed_jobs_summary -----------------------------------------

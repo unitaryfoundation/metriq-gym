@@ -1,0 +1,61 @@
+{
+  "$id": "metriq-gym/quops.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QUOPS",
+  "description": "Experimental physical QUOPS with three-ensemble mirror circuit fidelity estimation.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "benchmark_name": {"type": "string", "const": "QUOPS"},
+    "polarization_estimator": {
+      "type": "string", "enum": ["mcfe"], "default": "mcfe",
+      "description": "Polarization estimation method. Currently supports three-ensemble mirror circuit fidelity estimation (MCFE)."
+    },
+    "gate_set": {
+      "type": "string", "enum": ["pauli_rotations_cnot"], "default": "pauli_rotations_cnot",
+      "description": "Abstract workload gate set before native compilation. The paper's standard set uses arbitrary Rx/Ry/Rz rotations and all-to-all CNOT pairings."
+    },
+    "shapes": {
+      "type": "array",
+      "description": "Predeclared test sequence, strictly increasing in size. Each shape must satisfy width^2 <= size <= width^3 and consist of full rounds plus an optional partial round.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "width": {"type": "integer", "minimum": 2},
+          "size": {"type": "integer", "minimum": 4}
+        },
+        "required": ["width", "size"]
+      }
+    },
+    "num_circuits": {
+      "type": "integer", "minimum": 2, "default": 100,
+      "description": "Independent QUOPS circuits per shape; each produces one mixed mirror and one reference mirror."
+    },
+    "num_spam_circuits": {
+      "type": "integer", "minimum": 2, "default": 200,
+      "description": "Independent state-preparation and measurement reference circuits per width."
+    },
+    "shots": {"type": "integer", "minimum": 1, "default": 1000},
+    "seed": {
+      "type": "integer", "minimum": 0, "default": 42,
+      "description": "Seed for circuit sampling, compilation and bootstrap analysis."
+    },
+    "bootstrap_samples": {"type": "integer", "minimum": 100, "default": 2000},
+    "max_circuits_per_job": {
+      "type": "integer", "minimum": 1, "default": 100,
+      "description": "Batch limit. Mirror jobs contain only one shape; SPAM references use separate jobs."
+    },
+    "physical_qubits": {
+      "type": "array", "minItems": 2, "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 0},
+      "description": "Optional fixed physical subset, allowed when all shapes have the same width. Otherwise a subset is selected once per width."
+    },
+    "dynamical_decoupling": {
+      "type": "boolean", "default": false,
+      "description": "Enable IBM Runtime's XX dynamical decoupling. Supported only on IBM."
+    }
+  },
+  "required": ["benchmark_name", "shapes"]
+}
