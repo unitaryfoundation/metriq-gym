@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 import pytest
-from qbraid.runtime import QuantumJob, QiskitJob, AzureQuantumJob
+from qbraid.runtime import QuantumJob, QiskitJob, AzureQuantumJob, IonQJob
 from metriq_gym.qplatform.job import execution_time, job_status, JobStatusInfo, total_execution_time
 from qbraid.runtime.quantinuum import QuantinuumJob
 from qbraid.runtime.enums import JobStatus
@@ -24,14 +24,10 @@ def test_execution_time_quantinuum():
     start = datetime.now()
     completed = start + timedelta(seconds=15)
 
-    mock_ref = MagicMock()
-    mock_ref.last_status_detail = SimpleNamespace(
-        running_time=start,
-        completed_time=completed,
-    )
+    detail = SimpleNamespace(running_time=start, completed_time=completed)
 
     with (
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(QuantinuumJob, "_get_status_detail", return_value=detail),
         patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
@@ -47,29 +43,28 @@ def test_execution_time_quantinuum_not_completed():
 
 
 def test_execution_time_quantinuum_missing_status_detail():
-    """Verify execution time raises ValueError when last_status_detail is missing."""
-    mock_ref = MagicMock()
-    mock_ref.last_status_detail = None
+    """Verify execution time raises ValueError when the NEXUS status cannot be fetched."""
+    from qbraid.runtime.quantinuum.exceptions import QuantinuumJobError
 
     with (
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(
+            QuantinuumJob,
+            "_get_status_detail",
+            side_effect=QuantinuumJobError("Unable to retrieve job status for test-job-id"),
+        ),
         patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
-        with pytest.raises(ValueError, match="last_status_detail is missing"):
+        with pytest.raises(ValueError, match="Unable to retrieve job status"):
             execution_time(quantinuum_job)
 
 
 def test_execution_time_quantinuum_missing_timestamps():
     """Verify execution time raises ValueError when timestamps are missing."""
-    mock_ref = MagicMock()
-    mock_ref.last_status_detail = SimpleNamespace(
-        running_time=datetime.now(),
-        completed_time=None,  # missing completed_time
-    )
+    detail = SimpleNamespace(running_time=datetime.now(), completed_time=None)
 
     with (
-        patch.object(QuantinuumJob, "_get_ref", return_value=mock_ref),
+        patch.object(QuantinuumJob, "_get_status_detail", return_value=detail),
         patch.object(QuantinuumJob, "status", return_value=JobStatus.COMPLETED),
     ):
         quantinuum_job = QuantinuumJob(job_id="test-job-id")
@@ -167,6 +162,52 @@ def test_total_execution_time_skips_unreported():
     result = total_execution_time([job_not_impl, job_value_error, job_valid])
 
     assert result == pytest.approx(4.2)
+
+
+def _make_ionq_job_with_metadata(metadata: dict) -> IonQJob:
+    """Create a mock IonQJob that returns given metadata."""
+    job = MagicMock(spec=IonQJob)
+    job.metadata.return_value = metadata
+    return job
+
+
+def test_execution_time_ionq_reads_execution_duration_ms():
+    job = _make_ionq_job_with_metadata({"execution_duration_ms": 5200})
+    assert execution_time(job) == pytest.approx(5.2)
+
+
+def test_execution_time_ionq_ignores_predicted_duration():
+    """An estimate is not a measured run time."""
+    job = _make_ionq_job_with_metadata({"predicted_execution_duration_ms": 3000})
+    with pytest.raises(ValueError, match="Execution time not available"):
+        execution_time(job)
+
+
+def test_execution_time_ionq_zero_duration_is_a_value():
+    """The simulator reports 0 ms, which is a measurement, not a missing field."""
+    job = _make_ionq_job_with_metadata({"execution_duration_ms": 0})
+    assert execution_time(job) == 0.0
+
+
+def test_execution_time_ionq_no_timing():
+    job = _make_ionq_job_with_metadata({})
+    with pytest.raises(ValueError, match="Execution time not available"):
+        execution_time(job)
+
+
+def test_job_status_ionq():
+    """IonQ job status extraction works."""
+    status_obj = MagicMock()
+    status_obj.name = "COMPLETED"
+
+    ionq_job = MagicMock(spec=IonQJob)
+    ionq_job.status.return_value = status_obj
+
+    info = job_status(ionq_job)
+
+    assert isinstance(info, JobStatusInfo)
+    assert info.status == JobStatus.COMPLETED
+    assert info.queue_position is None
 
 
 # --- failure_reason / failed_jobs_summary -----------------------------------------

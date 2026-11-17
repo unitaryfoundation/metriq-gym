@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12, <3.16"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -268,19 +268,6 @@ wheels = [
 ]
 
 [[package]]
-name = "boto3-stubs"
-version = "1.42.88"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "botocore-stubs" },
-    { name = "types-s3transfer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/c7/d4dfbb4757cd72fd350ba666902ec3ac19e04d6be639e96cdad4543d4726/boto3_stubs-1.42.88.tar.gz", hash = "sha256:85215fb4938a94d1cf83cd8632f46ae7728b5ec88187d83468f393bbe64236d6", size = 102495, upload-time = "2026-04-10T19:55:57.526Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/6f/3befd72080aedbb4ad26b353a6e364645668664930ce49668fd0bab8f2b5/boto3_stubs-1.42.88-py3-none-any.whl", hash = "sha256:9e74350715ca8ccd63fc250f8eca9fa3161b3d1704339554344d72e4e21c5ed1", size = 70603, upload-time = "2026-04-10T19:55:49.921Z" },
-]
-
-[[package]]
 name = "botocore"
 version = "1.42.88"
 source = { registry = "https://pypi.org/simple" }
@@ -292,18 +279,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/93/50/87966238f7aa3f7e5f87081185d5a407a95ede8b551e11bbe134ca3306dc/botocore-1.42.88.tar.gz", hash = "sha256:cbb59ee464662039b0c2c95a520cdf85b1e8ce00b72375ab9cd9f842cc001301", size = 15195331, upload-time = "2026-04-10T19:40:57.012Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/46/ad14e41245adb8b0c83663ba13e822b68a0df08999dd250e75b0750fdf6c/botocore-1.42.88-py3-none-any.whl", hash = "sha256:032375b213305b6b81eedb269eaeefdf96f674620799bbf96117dca86052cc1a", size = 14876640, upload-time = "2026-04-10T19:40:53.663Z" },
-]
-
-[[package]]
-name = "botocore-stubs"
-version = "1.42.41"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "types-awscrt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0c/a8/a26608ff39e3a5866c6c79eda10133490205cbddd45074190becece3ff2a/botocore_stubs-1.42.41.tar.gz", hash = "sha256:dbeac2f744df6b814ce83ec3f3777b299a015cbea57a2efc41c33b8c38265825", size = 42411, upload-time = "2026-02-03T20:46:14.479Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/76/cab7af7f16c0b09347f2ebe7ffda7101132f786acb767666dce43055faab/botocore_stubs-1.42.41-py3-none-any.whl", hash = "sha256:9423110fb0e391834bd2ed44ae5f879d8cb370a444703d966d30842ce2bcb5f0", size = 66759, upload-time = "2026-02-03T20:46:13.02Z" },
 ]
 
 [[package]]
@@ -1849,8 +1824,8 @@ requires-dist = [
     { name = "pyqpanda3", marker = "python_full_version < '3.15'", specifier = ">=0.3.5" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "pytket-qiskit", specifier = ">=0.71.0,<0.80.0" },
-    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit", "quantinuum"], specifier = ">=0.12.2,<0.14.0" },
-    { name = "qbraid", extras = ["origin"], marker = "python_full_version < '3.15'", specifier = ">=0.12.2,<0.14.0" },
+    { name = "qbraid", extras = ["azure", "braket", "ionq", "qiskit", "quantinuum"], specifier = ">=0.13.0,<0.14.0" },
+    { name = "qbraid", extras = ["origin"], marker = "python_full_version < '3.15'", specifier = ">=0.13.0,<0.14.0" },
     { name = "qbraid-core", specifier = ">=0.1.45,<0.7.0" },
     { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.4.3,<3.0" },
     { name = "qiskit-aer", specifier = ">=0.18.0,<0.19.0" },
@@ -3067,21 +3042,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytket-braket"
-version = "0.45.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "amazon-braket-default-simulator" },
-    { name = "amazon-braket-schemas" },
-    { name = "amazon-braket-sdk" },
-    { name = "boto3-stubs" },
-    { name = "pytket" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/71/67/09f22e7b4209b4e6793396a8e04340dc3a433146233d312a2c76e93b9b06/pytket_braket-0.45.0-py3-none-any.whl", hash = "sha256:7b2735946ae2e570f7efa5985075fc3ad4705a36a47092e81e60265b2e268576", size = 24954, upload-time = "2025-10-17T10:32:31.679Z" },
-]
-
-[[package]]
 name = "pytket-qiskit"
 version = "0.71.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3209,7 +3169,7 @@ wheels = [
 
 [[package]]
 name = "qbraid"
-version = "0.12.2"
+version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -3223,9 +3183,9 @@ dependencies = [
     { name = "rustworkx" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c1/75/67a70b5a4873d135ff4d9e458fa1e3492d041bf392d2931a601297b72026/qbraid-0.12.2.tar.gz", hash = "sha256:fc361be51405a3cf024f7046826329fcf19361ddaca7c7fe123f84dcfe8389d0", size = 695223, upload-time = "2026-07-11T14:02:59.705Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/64/4891e85a47cba65158e45c30c50702104de0e9ff62c578968df18951e436/qbraid-0.13.0.tar.gz", hash = "sha256:f44f2a29c53fd1b3962582b54085464a5ca8028ccb94059041d44bfe1193f9f7", size = 1069274, upload-time = "2026-10-02T15:25:05.341Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/0c/67f3040f37c38fabfa22b6027adafe6e1326b17f4e4e0fc7ebd217178d3b/qbraid-0.12.2-py3-none-any.whl", hash = "sha256:58370d5654ada79b6648ca146e51336e085d2eb7a474c62e13a2587142104c7d", size = 360382, upload-time = "2026-07-11T14:02:58.1Z" },
+    { url = "https://files.pythonhosted.org/packages/42/0d/dff8b6e27fedfe8e115c1917a165717049c541619cfec4d1ec1c6adb5223/qbraid-0.13.0-py3-none-any.whl", hash = "sha256:02cc4f9e8409cfad9f391bfd78f65c25b51fd37b646f13b871fe426c42de9791", size = 456950, upload-time = "2026-10-02T15:25:03.464Z" },
 ]
 
 [package.optional-dependencies]
@@ -3234,7 +3194,6 @@ azure = [
 ]
 braket = [
     { name = "amazon-braket-sdk" },
-    { name = "pytket-braket" },
 ]
 ionq = [
     { name = "qiskit-ionq" },
@@ -3255,18 +3214,20 @@ quantinuum = [
 
 [[package]]
 name = "qbraid-core"
-version = "0.3.4"
+version = "0.6.37"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
+    { name = "psutil" },
     { name = "pydantic", version = "2.12.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "requests" },
+    { name = "tornado" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e2/eb/1b016ff7e10226ea208a3b5a6044f5561e4e937f457077a9543612d9150e/qbraid_core-0.3.4.tar.gz", hash = "sha256:9f628603fcc36ecde656db5039c7588146f47f72495e2f791bb3ad720219b49d", size = 369924, upload-time = "2026-06-08T22:50:19.968Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/76/0e76ad46f43413c020a0e10c431e673427e4632446aed9d6c699a50459d7/qbraid_core-0.6.37.tar.gz", hash = "sha256:81a89250ae1077110e2432b2785f61ffafeb0c6ba35a733bcfc7604d9588aef1", size = 672944, upload-time = "2026-10-25T21:14:39.047Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/03/51e769e8df585c80a7dae68f783c19f8f856d2b83588779b7c5e0e1ba818/qbraid_core-0.3.4-py3-none-any.whl", hash = "sha256:cb0e303b39b3723d00a8d0f36a6f5f76057835b517491fc76dc0b79d2b75378c", size = 246898, upload-time = "2026-06-08T22:50:18.468Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/ba/48cf5abae3680689fcc82350a2a8bb5ba19c474d8b90edc50519ec19eb4c/qbraid_core-0.6.37-py3-none-any.whl", hash = "sha256:0658ca9d782fb3dc3c5b428a79e465c30467f19dcf8b5021c0ad49c3bbceb699", size = 543753, upload-time = "2026-10-25T21:14:37.803Z" },
 ]
 
 [[package]]
@@ -4019,24 +3980,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f5/24/cb09efec5cc954f7f9b930bf8279447d24618bb6758d4f6adf2574c41780/typer-0.24.1.tar.gz", hash = "sha256:e39b4732d65fbdcde189ae76cf7cd48aeae72919dea1fdfc16593be016256b45", size = 118613, upload-time = "2026-02-21T16:54:40.609Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4a/91/48db081e7a63bb37284f9fbcefda7c44c277b18b0e13fbc36ea2335b71e6/typer-0.24.1-py3-none-any.whl", hash = "sha256:112c1f0ce578bfb4cab9ffdabc68f031416ebcc216536611ba21f04e9aa84c9e", size = 56085, upload-time = "2026-02-21T16:54:41.616Z" },
-]
-
-[[package]]
-name = "types-awscrt"
-version = "0.31.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/76/26/0aa563e229c269c528a3b8c709fc671ac2a5c564732fab0852ac6ee006cf/types_awscrt-0.31.3.tar.gz", hash = "sha256:09d3eaf00231e0f47e101bd9867e430873bc57040050e2a3bd8305cb4fc30865", size = 18178, upload-time = "2026-03-08T02:31:14.569Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/e5/47a573bbbd0a790f8f9fe452f7188ea72b212d21c9be57d5fc0cbc442075/types_awscrt-0.31.3-py3-none-any.whl", hash = "sha256:e5ce65a00a2ab4f35eacc1e3d700d792338d56e4823ee7b4dbe017f94cfc4458", size = 43340, upload-time = "2026-03-08T02:31:13.38Z" },
-]
-
-[[package]]
-name = "types-s3transfer"
-version = "0.16.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fe/64/42689150509eb3e6e82b33ee3d89045de1592488842ddf23c56957786d05/types_s3transfer-0.16.0.tar.gz", hash = "sha256:b4636472024c5e2b62278c5b759661efeb52a81851cde5f092f24100b1ecb443", size = 13557, upload-time = "2025-12-08T08:13:09.928Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/27/e88220fe6274eccd3bdf95d9382918716d312f6f6cef6a46332d1ee2feff/types_s3transfer-0.16.0-py3-none-any.whl", hash = "sha256:1c0cd111ecf6e21437cb410f5cddb631bfb2263b77ad973e79b9c6d0cb24e0ef", size = 19247, upload-time = "2025-12-08T08:13:08.426Z" },
 ]
 
 [[package]]
