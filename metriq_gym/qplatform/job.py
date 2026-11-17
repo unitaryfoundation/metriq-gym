@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from functools import singledispatch
+import math
 from typing import Iterable
 
 from qbraid import QuantumJob
@@ -64,6 +65,88 @@ def total_execution_time(quantum_jobs: Iterable[QuantumJob]) -> float | None:
             continue
         total = t if total is None else total + t
     return total
+
+
+@dataclass(frozen=True)
+class QPUTime:
+    """Measured QPU seconds and the provider field or timer that defines them."""
+
+    seconds: float
+    source: str
+
+
+@singledispatch
+def qpu_time(quantum_job: QuantumJob) -> QPUTime | None:
+    """Read finalized QPU timing suitable for hardware throughput measurements.
+
+    Adapters must establish the timing semantics, including circuit switching
+    and shot overhead. Generic job timestamps and simulator runtimes are not
+    substituted automatically. The source identifies the measured interval.
+
+    Args:
+        quantum_job: Job whose measured QPU usage is requested.
+
+    Returns:
+        Measured seconds and their source, or None when suitable timing is
+        unsupported, unavailable, or still pending.
+    """
+    return None
+
+
+@qpu_time.register
+def _(quantum_job: QiskitJob) -> QPUTime | None:
+    """Read finalized IBM QPU-locked usage, including legacy usage records."""
+    try:
+        usage = quantum_job._job.metrics().get("usage", {})
+        if "status" in usage and usage["status"] != "complete":
+            return None
+        if "qpu_charge_time_seconds" in usage:
+            # Current accounting takes precedence, even if pending or invalid.
+            if usage.get("status") != "complete":
+                return None
+            value = usage["qpu_charge_time_seconds"]
+        else:
+            value = usage.get("quantum_seconds")
+        if isinstance(value, bool):
+            return None
+        seconds = float(value)
+    except Exception:
+        return None
+    if not math.isfinite(seconds) or seconds <= 0:
+        return None
+    return QPUTime(seconds, "ibm_qpu_usage")
+
+
+def sum_qpu_times(timings: Iterable[QPUTime | None]) -> QPUTime | None:
+    """Sum complete measured QPU timing from one consistent source.
+
+    Args:
+        timings: Timing records for every job or batch in a throughput measurement.
+
+    Returns:
+        Their total seconds and common source. Returns None for an empty set,
+        missing or invalid timing, mixed sources, or a nonfinite total. Partial
+        totals would overstate throughput and are never returned.
+    """
+    total = 0.0
+    source = None
+    for timing in timings:
+        try:
+            if (
+                timing is None
+                or isinstance(timing.seconds, bool)
+                or not math.isfinite(timing.seconds)
+                or timing.seconds <= 0
+                or not isinstance(timing.source, str)
+                or not timing.source.strip()
+                or (source is not None and timing.source != source)
+            ):
+                return None
+            total += timing.seconds
+            source = timing.source
+        except Exception:
+            return None
+    return QPUTime(total, source) if source is not None and math.isfinite(total) else None
 
 
 FAILED_STATUSES = frozenset({JobStatus.FAILED, JobStatus.CANCELLED})

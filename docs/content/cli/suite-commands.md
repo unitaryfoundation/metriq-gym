@@ -96,6 +96,7 @@ mgym suite estimate <suite_config> [OPTIONS]
 | `--component, -c` | LIST | Component to estimate; repeat the option to select multiple components | `None` |
 | `--all` | BOOL | Explicitly estimate every component, including guarded full suites | `False` |
 | `--verbose, -v` | BOOL | Show per-job resources, circuit statistics, and estimation assumptions | `False` |
+| `--full` | BOOL | Build every circuit instead of using benchmark-specific estimation sampling | `False` |
 
 ### Estimate the complete Metriq Score suite
 

@@ -1,0 +1,10 @@
+{
+  "benchmark_name": "QUOPS",
+  "polarization_estimator": "mcfe",
+  "gate_set": "pauli_rotations_cnot",
+  "shapes": [{"width": 2, "size": 4}, {"width": 2, "size": 8}],
+  "num_circuits": 10,
+  "num_spam_circuits": 20,
+  "shots": 100,
+  "seed": 42
+}

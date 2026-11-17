@@ -176,6 +176,7 @@ class TestJobCommands:
         assert "--provider" in result.output
         assert "--device" in result.output
         assert "--verbose" in result.output
+        assert "--full" in result.output
         assert "-v" in result.output
 
     @patch("metriq_gym.run.estimate_job")
@@ -189,6 +190,15 @@ class TestJobCommands:
         assert args.provider is None
         assert args.device is None
         assert args.verbose is False
+        assert args.full is False
+
+    @patch("metriq_gym.run.estimate_job")
+    def test_job_estimate_forwards_full(self, mock_estimate):
+        result = runner.invoke(app, ["job", "estimate", "job.json", "--full"])
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        assert mock_estimate.call_args[0][0].full is True
 
     @pytest.mark.parametrize("verbose_flag", ["-v", "--verbose"])
     @patch("metriq_gym.run.estimate_job")
@@ -437,6 +447,7 @@ class TestSuiteCommands:
         assert "--component" in result.output
         assert "--all" in result.output
         assert "--verbose" in result.output
+        assert "--full" in result.output
         assert "-v" in result.output
 
     def test_suite_estimate_missing_config_shows_error(self):
@@ -519,7 +530,16 @@ class TestSuiteCommands:
         assert args.components is None
         assert args.all_components is False
         assert args.verbose is False
+        assert args.full is False
         mock_jm.assert_not_called()
+
+    @patch("metriq_gym.run.estimate_suite")
+    def test_suite_estimate_forwards_full(self, mock_estimate):
+        result = runner.invoke(app, ["suite", "estimate", "suite.json", "--full"])
+
+        assert result.exit_code == 0
+        mock_estimate.assert_called_once()
+        assert mock_estimate.call_args[0][0].full is True
 
     @pytest.mark.parametrize("verbose_flag", ["-v", "--verbose"])
     @patch("metriq_gym.run.estimate_suite")
