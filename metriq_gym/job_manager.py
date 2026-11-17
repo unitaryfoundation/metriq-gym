@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 from pathlib import Path
 import shutil
+import threading
+from contextlib import contextmanager
 from metriq_gym._version import __version__
 import json
 import os
@@ -14,6 +16,7 @@ from typing import Any, Sequence
 from tabulate import tabulate
 from metriq_gym.constants import JobType
 from metriq_gym.paths import get_data_db_path
+from metriq_gym.helpers.file_lock import exclusive_lock
 from metriq_gym.platform import canonical_device_name, canonical_provider_name
 
 
@@ -157,7 +160,6 @@ class MetriqGymJob:
         return tabulate(rows, tablefmt="fancy_grid")
 
 
-# TODO: https://github.com/unitaryfoundation/metriq-gym/issues/51
 class JobManager:
     jobs: list[MetriqGymJob]
     jobs_file: Path
@@ -167,12 +169,38 @@ class JobManager:
         # Track original lines (parsed jobs and raw skipped) to preserve order on rewrite.
         # Each entry is (line_number, kind, payload) where kind is "job" or "raw".
         self._line_entries: list[tuple[int, str, Any]] = []
-        self._load_jobs()
+        # Guards this instance against other threads; the file lock guards
+        # against other processes. Both are reentrant so the public methods can
+        # nest calls to _load_jobs and _rewrite_jobs_file.
+        self._thread_lock = threading.RLock()
+        self._lock_depth = 0
+        self._lock_cm: Any = None
+        # Under the lock as well: on Windows, Path.replace fails while another
+        # process holds the destination open, so an unlocked read here can make
+        # a concurrent writer's rewrite fail.
+        with self._db_lock():
+            self._load_jobs(warn_if_empty=True)
+
+    @contextmanager
+    def _db_lock(self):
+        """Hold the jobs-file lock, reentrantly, for the duration."""
+        with self._thread_lock:
+            if self._lock_depth == 0:
+                self._lock_cm = exclusive_lock(self.jobs_file)
+                self._lock_cm.__enter__()
+            self._lock_depth += 1
+            try:
+                yield
+            finally:
+                self._lock_depth -= 1
+                if self._lock_depth == 0:
+                    cm, self._lock_cm = self._lock_cm, None
+                    cm.__exit__(None, None, None)
 
     def _log_skip(self, line_number: int, reason: str) -> None:
         logger.warning(f"Skipping job on line {line_number} in {self.jobs_file}: {reason}")
 
-    def _load_jobs(self):
+    def _load_jobs(self, warn_if_empty: bool = False):
         """
         Initialize the job list by loading valid jobs from the local JSONL db file.
 
@@ -189,6 +217,9 @@ class JobManager:
         All successfully parsed jobs are stored in `self.jobs`.
         """
         self.jobs = []
+        # Must be reset alongside self.jobs: reloading otherwise appends to the
+        # previous entries and a later rewrite duplicates every line.
+        self._line_entries = []
 
         if not self.jobs_file.exists():
             return
@@ -226,24 +257,27 @@ class JobManager:
                 # Keep skipped lines so later rewrites don't drop user data and preserve order
                 self._line_entries.append((line_number, "raw", stripped_line))
 
-        if not self.jobs:
+        if not self.jobs and warn_if_empty:
             logger.warning(f"No valid jobs found in {self.jobs_file}.")
 
     def add_job(self, job: MetriqGymJob) -> str:
-        self.jobs.append(job)
-        max_line = max((ln for ln, _, _ in self._line_entries), default=0)
-        self._line_entries.append((max_line + 1, "job", job))
-        # Append safely without rewriting existing records (minimize data-loss risk)
-        try:
-            with open(self.jobs_file, "a") as file:
-                file.write(job.serialize() + "\n")
-        except Exception as e:
-            self.jobs.pop()
-            self._line_entries.pop()
-            logger.error(
-                f"Failed to append job {job.id} to {self.jobs_file}: {e}. "
-                "Job was not persisted and has been removed from memory."
-            )
+        with self._db_lock():
+            # Refresh first: another process may have written since __init__.
+            self._load_jobs()
+            self.jobs.append(job)
+            max_line = max((ln for ln, _, _ in self._line_entries), default=0)
+            self._line_entries.append((max_line + 1, "job", job))
+            # Append safely without rewriting existing records (minimize data-loss risk)
+            try:
+                with open(self.jobs_file, "a") as file:
+                    file.write(job.serialize() + "\n")
+            except Exception as e:
+                self.jobs.pop()
+                self._line_entries.pop()
+                logger.error(
+                    f"Failed to append job {job.id} to {self.jobs_file}: {e}. "
+                    "Job was not persisted and has been removed from memory."
+                )
         return job.id
 
     def get_jobs(self) -> list[MetriqGymJob]:
@@ -264,17 +298,26 @@ class JobManager:
         return [job for job in self.jobs if job.suite_id == suite_id]
 
     def delete_job(self, job_id: str) -> None:
-        self.jobs = [job for job in self.jobs if job.id != job_id]
-        self._line_entries = [
-            (ln, kind, payload)
-            for (ln, kind, payload) in self._line_entries
-            if not (kind == "job" and isinstance(payload, MetriqGymJob) and payload.id == job_id)
-        ]
-        self._rewrite_jobs_file()
+        with self._db_lock():
+            self._load_jobs()
+            self.jobs = [job for job in self.jobs if job.id != job_id]
+            self._line_entries = [
+                (ln, kind, payload)
+                for (ln, kind, payload) in self._line_entries
+                if not (
+                    kind == "job" and isinstance(payload, MetriqGymJob) and payload.id == job_id
+                )
+            ]
+            self._rewrite_jobs_file()
         logger.info(f"Deleted job with id {job_id} from {self.jobs_file}")
 
     def update_job(self, updated_job: MetriqGymJob) -> None:
         """Persist updated job information to disk."""
+        with self._db_lock():
+            self._load_jobs()
+            self._update_job_locked(updated_job)
+
+    def _update_job_locked(self, updated_job: MetriqGymJob) -> None:
         for idx, job in enumerate(self.jobs):
             if job.id == updated_job.id:
                 self.jobs[idx] = updated_job
@@ -293,8 +336,14 @@ class JobManager:
 
     def _rewrite_jobs_file(self) -> None:
         """Rewrite the jobs file preserving original line order (parsed + skipped)."""
+        with self._db_lock():
+            self._rewrite_jobs_file_locked()
+
+    def _rewrite_jobs_file_locked(self) -> None:
         backup_path = self._backup_jobs_file()
-        temp_file = f"{self.jobs_file}.tmp"
+        # Unique per process: a shared name lets two concurrent rewrites write
+        # the same temp file and race on the replace below.
+        temp_file = f"{self.jobs_file}.{os.getpid()}.tmp"
         try:
             with open(temp_file, "w") as file:
                 for ln, kind, payload in sorted(self._line_entries, key=lambda x: x[0]):
