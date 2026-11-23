@@ -67,7 +67,7 @@ Example WIT configuration:
 {
   "benchmark_name": "WIT",
   "num_qubits": 7,
-  "shots": 8192
+  "shots": 1000
 }
 ```
 
