@@ -38,7 +38,7 @@ EXPECTED_CONFIGS: dict[str, dict] = {
     "wit_7q": {
         "benchmark_name": "WIT",
         "num_qubits": 7,
-        "shots": 8192,
+        "shots": 1000,
     },
 }
 
