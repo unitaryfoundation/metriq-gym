@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -1839,11 +1839,21 @@ report uncertainty on a metric use that same object shape for the metric itself.
 <td>Optional normalized metadata such as <code>num_qubits</code>, <code>simulator</code>, and backend <code>version</code></td>
 </tr>
 <tr>
+<td><code>platform.device_metadata.hardware_manufacturer</code></td>
+<td>Optional lowercase identifier for the organization that built the physical QPU. Simulators and unidentified targets omit this field.</td>
+</tr>
+<tr>
 <td><code>params</code></td>
 <td>Validated benchmark configuration used to run the job</td>
 </tr>
 </tbody>
 </table>
+<p>For example, an IonQ Forte-1 run through Braket records <code>aws</code> as the provider and
+<code>ionq_forte-1</code> as the device. A run through qBraid with the device ID
+<code>aws:ionq:qpu:forte-1</code> records <code>qbraid</code> as the provider. Both record <code>ionq</code> as
+the manufacturer.</p>
+<p>Gym captures the manufacturer at dispatch. One identified run can supply the
+manufacturer for its platform during aggregation, so older results need no backfill.</p>
 <p>Upload filenames also use UTC. Older jobs saved without a timezone are interpreted
 in the machine's local timezone, using the offset at the dispatch date. Export those
 jobs with the same timezone used at dispatch; if it has changed, set <code>TZ</code> to the
