@@ -93,7 +93,16 @@ report uncertainty on a metric use that same object shape for the metric itself.
 | `platform.provider` | Provider identifier used for the run |
 | `platform.device` | Device or backend identifier used for the run |
 | `platform.device_metadata` | Optional normalized metadata such as `num_qubits`, `simulator`, and backend `version` |
+| `platform.device_metadata.hardware_manufacturer` | Optional lowercase identifier for the organization that built the physical QPU. Simulators and unidentified targets omit this field. |
 | `params` | Validated benchmark configuration used to run the job |
+
+For example, an IonQ Forte-1 run through Braket records `aws` as the provider and
+`ionq_forte-1` as the device. A run through qBraid with the device ID
+`aws:ionq:qpu:forte-1` records `qbraid` as the provider. Both record `ionq` as
+the manufacturer.
+
+Gym captures the manufacturer at dispatch. One identified run can supply the
+manufacturer for its platform during aggregation, so older results need no backfill.
 
 Upload filenames also use UTC. Older jobs saved without a timezone are interpreted
 in the machine's local timezone, using the offset at the dispatch date. Export those

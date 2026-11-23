@@ -5,8 +5,9 @@ from typing import cast
 import networkx as nx
 import rustworkx as rx
 from qbraid import QuantumDevice
-from qbraid.runtime import AzureQuantumDevice, BraketDevice, QiskitBackend
+from qbraid.runtime import AzureQuantumDevice, BraketDevice, IonQDevice, QbraidDevice, QiskitBackend
 from qiskit.transpiler import CouplingMap
+from qiskit_ibm_runtime import IBMBackend
 from pytket.architecture import FullyConnected
 
 from metriq_gym.local.device import LocalAerDevice
@@ -252,6 +253,38 @@ def _(device: QiskitBackend, graph: rx.PyGraph) -> rx.PyGraph:
     return new_graph
 
 
+def _hardware_manufacturer(device: QuantumDevice) -> str | None:
+    """Identify the maker of a physical target using metadata already loaded at dispatch."""
+    if isinstance(device, QiskitBackend) and isinstance(device._backend, IBMBackend):
+        return "ibm"
+    if isinstance(device, IonQDevice):
+        return "ionq"
+    if isinstance(device, OriginDevice):
+        return "originq"
+    if isinstance(device, QuantinuumDevice):
+        # The NEXUS adapter also exposes syntax checkers as non-simulator targets.
+        info = getattr(device, "backend_info", None)
+        if (getattr(info, "misc", None) or {}).get("system_type") == "hardware":
+            return "quantinuum"
+    if isinstance(device, (BraketDevice, AzureQuantumDevice, QbraidDevice)):
+        partner = getattr(device.profile, "provider_name", None)
+        if not isinstance(partner, str) or not partner.strip():
+            return None
+        partner = partner.strip().lower()
+        target = device.id.lower()
+        # Match the reported partner to the provider's physical QPU namespace.
+        if isinstance(device, BraketDevice) and f":device/qpu/{partner}/" in target:
+            return partner
+        if isinstance(device, AzureQuantumDevice) and target.startswith(f"{partner}.qpu."):
+            return partner
+        if isinstance(device, QbraidDevice):
+            # A qBraid resource name has the form route:provider:type:name.
+            match target.split(":"):
+                case [route, provider, "qpu", name] if route and name and provider == partner:
+                    return partner
+    return None
+
+
 def normalized_metadata(device: QuantumDevice) -> dict:
     """Return a minimal, normalized subset of device metadata.
 
@@ -259,6 +292,7 @@ def normalized_metadata(device: QuantumDevice) -> dict:
     - simulator: bool
     - version: str
     - num_qubits: int
+    - hardware_manufacturer: lowercase identifier for an identified physical device maker
     """
     meta: dict = {}
     try:
@@ -268,6 +302,11 @@ def normalized_metadata(device: QuantumDevice) -> dict:
     else:
         if isinstance(simulator, bool):
             meta["simulator"] = simulator
+
+    if meta.get("simulator") is False:
+        manufacturer = _hardware_manufacturer(device)
+        if manufacturer is not None:
+            meta["hardware_manufacturer"] = manufacturer
 
     try:
         num_qubits = device.num_qubits
