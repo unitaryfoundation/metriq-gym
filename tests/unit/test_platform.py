@@ -1,13 +1,18 @@
+from argparse import Namespace
 from datetime import datetime
 import json
+from unittest.mock import patch
 
 import pytest
+from qbraid.runtime import BraketDevice, TargetProfile
 
 from metriq_gym.benchmarks.benchmark import BenchmarkResult
 from metriq_gym.constants import JobType
 from metriq_gym.exporters.dict_exporter import DictExporter
 from metriq_gym.job_manager import MetriqGymJob
 from metriq_gym.platform import canonical_device_name, canonical_provider_name
+from metriq_gym.run import _new_job
+from metriq_gym.schema_validator import validate_and_create_model
 
 
 CEPHEUS_ARN = "arn:aws:braket:us-west-1::device/qpu/rigetti/Cepheus-1-108Q"
@@ -67,3 +72,22 @@ def test_braket_job_preserves_runtime_identifiers_and_exports_canonical_platform
     saved_record = json.loads(restored_job.serialize())
     assert saved_record["provider_name"] == "braket"
     assert saved_record["device_name"] == CEPHEUS_ARN
+
+
+def test_new_braket_job_preserves_hardware_manufacturer_through_export():
+    profile = TargetProfile(device_id=CEPHEUS_ARN, provider_name="Rigetti", simulator=False)
+    with patch("qbraid.runtime.aws.device.AwsDevice"):
+        device = BraketDevice(profile)
+    args = Namespace(provider="braket", device=CEPHEUS_ARN)
+    params = validate_and_create_model({"benchmark_name": "WIT", "num_qubits": 7, "shots": 10})
+
+    job = _new_job(args, device, JobType.WIT, params, data={})
+    restored = MetriqGymJob.deserialize(job.serialize())
+    assert restored.provider_name == "braket"
+    assert restored.device_name == CEPHEUS_ARN
+
+    platform = DictExporter(restored, BenchmarkResult()).export()["platform"]
+    assert platform == restored.platform
+    assert platform["provider"] == "aws"
+    assert platform["device"] == "rigetti_cepheus-1-108q"
+    assert platform["device_metadata"]["hardware_manufacturer"] == "rigetti"

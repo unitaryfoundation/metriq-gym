@@ -5,13 +5,25 @@ Tests the version and connectivity_graph functions for different device types
 using mocked qBraid device objects.
 """
 
-from unittest.mock import Mock, PropertyMock
+from types import SimpleNamespace
+from unittest.mock import MagicMock, Mock, PropertyMock
 
 import pytest
 import rustworkx as rx
 import networkx as nx
-from qbraid.runtime import QiskitBackend, BraketDevice, AzureQuantumDevice, TargetProfile
+from qbraid.runtime import (
+    QiskitBackend,
+    BraketDevice,
+    AzureQuantumDevice,
+    IonQDevice,
+    TargetProfile,
+)
 from qbraid.programs import ExperimentType, ProgramSpec
+from qbraid.runtime.native import QbraidProvider
+from qbraid.runtime.quantinuum import QuantinuumDevice
+from qbraid_core.services.runtime.schemas import RuntimeDevice
+from qiskit_ibm_runtime import IBMBackend
+from qiskit_ibm_runtime.fake_provider import FakeFez
 
 from metriq_gym.local.provider import LocalProvider
 from qbraid.runtime.origin import OriginDevice
@@ -385,6 +397,85 @@ class TestEdgeCases:
 
 class TestNormalizedMetadata:
     """Tests for normalized_metadata() helper."""
+
+    @pytest.mark.parametrize(
+        "device_type, device_id, partner, maker",
+        [
+            (BraketDevice, "arn:aws:braket:us-east-1::device/qpu/ionq/Forte-1", "IonQ", "ionq"),
+            (AzureQuantumDevice, "ionq.qpu.forte-1", "ionq", "ionq"),
+            (IonQDevice, "qpu.forte-1", "IonQ", "ionq"),
+            (OriginDevice, "WK_C102_400", "origin", "originq"),
+        ],
+    )
+    def test_physical_hardware_manufacturer(self, device_type, device_id, partner, maker):
+        device = Mock(spec=device_type, id=device_id)
+        device.profile = TargetProfile(device_id=device_id, simulator=False, provider_name=partner)
+        assert normalized_metadata(device)["hardware_manufacturer"] == maker
+
+    @pytest.mark.parametrize(
+        "qrn, device_type, maker",
+        [
+            ("aws:ionq:qpu:forte-1", "QPU", "ionq"),
+            ("rigetti:rigetti:qpu:cepheus-1-108q", "QPU", "rigetti"),
+            ("ionq:ionq:sim:simulator", "SIMULATOR", None),
+            ("aws:ionq:experimental:prototype", "EXPERIMENTAL", None),
+        ],
+    )
+    def test_native_qbraid_catalog_manufacturer(self, qrn, device_type, maker):
+        client = MagicMock()
+        client.get_device.return_value = RuntimeDevice(
+            qrn=qrn,
+            name=qrn.split(":")[-1],
+            vendor=qrn.split(":")[0],
+            deviceType=device_type,
+            runInputTypes=[],
+            status="ONLINE",
+            paradigm=ExperimentType.GATE_MODEL,
+        )
+        device = QbraidProvider(client=client).get_device(qrn)
+        metadata = normalized_metadata(device)
+        if maker is None:
+            assert "hardware_manufacturer" not in metadata
+        else:
+            assert metadata["hardware_manufacturer"] == maker
+
+    @pytest.mark.parametrize(
+        "device_type, device_id, profile",
+        [
+            (IonQDevice, "simulator", SimpleNamespace(provider_name="IonQ", simulator=True)),
+            (IonQDevice, "qpu.forte-1", SimpleNamespace(provider_name="IonQ")),
+            (AzureQuantumDevice, "ionq.qpu.forte-1", SimpleNamespace(simulator=False)),
+            (
+                AzureQuantumDevice,
+                "ionq.qpu.forte-1",
+                SimpleNamespace(simulator=False, provider_name="rigetti"),
+            ),
+            (object, "ionq.qpu.forte-1", SimpleNamespace(simulator=False, provider_name="IonQ")),
+        ],
+    )
+    def test_omits_unverified_manufacturer(self, device_type, device_id, profile):
+        device = Mock(spec=device_type, id=device_id, profile=profile)
+        assert "hardware_manufacturer" not in normalized_metadata(device)
+
+    def test_ibm_hardware_and_fake_backend(self, mock_qiskit_backend):
+        device = mock_qiskit_backend
+        device.profile = TargetProfile(device_id="ibm_fez", simulator=False, provider_name="IBM")
+        device._backend = Mock(spec=IBMBackend)
+        assert normalized_metadata(device)["hardware_manufacturer"] == "ibm"
+        # The fake has the configuration flags of the physical backend it mirrors.
+        device._backend = FakeFez()
+        assert "hardware_manufacturer" not in normalized_metadata(device)
+
+    @pytest.mark.parametrize("system_type", ["hardware", "syntax_checker"])
+    def test_quantinuum_manufacturer_requires_physical_system(self, system_type):
+        device = Mock(spec=QuantinuumDevice)
+        device.profile = SimpleNamespace(simulator=False, provider_name="quantinuum")
+        device.backend_info = SimpleNamespace(misc={"system_type": system_type})
+        metadata = normalized_metadata(device)
+        if system_type == "hardware":
+            assert metadata["hardware_manufacturer"] == "quantinuum"
+        else:
+            assert "hardware_manufacturer" not in metadata
 
     def test_qiskit_backend_metadata(self, mock_qiskit_backend):
         meta = normalized_metadata(mock_qiskit_backend)
