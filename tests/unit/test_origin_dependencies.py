@@ -1,16 +1,46 @@
 """Origin SDK availability must not prevent other providers or cached results."""
 
 from dataclasses import replace
+from pathlib import Path
+import tomllib
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from packaging.requirements import Requirement
 from typer.testing import CliRunner
 
 import metriq_gym.run as run
 from metriq_gym.cli import app
 from metriq_gym.exceptions import QBraidSetupError
 from metriq_gym.job_manager import JobManager
+
+
+@pytest.mark.parametrize(
+    "system, machine, python_version, expected",
+    [
+        ("Linux", "aarch64", "3.13", False),
+        ("Linux", "x86_64", "3.13", True),
+        ("Darwin", "arm64", "3.13", True),
+        ("Linux", "x86_64", "3.14", True),
+        ("Linux", "x86_64", "3.15", False),
+    ],
+)
+def test_origin_dependency_markers(system, machine, python_version, expected):
+    with (Path(__file__).resolve().parents[2] / "pyproject.toml").open("rb") as project:
+        requirements = [
+            Requirement(dep) for dep in tomllib.load(project)["project"]["dependencies"]
+        ]
+    env = {
+        "platform_system": system,
+        "sys_platform": {"Linux": "linux", "Darwin": "darwin"}[system],
+        "platform_machine": machine,
+        "python_version": python_version,
+        "python_full_version": f"{python_version}.0",
+    }
+    active = [req for req in requirements if req.marker is None or req.marker.evaluate(env)]
+    assert any(req.name == "pyqpanda3" for req in active) is expected
+    assert any(req.name == "qbraid" and "origin" in req.extras for req in active) is expected
 
 
 @pytest.mark.parametrize("loader", ["load_provider", "load_job"])
@@ -21,7 +51,7 @@ def test_origin_requires_sdk_before_loading_provider_or_job(monkeypatch, loader,
     upstream_loader = Mock()
     monkeypatch.setattr(f"qbraid.runtime.{loader}", upstream_loader)
 
-    with pytest.raises(QBraidSetupError, match="pyqpanda3.*Python 3.12–3.14"):
+    with pytest.raises(QBraidSetupError, match="pyqpanda3.*Python 3.12–3.14.*Linux.*x86-64"):
         if loader == "load_provider":
             run.load_provider(provider)
         else:

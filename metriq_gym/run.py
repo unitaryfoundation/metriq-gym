@@ -58,7 +58,7 @@ def _require_origin_sdk(provider_name: str) -> None:
     if provider_name.strip().lower() == "origin" and find_spec("pyqpanda3") is None:
         raise QBraidSetupError(
             "OriginQ requires the pyqpanda3 SDK, which is not installed. "
-            "Use Python 3.12–3.14 and reinstall metriq-gym for OriginQ support."
+            "Use Python 3.12–3.14 for OriginQ support. On Linux, the SDK requires x86-64."
         )
 
 
